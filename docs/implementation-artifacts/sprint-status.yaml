@@ -44,7 +44,7 @@ development_status:
   epic-1: in-progress
   1-1-project-scaffold: done
   1-2-domain-value-types-and-tuning-system: done
-  1-3-perceptual-profile-and-adaptive-algorithm: ready-for-dev
+  1-3-perceptual-profile-and-adaptive-algorithm: review
   1-4-app-shell-and-routing: backlog
   1-5-audio-engine-oscillator: backlog
   1-6-comparison-session-state-machine: backlog
