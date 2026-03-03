@@ -31,6 +31,13 @@ pub fn ComparisonView() -> impl IntoView {
     let audio_ctx: SendWrapper<Rc<RefCell<AudioContextManager>>> =
         use_context().expect("AudioContextManager not provided");
 
+    // Eagerly create AudioContext in synchronous render path.
+    // This ensures creation happens within the user gesture call stack (click on Start Page),
+    // satisfying Safari/iOS autoplay policies that reject async AudioContext creation.
+    if let Err(e) = audio_ctx.borrow_mut().get_or_create() {
+        log::error!("Failed to create AudioContext: {e}");
+    }
+
     let settings = DefaultSettings;
     let note_player = Rc::new(RefCell::new(OscillatorNotePlayer::new(Rc::clone(&audio_ctx))));
     let profile_observer = ProfileObserver(Rc::clone(&profile));
