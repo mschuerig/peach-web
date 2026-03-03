@@ -1,6 +1,6 @@
 # Story 1.2: Domain Value Types & Tuning System
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,38 +24,38 @@ so that the foundational types are correct, precise, and ready for use by sessio
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create module structure (AC: all)
-  - [ ] Create `domain/src/types/mod.rs` with re-exports
-  - [ ] Create individual type files under `domain/src/types/`
-  - [ ] Create `domain/src/tuning.rs`
-  - [ ] Update `domain/src/lib.rs` to declare and re-export all modules
-- [ ] Task 2: Implement MIDINote (AC: 1,2,3,4)
-  - [ ] `domain/src/types/midi.rs` — MIDINote struct with new(), name(), random(), transposed()
-  - [ ] MIDIVelocity struct in same file
-  - [ ] Inline unit tests for all MIDINote operations
-- [ ] Task 3: Implement simple value types (AC: 5)
-  - [ ] `domain/src/types/cents.rs` — Cents with magnitude()
-  - [ ] `domain/src/types/frequency.rs` — Frequency with CONCERT_440 constant
-  - [ ] `domain/src/types/duration.rs` — NoteDuration with clamping
-  - [ ] `domain/src/types/amplitude.rs` — AmplitudeDB (f32!) with clamping, UnitInterval with clamping
-  - [ ] `domain/src/types/sound_source.rs` — SoundSourceID with empty-default
-  - [ ] Inline unit tests for each type
-- [ ] Task 4: Implement Interval, Direction, DirectedInterval (AC: 6,7)
-  - [ ] `domain/src/types/interval.rs` — Interval enum (13 variants), Direction enum, DirectedInterval struct
-  - [ ] Interval::between() returning Result
-  - [ ] DirectedInterval::between() with prime-always-up rule
-  - [ ] Inline unit tests
-- [ ] Task 5: Implement DetunedMIDINote (AC: 8)
-  - [ ] `domain/src/types/detuned.rs` — DetunedMIDINote with From<MIDINote> (offset=0.0)
-  - [ ] Inline unit tests
-- [ ] Task 6: Implement TuningSystem (AC: 8,9,10)
-  - [ ] `domain/src/tuning.rs` — TuningSystem enum with frequency() and cent_offset()
-  - [ ] Equal temperament formula: `ref_pitch * 2^((midi - 69 + cents/100) / 12)`
-  - [ ] Just intonation cent offset lookup table
-  - [ ] Inline unit tests + integration test `domain/tests/tuning_accuracy.rs`
-- [ ] Task 7: Verify full suite (AC: 11)
-  - [ ] Run `cargo test -p domain` — all pass
-  - [ ] Run `cargo clippy -p domain` — no warnings
+- [x] Task 1: Create module structure (AC: all)
+  - [x] Create `domain/src/types/mod.rs` with re-exports
+  - [x] Create individual type files under `domain/src/types/`
+  - [x] Create `domain/src/tuning.rs`
+  - [x] Update `domain/src/lib.rs` to declare and re-export all modules
+- [x] Task 2: Implement MIDINote (AC: 1,2,3,4)
+  - [x] `domain/src/types/midi.rs` — MIDINote struct with new(), name(), random(), transposed()
+  - [x] MIDIVelocity struct in same file
+  - [x] Inline unit tests for all MIDINote operations
+- [x] Task 3: Implement simple value types (AC: 5)
+  - [x] `domain/src/types/cents.rs` — Cents with magnitude()
+  - [x] `domain/src/types/frequency.rs` — Frequency with CONCERT_440 constant
+  - [x] `domain/src/types/duration.rs` — NoteDuration with clamping
+  - [x] `domain/src/types/amplitude.rs` — AmplitudeDB (f32!) with clamping, UnitInterval with clamping
+  - [x] `domain/src/types/sound_source.rs` — SoundSourceID with empty-default
+  - [x] Inline unit tests for each type
+- [x] Task 4: Implement Interval, Direction, DirectedInterval (AC: 6,7)
+  - [x] `domain/src/types/interval.rs` — Interval enum (13 variants), Direction enum, DirectedInterval struct
+  - [x] Interval::between() returning Result
+  - [x] DirectedInterval::between() with prime-always-up rule
+  - [x] Inline unit tests
+- [x] Task 5: Implement DetunedMIDINote (AC: 8)
+  - [x] `domain/src/types/detuned.rs` — DetunedMIDINote with From<MIDINote> (offset=0.0)
+  - [x] Inline unit tests
+- [x] Task 6: Implement TuningSystem (AC: 8,9,10)
+  - [x] `domain/src/tuning.rs` — TuningSystem enum with frequency() and cent_offset()
+  - [x] Equal temperament formula: `ref_pitch * 2^((midi - 69 + cents/100) / 12)`
+  - [x] Just intonation cent offset lookup table
+  - [x] Inline unit tests + integration test `domain/tests/tuning_accuracy.rs`
+- [x] Task 7: Verify full suite (AC: 11)
+  - [x] Run `cargo test -p domain` — all pass
+  - [x] Run `cargo clippy -p domain` — no warnings
 
 ## Dev Notes
 
@@ -253,8 +253,44 @@ Existing `domain/src/lib.rs` contains only an empty `#[cfg(test)] mod tests {}` 
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- Clippy caught `if_same_then_else` in `DirectedInterval::between()` where prime-always-up and target>=reference cases both returned `Direction::Up`. Simplified to single condition since equal notes (prime) satisfy `target >= reference`.
 
 ### Completion Notes List
 
+- All 11 domain value types implemented with exact blueprint names: MIDINote, MIDIVelocity, Cents, Frequency, NoteDuration, AmplitudeDB, UnitInterval, SoundSourceID, Interval, Direction, DirectedInterval, DetunedMIDINote, TuningSystem
+- Error handling via `DomainError` enum with `thiserror` for `Interval::between` out-of-range
+- Panic invariants for programming errors: MIDINote >127, Frequency <=0, MIDIVelocity outside 1-127
+- Clamping types silently clamp: NoteDuration (0.3-3.0), AmplitudeDB (-90.0..12.0 f32), UnitInterval (0.0-1.0)
+- SoundSourceID defaults to "sf2:8:80" on empty string
+- All serde: struct fields snake_case, enum variants camelCase
+- 56 inline unit tests + 4 integration tests = 60 total, all pass
+- Zero clippy warnings
+- Zero browser dependencies — pure native Rust
+- Added `serde_json` as dev-dependency for serialization round-trip tests
+- Equal temperament precision verified to within 0.1 cent for all 128 MIDI notes
+- Just intonation cent offset lookup table with all 13 intervals
+
 ### File List
+
+- domain/src/lib.rs (modified — replaced empty test stub with module declarations and re-exports)
+- domain/src/error.rs (new — DomainError enum)
+- domain/src/types/mod.rs (new — module re-exports)
+- domain/src/types/midi.rs (new — MIDINote, MIDIVelocity)
+- domain/src/types/cents.rs (new — Cents)
+- domain/src/types/frequency.rs (new — Frequency)
+- domain/src/types/duration.rs (new — NoteDuration)
+- domain/src/types/amplitude.rs (new — AmplitudeDB, UnitInterval)
+- domain/src/types/sound_source.rs (new — SoundSourceID)
+- domain/src/types/interval.rs (new — Interval, Direction, DirectedInterval)
+- domain/src/types/detuned.rs (new — DetunedMIDINote)
+- domain/src/tuning.rs (new — TuningSystem with frequency() and cent_offset())
+- domain/tests/tuning_accuracy.rs (new — integration test for frequency precision)
+- domain/Cargo.toml (modified — added serde_json dev-dependency)
+
+## Change Log
+
+- 2026-03-03: Implemented all domain value types and tuning system (Story 1.2) — 13 new files, 60 tests
