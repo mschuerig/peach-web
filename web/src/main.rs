@@ -1,3 +1,6 @@
+mod app;
+mod components;
+
 use leptos::prelude::*;
 
 fn init_logging() {
@@ -12,14 +15,5 @@ fn init_logging() {
 fn main() {
     console_error_panic_hook::set_once();
     init_logging();
-    mount_to_body(App);
-}
-
-#[component]
-fn App() -> impl IntoView {
-    view! {
-        <main class="flex min-h-screen items-center justify-center">
-            <h1 class="text-4xl font-bold">"Peach"</h1>
-        </main>
-    }
+    mount_to_body(app::App);
 }
