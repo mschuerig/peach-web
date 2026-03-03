@@ -146,45 +146,6 @@ pub fn ComparisonView() -> impl IntoView {
 
     // Keyboard event handler
     let navigate = use_navigate();
-    let keydown_handler = {
-        let on_answer = Rc::clone(&on_answer);
-        let cancelled = Rc::clone(&cancelled);
-        let session = Rc::clone(&session);
-        let note_player = Rc::clone(&note_player);
-        let sync = sync_signals.clone();
-        let navigate = navigate.clone();
-        Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
-            match ev.key().as_str() {
-                "ArrowUp" | "h" | "H" => {
-                    ev.prevent_default();
-                    on_answer(true);
-                }
-                "ArrowDown" | "l" | "L" => {
-                    ev.prevent_default();
-                    on_answer(false);
-                }
-                "Escape" => {
-                    ev.prevent_default();
-                    cancelled.set(true);
-                    session.borrow_mut().stop();
-                    note_player.borrow().stop_all();
-                    sync();
-                    navigate("/", Default::default());
-                }
-                _ => {}
-            }
-        })
-    };
-
-    // Register keydown listener on document and save JS function ref for cleanup
-    let document = web_sys::window().unwrap().document().unwrap();
-    let keydown_fn: JsValue = keydown_handler.as_ref().clone();
-    document
-        .add_event_listener_with_callback("keydown", keydown_fn.unchecked_ref())
-        .unwrap();
-
-    // Keep closure alive for component lifetime
-    let _keydown_closure = StoredValue::new_local(keydown_handler);
 
     // Navigation away handler — stops training before nav
     let on_nav_away = {
@@ -220,12 +181,48 @@ pub fn ComparisonView() -> impl IntoView {
 
     // Shared interruption closure — stops training and navigates to start page
     let interrupt_and_navigate = {
+        let cancelled = Rc::clone(&cancelled);
         let navigate = navigate.clone();
         Rc::new(move || {
+            if cancelled.get() {
+                return;
+            }
             on_nav_away();
             navigate("/", Default::default());
         })
     };
+
+    let keydown_handler = {
+        let on_answer = Rc::clone(&on_answer);
+        let interrupt = Rc::clone(&interrupt_and_navigate);
+        Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
+            match ev.key().as_str() {
+                "ArrowUp" | "h" | "H" => {
+                    ev.prevent_default();
+                    on_answer(true);
+                }
+                "ArrowDown" | "l" | "L" => {
+                    ev.prevent_default();
+                    on_answer(false);
+                }
+                "Escape" => {
+                    ev.prevent_default();
+                    (*interrupt)();
+                }
+                _ => {}
+            }
+        })
+    };
+
+    // Register keydown listener on document and save JS function ref for cleanup
+    let document = web_sys::window().unwrap().document().unwrap();
+    let keydown_fn: JsValue = keydown_handler.as_ref().clone();
+    document
+        .add_event_listener_with_callback("keydown", keydown_fn.unchecked_ref())
+        .unwrap();
+
+    // Keep closure alive for component lifetime
+    let _keydown_closure = StoredValue::new_local(keydown_handler);
 
     // Visibility change handler — interrupts training when tab is hidden
     let visibility_handler = Closure::<dyn FnMut(web_sys::Event)>::new({
