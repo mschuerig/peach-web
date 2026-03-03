@@ -1,5 +1,4 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use gloo_timers::future::TimeoutFuture;
@@ -19,8 +18,8 @@ use crate::bridge::{DataStoreObserver, ProfileObserver, TimelineObserver, TrendO
 use domain::ports::{ComparisonObserver, NotePlayer};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
-    ComparisonSession, ComparisonSessionState, DirectedInterval, Direction, Interval,
-    PerceptualProfile, ThresholdTimeline, TrendAnalyzer, FEEDBACK_DURATION_SECS,
+    ComparisonSession, ComparisonSessionState, PerceptualProfile, ThresholdTimeline,
+    TrendAnalyzer, FEEDBACK_DURATION_SECS,
 };
 use leptos::reactive::owner::LocalStorage;
 
@@ -319,9 +318,7 @@ pub fn ComparisonView() -> impl IntoView {
         let cancelled = Rc::clone(&cancelled);
         let sync = sync_signals.clone();
         spawn_local(async move {
-            // Start session with unison mode intervals
-            let mut intervals = HashSet::new();
-            intervals.insert(DirectedInterval::new(Interval::Prime, Direction::Up));
+            let intervals = LocalStorageSettings::get_selected_intervals();
             session.borrow_mut().start(intervals, &settings);
             sync();
 

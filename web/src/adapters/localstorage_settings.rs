@@ -1,5 +1,7 @@
+use std::collections::HashSet;
+
 use domain::ports::UserSettings;
-use domain::types::{Frequency, MIDINote, NoteRange, NoteDuration};
+use domain::types::{DirectedInterval, Direction, Frequency, Interval, MIDINote, NoteRange, NoteDuration};
 use domain::TuningSystem;
 
 pub struct LocalStorageSettings;
@@ -36,6 +38,19 @@ impl LocalStorageSettings {
         {
             log::error!("Failed to write localStorage key '{key}': {e:?}");
         }
+    }
+
+    /// Read selected intervals from localStorage. Returns default {Prime/Up} if absent or invalid.
+    pub fn get_selected_intervals() -> HashSet<DirectedInterval> {
+        Self::get_string("peach.intervals")
+            .and_then(|json| serde_json::from_str::<Vec<DirectedInterval>>(&json).ok())
+            .map(|v| v.into_iter().collect())
+            .filter(|s: &HashSet<DirectedInterval>| !s.is_empty())
+            .unwrap_or_else(|| {
+                let mut set = HashSet::new();
+                set.insert(DirectedInterval::new(Interval::Prime, Direction::Up));
+                set
+            })
     }
 }
 
