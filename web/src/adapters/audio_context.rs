@@ -35,4 +35,18 @@ impl AudioContextManager {
         self.context = Some(Rc::clone(&shared));
         Ok(shared)
     }
+
+    /// Attaches a state change handler to the AudioContext.
+    pub fn set_state_change_handler(&self, callback: &js_sys::Function) {
+        if let Some(ctx) = &self.context {
+            ctx.borrow().set_onstatechange(Some(callback));
+        }
+    }
+
+    /// Removes the state change handler from the AudioContext.
+    pub fn clear_state_change_handler(&self) {
+        if let Some(ctx) = &self.context {
+            ctx.borrow().set_onstatechange(None);
+        }
+    }
 }

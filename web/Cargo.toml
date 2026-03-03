@@ -20,6 +20,7 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 send_wrapper = "0.6"
 web-sys = { version = "0.3", features = [
     "AudioContext",
+    "AudioContextState",
     "AudioDestinationNode",
     "AudioNode",
     "AudioParam",
@@ -48,6 +49,7 @@ web-sys = { version = "0.3", features = [
     "OscillatorNode",
     "OscillatorType",
     "Storage",
+    "VisibilityState",
     "Window",
 ] }
 

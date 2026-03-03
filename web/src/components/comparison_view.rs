@@ -218,23 +218,79 @@ pub fn ComparisonView() -> impl IntoView {
         }
     };
 
-    // Cleanup on component unmount — stop training AND remove keydown listener
+    // Shared interruption closure — stops training and navigates to start page
+    let interrupt_and_navigate = {
+        let navigate = navigate.clone();
+        Rc::new(move || {
+            on_nav_away();
+            navigate("/", Default::default());
+        })
+    };
+
+    // Visibility change handler — interrupts training when tab is hidden
+    let visibility_handler = Closure::<dyn FnMut(web_sys::Event)>::new({
+        let interrupt = Rc::clone(&interrupt_and_navigate);
+        move |_event: web_sys::Event| {
+            let document = web_sys::window().unwrap().document().unwrap();
+            if document.hidden() {
+                (*interrupt)();
+            }
+        }
+    });
+
+    let visibility_fn: JsValue = visibility_handler.as_ref().clone();
+    document
+        .add_event_listener_with_callback("visibilitychange", visibility_fn.unchecked_ref())
+        .unwrap();
+    let _visibility_closure = StoredValue::new_local(visibility_handler);
+
+    // AudioContext state change handler — interrupts on context suspension
+    let audiocontext_handler = Closure::<dyn FnMut(web_sys::Event)>::new({
+        let interrupt = Rc::clone(&interrupt_and_navigate);
+        move |event: web_sys::Event| {
+            if let Some(target) = event.target()
+                && let Some(ctx) = target.dyn_ref::<web_sys::BaseAudioContext>()
+            {
+                let state = ctx.state();
+                if state == web_sys::AudioContextState::Suspended
+                    || state == web_sys::AudioContextState::Closed
+                {
+                    (*interrupt)();
+                }
+            }
+        }
+    });
+
+    audio_ctx
+        .borrow()
+        .set_state_change_handler(audiocontext_handler.as_ref().unchecked_ref());
+    let _audiocontext_closure = StoredValue::new_local(audiocontext_handler);
+
+    // Cleanup on component unmount — stop training AND remove all event listeners
     {
         let cleanup_state = SendWrapper::new((
             Rc::clone(&cancelled),
             Rc::clone(&session),
             Rc::clone(&note_player),
+            Rc::clone(&audio_ctx),
             keydown_fn,
+            visibility_fn,
         ));
         on_cleanup(move || {
-            let (cancelled, session, note_player, keydown_fn) = &*cleanup_state;
+            let (cancelled, session, note_player, audio_ctx, keydown_fn, visibility_fn) =
+                &*cleanup_state;
             cancelled.set(true);
             session.borrow_mut().stop();
             note_player.borrow().stop_all();
+            audio_ctx.borrow().clear_state_change_handler();
             if let Some(document) = web_sys::window().and_then(|w| w.document()) {
                 let _ = document.remove_event_listener_with_callback(
                     "keydown",
                     keydown_fn.unchecked_ref(),
+                );
+                let _ = document.remove_event_listener_with_callback(
+                    "visibilitychange",
+                    visibility_fn.unchecked_ref(),
                 );
             }
         });
