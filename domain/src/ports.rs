@@ -1,7 +1,7 @@
 use crate::records::ComparisonRecord;
 use crate::training::CompletedComparison;
 use crate::tuning::TuningSystem;
-use crate::types::{AmplitudeDB, Frequency, MIDINote, MIDIVelocity, NoteDuration};
+use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteRange, NoteDuration};
 
 /// Error type for audio engine operations.
 #[derive(Debug, thiserror::Error)]
@@ -39,8 +39,7 @@ pub trait Resettable {
 
 /// Trait for reading user settings. Implementations live in the web crate.
 pub trait UserSettings {
-    fn note_range_min(&self) -> MIDINote;
-    fn note_range_max(&self) -> MIDINote;
+    fn note_range(&self) -> NoteRange;
     fn note_duration(&self) -> NoteDuration;
     fn reference_pitch(&self) -> Frequency;
     fn tuning_system(&self) -> TuningSystem;

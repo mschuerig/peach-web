@@ -1,11 +1,10 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::error::DomainError;
 use crate::profile::PerceptualProfile;
 use crate::training::comparison::Comparison;
 use crate::training::CompletedComparison;
-use crate::types::{Cents, DetunedMIDINote, DirectedInterval, Direction, Frequency, MIDINote};
+use crate::types::{Cents, DetunedMIDINote, DirectedInterval, Direction, Frequency, MIDINote, NoteRange};
 
 /// Kazez narrow: reduce difficulty after correct answer.
 /// Formula: p * (1.0 - 0.05 * sqrt(p))
@@ -24,63 +23,29 @@ pub fn kazez_widen(p: f64) -> f64 {
 /// Training configuration parameters.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TrainingSettings {
-    note_range_min: MIDINote,
-    note_range_max: MIDINote,
+    note_range: NoteRange,
     reference_pitch: Frequency,
     min_cent_difference: Cents,
     max_cent_difference: Cents,
 }
 
 impl TrainingSettings {
-    /// Create new TrainingSettings. Panics if note_range_min > note_range_max.
-    /// Use `try_new()` when input is not guaranteed valid.
     pub fn new(
-        note_range_min: MIDINote,
-        note_range_max: MIDINote,
+        note_range: NoteRange,
         reference_pitch: Frequency,
         min_cent_difference: Cents,
         max_cent_difference: Cents,
     ) -> Self {
-        Self::try_new(
-            note_range_min,
-            note_range_max,
+        Self {
+            note_range,
             reference_pitch,
             min_cent_difference,
             max_cent_difference,
-        )
-        .expect("invalid training settings")
-    }
-
-    /// Fallible constructor: returns `Err` if note_range_min > note_range_max.
-    pub fn try_new(
-        note_range_min: MIDINote,
-        note_range_max: MIDINote,
-        reference_pitch: Frequency,
-        min_cent_difference: Cents,
-        max_cent_difference: Cents,
-    ) -> Result<Self, DomainError> {
-        if note_range_min.raw_value() > note_range_max.raw_value() {
-            return Err(DomainError::InvalidSettings(format!(
-                "note_range_min ({}) must be <= note_range_max ({})",
-                note_range_min.raw_value(),
-                note_range_max.raw_value()
-            )));
         }
-        Ok(Self {
-            note_range_min,
-            note_range_max,
-            reference_pitch,
-            min_cent_difference,
-            max_cent_difference,
-        })
     }
 
-    pub fn note_range_min(&self) -> MIDINote {
-        self.note_range_min
-    }
-
-    pub fn note_range_max(&self) -> MIDINote {
-        self.note_range_max
+    pub fn note_range(&self) -> NoteRange {
+        self.note_range
     }
 
     pub fn reference_pitch(&self) -> Frequency {
@@ -99,8 +64,7 @@ impl TrainingSettings {
 impl Default for TrainingSettings {
     fn default() -> Self {
         Self {
-            note_range_min: MIDINote::new(36),
-            note_range_max: MIDINote::new(84),
+            note_range: NoteRange::new(MIDINote::new(36), MIDINote::new(84)),
             reference_pitch: Frequency::CONCERT_440,
             min_cent_difference: Cents::new(0.1),
             max_cent_difference: Cents::new(100.0),
@@ -155,8 +119,8 @@ pub fn next_comparison(
 
     // Step 4: Select reference note within range, accounting for interval transposition
     let semitones = interval.signed_semitones().unsigned_abs() as u8;
-    let min = settings.note_range_min.raw_value();
-    let max = settings.note_range_max.raw_value();
+    let min = settings.note_range.min().raw_value();
+    let max = settings.note_range.max().raw_value();
 
     // Ensure reference note allows transposition to stay within MIDI 0-127
     let (ref_min, ref_max) = match interval.direction {
@@ -400,59 +364,18 @@ mod tests {
     #[test]
     fn test_training_settings_defaults() {
         let s = TrainingSettings::default();
-        assert_eq!(s.note_range_min().raw_value(), 36);
-        assert_eq!(s.note_range_max().raw_value(), 84);
+        assert_eq!(s.note_range().min().raw_value(), 36);
+        assert_eq!(s.note_range().max().raw_value(), 84);
         assert_eq!(s.reference_pitch().raw_value(), 440.0);
         assert!((s.min_cent_difference().raw_value - 0.1).abs() < 1e-10);
         assert!((s.max_cent_difference().raw_value - 100.0).abs() < 1e-10);
     }
 
     #[test]
-    #[should_panic(expected = "invalid training settings")]
-    fn test_training_settings_panics_on_invalid_range() {
-        TrainingSettings::new(
-            MIDINote::new(84),
-            MIDINote::new(36),
-            Frequency::CONCERT_440,
-            Cents::new(0.1),
-            Cents::new(100.0),
-        );
-    }
-
-    #[test]
-    fn test_training_settings_try_new_valid() {
-        let result = TrainingSettings::try_new(
-            MIDINote::new(36),
-            MIDINote::new(84),
-            Frequency::CONCERT_440,
-            Cents::new(0.1),
-            Cents::new(100.0),
-        );
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_training_settings_try_new_invalid() {
-        let result = TrainingSettings::try_new(
-            MIDINote::new(84),
-            MIDINote::new(36),
-            Frequency::CONCERT_440,
-            Cents::new(0.1),
-            Cents::new(100.0),
-        );
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_training_settings_try_new_equal_range() {
-        let result = TrainingSettings::try_new(
-            MIDINote::new(60),
-            MIDINote::new(60),
-            Frequency::CONCERT_440,
-            Cents::new(0.1),
-            Cents::new(100.0),
-        );
-        assert!(result.is_ok());
+    fn test_training_settings_equal_range() {
+        let range = NoteRange::new(MIDINote::new(60), MIDINote::new(60));
+        let s = TrainingSettings::new(range, Frequency::CONCERT_440, Cents::new(0.1), Cents::new(100.0));
+        assert_eq!(s.note_range().min(), s.note_range().max());
     }
 
     #[test]

@@ -51,10 +51,19 @@ pub fn App() -> impl IntoView {
                         let mut prof = profile_for_hydration.borrow_mut();
                         let mut trend = trend_for_hydration.borrow_mut();
                         let mut tl = timeline_for_hydration.borrow_mut();
+                        let mut skipped = 0u32;
 
                         for record in &records {
+                            let note = match MIDINote::try_new(record.reference_note) {
+                                Ok(n) => n,
+                                Err(_) => {
+                                    skipped += 1;
+                                    continue;
+                                }
+                            };
+
                             prof.update(
-                                MIDINote::new(record.reference_note),
+                                note,
                                 record.cent_offset.abs(),
                                 record.is_correct,
                             );
@@ -69,7 +78,10 @@ pub fn App() -> impl IntoView {
                             );
                         }
 
-                        log::info!("Profile hydrated from {} records", records.len());
+                        if skipped > 0 {
+                            log::warn!("Skipped {skipped} records with invalid MIDI note values during hydration");
+                        }
+                        log::info!("Profile hydrated from {} records", records.len() - skipped as usize);
                     }
                     Err(e) => {
                         log::error!("Failed to fetch records for hydration: {e}");

@@ -1,17 +1,13 @@
 use domain::ports::UserSettings;
-use domain::types::{Frequency, MIDINote, NoteDuration};
+use domain::types::{Frequency, MIDINote, NoteRange, NoteDuration};
 use domain::TuningSystem;
 
 #[allow(dead_code)] // Planned fallback for Settings view (Epic 2, story 2.1)
 pub struct DefaultSettings;
 
 impl UserSettings for DefaultSettings {
-    fn note_range_min(&self) -> MIDINote {
-        MIDINote::new(36) // C2
-    }
-
-    fn note_range_max(&self) -> MIDINote {
-        MIDINote::new(84) // C6
+    fn note_range(&self) -> NoteRange {
+        NoteRange::new(MIDINote::new(36), MIDINote::new(84)) // C2-C6
     }
 
     fn note_duration(&self) -> NoteDuration {
