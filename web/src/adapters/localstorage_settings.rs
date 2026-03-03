@@ -25,8 +25,7 @@ impl LocalStorageSettings {
             .unwrap_or(default)
     }
 
-    /// Write a value to localStorage. Used by Settings UI (story 2.1).
-    #[allow(dead_code)] // Planned for Settings view (Epic 2, story 2.1)
+    /// Write a value to localStorage. Used by Settings UI.
     pub fn set(key: &str, value: &str) {
         if let Some(storage) = web_sys::window()
             .and_then(|w| w.local_storage().ok())

@@ -1,6 +1,6 @@
 # Story 2.1: Settings View — Core Training Parameters
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -38,54 +38,54 @@ so that I can personalize my training experience to match my instrument and goal
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Replace SettingsView stub with full component (AC: 1,11,12)
-  - [ ] 1.1 Replace the stub in `web/src/components/settings_view.rs` with the complete settings form layout
-  - [ ] 1.2 Add section heading "Settings" and back navigation link to "/"
-  - [ ] 1.3 Use semantic HTML: `<label>` + `<select>`, `<label>` + `<input type="range">` — no `<div>` click handlers
-  - [ ] 1.4 Apply Tailwind classes for layout (single column, centered, consistent spacing), dark mode (`dark:` variants), and 44x44px minimum touch targets (`min-h-11 min-w-11`)
-  - [ ] 1.5 Add `aria-label` attributes where labels are not visually adjacent to controls
+- [x] Task 1: Replace SettingsView stub with full component (AC: 1,11,12)
+  - [x] 1.1 Replace the stub in `web/src/components/settings_view.rs` with the complete settings form layout
+  - [x] 1.2 Add section heading "Settings" and back navigation link to "/"
+  - [x] 1.3 Use semantic HTML: `<label>` + `<select>`, `<label>` + `<input type="range">` — no `<div>` click handlers
+  - [x] 1.4 Apply Tailwind classes for layout (single column, centered, consistent spacing), dark mode (`dark:` variants), and 44x44px minimum touch targets (`min-h-11 min-w-11`)
+  - [x] 1.5 Add `aria-label` attributes where labels are not visually adjacent to controls
 
-- [ ] Task 2: Note range controls (AC: 2,3)
-  - [ ] 2.1 Add two `<select>` dropdowns for lower bound and upper bound
-  - [ ] 2.2 Populate options with MIDI notes using `MIDINote::name()` for labels (e.g., "C2 (36)", "C#2 (37)", ..., "G9 (127)"). Practical range: MIDI 21 (A0) to 108 (C8)
-  - [ ] 2.3 Read initial values from `LocalStorageSettings` on mount — lower defaults to 36, upper defaults to 84
-  - [ ] 2.4 Constrain lower bound: max selectable value is current upper bound value
-  - [ ] 2.5 Constrain upper bound: min selectable value is current lower bound value
-  - [ ] 2.6 On change, call `LocalStorageSettings::set()` to persist immediately
-  - [ ] 2.7 Use Leptos signals to keep both dropdowns reactive to each other's changes
+- [x] Task 2: Note range controls (AC: 2,3)
+  - [x] 2.1 Add two `<select>` dropdowns for lower bound and upper bound
+  - [x] 2.2 Populate options with MIDI notes using `MIDINote::name()` for labels (e.g., "C2 (36)", "C#2 (37)", ..., "G9 (127)"). Practical range: MIDI 21 (A0) to 108 (C8)
+  - [x] 2.3 Read initial values from `LocalStorageSettings` on mount — lower defaults to 36, upper defaults to 84
+  - [x] 2.4 Constrain lower bound: max selectable value is current upper bound value
+  - [x] 2.5 Constrain upper bound: min selectable value is current lower bound value
+  - [x] 2.6 On change, call `LocalStorageSettings::set()` to persist immediately
+  - [x] 2.7 Use Leptos signals to keep both dropdowns reactive to each other's changes
 
-- [ ] Task 3: Note duration control (AC: 4)
-  - [ ] 3.1 Add `<input type="range">` slider with min=0.3, max=3.0, step=0.1
-  - [ ] 3.2 Display current value as text next to slider (e.g., "1.0s")
-  - [ ] 3.3 Read initial value from localStorage key `peach.note_duration`, default 1.0
-  - [ ] 3.4 On change, persist via `LocalStorageSettings::set("peach.note_duration", &value.to_string())`
+- [x] Task 3: Note duration control (AC: 4)
+  - [x] 3.1 Add `<input type="range">` slider with min=0.3, max=3.0, step=0.1
+  - [x] 3.2 Display current value as text next to slider (e.g., "1.0s")
+  - [x] 3.3 Read initial value from localStorage key `peach.note_duration`, default 1.0
+  - [x] 3.4 On change, persist via `LocalStorageSettings::set("peach.note_duration", &value.to_string())`
 
-- [ ] Task 4: Reference pitch control (AC: 5)
-  - [ ] 4.1 Add `<select>` dropdown with options: "440 Hz (Concert)", "442 Hz", "432 Hz", "415 Hz (Baroque)"
-  - [ ] 4.2 Read initial value from `peach.reference_pitch`, default 440.0
-  - [ ] 4.3 On change, persist the numeric Hz value to localStorage
+- [x] Task 4: Reference pitch control (AC: 5)
+  - [x] 4.1 Add `<select>` dropdown with options: "440 Hz (Concert)", "442 Hz", "432 Hz", "415 Hz (Baroque)"
+  - [x] 4.2 Read initial value from `peach.reference_pitch`, default 440.0
+  - [x] 4.3 On change, persist the numeric Hz value to localStorage
 
-- [ ] Task 5: Sound source control (AC: 6)
-  - [ ] 5.1 Add `<select>` dropdown with single option: "Sine Oscillator"
-  - [ ] 5.2 Read initial value from `peach.sound_source`, default "oscillator:sine"
-  - [ ] 5.3 On change, persist to localStorage (currently only one option — control is present for future SoundFont support in Epic 5)
+- [x] Task 5: Sound source control (AC: 6)
+  - [x] 5.1 Add `<select>` dropdown with single option: "Sine Oscillator"
+  - [x] 5.2 Read initial value from `peach.sound_source`, default "oscillator:sine"
+  - [x] 5.3 On change, persist to localStorage (currently only one option — control is present for future SoundFont support in Epic 5)
 
-- [ ] Task 6: Loudness variation control (AC: 7)
-  - [ ] 6.1 Add `<input type="range">` slider with min=0, max=100, step=1
-  - [ ] 6.2 Display current value as text next to slider (e.g., "25%")
-  - [ ] 6.3 Read initial value from `peach.vary_loudness` (stored as 0.0-1.0 float), convert to 0-100 for display
-  - [ ] 6.4 On change, convert percentage back to 0.0-1.0 and persist via `LocalStorageSettings::set()`
+- [x] Task 6: Loudness variation control (AC: 7)
+  - [x] 6.1 Add `<input type="range">` slider with min=0, max=100, step=1
+  - [x] 6.2 Display current value as text next to slider (e.g., "25%")
+  - [x] 6.3 Read initial value from `peach.vary_loudness` (stored as 0.0-1.0 float), convert to 0-100 for display
+  - [x] 6.4 On change, convert percentage back to 0.0-1.0 and persist via `LocalStorageSettings::set()`
 
-- [ ] Task 7: Tuning system control (AC: 8)
-  - [ ] 7.1 Add `<select>` dropdown with options: "Equal Temperament", "Just Intonation"
-  - [ ] 7.2 Read initial value from `peach.tuning_system`, default "equalTemperament"
-  - [ ] 7.3 On change, persist value — use `"equalTemperament"` or `"justIntonation"` as serialized values (matching the existing `serde(rename_all = "camelCase")` on `TuningSystem` enum)
+- [x] Task 7: Tuning system control (AC: 8)
+  - [x] 7.1 Add `<select>` dropdown with options: "Equal Temperament", "Just Intonation"
+  - [x] 7.2 Read initial value from `peach.tuning_system`, default "equalTemperament"
+  - [x] 7.3 On change, persist value — use `"equalTemperament"` or `"justIntonation"` as serialized values (matching the existing `serde(rename_all = "camelCase")` on `TuningSystem` enum)
 
-- [ ] Task 8: Verify and validate (AC: all)
-  - [ ] 8.1 `cargo clippy -p domain` — zero warnings
-  - [ ] 8.2 `cargo clippy -p web` — zero warnings
-  - [ ] 8.3 `cargo test -p domain` — all tests pass
-  - [ ] 8.4 `trunk build` — successful WASM compilation
+- [x] Task 8: Verify and validate (AC: all)
+  - [x] 8.1 `cargo clippy -p domain` — zero warnings
+  - [x] 8.2 `cargo clippy -p web` — zero warnings
+  - [x] 8.3 `cargo test -p domain` — all tests pass (253 tests)
+  - [x] 8.4 `trunk build` — successful WASM compilation
   - [ ] 8.5 `trunk serve` — manual browser smoke test: open Settings, change each control, verify localStorage values update, return to training, verify settings take effect
 
 ## Dev Notes
@@ -249,10 +249,34 @@ Files most relevant to this story:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
+No debug issues encountered.
+
 ### Completion Notes List
 
+- Replaced `SettingsView` stub with full settings form implementing all 7 controls (note range min/max, note duration, reference pitch, sound source, loudness variation, tuning system)
+- Used `UserSettings` trait methods on `LocalStorageSettings` to read initial values — avoids exposing private helpers
+- Note range dropdowns use reactive signal-driven option lists: lower bound options constrained to 21..=upper, upper bound options constrained to lower..=108
+- Initial note range values clamped to practical 21-108 range for robustness
+- Range sliders use `on:input` for live feedback; selects use `on:change`
+- Helper function `target_value()` extracts `.value` from event targets using `js_sys::Reflect` — no new web-sys features needed
+- Duration values rounded to 1 decimal to avoid floating-point drift
+- Loudness stored as 0.0-1.0 float in localStorage, displayed as 0-100% integer
+- Sound source defaults to "oscillator:sine" (single option, future Epic 5 extensibility)
+- Removed `#[allow(dead_code)]` from `LocalStorageSettings::set()` since it's now actively used
+- All Tailwind classes follow established patterns: dark mode variants, 44px touch targets, focus rings, consistent spacing
+- All labels use `<label for="...">` + matching `id` for accessibility — no extra `aria-label` needed since labels are visually adjacent to controls
+
 ### File List
+
+- `web/src/components/settings_view.rs` — Replaced stub with full settings form (new implementation)
+- `web/src/adapters/localstorage_settings.rs` — Removed `#[allow(dead_code)]` from `set()` method
+- `docs/implementation-artifacts/sprint-status.yaml` — Updated story status
+- `docs/implementation-artifacts/2-1-settings-view-core-training-parameters.md` — Updated tasks, status, dev agent record
+
+## Change Log
+
+- 2026-03-03: Implemented Settings View with all core training parameter controls (story 2.1)
