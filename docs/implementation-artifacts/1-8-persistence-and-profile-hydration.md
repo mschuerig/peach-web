@@ -1,6 +1,6 @@
 # Story 1.8: Persistence & Profile Hydration
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -1012,18 +1012,21 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-03: Implemented persistence and profile hydration — IndexedDB for comparison records, localStorage for settings, observer-driven persistence, profile hydration on app launch.
+- 2026-03-03: Code review fixes — H1: replaced silent error swallowing in LocalStorageSettings::set() with log::error!(); M1: DataStoreObserver now holds RwSignal instead of Rc to fix race condition on fast navigation; M2: wired is_profile_loaded signal in StartPage with loading indicator; M3: added doc comment to TrainingDataStore trait explaining async adapter design decision.
 
 ### File List
 
 - domain/src/records.rs (NEW — ComparisonRecord flat DTO, from_completed conversion, unit tests)
-- domain/src/ports.rs (MODIFIED — added StorageError enum, TrainingDataStore trait)
+- domain/src/ports.rs (MODIFIED — added StorageError enum, TrainingDataStore trait with doc comment)
 - domain/src/lib.rs (MODIFIED — added records module, re-exports for ComparisonRecord, StorageError, TrainingDataStore)
 - web/Cargo.toml (MODIFIED — added serde_json, serde-wasm-bindgen, 15 web-sys IDB features, Storage feature)
 - web/src/adapters/indexeddb_store.rs (NEW — IndexedDB adapter with open, save, fetch, delete, idb_request_to_future helper)
-- web/src/adapters/localstorage_settings.rs (NEW — localStorage UserSettings implementation with defaults)
+- web/src/adapters/localstorage_settings.rs (NEW — localStorage UserSettings implementation with defaults, error logging on write failure)
 - web/src/adapters/mod.rs (MODIFIED — added indexeddb_store, localstorage_settings modules)
-- web/src/bridge.rs (MODIFIED — added DataStoreObserver, TrendObserver, TimelineObserver)
+- web/src/bridge.rs (MODIFIED — added DataStoreObserver with signal-based store access, TrendObserver, TimelineObserver)
 - web/src/app.rs (MODIFIED — profile hydration, TrendAnalyzer/ThresholdTimeline/is_profile_loaded/db_store context providers)
-- web/src/components/comparison_view.rs (MODIFIED — wired all 4 observers, replaced DefaultSettings with LocalStorageSettings, added storage error notification)
+- web/src/components/comparison_view.rs (MODIFIED — wired all 4 observers unconditionally, replaced DefaultSettings with LocalStorageSettings, added storage error notification)
+- web/src/components/start_page.rs (MODIFIED — wired is_profile_loaded signal, loading indicator)
+- Cargo.lock (MODIFIED — updated lockfile for new dependencies)
 - docs/implementation-artifacts/sprint-status.yaml (MODIFIED — story status updated)
 - docs/implementation-artifacts/1-8-persistence-and-profile-hydration.md (MODIFIED — task checkboxes, Dev Agent Record, File List, Change Log, Status)

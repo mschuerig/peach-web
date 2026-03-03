@@ -30,8 +30,9 @@ impl LocalStorageSettings {
         if let Some(storage) = web_sys::window()
             .and_then(|w| w.local_storage().ok())
             .flatten()
+            && let Err(e) = storage.set_item(key, value)
         {
-            let _ = storage.set_item(key, value);
+            log::error!("Failed to write localStorage key '{key}': {e:?}");
         }
     }
 }
