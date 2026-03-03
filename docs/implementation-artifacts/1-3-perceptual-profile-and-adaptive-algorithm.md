@@ -1,6 +1,6 @@
 # Story 1.3: Perceptual Profile & Adaptive Algorithm
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -31,43 +31,43 @@ so that the core intelligence of the app is correct and ready for integration.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement training domain entities — Blueprint §4 (AC: 15)
-  - [ ] Create `domain/src/training/mod.rs` with re-exports
-  - [ ] Create `domain/src/training/comparison.rs` — `Comparison`, `CompletedComparison`
-  - [ ] Create `domain/src/training/pitch_matching.rs` — `PitchMatchingChallenge`, `CompletedPitchMatching`
-  - [ ] Update `domain/src/lib.rs` to declare `training` module and re-export types
-  - [ ] Inline unit tests for all training entity operations
-- [ ] Task 2: Implement PerceptualProfile — Blueprint §5 (AC: 1,2,3,4,5,6)
-  - [ ] Create `domain/src/profile.rs` — `PerceptualNote`, `PerceptualProfile`
-  - [ ] Implement Welford's online algorithm for `update()`
-  - [ ] Implement `weak_spots(count)` with untrained-first ranking
-  - [ ] Implement `overall_mean`, `overall_std_dev`, `average_threshold(range)`
-  - [ ] Implement pitch matching accumulators: `update_matching`, `matching_mean`, `matching_std_dev`
-  - [ ] Implement `reset()` and `reset_matching()`
-  - [ ] Update `domain/src/lib.rs` to declare and re-export
-  - [ ] Comprehensive inline unit tests (Welford's correctness, weak spots, summary stats, reset, matching)
-- [ ] Task 3: Implement KazezNoteStrategy — Blueprint §6 (AC: 7,8,9,10,11)
-  - [ ] Create `domain/src/strategy.rs` — `kazez_narrow`, `kazez_widen`, `TrainingSettings`, `next_comparison`
-  - [ ] Implement cold start, warm start, and adaptive difficulty logic
-  - [ ] Implement note range clamping and interval-aware note selection
-  - [ ] Update `domain/src/lib.rs` to declare and re-export
-  - [ ] Inline unit tests (formulas, cold start, warm start, note range, interval modes)
-- [ ] Task 4: Implement TrendAnalyzer — Blueprint §8.1 (AC: 12,13)
-  - [ ] Create `domain/src/trend.rs` — `TrendAnalyzer`, `Trend` enum
-  - [ ] Implement half-split comparison algorithm with 5% threshold
-  - [ ] Update `domain/src/lib.rs` to declare and re-export
-  - [ ] Inline unit tests (insufficient data, improving, stable, declining)
-- [ ] Task 5: Implement ThresholdTimeline — Blueprint §8.2 (AC: 14)
-  - [ ] Create `domain/src/timeline.rs` — `ThresholdTimeline`, `TimelineDataPoint`, `PeriodAggregate`
-  - [ ] Implement data point recording and daily aggregation
-  - [ ] Update `domain/src/lib.rs` to declare and re-export
-  - [ ] Inline unit tests (data recording, aggregation, rolling statistics)
-- [ ] Task 6: Add integration tests (AC: 16)
-  - [ ] Create `domain/tests/strategy_convergence.rs` — Kazez convergence behavior over sequences
-  - [ ] Create `domain/tests/profile_hydration.rs` — Replay records → verify profile state
-- [ ] Task 7: Verify full suite (AC: 16)
-  - [ ] Run `cargo test -p domain` — all pass
-  - [ ] Run `cargo clippy -p domain` — no warnings
+- [x] Task 1: Implement training domain entities — Blueprint §4 (AC: 15)
+  - [x] Create `domain/src/training/mod.rs` with re-exports
+  - [x] Create `domain/src/training/comparison.rs` — `Comparison`, `CompletedComparison`
+  - [x] Create `domain/src/training/pitch_matching.rs` — `PitchMatchingChallenge`, `CompletedPitchMatching`
+  - [x] Update `domain/src/lib.rs` to declare `training` module and re-export types
+  - [x] Inline unit tests for all training entity operations
+- [x] Task 2: Implement PerceptualProfile — Blueprint §5 (AC: 1,2,3,4,5,6)
+  - [x] Create `domain/src/profile.rs` — `PerceptualNote`, `PerceptualProfile`
+  - [x] Implement Welford's online algorithm for `update()`
+  - [x] Implement `weak_spots(count)` with untrained-first ranking
+  - [x] Implement `overall_mean`, `overall_std_dev`, `average_threshold(range)`
+  - [x] Implement pitch matching accumulators: `update_matching`, `matching_mean`, `matching_std_dev`
+  - [x] Implement `reset()` and `reset_matching()`
+  - [x] Update `domain/src/lib.rs` to declare and re-export
+  - [x] Comprehensive inline unit tests (Welford's correctness, weak spots, summary stats, reset, matching)
+- [x] Task 3: Implement KazezNoteStrategy — Blueprint §6 (AC: 7,8,9,10,11)
+  - [x] Create `domain/src/strategy.rs` — `kazez_narrow`, `kazez_widen`, `TrainingSettings`, `next_comparison`
+  - [x] Implement cold start, warm start, and adaptive difficulty logic
+  - [x] Implement note range clamping and interval-aware note selection
+  - [x] Update `domain/src/lib.rs` to declare and re-export
+  - [x] Inline unit tests (formulas, cold start, warm start, note range, interval modes)
+- [x] Task 4: Implement TrendAnalyzer — Blueprint §8.1 (AC: 12,13)
+  - [x] Create `domain/src/trend.rs` — `TrendAnalyzer`, `Trend` enum
+  - [x] Implement half-split comparison algorithm with 5% threshold
+  - [x] Update `domain/src/lib.rs` to declare and re-export
+  - [x] Inline unit tests (insufficient data, improving, stable, declining)
+- [x] Task 5: Implement ThresholdTimeline — Blueprint §8.2 (AC: 14)
+  - [x] Create `domain/src/timeline.rs` — `ThresholdTimeline`, `TimelineDataPoint`, `PeriodAggregate`
+  - [x] Implement data point recording and daily aggregation
+  - [x] Update `domain/src/lib.rs` to declare and re-export
+  - [x] Inline unit tests (data recording, aggregation, rolling statistics)
+- [x] Task 6: Add integration tests (AC: 16)
+  - [x] Create `domain/tests/strategy_convergence.rs` — Kazez convergence behavior over sequences
+  - [x] Create `domain/tests/profile_hydration.rs` — Replay records → verify profile state
+- [x] Task 7: Verify full suite (AC: 16)
+  - [x] Run `cargo test -p domain` — all pass (170 tests)
+  - [x] Run `cargo clippy -p domain` — no warnings
 
 ## Dev Notes
 
@@ -411,10 +411,41 @@ Recent commits show:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- Serde does not natively support `[T; 128]` arrays — resolved with custom `note_array_serde` module that serializes/deserializes as `Vec<PerceptualNote>` without adding external dependencies.
+- Clippy `collapsible_if` warning in `timeline.rs` — fixed by merging nested `if let` + `if` into single `if let && condition` expression.
+
 ### Completion Notes List
 
+- **Task 1:** Implemented `Comparison`, `CompletedComparison`, `PitchMatchingChallenge`, `CompletedPitchMatching` in `training/` module. All types use private fields with public getters, correct derives, serde roundtrip tests. 17 unit tests.
+- **Task 2:** Implemented `PerceptualNote` and `PerceptualProfile` with Welford's online algorithm for both comparison updates and pitch matching accumulators. Includes `weak_spots`, `overall_mean`, `overall_std_dev`, `average_threshold`, `reset`, `reset_matching`, `note_stats`. 22 unit tests.
+- **Task 3:** Implemented `kazez_narrow`, `kazez_widen`, `TrainingSettings`, and `next_comparison` with cold start, warm start, adaptive difficulty, note range clamping, and interval-aware note selection. 18 unit tests.
+- **Task 4:** Implemented `TrendAnalyzer` with half-split comparison algorithm (20-point minimum, 5% threshold) and `Trend` enum. 10 unit tests.
+- **Task 5:** Implemented `ThresholdTimeline` with `TimelineDataPoint`, `PeriodAggregate`, daily aggregation by ISO 8601 date prefix. 9 unit tests.
+- **Task 6:** Created `strategy_convergence.rs` (4 integration tests: convergence, divergence, oscillation, interval transposition) and `profile_hydration.rs` (7 integration tests: replay, order independence, multi-note, weak spots, matching, reset, large dataset).
+- **Task 7:** Full suite passes: 170 tests (155 unit + 15 integration), 0 clippy warnings.
+
 ### File List
+
+**New files:**
+- domain/src/training/mod.rs
+- domain/src/training/comparison.rs
+- domain/src/training/pitch_matching.rs
+- domain/src/profile.rs
+- domain/src/strategy.rs
+- domain/src/trend.rs
+- domain/src/timeline.rs
+- domain/tests/strategy_convergence.rs
+- domain/tests/profile_hydration.rs
+
+**Modified files:**
+- domain/src/lib.rs
+- docs/implementation-artifacts/sprint-status.yaml
+- docs/implementation-artifacts/1-3-perceptual-profile-and-adaptive-algorithm.md
+
+## Change Log
+
+- 2026-03-03: Implemented story 1.3 — Perceptual Profile & Adaptive Algorithm. Added training entities (Comparison, CompletedComparison, PitchMatchingChallenge, CompletedPitchMatching), PerceptualProfile with Welford's online algorithm, KazezNoteStrategy with adaptive difficulty, TrendAnalyzer, ThresholdTimeline. 170 tests passing, 0 clippy warnings.
