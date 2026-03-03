@@ -1,6 +1,6 @@
 # Story 2.1: Settings View — Core Training Parameters
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -265,18 +265,22 @@ No debug issues encountered.
 - Helper function `target_value()` extracts `.value` from event targets using `js_sys::Reflect` — no new web-sys features needed
 - Duration values rounded to 1 decimal to avoid floating-point drift
 - Loudness stored as 0.0-1.0 float in localStorage, displayed as 0-100% integer
-- Sound source defaults to "oscillator:sine" (single option, future Epic 5 extensibility)
+- Sound source reads initial value from localStorage via `LocalStorageSettings::get_string()`, defaults to "oscillator:sine" (single option, future Epic 5 extensibility)
 - Removed `#[allow(dead_code)]` from `LocalStorageSettings::set()` since it's now actively used
+- Made `LocalStorageSettings::get_string()` public for Settings UI to read keys not covered by `UserSettings` trait
 - All Tailwind classes follow established patterns: dark mode variants, 44px touch targets, focus rings, consistent spacing
+- Range sliders styled with `accent-indigo-600 dark:accent-indigo-400` for brand consistency
+- Focus ring offsets use `dark:ring-offset-gray-900` to match dark mode page background
 - All labels use `<label for="...">` + matching `id` for accessibility — no extra `aria-label` needed since labels are visually adjacent to controls
 
 ### File List
 
 - `web/src/components/settings_view.rs` — Replaced stub with full settings form (new implementation)
-- `web/src/adapters/localstorage_settings.rs` — Removed `#[allow(dead_code)]` from `set()` method
+- `web/src/adapters/localstorage_settings.rs` — Removed `#[allow(dead_code)]` from `set()`, made `get_string()` public
 - `docs/implementation-artifacts/sprint-status.yaml` — Updated story status
 - `docs/implementation-artifacts/2-1-settings-view-core-training-parameters.md` — Updated tasks, status, dev agent record
 
 ## Change Log
 
 - 2026-03-03: Implemented Settings View with all core training parameter controls (story 2.1)
+- 2026-03-03: Code review fixes — sound source reads from localStorage, accent-color on range sliders, dark mode ring offsets, removed unnecessary clones, consistent duration format

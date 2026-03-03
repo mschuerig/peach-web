@@ -33,7 +33,10 @@ pub fn SettingsView() -> impl IntoView {
         }
         .to_string(),
     );
-    let sound_source = RwSignal::new("oscillator:sine".to_string());
+    let sound_source = RwSignal::new(
+        LocalStorageSettings::get_string("peach.sound_source")
+            .unwrap_or_else(|| "oscillator:sine".to_string()),
+    );
 
     view! {
         <div class="py-12">
@@ -47,7 +50,7 @@ pub fn SettingsView() -> impl IntoView {
                     </label>
                     <select
                         id="note-range-min"
-                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                         prop:value=move || note_range_min.get().to_string()
                         on:change=move |ev| {
                             if let Ok(val) = target_value(&ev).parse::<u8>() {
@@ -76,7 +79,7 @@ pub fn SettingsView() -> impl IntoView {
                     </label>
                     <select
                         id="note-range-max"
-                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                         prop:value=move || note_range_max.get().to_string()
                         on:change=move |ev| {
                             if let Ok(val) = target_value(&ev).parse::<u8>() {
@@ -109,13 +112,13 @@ pub fn SettingsView() -> impl IntoView {
                         min="0.3"
                         max="3.0"
                         step="0.1"
-                        class="mt-1 block w-full min-h-11"
+                        class="mt-1 block w-full min-h-11 accent-indigo-600 dark:accent-indigo-400"
                         prop:value=move || format!("{:.1}", note_duration.get())
                         on:input=move |ev| {
                             if let Ok(val) = target_value(&ev).parse::<f64>() {
                                 let rounded = (val * 10.0).round() / 10.0;
                                 note_duration.set(rounded);
-                                LocalStorageSettings::set("peach.note_duration", &format!("{rounded}"));
+                                LocalStorageSettings::set("peach.note_duration", &format!("{rounded:.1}"));
                             }
                         }
                     />
@@ -128,7 +131,7 @@ pub fn SettingsView() -> impl IntoView {
                     </label>
                     <select
                         id="reference-pitch"
-                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                         prop:value=move || reference_pitch.get().to_string()
                         on:change=move |ev| {
                             if let Ok(val) = target_value(&ev).parse::<f64>() {
@@ -151,12 +154,12 @@ pub fn SettingsView() -> impl IntoView {
                     </label>
                     <select
                         id="sound-source"
-                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                         prop:value=move || sound_source.get()
                         on:change=move |ev| {
                             let val = target_value(&ev);
-                            sound_source.set(val.clone());
                             LocalStorageSettings::set("peach.sound_source", &val);
+                            sound_source.set(val);
                         }
                     >
                         <option value="oscillator:sine">"Sine Oscillator"</option>
@@ -174,7 +177,7 @@ pub fn SettingsView() -> impl IntoView {
                         min="0"
                         max="100"
                         step="1"
-                        class="mt-1 block w-full min-h-11"
+                        class="mt-1 block w-full min-h-11 accent-indigo-600 dark:accent-indigo-400"
                         prop:value=move || vary_loudness_pct.get().to_string()
                         on:input=move |ev| {
                             if let Ok(val) = target_value(&ev).parse::<i32>() {
@@ -193,12 +196,12 @@ pub fn SettingsView() -> impl IntoView {
                     </label>
                     <select
                         id="tuning-system"
-                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                        class="mt-1 block w-full min-h-11 rounded border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                         prop:value=move || tuning_system.get()
                         on:change=move |ev| {
                             let val = target_value(&ev);
-                            tuning_system.set(val.clone());
                             LocalStorageSettings::set("peach.tuning_system", &val);
+                            tuning_system.set(val);
                         }
                     >
                         <option value="equalTemperament">"Equal Temperament"</option>
@@ -209,7 +212,7 @@ pub fn SettingsView() -> impl IntoView {
 
             <A
                 href="/"
-                attr:class="mt-8 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
+                attr:class="mt-8 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
                 "Back to Start"
             </A>
