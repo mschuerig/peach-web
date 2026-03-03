@@ -75,6 +75,10 @@ impl ThresholdTimeline {
         is_correct: bool,
         reference_note: u8,
     ) {
+        assert!(
+            timestamp.len() >= 10,
+            "timestamp must be ISO 8601 format (at least 10 chars), got: {timestamp}"
+        );
         self.data_points.push(TimelineDataPoint {
             timestamp: timestamp.to_string(),
             cent_offset,
@@ -85,22 +89,18 @@ impl ThresholdTimeline {
 
     /// Aggregate data points by day (first 10 characters of ISO 8601 timestamp).
     pub fn aggregate_daily(&self) -> Vec<PeriodAggregate> {
+        use std::collections::BTreeMap;
+
         if self.data_points.is_empty() {
             return Vec::new();
         }
 
         // Group by date portion (first 10 chars of ISO 8601: "YYYY-MM-DD")
-        let mut groups: Vec<(String, Vec<&TimelineDataPoint>)> = Vec::new();
+        let mut groups: BTreeMap<&str, Vec<&TimelineDataPoint>> = BTreeMap::new();
 
         for dp in &self.data_points {
             let date = &dp.timestamp[..10];
-            if let Some(last) = groups.last_mut()
-                && last.0 == date
-            {
-                last.1.push(dp);
-                continue;
-            }
-            groups.push((date.to_string(), vec![dp]));
+            groups.entry(date).or_default().push(dp);
         }
 
         groups
@@ -111,7 +111,7 @@ impl ThresholdTimeline {
                 let correct: u32 = points.iter().filter(|p| p.is_correct).count() as u32;
 
                 PeriodAggregate {
-                    period_start: date,
+                    period_start: date.to_string(),
                     mean_threshold: sum / count as f64,
                     comparison_count: count,
                     correct_count: correct,
@@ -253,5 +253,36 @@ mod tests {
     fn test_default() {
         let timeline = ThresholdTimeline::default();
         assert!(timeline.aggregate_daily().is_empty());
+    }
+
+    // --- Input validation ---
+
+    #[test]
+    #[should_panic(expected = "timestamp must be ISO 8601")]
+    fn test_push_panics_on_short_timestamp() {
+        let mut timeline = ThresholdTimeline::new();
+        timeline.push("short", 50.0, true, 60);
+    }
+
+    // --- Non-chronological grouping ---
+
+    #[test]
+    fn test_aggregate_daily_non_chronological() {
+        let mut timeline = ThresholdTimeline::new();
+        timeline.push("2026-03-03T14:00:00Z", 40.0, true, 60);
+        timeline.push("2026-03-04T10:00:00Z", 60.0, false, 72);
+        timeline.push("2026-03-03T16:00:00Z", 50.0, true, 65);
+
+        let agg = timeline.aggregate_daily();
+        assert_eq!(agg.len(), 2);
+
+        // Day 1: (40 + 50) / 2 = 45
+        assert_eq!(agg[0].period_start(), "2026-03-03");
+        assert_eq!(agg[0].comparison_count(), 2);
+        assert!((agg[0].mean_threshold() - 45.0).abs() < 1e-10);
+
+        // Day 2: 60
+        assert_eq!(agg[1].period_start(), "2026-03-04");
+        assert_eq!(agg[1].comparison_count(), 1);
     }
 }
