@@ -1,4 +1,7 @@
-#[cfg(test)]
-mod tests {
-    // Domain tests added as types are implemented in Story 1.2+
-}
+pub mod error;
+pub mod tuning;
+pub mod types;
+
+pub use error::DomainError;
+pub use tuning::TuningSystem;
+pub use types::*;
