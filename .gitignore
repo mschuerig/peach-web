@@ -1,6 +1,9 @@
 dist/
 target/
 
+# IDE
+.idea/
+
 # OS-specific
 .DS_Store
 Thumbs.db
