@@ -17,6 +17,9 @@ pub enum DomainError {
     #[error("invalid training settings: {0}")]
     InvalidSettings(String),
 
+    #[error("invalid note range: min {min} > max {max}")]
+    InvalidNoteRange { min: u8, max: u8 },
+
     #[error("transposition out of MIDI range: note {note} + {semitones} semitones")]
     TranspositionOutOfRange { note: u8, semitones: i16 },
 }

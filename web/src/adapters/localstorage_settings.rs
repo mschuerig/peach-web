@@ -1,5 +1,5 @@
 use domain::ports::UserSettings;
-use domain::types::{Frequency, MIDINote, NoteDuration};
+use domain::types::{Frequency, MIDINote, NoteRange, NoteDuration};
 use domain::TuningSystem;
 
 pub struct LocalStorageSettings;
@@ -39,14 +39,13 @@ impl LocalStorageSettings {
 }
 
 impl UserSettings for LocalStorageSettings {
-    fn note_range_min(&self) -> MIDINote {
-        MIDINote::try_new(Self::get_u8("peach.note_range_min", 36))
-            .unwrap_or(MIDINote::new(36))
-    }
-
-    fn note_range_max(&self) -> MIDINote {
-        MIDINote::try_new(Self::get_u8("peach.note_range_max", 84))
-            .unwrap_or(MIDINote::new(84))
+    fn note_range(&self) -> NoteRange {
+        let min = MIDINote::try_new(Self::get_u8("peach.note_range_min", 36))
+            .unwrap_or(MIDINote::new(36));
+        let max = MIDINote::try_new(Self::get_u8("peach.note_range_max", 84))
+            .unwrap_or(MIDINote::new(84));
+        NoteRange::try_new(min, max)
+            .unwrap_or(NoteRange::new(MIDINote::new(36), MIDINote::new(84)))
     }
 
     fn note_duration(&self) -> NoteDuration {

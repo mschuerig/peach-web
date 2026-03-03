@@ -1,6 +1,6 @@
 # Story 1.10: Code Quality Review
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -294,28 +294,53 @@ Claude Opus 4.6
 - Concurrency audit: all `RefCell` borrow scopes verified safe, `SendWrapper` confirmed required for Leptos 0.8, `Cell<bool>` usage confirmed correct for cancellation flags. Safety comments added.
 - Resource management: IndexedDB `unwrap()` calls in JS closures documented (cannot use `Result` in JS closure context). `use_context().expect()` evaluated and confirmed preferable to alternatives.
 - Professional design review documented in Dev Agent Record — type design, API ergonomics, module boundaries all assessed positively. Deferred items: `Timestamp` newtype, `ComparisonView` decomposition.
-- Zero clippy warnings across both crates. All 248 domain tests pass. `trunk build` succeeds.
+- Zero clippy warnings across both crates. All 253 domain tests pass. `trunk build` succeeds.
 - **Action required:** Task 8.5 — manual browser smoke test (`trunk serve`, start training, complete a comparison, verify persistence, interrupt via tab switch, verify clean recovery).
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 4.6 | **Date:** 2026-03-03
+
+**Issues found:** 2 High, 2 Medium, 1 Low
+
+**H1 — `app.rs:57` — `MIDINote::new()` with deserialized IndexedDB data (Task 1.8 incomplete):**
+Hydration loop passed `record.reference_note` from IndexedDB to `MIDINote::new()`, which would panic on corrupted data > 127. **Fixed:** Migrated to `MIDINote::try_new()`, invalid records are now skipped with a warning.
+
+**H2 — `comparison_session.rs:267` — `TrainingSettings::new()` could panic on user-configured settings:**
+`LocalStorageSettings` validated each note individually but not `min <= max`. A user with `peach.note_range_min > peach.note_range_max` in localStorage would trigger a panic. **Fixed:** Introduced `NoteRange` type that validates `min <= max` by construction. `UserSettings` trait now returns `NoteRange` instead of separate min/max. `LocalStorageSettings` validates the range with fallback to defaults. `TrainingSettings` simplified — range validation now guaranteed by `NoteRange`.
+
+**M1 — Story File List omitted `start_page.rs`:**
+Task 6.2 explicitly mentioned evaluating `start_page.rs`. The file was reviewed and found adequate (already has descriptive expect message), but was not documented in File List. **Fixed:** Added to File List below.
+
+**M2 — `comparison_session.rs:314` — `eprintln!` in domain crate breaks logging pattern:**
+The web crate uses `log::error!`/`log::warn!` consistently. The domain crate uses `eprintln!` for observer panic logging because it doesn't depend on `log`. In WASM, `eprintln!` routes to `console.error` which works but is less structured. **Noted:** Adding `log` to the domain crate is a broader architectural decision deferred to future epics.
+
+**L1 — Serde `Deserialize` on value types bypasses `try_new()` validation:**
+`Frequency`, `MIDINote`, `MIDIVelocity` derive `Deserialize`, which can construct instances with invalid values by writing directly to private fields. Not exploitable currently since these types are never directly deserialized from untrusted data. **Deferred:** Consider `#[serde(try_from)]` if deserialization patterns change in future epics.
 
 ### File List
 
 **Domain crate (`domain/src/`):**
-- `error.rs` — Added 5 new `DomainError` variants for fallible constructors
+- `error.rs` — Added 6 new `DomainError` variants (5 for fallible constructors + `InvalidNoteRange` from review)
 - `types/frequency.rs` — Added `try_new()`, refactored `new()` to delegate, added 6 tests
 - `types/midi.rs` — Added `MIDINote::try_new()`, `MIDIVelocity::try_new()`, changed `transposed()` to return `Result`, added tests, updated existing test assertions
-- `strategy.rs` — Added `TrainingSettings::try_new()`, refactored `new()` to delegate, updated `transposed()` caller, added 3 tests
-- `session/comparison_session.rs` — Replaced `eprintln!` with `.ok()` in `current_interval()`
+- `types/note_range.rs` — **NEW** `NoteRange` type validating `min <= max` by construction, with `try_new()`/`new()`, 8 tests (added in review)
+- `types/mod.rs` — Added `note_range` module and re-export (added in review)
+- `strategy.rs` — Replaced separate `note_range_min`/`note_range_max` fields with `NoteRange`, simplified constructor (review refactor)
+- `session/comparison_session.rs` — Replaced `eprintln!` with `.ok()` in `current_interval()`, replaced separate note range fields with `NoteRange` (review fix)
 - `records.rs` — Added documentation for `unwrap_or(0)` safety
 - `profile.rs` — Extracted `trained_means()` helper, documented `_is_correct` and `_note` params
+- `ports.rs` — `UserSettings` trait: replaced `note_range_min()`/`note_range_max()` with `note_range() -> NoteRange` (review refactor)
 
 **Web crate (`web/src/`):**
 - `adapters/audio_oscillator.rs` — Replaced `clone_shared()` with `#[derive(Clone)]`
-- `adapters/default_settings.rs` — Added `#[allow(dead_code)]` with comment
+- `adapters/default_settings.rs` — Added `#[allow(dead_code)]` with comment, updated `UserSettings` impl for `NoteRange`
 - `adapters/indexeddb_store.rs` — Added documenting comments for `unwrap()` in JS closures, `#[allow(dead_code)]` on `delete_all`
-- `adapters/localstorage_settings.rs` — Migrated to `try_new()` with fallback defaults, `#[allow(dead_code)]` on `set`
+- `adapters/localstorage_settings.rs` — Migrated to `try_new()` with fallback defaults, `#[allow(dead_code)]` on `set`, returns `NoteRange` with min<=max validation (review fix)
 - `bridge.rs` — Made observer tuple struct fields private, added `pub fn new()` constructors
 - `components/comparison_view.rs` — Extracted `sync_session_to_signals()` helper, consolidated document binding, updated observer construction, added RefCell borrow safety comment
-- `app.rs` — Added comment explaining `SendWrapper` requirement
+- `components/start_page.rs` — Reviewed (Task 6.2): `use_context().expect()` already has descriptive message, no changes needed
+- `app.rs` — Added comment explaining `SendWrapper` requirement, migrated hydration to `MIDINote::try_new()` with skip on invalid records (review fix H1)
 
 ### Change Log
 
@@ -323,3 +348,4 @@ Claude Opus 4.6
 |---|---|
 | 2026-03-03 | Story created with status ready-for-dev |
 | 2026-03-03 | Implementation started — all 8 tasks completed, status moved to review |
+| 2026-03-03 | Code review: 2 HIGH, 2 MEDIUM, 1 LOW findings. All HIGH/MEDIUM fixed. Introduced `NoteRange` type (H2), migrated hydration to `try_new()` (H1), updated File List (M1), documented `eprintln!` inconsistency (M2), documented serde bypass (L1). |

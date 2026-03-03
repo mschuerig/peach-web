@@ -10,7 +10,7 @@ use crate::strategy::{next_comparison, TrainingSettings};
 use crate::training::{CompletedComparison, Comparison};
 use crate::tuning::TuningSystem;
 use crate::types::{
-    AmplitudeDB, Cents, DetunedMIDINote, DirectedInterval, Frequency, MIDINote, NoteDuration,
+    AmplitudeDB, Cents, DetunedMIDINote, DirectedInterval, Frequency, MIDINote, NoteRange, NoteDuration,
 };
 
 /// Feedback display duration in seconds.
@@ -52,8 +52,7 @@ pub struct ComparisonSession {
     session_reference_pitch: Frequency,
     session_note_duration: NoteDuration,
     session_vary_loudness: f64,
-    session_note_range_min: MIDINote,
-    session_note_range_max: MIDINote,
+    session_note_range: NoteRange,
 
     // Current comparison state
     current_comparison: Option<Comparison>,
@@ -82,8 +81,7 @@ impl ComparisonSession {
             session_reference_pitch: Frequency::CONCERT_440,
             session_note_duration: NoteDuration::new(1.0),
             session_vary_loudness: 0.0,
-            session_note_range_min: MIDINote::new(36),
-            session_note_range_max: MIDINote::new(84),
+            session_note_range: NoteRange::new(MIDINote::new(36), MIDINote::new(84)),
             current_comparison: None,
             current_playback_data: None,
             last_completed: None,
@@ -141,8 +139,7 @@ impl ComparisonSession {
         self.session_reference_pitch = settings.reference_pitch();
         self.session_note_duration = settings.note_duration();
         self.session_vary_loudness = settings.vary_loudness();
-        self.session_note_range_min = settings.note_range_min();
-        self.session_note_range_max = settings.note_range_max();
+        self.session_note_range = settings.note_range();
 
         // Reset session-level transient state
         self.last_completed = None;
@@ -265,8 +262,7 @@ impl ComparisonSession {
         let interval = self.random_interval();
         let profile = self.profile.borrow();
         let training_settings = TrainingSettings::new(
-            self.session_note_range_min,
-            self.session_note_range_max,
+            self.session_note_range,
             self.session_reference_pitch,
             Cents::new(0.1),
             Cents::new(100.0),
@@ -330,7 +326,7 @@ fn calculate_target_amplitude(vary_loudness: f64) -> AmplitudeDB {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Direction, Interval};
+    use crate::types::{Direction, Interval, NoteRange};
     use std::cell::Cell;
 
     // --- Mock types ---
@@ -390,11 +386,8 @@ mod tests {
     struct DefaultTestSettings;
 
     impl UserSettings for DefaultTestSettings {
-        fn note_range_min(&self) -> MIDINote {
-            MIDINote::new(36)
-        }
-        fn note_range_max(&self) -> MIDINote {
-            MIDINote::new(84)
+        fn note_range(&self) -> NoteRange {
+            NoteRange::new(MIDINote::new(36), MIDINote::new(84))
         }
         fn note_duration(&self) -> NoteDuration {
             NoteDuration::new(1.0)
@@ -415,11 +408,8 @@ mod tests {
     }
 
     impl UserSettings for LoudnessTestSettings {
-        fn note_range_min(&self) -> MIDINote {
-            MIDINote::new(36)
-        }
-        fn note_range_max(&self) -> MIDINote {
-            MIDINote::new(84)
+        fn note_range(&self) -> NoteRange {
+            NoteRange::new(MIDINote::new(36), MIDINote::new(84))
         }
         fn note_duration(&self) -> NoteDuration {
             NoteDuration::new(1.0)
