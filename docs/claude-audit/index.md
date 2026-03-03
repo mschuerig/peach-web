@@ -1,19 +1,23 @@
 ---
 repo: "/Users/michael/Projekte/peach-web"
-total_commits: 14
-audited_commits: 14
+total_commits: 18
+audited_commits: 18
 detail: "full"
-generated: "2026-03-03T01:49:14.063008+00:00"
+generated: "2026-03-03T08:57:29.045727+00:00"
 ---
 
 # Claude Code Audit Log
 
 Repository: `/Users/michael/Projekte/peach-web`  
-Total commits: 14  
-Commits with Claude Code sessions: 14
+Total commits: 18  
+Commits with Claude Code sessions: 18
 
 ## Commits
 
+- [6246c33b37](6246c33b37.md) — 2026-03-03T09:56 — Apply code review fixes for story 1.2 and mark as done (1 session, 272 messages)
+- [12894a905b](12894a905b.md) — 2026-03-03T08:45 — Implement story 1.2 domain value types and tuning system (2 sessions, 120 messages)
+- [5fabd50567](5fabd50567.md) — 2026-03-03T08:38 — Add story 1.2 Domain Value Types & Tuning System and mark as ready-for-dev (2 sessions, 93 messages)
+- [554b55f0cc](554b55f0cc.md) — 2026-03-03T02:57 — Add project metadata, utility scripts, and audit trail (1 session, 81 messages)
 - [5474240b68](5474240b68.md) — 2026-03-03T02:39 — Apply code review fixes for story 1.1 and mark as done (1 session, 131 messages)
 - [7e93650722](7e93650722.md) — 2026-03-03T02:25 — Add sprint status tracking for all 6 epics and 25 stories (3 sessions, 160 messages)
 - [3a19c86477](3a19c86477.md) — 2026-03-03T02:21 — Fix outdated project description and output paths in CLAUDE.md (2 sessions, 66 messages)

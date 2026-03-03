@@ -455,6 +455,7 @@ def generate_commit_markdown(
         lines.append("")
 
     # Conversation transcript(s)
+    msg_counter = 0
     for session_idx, (sid, messages) in enumerate(matched_sessions):
         if len(matched_sessions) > 1:
             lines.append(f"## Session {session_idx + 1} (`{sid[:8]}…`)")
@@ -478,8 +479,13 @@ def generate_commit_markdown(
                 # assistant tool_use call and are self-explanatory).
                 lines.extend(_render_blocks(msg["blocks"]))
             else:
+                msg_counter += 1
                 role_label = "🧑 Human" if msg["role"] == "human" else "🤖 Assistant"
+                role_tag = "human" if msg["role"] == "human" else "assistant"
                 ts = format_timestamp(msg["timestamp"])
+                anchor = f"msg-{role_tag}-{msg_counter}"
+                lines.append(f'<a id="{anchor}"></a>')
+                lines.append("")
                 lines.append(f"### {role_label} ({ts})")
                 lines.append("")
                 lines.extend(_render_blocks(msg["blocks"]))

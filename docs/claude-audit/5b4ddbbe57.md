@@ -46,11 +46,15 @@ docs/domain-blueprint.md                | 1018 -------------------------------
 
 *2026-03-02T21:45 → 2026-03-02T22:57*
 
+<a id="msg-human-1"></a>
+
 ### 🧑 Human (2026-03-02T21:45)
 
 <command-message>bmad-bmm-create-architecture</command-message>
 <command-name>/bmad-bmm-create-architecture</command-name>
 
+
+<a id="msg-assistant-2"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -61,6 +65,8 @@ The user wants me to execute the BMAD architecture creation workflow. Let me loa
 
 </details>
 
+
+<a id="msg-assistant-3"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -91,6 +97,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-4"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -119,6 +127,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/config.yaml
 ```
 
 </details>
+
+<a id="msg-assistant-5"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -149,6 +159,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-6"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -165,10 +177,14 @@ Let me search for existing architecture documents and discover input documents.
 </details>
 
 
+<a id="msg-assistant-7"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 Let me initialize the Architecture workflow. First, I'll check for existing documents and discover inputs.
 
+
+<a id="msg-assistant-8"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -181,6 +197,8 @@ pattern: docs/planning-artifacts/*architecture*.md
 
 </details>
 
+
+<a id="msg-assistant-9"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -212,6 +230,8 @@ No files found
 
 </details>
 
+<a id="msg-assistant-10"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -223,6 +243,8 @@ pattern: docs/planning-artifacts/*brief*.md
 
 </details>
 
+
+<a id="msg-assistant-11"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -254,6 +276,8 @@ No files found
 
 </details>
 
+<a id="msg-assistant-12"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -265,6 +289,8 @@ pattern: docs/planning-artifacts/*research*.md
 
 </details>
 
+
+<a id="msg-assistant-13"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -296,6 +322,8 @@ No files found
 
 </details>
 
+<a id="msg-assistant-14"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -307,6 +335,8 @@ pattern: docs/**/project-context.md
 
 </details>
 
+
+<a id="msg-assistant-15"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -341,6 +371,8 @@ No files found
 
 </details>
 
+<a id="msg-assistant-16"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -360,6 +392,8 @@ Let me also check for sharded folders for architecture, brief, research, and ux-
 </details>
 
 
+<a id="msg-assistant-17"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -372,6 +406,8 @@ pattern: docs/**/architecture/index.md
 </details>
 
 
+<a id="msg-assistant-18"></a>
+
 ### 🤖 Assistant (2026-03-02T21:45)
 
 <details>
@@ -383,6 +419,8 @@ pattern: docs/**/brief/index.md
 
 </details>
 
+
+<a id="msg-assistant-19"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -404,6 +442,8 @@ No files found
 ```
 
 </details>
+
+<a id="msg-assistant-20"></a>
 
 ### 🤖 Assistant (2026-03-02T21:45)
 
@@ -444,6 +484,8 @@ No files found
 
 </details>
 
+<a id="msg-assistant-21"></a>
+
 ### 🤖 Assistant (2026-03-02T21:46)
 
 No existing architecture document found — this is a **fresh workflow**. Here's what I discovered:
@@ -466,12 +508,16 @@ Michael, before I proceed to load these and set up the workspace, I want to conf
 2. **Anything else to include?** Do you have any other documents, design decisions, or context you'd like me to incorporate?
 
 
+<a id="msg-human-22"></a>
+
 ### 🧑 Human (2026-03-02T21:55)
 
 This project is a re-implementation of an existing iOS app for the web. From the app project I've created the files directly in docs, that is docs/peach-web-prd.md, docs/peach-web-ux-spec.md, and docs/domain-blueprint.md. These are meant for reference, but as with the PRD, we will probably have to create an adapted version of the UX spec. I expect the domain blueprint to be extremely solid and would like this new web implementation to be based on it. If it makes matters clearer, feel free to move these three files to a suitable subdirectory of docs.
 
 If need be, I can provide you with all the usual BMAD docs from the app project. Including extensive docs from 30 epics.
 
+
+<a id="msg-assistant-23"></a>
 
 ### 🤖 Assistant (2026-03-02T21:55)
 
@@ -493,10 +539,14 @@ Let me understand the situation:
 </details>
 
 
+<a id="msg-assistant-24"></a>
+
 ### 🤖 Assistant (2026-03-02T21:55)
 
 Got it — clear picture. Let me read all the documents to understand the full context before organizing.
 
+
+<a id="msg-assistant-25"></a>
 
 ### 🤖 Assistant (2026-03-02T21:55)
 
@@ -527,6 +577,8 @@ file_path: /Users/michael/Projekte/peach-web/docs/planning-artifacts/prd.md
 
 </details>
 
+<a id="msg-assistant-26"></a>
+
 ### 🤖 Assistant (2026-03-02T21:55)
 
 <details>
@@ -555,6 +607,8 @@ file_path: /Users/michael/Projekte/peach-web/docs/peach-web-prd.md
 ```
 
 </details>
+
+<a id="msg-assistant-27"></a>
 
 ### 🤖 Assistant (2026-03-02T21:55)
 
@@ -585,6 +639,8 @@ file_path: /Users/michael/Projekte/peach-web/docs/peach-web-ux-spec.md
 
 </details>
 
+<a id="msg-assistant-28"></a>
+
 ### 🤖 Assistant (2026-03-02T21:55)
 
 <details>
@@ -612,6 +668,8 @@ file_path: /Users/michael/Projekte/peach-web/docs/domain-blueprint.md
 
 </details>
 
+<a id="msg-assistant-29"></a>
+
 ### 🤖 Assistant (2026-03-02T21:55)
 
 <details>
@@ -634,6 +692,8 @@ I'll start by reorganizing the files, then pull up the architecture template to 
 </details>
 
 
+<a id="msg-assistant-30"></a>
+
 ### 🤖 Assistant (2026-03-02T21:55)
 
 Excellent — I've read all four documents. Clear picture:
@@ -645,6 +705,8 @@ Excellent — I've read all four documents. Clear picture:
 
 Let me organize the reference docs and set up the workspace. First, the template.
 
+
+<a id="msg-assistant-31"></a>
 
 ### 🤖 Assistant (2026-03-02T21:55)
 
@@ -675,10 +737,14 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-32"></a>
+
 ### 🤖 Assistant (2026-03-02T21:55)
 
 Now let me move the reference docs and create the architecture document.
 
+
+<a id="msg-assistant-33"></a>
 
 ### 🤖 Assistant (2026-03-02T21:55)
 
@@ -693,6 +759,8 @@ description: Create subdirectory for iOS reference docs
 </details>
 
 
+<a id="msg-assistant-34"></a>
+
 ### 🤖 Assistant (2026-03-02T21:56)
 
 <details>
@@ -705,6 +773,8 @@ description: Move iOS reference docs to subdirectory
 
 </details>
 
+
+<a id="msg-assistant-35"></a>
 
 ### 🤖 Assistant (2026-03-02T21:56)
 
@@ -731,6 +801,8 @@ File created successfully at: /Users/michael/Projekte/peach-web/docs/planning-ar
 ```
 
 </details>
+
+<a id="msg-assistant-36"></a>
 
 ### 🤖 Assistant (2026-03-02T21:56)
 
@@ -761,10 +833,14 @@ I don't think we need the 30 epics from the iOS project at this point — the do
 **[C]** Continue to project context analysis
 
 
+<a id="msg-human-37"></a>
+
 ### 🧑 Human (2026-03-02T21:58)
 
 c
 
+
+<a id="msg-assistant-38"></a>
 
 ### 🤖 Assistant (2026-03-02T21:58)
 
@@ -795,6 +871,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-39"></a>
+
 ### 🤖 Assistant (2026-03-02T21:58)
 
 <details>
@@ -823,6 +901,8 @@ The system maintains a stateless profile that's rebuilt from records on each lau
 
 </details>
 
+
+<a id="msg-assistant-40"></a>
 
 ### 🤖 Assistant (2026-03-02T21:59)
 
@@ -922,10 +1002,14 @@ NFRs that will drive architectural decisions:
 **[C]** Continue — save this analysis and begin architectural decisions
 
 
+<a id="msg-human-41"></a>
+
 ### 🧑 Human (2026-03-02T22:00)
 
 c
 
+
+<a id="msg-assistant-42"></a>
 
 ### 🤖 Assistant (2026-03-02T22:00)
 
@@ -956,6 +1040,8 @@ file_path: /Users/michael/Projekte/peach-web/docs/planning-artifacts/architectur
 
 </details>
 
+<a id="msg-assistant-43"></a>
+
 ### 🤖 Assistant (2026-03-02T22:00)
 
 <details>
@@ -979,6 +1065,8 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 ```
 
 </details>
+
+<a id="msg-assistant-44"></a>
 
 ### 🤖 Assistant (2026-03-02T22:00)
 
@@ -1004,10 +1092,14 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 
 </details>
 
+<a id="msg-assistant-45"></a>
+
 ### 🤖 Assistant (2026-03-02T22:00)
 
 Now loading step 3.
 
+
+<a id="msg-assistant-46"></a>
 
 ### 🤖 Assistant (2026-03-02T22:00)
 
@@ -1038,6 +1130,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-47"></a>
+
 ### 🤖 Assistant (2026-03-02T22:00)
 
 <details>
@@ -1058,12 +1152,16 @@ The framework choice is really the core decision here. I need to look into what'
 </details>
 
 
+<a id="msg-assistant-48"></a>
+
 ### 🤖 Assistant (2026-03-02T22:00)
 
 Before evaluating starter options, let me check the current state of the Rust/WASM ecosystem — your technology stack is already established (Rust/WASM, no backend, Web Audio API), so the key decision here is the **UI framework and build tooling**.
 
 Let me research current options.
 
+
+<a id="msg-assistant-49"></a>
 
 ### 🤖 Assistant (2026-03-02T22:00)
 
@@ -1077,6 +1175,8 @@ query: Leptos Rust WASM framework latest version 2025 2026 starter template
 </details>
 
 
+<a id="msg-assistant-50"></a>
+
 ### 🤖 Assistant (2026-03-02T22:00)
 
 <details>
@@ -1088,6 +1188,8 @@ query: Dioxus Rust WASM framework latest version 2025 2026 starter template
 
 </details>
 
+
+<a id="msg-assistant-51"></a>
 
 ### 🤖 Assistant (2026-03-02T22:00)
 
@@ -1134,6 +1236,8 @@ Links: [{"title":"Leptos is becoming best rust web framwork and How to set up ·
 
 </details>
 
+<a id="msg-assistant-52"></a>
+
 ### 🤖 Assistant (2026-03-02T22:01)
 
 <details>
@@ -1146,6 +1250,8 @@ query: Leptos 0.8 client-side only SPA WASM no SSR setup trunk
 </details>
 
 
+<a id="msg-assistant-53"></a>
+
 ### 🤖 Assistant (2026-03-02T22:01)
 
 <details>
@@ -1157,6 +1263,8 @@ query: Dioxus 0.7 client-side only web app WASM Web Audio API interop
 
 </details>
 
+
+<a id="msg-assistant-54"></a>
 
 ### 🤖 Assistant (2026-03-02T22:01)
 
@@ -1203,6 +1311,8 @@ Links: [{"title":"Deploying SSR Apps","url":"https://book.leptos.dev/deployment/
 
 </details>
 
+<a id="msg-assistant-55"></a>
+
 ### 🤖 Assistant (2026-03-02T22:01)
 
 <details>
@@ -1214,6 +1324,8 @@ query: Leptos CSR client side rendering starter template cargo generate 2025 202
 
 </details>
 
+
+<a id="msg-assistant-56"></a>
 
 ### 🤖 Assistant (2026-03-02T22:02)
 
@@ -1249,6 +1361,8 @@ Links: [{"title":"GitHub - friendlymatthew/create-leptos-csr: a binary that boot
 
 </details>
 
+<a id="msg-assistant-57"></a>
+
 ### 🤖 Assistant (2026-03-02T22:02)
 
 <details>
@@ -1283,6 +1397,8 @@ Leptos edges ahead for this use case because its signal-based reactivity aligns 
 
 </details>
 
+
+<a id="msg-assistant-58"></a>
 
 ### 🤖 Assistant (2026-03-02T22:02)
 
@@ -1412,10 +1528,14 @@ Sources:
 - [Trunk WASM bundler](https://trunkrs.dev/)
 
 
+<a id="msg-human-59"></a>
+
 ### 🧑 Human (2026-03-02T22:07)
 
 I agree with your suggestion to use Leptos.
 
+
+<a id="msg-assistant-60"></a>
 
 ### 🤖 Assistant (2026-03-02T22:07)
 
@@ -1446,6 +1566,8 @@ file_path: /Users/michael/Projekte/peach-web/docs/planning-artifacts/architectur
 
 </details>
 
+<a id="msg-assistant-61"></a>
+
 ### 🤖 Assistant (2026-03-02T22:07)
 
 <details>
@@ -1469,6 +1591,8 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 ```
 
 </details>
+
+<a id="msg-assistant-62"></a>
 
 ### 🤖 Assistant (2026-03-02T22:07)
 
@@ -1494,10 +1618,14 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 
 </details>
 
+<a id="msg-assistant-63"></a>
+
 ### 🤖 Assistant (2026-03-02T22:07)
 
 Saved. Now loading step 4 — the core architectural decisions.
 
+
+<a id="msg-assistant-64"></a>
 
 ### 🤖 Assistant (2026-03-02T22:07)
 
@@ -1527,6 +1655,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 ```
 
 </details>
+
+<a id="msg-assistant-65"></a>
 
 ### 🤖 Assistant (2026-03-02T22:08)
 
@@ -1561,6 +1691,8 @@ Now I'm thinking through the project-specific decisions that shape the actual im
 
 </details>
 
+
+<a id="msg-assistant-66"></a>
 
 ### 🤖 Assistant (2026-03-02T22:08)
 
@@ -1606,10 +1738,14 @@ I'd lean toward **Option C (split)** because:
 What are your thoughts on this?
 
 
+<a id="msg-human-67"></a>
+
 ### 🧑 Human (2026-03-02T22:10)
 
 Go with C.
 
+
+<a id="msg-assistant-68"></a>
 
 ### 🤖 Assistant (2026-03-02T22:10)
 
@@ -1620,6 +1756,8 @@ Good, the user chose option C (split storage). Let me continue with the next dec
 
 </details>
 
+
+<a id="msg-assistant-69"></a>
 
 ### 🤖 Assistant (2026-03-02T22:10)
 
@@ -1646,10 +1784,14 @@ I'd lean toward **Option A (`wasm-bindgen-futures` + `gloo-timers`)** because:
 What do you think?
 
 
+<a id="msg-human-70"></a>
+
 ### 🧑 Human (2026-03-02T22:11)
 
 A sounds good.
 
+
+<a id="msg-assistant-71"></a>
 
 ### 🤖 Assistant (2026-03-02T22:11)
 
@@ -1677,10 +1819,14 @@ I'd lean toward **Option B (UIObserver bridge)** because:
 What's your take?
 
 
+<a id="msg-human-72"></a>
+
 ### 🧑 Human (2026-03-02T22:12)
 
 B
 
+
+<a id="msg-assistant-73"></a>
 
 ### 🤖 Assistant (2026-03-02T22:13)
 
@@ -1734,10 +1880,14 @@ peach-web/
 Does this structure make sense to you?
 
 
+<a id="msg-human-74"></a>
+
 ### 🧑 Human (2026-03-02T22:14)
 
 yes, looks good
 
+
+<a id="msg-assistant-75"></a>
 
 ### 🤖 Assistant (2026-03-02T22:14)
 
@@ -1766,10 +1916,14 @@ The tradeoff is no browser back button. But the UX spec's navigation already has
 What do you prefer?
 
 
+<a id="msg-human-76"></a>
+
 ### 🧑 Human (2026-03-02T22:19)
 
 I like option A, because it gives users the opportunity to link to trainings directly. As a future addition, we may even allow to override the configuration with query parameters. That would allow users to have bookmarks to the same training type with different tuning systems, say. We may never do this, but I wouldn't want to preclude it from the start.
 
+
+<a id="msg-assistant-77"></a>
 
 ### 🤖 Assistant (2026-03-02T22:19)
 
@@ -1810,10 +1964,14 @@ The verbosity is real — `web-sys` calls are more boilerplate than JS equivalen
 What's your preference?
 
 
+<a id="msg-human-78"></a>
+
 ### 🧑 Human (2026-03-02T22:24)
 
 We don't necessarily need to bother with oscillators. In the iOS version we started with a SineWaveNotePlayer just to get some sound out of it. Later, we added the SoundFontNotePlayer and then removed the SineWaveNotePlayer entirely. I have no idea what's involved in playing presets from a SoundFont in the browser. Also, the SoundFont file is a rather hefty 31 MB. However, once loaded it can be cached for eternity.
 
+
+<a id="msg-assistant-79"></a>
 
 ### 🤖 Assistant (2026-03-02T22:24)
 
@@ -1832,10 +1990,14 @@ Let me search for the current state of Rust SoundFont crates that work in WASM.
 </details>
 
 
+<a id="msg-assistant-80"></a>
+
 ### 🤖 Assistant (2026-03-02T22:24)
 
 Good context — no point building a throwaway oscillator player if we can go straight to SoundFont. Let me research what's actually involved.
 
+
+<a id="msg-assistant-81"></a>
 
 ### 🤖 Assistant (2026-03-02T22:24)
 
@@ -1849,6 +2011,8 @@ query: rustysynth Rust SoundFont WASM crate latest version 2025 2026
 </details>
 
 
+<a id="msg-assistant-82"></a>
+
 ### 🤖 Assistant (2026-03-02T22:24)
 
 <details>
@@ -1860,6 +2024,8 @@ query: oxisynth Rust SoundFont synthesizer WASM WebAssembly crate
 
 </details>
 
+
+<a id="msg-assistant-83"></a>
 
 ### 🤖 Assistant (2026-03-02T22:24)
 
@@ -1906,6 +2072,8 @@ Links: [{"title":"A 🦀 Rust + WebAssembly + AudioWorklet example! - tutorials 
 
 </details>
 
+<a id="msg-assistant-84"></a>
+
 ### 🤖 Assistant (2026-03-02T22:25)
 
 <details>
@@ -1917,6 +2085,8 @@ query: oxisynth WASM example pitch bend per-channel tuning real-time frequency
 
 </details>
 
+
+<a id="msg-assistant-85"></a>
 
 ### 🤖 Assistant (2026-03-02T22:25)
 
@@ -1951,6 +2121,8 @@ Links: [{"title":"Wasm By Example","url":"https://wasmbyexample.dev/examples/rea
 ```
 
 </details>
+
+<a id="msg-assistant-86"></a>
 
 ### 🤖 Assistant (2026-03-02T22:26)
 
@@ -2002,6 +2174,8 @@ The speed change at ±20 cents is only about 1.2%, which should be imperceptible
 </details>
 
 
+<a id="msg-assistant-87"></a>
+
 ### 🤖 Assistant (2026-03-02T22:26)
 
 Interesting. That changes the calculus. Let me share what I found — there's a viable path to SoundFont from day one.
@@ -2046,10 +2220,14 @@ Sources:
 - [Wavetable Synth with Rust/WASM](https://cprimozic.net/blog/buliding-a-wavetable-synthesizer-with-rust-wasm-and-webaudio/)
 
 
+<a id="msg-human-88"></a>
+
 ### 🧑 Human (2026-03-02T22:32)
 
 On the web, a self-contained oscillator has a point, if for some reason the SoundFont file can't be loaded. So let's go with the hybrid B + C approach.
 
+
+<a id="msg-assistant-89"></a>
 
 ### 🤖 Assistant (2026-03-02T22:33)
 
@@ -2077,10 +2255,14 @@ I'd lean toward **Option A (plain CSS)** because:
 What do you think?
 
 
+<a id="msg-human-90"></a>
+
 ### 🧑 Human (2026-03-02T22:35)
 
 I prefer Option B. I simply don't want to deal with plain CSS anymore.
 
+
+<a id="msg-assistant-91"></a>
 
 ### 🤖 Assistant (2026-03-02T22:35)
 
@@ -2111,10 +2293,14 @@ That said, this decision can also be deferred entirely until you're ready to dep
 Do you have a preference, or should we defer this?
 
 
+<a id="msg-human-92"></a>
+
 ### 🧑 Human (2026-03-02T22:37)
 
 Neither, I intend to host it on my personal website on a shared Apache with limited configuration options. The webserver does nothing more than serve files.
 
+
+<a id="msg-assistant-93"></a>
 
 ### 🤖 Assistant (2026-03-02T22:38)
 
@@ -2140,12 +2326,16 @@ I don't think any of these need a full decision conversation now. They're either
 Does anything else come to mind that you'd like to decide now, or shall I compile everything and continue?
 
 
+<a id="msg-human-94"></a>
+
 ### 🧑 Human (2026-03-02T22:42)
 
 A few notes
 * CI/CD: I'd like to have it some time, but more as a learning opportunity than out of necessity. Automated local testing will do for a start.
 * Error handling: The domain blueprint may carry over idioms from Swift, I don't know. We should by all means do what is idiomatic in Rust.
 
+
+<a id="msg-assistant-95"></a>
 
 ### 🤖 Assistant (2026-03-02T22:43)
 
@@ -2322,10 +2512,14 @@ peach-web/
 **[C]** Continue — save these decisions and move to implementation patterns
 
 
+<a id="msg-human-96"></a>
+
 ### 🧑 Human (2026-03-02T22:44)
 
 c
 
+
+<a id="msg-assistant-97"></a>
 
 ### 🤖 Assistant (2026-03-02T22:45)
 
@@ -2356,6 +2550,8 @@ file_path: /Users/michael/Projekte/peach-web/docs/planning-artifacts/architectur
 
 </details>
 
+<a id="msg-assistant-98"></a>
+
 ### 🤖 Assistant (2026-03-02T22:45)
 
 <details>
@@ -2379,6 +2575,8 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 ```
 
 </details>
+
+<a id="msg-assistant-99"></a>
 
 ### 🤖 Assistant (2026-03-02T22:45)
 
@@ -2406,10 +2604,14 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 
 </details>
 
+<a id="msg-assistant-100"></a>
+
 ### 🤖 Assistant (2026-03-02T22:45)
 
 Saved. Loading step 5 — implementation patterns.
 
+
+<a id="msg-assistant-101"></a>
 
 ### 🤖 Assistant (2026-03-02T22:45)
 
@@ -2439,6 +2641,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 ```
 
 </details>
+
+<a id="msg-assistant-102"></a>
 
 ### 🤖 Assistant (2026-03-02T22:46)
 
@@ -2474,6 +2678,8 @@ I should present the relevant patterns concisely, focusing on what actually appl
 
 </details>
 
+
+<a id="msg-assistant-103"></a>
 
 ### 🤖 Assistant (2026-03-02T22:47)
 
@@ -2635,10 +2841,14 @@ let _ = store.save(record);           // Silent failure violates NFR8
 **[C]** Continue — save these patterns and move to project structure
 
 
+<a id="msg-human-104"></a>
+
 ### 🧑 Human (2026-03-02T22:47)
 
 c
 
+
+<a id="msg-assistant-105"></a>
 
 ### 🤖 Assistant (2026-03-02T22:48)
 
@@ -2667,6 +2877,8 @@ limit: 5
 
 </details>
 
+<a id="msg-assistant-106"></a>
+
 ### 🤖 Assistant (2026-03-02T22:48)
 
 <details>
@@ -2691,10 +2903,14 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 
 </details>
 
+<a id="msg-assistant-107"></a>
+
 ### 🤖 Assistant (2026-03-02T22:48)
 
 Now let me append the patterns section. I'll read the end of the file to find the right insertion point.
 
+
+<a id="msg-assistant-108"></a>
 
 ### 🤖 Assistant (2026-03-02T22:48)
 
@@ -2726,6 +2942,8 @@ offset: 230
 
 </details>
 
+<a id="msg-assistant-109"></a>
+
 ### 🤖 Assistant (2026-03-02T22:48)
 
 <details>
@@ -2752,10 +2970,14 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 
 </details>
 
+<a id="msg-assistant-110"></a>
+
 ### 🤖 Assistant (2026-03-02T22:48)
 
 Saved. Loading step 6.
 
+
+<a id="msg-assistant-111"></a>
 
 ### 🤖 Assistant (2026-03-02T22:48)
 
@@ -2786,6 +3008,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-112"></a>
+
 ### 🤖 Assistant (2026-03-02T22:48)
 
 <details>
@@ -2797,6 +3021,8 @@ Let me create the detailed structure mapping FRs and domain blueprint sections t
 
 </details>
 
+
+<a id="msg-assistant-113"></a>
 
 ### 🤖 Assistant (2026-03-02T22:49)
 
@@ -3046,10 +3272,14 @@ Trunk reads index.html
 **[C]** Continue — save this structure and move to validation
 
 
+<a id="msg-human-114"></a>
+
 ### 🧑 Human (2026-03-02T22:51)
 
 c
 
+
+<a id="msg-assistant-115"></a>
 
 ### 🤖 Assistant (2026-03-02T22:51)
 
@@ -3081,6 +3311,8 @@ offset: 390
 
 </details>
 
+<a id="msg-assistant-116"></a>
+
 ### 🤖 Assistant (2026-03-02T22:51)
 
 <details>
@@ -3104,6 +3336,8 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 ```
 
 </details>
+
+<a id="msg-assistant-117"></a>
 
 ### 🤖 Assistant (2026-03-02T22:52)
 
@@ -3135,10 +3369,14 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 
 </details>
 
+<a id="msg-assistant-118"></a>
+
 ### 🤖 Assistant (2026-03-02T22:52)
 
 Saved. Loading step 7 — validation.
 
+
+<a id="msg-assistant-119"></a>
 
 ### 🤖 Assistant (2026-03-02T22:52)
 
@@ -3169,6 +3407,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-120"></a>
+
 ### 🤖 Assistant (2026-03-02T22:52)
 
 <details>
@@ -3198,6 +3438,8 @@ There are also some build and asset configuration details to work out — Trunk 
 
 </details>
 
+
+<a id="msg-assistant-121"></a>
 
 ### 🤖 Assistant (2026-03-02T22:53)
 
@@ -3375,10 +3617,14 @@ Project scaffold — Cargo workspace, Leptos CSR + Trunk + Tailwind, domain crat
 **[C]** Continue — complete the architecture
 
 
+<a id="msg-human-122"></a>
+
 ### 🧑 Human (2026-03-02T22:54)
 
 c
 
+
+<a id="msg-assistant-123"></a>
 
 ### 🤖 Assistant (2026-03-02T22:54)
 
@@ -3410,6 +3656,8 @@ offset: 530
 
 </details>
 
+<a id="msg-assistant-124"></a>
+
 ### 🤖 Assistant (2026-03-02T22:54)
 
 <details>
@@ -3433,6 +3681,8 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 ```
 
 </details>
+
+<a id="msg-assistant-125"></a>
 
 ### 🤖 Assistant (2026-03-02T22:54)
 
@@ -3464,10 +3714,14 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 
 </details>
 
+<a id="msg-assistant-126"></a>
+
 ### 🤖 Assistant (2026-03-02T22:54)
 
 Now loading the final step.
 
+
+<a id="msg-assistant-127"></a>
 
 ### 🤖 Assistant (2026-03-02T22:54)
 
@@ -3498,6 +3752,8 @@ file_path: /Users/michael/Projekte/peach-web/_bmad/bmm/workflows/3-solutioning/c
 
 </details>
 
+<a id="msg-assistant-128"></a>
+
 ### 🤖 Assistant (2026-03-02T22:54)
 
 <details>
@@ -3524,6 +3780,8 @@ The file /Users/michael/Projekte/peach-web/docs/planning-artifacts/architecture.
 ```
 
 </details>
+
+<a id="msg-assistant-129"></a>
 
 ### 🤖 Assistant (2026-03-02T22:54)
 
@@ -3553,10 +3811,14 @@ The domain blueprint you brought from the iOS project gave this architecture an 
 Do you have any questions about the architecture document, or would you like to proceed with one of these next steps?
 
 
+<a id="msg-human-130"></a>
+
 ### 🧑 Human (2026-03-02T22:55)
 
 commit everything
 
+
+<a id="msg-assistant-131"></a>
 
 ### 🤖 Assistant (2026-03-02T22:56)
 
@@ -3588,6 +3850,8 @@ Changes not staged for commit:
 
 </details>
 
+<a id="msg-assistant-132"></a>
+
 ### 🤖 Assistant (2026-03-02T22:56)
 
 <details>
@@ -3618,6 +3882,8 @@ index 17ea791..0000000
 
 </details>
 
+<a id="msg-assistant-133"></a>
+
 ### 🤖 Assistant (2026-03-02T22:56)
 
 <details>
@@ -3641,10 +3907,14 @@ e0dc0ac Initial project setup.
 
 </details>
 
+<a id="msg-assistant-134"></a>
+
 ### 🤖 Assistant (2026-03-02T22:56)
 
 The changes are: three reference docs moved from `docs/` to `docs/ios-reference/`, and the new architecture document created.
 
+
+<a id="msg-assistant-135"></a>
 
 ### 🤖 Assistant (2026-03-02T22:56)
 
@@ -3658,6 +3928,8 @@ description: Stage moved reference docs and new architecture document
 
 </details>
 
+
+<a id="msg-assistant-136"></a>
 
 ### 🤖 Assistant (2026-03-02T22:56)
 
@@ -3689,6 +3961,8 @@ description: Commit architecture document and reorganized docs
 
 </details>
 
+<a id="msg-assistant-137"></a>
+
 ### 🤖 Assistant (2026-03-02T22:56)
 
 <details>
@@ -3715,10 +3989,14 @@ nothing to commit, working tree clean
 
 </details>
 
+<a id="msg-assistant-138"></a>
+
 ### 🤖 Assistant (2026-03-02T22:56)
 
 Committed. Clean working tree, 4 files changed — 3 renames + 1 new architecture document (748 lines).
 
+
+<a id="msg-human-139"></a>
 
 ### 🧑 Human (2026-03-02T22:57)
 
@@ -3726,6 +4004,8 @@ Committed. Clean working tree, 4 files changed — 3 renames + 1 new architectur
             <command-message>exit</command-message>
             <command-args></command-args>
 
+
+<a id="msg-human-140"></a>
 
 ### 🧑 Human (2026-03-02T22:57)
 
