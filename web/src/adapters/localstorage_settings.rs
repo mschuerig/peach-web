@@ -1,0 +1,66 @@
+use domain::ports::UserSettings;
+use domain::types::{Frequency, MIDINote, NoteDuration};
+use domain::TuningSystem;
+
+pub struct LocalStorageSettings;
+
+impl LocalStorageSettings {
+    fn get_string(key: &str) -> Option<String> {
+        web_sys::window()?
+            .local_storage()
+            .ok()??
+            .get_item(key)
+            .ok()?
+    }
+
+    fn get_f64(key: &str, default: f64) -> f64 {
+        Self::get_string(key)
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(default)
+    }
+
+    fn get_u8(key: &str, default: u8) -> u8 {
+        Self::get_string(key)
+            .and_then(|s| s.parse::<u8>().ok())
+            .unwrap_or(default)
+    }
+
+    /// Write a value to localStorage. Used by Settings UI (story 2.1).
+    pub fn set(key: &str, value: &str) {
+        if let Some(storage) = web_sys::window()
+            .and_then(|w| w.local_storage().ok())
+            .flatten()
+        {
+            let _ = storage.set_item(key, value);
+        }
+    }
+}
+
+impl UserSettings for LocalStorageSettings {
+    fn note_range_min(&self) -> MIDINote {
+        MIDINote::new(Self::get_u8("peach.note_range_min", 36))
+    }
+
+    fn note_range_max(&self) -> MIDINote {
+        MIDINote::new(Self::get_u8("peach.note_range_max", 84))
+    }
+
+    fn note_duration(&self) -> NoteDuration {
+        NoteDuration::new(Self::get_f64("peach.note_duration", 1.0))
+    }
+
+    fn reference_pitch(&self) -> Frequency {
+        Frequency::new(Self::get_f64("peach.reference_pitch", 440.0))
+    }
+
+    fn tuning_system(&self) -> TuningSystem {
+        match Self::get_string("peach.tuning_system").as_deref() {
+            Some("justIntonation") => TuningSystem::JustIntonation,
+            _ => TuningSystem::EqualTemperament,
+        }
+    }
+
+    fn vary_loudness(&self) -> f64 {
+        Self::get_f64("peach.vary_loudness", 0.0)
+    }
+}
