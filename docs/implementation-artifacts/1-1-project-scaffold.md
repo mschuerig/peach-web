@@ -1,6 +1,6 @@
 # Story 1.1: Project Scaffold
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -287,6 +287,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-03: Initial implementation — project scaffold with Cargo workspace, Leptos CSR, Trunk, and Tailwind CSS v4
+- 2026-03-03: Code review fixes — conditional log level (debug/release), noscript fallback, WASM target in toolchain, explicit Trunk build config, removed meaningless placeholder test
 
 ### File List
 

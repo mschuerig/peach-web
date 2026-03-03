@@ -1,7 +1,4 @@
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn placeholder() {
-        assert!(true);
-    }
+    // Domain tests added as types are implemented in Story 1.2+
 }
