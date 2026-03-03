@@ -50,7 +50,7 @@ development_status:
   1-6-comparison-session-state-machine: done
   1-7-comparison-training-ui: done
   1-8-persistence-and-profile-hydration: done
-  1-9-interruption-handling: backlog
+  1-9-interruption-handling: ready-for-dev
   epic-1-retrospective: optional
 
   # Epic 2: Training Customization
