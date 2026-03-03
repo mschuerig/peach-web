@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**peach-web** is a BMAD (Build Master AI Directories) v6.0.4 project installation — an AI-orchestrated development methodology system. It contains no traditional source code (no package.json, no application code). All functionality is driven through BMAD agents, workflows, and structured artifact generation.
+**peach-web** is a Rust/Leptos ear-training web app using BMAD v6.0.4 for AI-orchestrated development. The codebase is a Cargo workspace with two crates (`domain/` for pure Rust logic, `web/` for Leptos CSR + browser APIs) built via Trunk to WASM. BMAD agents, workflows, and structured artifact generation drive the planning and implementation process.
 
 User: Michael | Language: English | Skill level: intermediate
 
@@ -25,11 +25,11 @@ _bmad/
 
 ### Output Structure
 
-All generated artifacts are saved to `_bmad-output/`:
+All generated artifacts are saved to `docs/`:
 - `planning-artifacts/` — PRDs, architecture docs, UX designs, research reports
 - `implementation-artifacts/` — Stories, code implementations
-- `test-artifacts/` — Test plans, reviews, traceability matrices
-- `bmb-creations/` — New agents, modules, workflows created via BMB
+- `ios-reference/` — Domain blueprint and reference specs from iOS app
+- `project-context.md` — AI agent coding rules and conventions
 
 ### Configuration
 
