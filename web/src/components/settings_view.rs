@@ -1,10 +1,21 @@
-use leptos::prelude::*;
-use leptos_router::components::A;
+use std::cell::RefCell;
+use std::rc::Rc;
 
+use gloo_timers::future::TimeoutFuture;
+use leptos::prelude::*;
+use leptos::reactive::owner::LocalStorage;
+use leptos_router::components::A;
+use send_wrapper::SendWrapper;
+use wasm_bindgen_futures::spawn_local;
+
+use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use domain::ports::UserSettings;
 use domain::types::MIDINote;
-use domain::{DirectedInterval, Direction, Interval, TuningSystem};
+use domain::{
+    DirectedInterval, Direction, Interval, PerceptualProfile, ThresholdTimeline, TrendAnalyzer,
+    TuningSystem,
+};
 
 /// Extract the `.value` property from an event's target element.
 fn target_value(ev: &web_sys::Event) -> String {
@@ -97,6 +108,73 @@ pub fn SettingsView() -> impl IntoView {
             .unwrap_or_else(|| "oscillator:sine".to_string()),
     );
     let selected_intervals = RwSignal::new(LocalStorageSettings::get_selected_intervals());
+
+    // Reset training data
+    let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
+        use_context().expect("PerceptualProfile not provided");
+    let trend: SendWrapper<Rc<RefCell<TrendAnalyzer>>> =
+        use_context().expect("TrendAnalyzer not provided");
+    let timeline: SendWrapper<Rc<RefCell<ThresholdTimeline>>> =
+        use_context().expect("ThresholdTimeline not provided");
+    let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
+        use_context().expect("db_store not provided");
+
+    let dialog_ref = NodeRef::<leptos::html::Dialog>::new();
+    // "idle" | "resetting" | "success" | "error"
+    let reset_status = RwSignal::new("idle");
+
+    let open_dialog = move |_| {
+        if let Some(dialog) = dialog_ref.get()
+            && let Err(e) = dialog.show_modal()
+        {
+            web_sys::console::warn_1(
+                &format!("Failed to open reset dialog: {e:?}").into(),
+            );
+        }
+    };
+
+    let handle_cancel = move |_| {
+        if let Some(dialog) = dialog_ref.get() {
+            dialog.close();
+        }
+    };
+
+    let handle_confirm = move |_| {
+        reset_status.set("resetting");
+        let profile = Rc::clone(&*profile);
+        let trend = Rc::clone(&*trend);
+        let timeline = Rc::clone(&*timeline);
+
+        spawn_local(async move {
+            if let Some(store) = db_store.get_untracked() {
+                match store.delete_all().await {
+                    Ok(()) => {
+                        profile.borrow_mut().reset();
+                        profile.borrow_mut().reset_matching();
+                        trend.borrow_mut().reset();
+                        timeline.borrow_mut().reset();
+                        if let Some(dialog) = dialog_ref.get() {
+                            dialog.close();
+                        }
+                        reset_status.set("success");
+                        TimeoutFuture::new(2000).await;
+                        reset_status.set("idle");
+                    }
+                    Err(e) => {
+                        web_sys::console::warn_1(
+                            &format!("Failed to delete training data: {e:?}").into(),
+                        );
+                        if let Some(dialog) = dialog_ref.get() {
+                            dialog.close();
+                        }
+                        reset_status.set("error");
+                        TimeoutFuture::new(3000).await;
+                        reset_status.set("idle");
+                    }
+                }
+            }
+        });
+    };
 
     view! {
         <div class="py-12">
@@ -312,6 +390,53 @@ pub fn SettingsView() -> impl IntoView {
                     </div>
                 </fieldset>
             </div>
+
+            // Reset Training Data
+            <fieldset class="mt-8 border-t border-gray-200 pt-6 dark:border-gray-700">
+                <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    "Danger Zone"
+                </legend>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    "Permanently delete all training data, including your perceptual profile and comparison history. Your settings will be preserved."
+                </p>
+                <button
+                    on:click=open_dialog
+                    disabled=move || reset_status.get() == "resetting"
+                    class="mt-4 w-full min-h-[44px] rounded-lg bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-800 dark:ring-offset-gray-900 disabled:opacity-50"
+                >
+                    {move || match reset_status.get() {
+                        "resetting" => "Resetting\u{2026}",
+                        "success" => "Data Reset",
+                        "error" => "Reset Failed",
+                        _ => "Reset all training data",
+                    }}
+                </button>
+            </fieldset>
+
+            // Confirmation dialog
+            <dialog
+                node_ref=dialog_ref
+                class="rounded-lg p-6 max-w-md mx-auto bg-white text-gray-900 backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
+            >
+                <h2 class="text-lg font-bold">"Reset Training Data?"</h2>
+                <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    "This will permanently delete all training data, including your perceptual profile and comparison history. This cannot be undone."
+                </p>
+                <div class="mt-6 flex gap-3 justify-end">
+                    <button
+                        on:click=handle_cancel
+                        class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                        "Cancel"
+                    </button>
+                    <button
+                        on:click=handle_confirm
+                        class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                    >
+                        "Delete All Data"
+                    </button>
+                </div>
+            </dialog>
 
             <A
                 href="/"

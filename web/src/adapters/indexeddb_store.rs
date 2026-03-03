@@ -125,7 +125,6 @@ impl IndexedDbStore {
         Ok(records)
     }
 
-    #[allow(dead_code)] // Planned for Reset Training Data (Epic 2, story 2.3)
     pub async fn delete_all(&self) -> Result<(), StorageError> {
         let transaction = self
             .db
