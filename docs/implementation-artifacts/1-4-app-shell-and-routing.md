@@ -1,6 +1,6 @@
 # Story 1.4: App Shell & Routing
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -107,7 +107,7 @@ use leptos_router_macro::path;
 | `/settings` | `SettingsView` | Placeholder |
 | `/info` | `InfoView` | Placeholder |
 
-Interval mode (`?interval=true`) is NOT needed in this story — it will be handled when training views are implemented.
+Interval mode query parameter (`?intervals=M3u,M3d,...`) is NOT needed in this story — it will be handled when training views and interval selection are implemented.
 
 **Component Naming Convention:**
 
@@ -251,17 +251,44 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-03: Implemented story 1.4 — App Shell & Routing (all tasks complete)
+- 2026-03-03: Code review fixes — accessibility and consistency improvements (M2, M3, L1-L4)
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Michael (2026-03-03)
+**Outcome:** Changes Requested (6 issues) — all fixed
+
+**Issues Found & Fixed:**
+- [x] [M2] 404 page "Back to Start" link missing focus ring and touch target sizing (`app.rs`)
+- [x] [M3] Inconsistent `focus:ring-offset-2` across interactive elements (`start_page.rs`, all placeholder views)
+- [x] [L1] No visually hidden heading on StartPage — added `<h1 class="sr-only">"Peach"</h1>` (`start_page.rs`)
+- [x] [L2] Placeholder views lack vertical padding — added `py-12` to all 5 placeholder views
+- [x] [L3] `<nav>` only wrapped tertiary links — training buttons now wrapped in `<nav aria-label="Training modes">` (`start_page.rs`)
+- [x] [L4] `<nav>` missing `aria-label` — added `aria-label="Utility"` to utility nav (`start_page.rs`)
+
+**Design Decision (M1 — deferred):**
+- Interval buttons share URLs with non-interval counterparts. Deferred by design: the query parameter format will be `?intervals=M3u,M3d,m6u,M6d` (encoding specific intervals and direction), which requires interval selection from Settings (a later story). Docs updated to reflect this format.
+
+**Docs Updated:**
+- `docs/project-context.md` — routing section updated to `?intervals=<codes>` format
+- `docs/planning-artifacts/ux-design-specification.md` — route table updated
+- `docs/planning-artifacts/epics.md` — story ACs updated
+- `docs/planning-artifacts/implementation-readiness-report-2026-03-03.md` — alignment note updated
 
 ### File List
 
 - web/src/main.rs (modified — refactored to import App from app.rs)
-- web/src/app.rs (new — Router setup with all routes and 404 fallback)
+- web/src/app.rs (modified — Router setup with all routes, 404 fallback, focus ring fix)
 - web/src/components/mod.rs (new — module declarations)
-- web/src/components/start_page.rs (new — StartPage hub component)
-- web/src/components/comparison_view.rs (new — placeholder ComparisonView)
-- web/src/components/pitch_matching_view.rs (new — placeholder PitchMatchingView)
-- web/src/components/profile_view.rs (new — placeholder ProfileView)
-- web/src/components/settings_view.rs (new — placeholder SettingsView)
-- web/src/components/info_view.rs (new — placeholder InfoView)
+- web/src/components/start_page.rs (modified — StartPage hub component, accessibility improvements)
+- web/src/components/comparison_view.rs (modified — placeholder ComparisonView, padding + focus fix)
+- web/src/components/pitch_matching_view.rs (modified — placeholder PitchMatchingView, padding + focus fix)
+- web/src/components/profile_view.rs (modified — placeholder ProfileView, padding + focus fix)
+- web/src/components/settings_view.rs (modified — placeholder SettingsView, padding + focus fix)
+- web/src/components/info_view.rs (modified — placeholder InfoView, padding + focus fix)
 - docs/implementation-artifacts/sprint-status.yaml (modified — status updated)
-- docs/implementation-artifacts/1-4-app-shell-and-routing.md (modified — task tracking)
+- docs/implementation-artifacts/1-4-app-shell-and-routing.md (modified — review record)
+- docs/project-context.md (modified — interval query parameter format)
+- docs/planning-artifacts/ux-design-specification.md (modified — route table)
+- docs/planning-artifacts/epics.md (modified — interval route ACs)
+- docs/planning-artifacts/implementation-readiness-report-2026-03-03.md (modified — alignment note)

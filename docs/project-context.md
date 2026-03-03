@@ -108,7 +108,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - `leptos_router` with URL-based routes, hub-and-spoke model
 - Start page is root `/`, all views one level deep
 - Routes: `/`, `/training/comparison`, `/training/pitch-matching`, `/profile`, `/settings`, `/info`
-- Interval mode via query parameter: `?interval=true`
+- Interval mode via query parameter: `?intervals=<codes>` (e.g., `?intervals=M3u,M3d,m6u,M6d` where each code encodes interval quality, size, and direction u/d)
 
 **AudioContext Lifecycle:**
 

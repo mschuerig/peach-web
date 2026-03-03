@@ -239,7 +239,7 @@ Strong alignment. Architecture directly supports all UX requirements:
 ### Minor Alignment Notes
 
 1. **Screen reader scope expansion:** UX specifies announcements for "Training started" and "Training stopped" in addition to feedback events. PRD FR46 mentions only "feedback events." This is an expansion that enhances accessibility — not a conflict. Story 6.2 correctly covers this expanded scope.
-2. **Interval route parameters:** UX defines interval mode via query params (`?interval=true`), architecture lists only base route paths. Story 5.1 specifies `?interval=true` routing. Not a conflict — resolved at story level.
+2. **Interval route parameters:** UX defines interval mode via query params (`?intervals=<codes>`, e.g., `?intervals=M3u,M3d,m6u,M6d`), architecture lists only base route paths. Story 5.1 specifies interval query parameter routing. Not a conflict — resolved at story level.
 3. **Skip link:** UX specifies a "Skip to main content" link not explicitly in PRD, but covered by the WCAG 2.1 AA compliance requirement. Story 1.4 includes this.
 
 ### Warnings
