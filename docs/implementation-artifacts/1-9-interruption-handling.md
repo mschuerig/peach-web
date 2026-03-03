@@ -1,6 +1,6 @@
 # Story 1.9: Interruption Handling
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -230,13 +230,14 @@ None — clean implementation with no issues.
 ### Change Log
 
 - 2026-03-03: Implemented interruption handling — Page Visibility API listener, AudioContext state monitoring, shared interrupt_and_navigate closure, cleanup for all event listeners.
+- 2026-03-03: Code review fixes — removed unused `"VisibilityState"` web-sys feature, added cancelled guard to `interrupt_and_navigate`, refactored Escape handler to use shared `interrupt_and_navigate` closure (eliminates code duplication).
 
 ### File List
 
 | File | Change |
 |---|---|
-| `web/Cargo.toml` | Added `"AudioContextState"` and `"VisibilityState"` web-sys features |
+| `web/Cargo.toml` | Added `"AudioContextState"` web-sys feature |
 | `web/src/adapters/audio_context.rs` | Added `set_state_change_handler()` and `clear_state_change_handler()` methods |
-| `web/src/components/comparison_view.rs` | Added `interrupt_and_navigate` shared closure, `visibilitychange` listener, AudioContext `onstatechange` handler, updated `on_cleanup` to remove all listeners |
+| `web/src/components/comparison_view.rs` | Added `interrupt_and_navigate` shared closure with cancelled guard, `visibilitychange` listener, AudioContext `onstatechange` handler, refactored Escape to use shared closure, updated `on_cleanup` to remove all listeners |
 | `docs/implementation-artifacts/sprint-status.yaml` | Updated `1-9-interruption-handling` status |
 | `docs/implementation-artifacts/1-9-interruption-handling.md` | Updated task checkboxes, Dev Agent Record, File List, Change Log, Status |
