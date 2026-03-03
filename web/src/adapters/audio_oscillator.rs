@@ -161,10 +161,9 @@ impl NotePlayer for OscillatorNotePlayer {
             .stop_with_when(stop_time)
             .map_err(|e| AudioError::PlaybackFailed(format!("{:?}", e)))?;
 
-        // Remove from active_handles: timed notes self-terminate via Web Audio scheduling.
-        // stop_all() won't catch in-progress timed notes, but they're short-lived and
-        // self-terminating. Future stories can add onended listeners if needed.
-        self.active_handles.borrow_mut().pop();
+        // Keep handle in active_handles so stop_all() can stop it early
+        // (e.g., when the user answers during note2 playback).
+        // Handles are pruned on next create_and_start, or cleared by stop_all().
 
         Ok(())
     }
