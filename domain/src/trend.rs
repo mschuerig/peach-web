@@ -30,6 +30,10 @@ impl TrendAnalyzer {
 
     /// Append an absolute offset value.
     pub fn push(&mut self, abs_offset: f64) {
+        assert!(
+            abs_offset >= 0.0,
+            "abs_offset must be non-negative, got {abs_offset}"
+        );
         self.abs_offsets.push(abs_offset);
     }
 
@@ -193,5 +197,21 @@ mod tests {
     fn test_default() {
         let analyzer = TrendAnalyzer::default();
         assert_eq!(analyzer.trend(), None);
+    }
+
+    // --- Input validation ---
+
+    #[test]
+    #[should_panic(expected = "must be non-negative")]
+    fn test_push_panics_on_negative() {
+        let mut analyzer = TrendAnalyzer::new();
+        analyzer.push(-1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "must be non-negative")]
+    fn test_push_panics_on_nan() {
+        let mut analyzer = TrendAnalyzer::new();
+        analyzer.push(f64::NAN);
     }
 }

@@ -9,12 +9,14 @@ use crate::types::{Cents, DetunedMIDINote, DirectedInterval, Direction, Frequenc
 /// Kazez narrow: reduce difficulty after correct answer.
 /// Formula: p * (1.0 - 0.05 * sqrt(p))
 pub fn kazez_narrow(p: f64) -> f64 {
+    assert!(p >= 0.0, "kazez_narrow: p must be non-negative, got {p}");
     p * (1.0 - 0.05 * p.sqrt())
 }
 
 /// Kazez widen: increase difficulty after incorrect answer.
 /// Formula: p * (1.0 + 0.09 * sqrt(p))
 pub fn kazez_widen(p: f64) -> f64 {
+    assert!(p >= 0.0, "kazez_widen: p must be non-negative, got {p}");
     p * (1.0 + 0.09 * p.sqrt())
 }
 
@@ -420,5 +422,29 @@ mod tests {
         }
         assert!(pos_count > 0, "Should produce positive offsets");
         assert!(neg_count > 0, "Should produce negative offsets");
+    }
+
+    #[test]
+    #[should_panic(expected = "must be non-negative")]
+    fn test_kazez_narrow_panics_on_negative() {
+        kazez_narrow(-1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "must be non-negative")]
+    fn test_kazez_widen_panics_on_negative() {
+        kazez_widen(-1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "must be non-negative")]
+    fn test_kazez_narrow_panics_on_nan() {
+        kazez_narrow(f64::NAN);
+    }
+
+    #[test]
+    #[should_panic(expected = "must be non-negative")]
+    fn test_kazez_widen_panics_on_nan() {
+        kazez_widen(f64::NAN);
     }
 }

@@ -38,7 +38,7 @@ pub struct PerceptualNote {
     current_difficulty: f64,
 }
 
-impl PerceptualNote {
+impl Default for PerceptualNote {
     fn default() -> Self {
         Self {
             mean: 0.0,
@@ -48,7 +48,9 @@ impl PerceptualNote {
             current_difficulty: 100.0,
         }
     }
+}
 
+impl PerceptualNote {
     pub fn mean(&self) -> f64 {
         self.mean
     }
@@ -94,6 +96,7 @@ impl PerceptualProfile {
     /// `cent_offset` is the absolute magnitude of the cent difference presented.
     /// `is_correct` is accepted for future use but not used in computation.
     pub fn update(&mut self, note: MIDINote, cent_offset: f64, _is_correct: bool) {
+        assert!(!cent_offset.is_nan(), "cent_offset must not be NaN");
         let stats = &mut self.notes[note.raw_value() as usize];
         stats.sample_count += 1;
         let delta = cent_offset - stats.mean;
@@ -189,6 +192,7 @@ impl PerceptualProfile {
 
     /// Update aggregate pitch matching statistics using Welford's on abs(cent_error).
     pub fn update_matching(&mut self, _note: MIDINote, cent_error: f64) {
+        assert!(!cent_error.is_nan(), "cent_error must not be NaN");
         let abs_error = cent_error.abs();
         self.matching_count += 1;
         let delta = abs_error - self.matching_mean_abs;
@@ -510,5 +514,19 @@ mod tests {
         let profile = PerceptualProfile::default();
         assert_eq!(profile.overall_mean(), None);
         assert_eq!(profile.matching_mean(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "cent_offset must not be NaN")]
+    fn test_update_panics_on_nan() {
+        let mut profile = PerceptualProfile::new();
+        profile.update(MIDINote::new(60), f64::NAN, true);
+    }
+
+    #[test]
+    #[should_panic(expected = "cent_error must not be NaN")]
+    fn test_update_matching_panics_on_nan() {
+        let mut profile = PerceptualProfile::new();
+        profile.update_matching(MIDINote::new(60), f64::NAN);
     }
 }
