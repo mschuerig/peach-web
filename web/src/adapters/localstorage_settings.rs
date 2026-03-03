@@ -5,7 +5,9 @@ use domain::TuningSystem;
 pub struct LocalStorageSettings;
 
 impl LocalStorageSettings {
-    fn get_string(key: &str) -> Option<String> {
+    /// Read a string value from localStorage. Used by Settings UI for keys
+    /// not covered by the `UserSettings` trait (e.g. `peach.sound_source`).
+    pub fn get_string(key: &str) -> Option<String> {
         web_sys::window()?
             .local_storage()
             .ok()??

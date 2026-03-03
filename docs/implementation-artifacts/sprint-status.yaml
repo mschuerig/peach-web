@@ -56,7 +56,7 @@ development_status:
 
   # Epic 2: Training Customization
   epic-2: in-progress
-  2-1-settings-view-core-training-parameters: review
+  2-1-settings-view-core-training-parameters: done
   2-2-interval-selection: backlog
   2-3-reset-training-data: backlog
   epic-2-retrospective: optional
