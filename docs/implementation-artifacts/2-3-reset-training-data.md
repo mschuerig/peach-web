@@ -1,6 +1,6 @@
 # Story 2.3: Reset Training Data
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -269,6 +269,22 @@ Claude Opus 4.6
 - `web/src/components/settings_view.rs` — Added reset button, confirmation dialog, and async reset handler with context wiring
 - `web/src/adapters/indexeddb_store.rs` — Removed `#[allow(dead_code)]` from `delete_all()`
 
+## Senior Developer Review (AI)
+
+**Reviewer:** Code Review Workflow | **Date:** 2026-03-04
+
+**Issues Found:** 1 High, 3 Medium, 2 Low | **All Fixed:** Yes
+
+| # | Severity | Issue | Resolution |
+|---|---|---|---|
+| H1 | HIGH | Missing `else` branch for `None` db_store — button stuck in "Resetting..." forever if IndexedDB not loaded | Added else branch that treats None as Ok(()) and still resets in-memory state |
+| M1 | MEDIUM | `reset_status` used string literals instead of enum — error-prone | Replaced with `ResetStatus` enum (Idle, Resetting, Success, Error) |
+| M2 | MEDIUM | Dialog buttons not disabled during reset — allows double-click duplicate operations | Added `disabled` + `disabled:opacity-50` to both Cancel and Delete buttons |
+| M3 | MEDIUM | AC5 (active session stopped) not explicitly implemented — relies on SPA navigation unmounting ComparisonView | Accepted limitation: ComparisonSession is component-local, not in app-level context. SPA routing unmounts the training view before user can access Settings. Domain's `ComparisonSession::reset_training_data()` exists but requires architectural refactoring to use from Settings. |
+| L1 | LOW | Two separate `borrow_mut()` calls on profile | Combined into single scoped borrow |
+| L2 | LOW | Missing `aria-labelledby` on dialog | Added `aria-labelledby="reset-dialog-title"` and `id` on h2 |
+
 ## Change Log
 
+- 2026-03-04: Code review fixes — replaced string literals with ResetStatus enum, added else branch for None db_store, disabled dialog buttons during reset, combined double borrow_mut, added aria-labelledby to dialog. Documented AC5 accepted limitation.
 - 2026-03-04: Implemented story 2.3 — Reset Training Data. Added destructive reset button with confirmation dialog to SettingsView, wired to existing domain reset methods and IndexedDbStore::delete_all(). All automated validations pass (clippy zero warnings, 253 domain tests, trunk build).

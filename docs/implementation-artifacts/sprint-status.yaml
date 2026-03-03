@@ -55,10 +55,10 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Training Customization
-  epic-2: in-progress
+  epic-2: done
   2-1-settings-view-core-training-parameters: done
   2-2-interval-selection: done
-  2-3-reset-training-data: review
+  2-3-reset-training-data: done
   epic-2-retrospective: optional
 
   # Epic 3: Perceptual Profile & Visualization
