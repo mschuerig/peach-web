@@ -1,6 +1,6 @@
 # Story 1.1: Project Scaffold
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,30 +24,30 @@ so that I have a solid foundation to build the application on.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Install toolchain prerequisites (AC: #1, #4)
-  - [ ] 1.1 Install Trunk: `cargo install trunk`
-  - [ ] 1.2 Add WASM target: `rustup target add wasm32-unknown-unknown`
-- [ ] Task 2: Create Cargo workspace with two crates (AC: #2)
-  - [ ] 2.1 Create root `Cargo.toml` with workspace members `["domain", "web"]` and `resolver = "2"`
-  - [ ] 2.2 Create `domain/Cargo.toml` — pure Rust crate, dependencies: `serde` (with derive feature), `thiserror`, `rand`
-  - [ ] 2.3 Create `domain/src/lib.rs` — empty module with a placeholder test
-  - [ ] 2.4 Create `web/Cargo.toml` — depends on `leptos = { version = "0.8", features = ["csr"] }`, `leptos_router = "0.8"`, `console_log`, `console_error_panic_hook`, and `domain = { path = "../domain" }`
-  - [ ] 2.5 Create `web/src/main.rs` — Leptos mount point that renders a "Peach" heading
-- [ ] Task 3: Configure Trunk build pipeline (AC: #1)
-  - [ ] 3.1 Create `Trunk.toml` at project root with `[tools] tailwindcss = "4"` and build target pointing to `index.html`
-  - [ ] 3.2 Create `index.html` at project root with `data-trunk` attributes, viewport meta tag, and `<link data-trunk rel="tailwind-css" href="input.css" />`
-- [ ] Task 4: Configure Tailwind CSS (AC: #3)
-  - [ ] 4.1 Create `input.css` with Tailwind v4 directives: `@import 'tailwindcss';` and `@source` pointing to Rust source files
-  - [ ] 4.2 Apply a Tailwind utility class to the "Peach" heading to verify CSS processing works
-- [ ] Task 5: Add project scaffolding files (AC: #1)
-  - [ ] 5.1 Create `.gitignore` with `dist/`, `target/`, and OS-specific entries
-  - [ ] 5.2 Create `rust-toolchain.toml` specifying stable toolchain
-- [ ] Task 6: Verify all acceptance criteria (AC: #1-#5)
-  - [ ] 6.1 Run `trunk serve` — confirm page loads with "Peach" heading
-  - [ ] 6.2 Run `trunk build` — confirm Tailwind classes are in output CSS
-  - [ ] 6.3 Run `cargo test -p domain` — confirm domain crate compiles and tests pass natively
-  - [ ] 6.4 Inspect `domain/Cargo.toml` — confirm zero browser dependencies
-  - [ ] 6.5 Inspect `index.html` — confirm viewport meta tag present
+- [x] Task 1: Install toolchain prerequisites (AC: #1, #4)
+  - [x] 1.1 Install Trunk: `cargo install trunk`
+  - [x] 1.2 Add WASM target: `rustup target add wasm32-unknown-unknown`
+- [x] Task 2: Create Cargo workspace with two crates (AC: #2)
+  - [x] 2.1 Create root `Cargo.toml` with workspace members `["domain", "web"]` and `resolver = "2"`
+  - [x] 2.2 Create `domain/Cargo.toml` — pure Rust crate, dependencies: `serde` (with derive feature), `thiserror`, `rand`
+  - [x] 2.3 Create `domain/src/lib.rs` — empty module with a placeholder test
+  - [x] 2.4 Create `web/Cargo.toml` — depends on `leptos = { version = "0.8", features = ["csr"] }`, `leptos_router = "0.8"`, `console_log`, `console_error_panic_hook`, and `domain = { path = "../domain" }`
+  - [x] 2.5 Create `web/src/main.rs` — Leptos mount point that renders a "Peach" heading
+- [x] Task 3: Configure Trunk build pipeline (AC: #1)
+  - [x] 3.1 Create `Trunk.toml` at project root with `[tools] tailwindcss = "4"` and build target pointing to `index.html`
+  - [x] 3.2 Create `index.html` at project root with `data-trunk` attributes, viewport meta tag, and `<link data-trunk rel="tailwind-css" href="input.css" />`
+- [x] Task 4: Configure Tailwind CSS (AC: #3)
+  - [x] 4.1 Create `input.css` with Tailwind v4 directives: `@import 'tailwindcss';` and `@source` pointing to Rust source files
+  - [x] 4.2 Apply a Tailwind utility class to the "Peach" heading to verify CSS processing works
+- [x] Task 5: Add project scaffolding files (AC: #1)
+  - [x] 5.1 Create `.gitignore` with `dist/`, `target/`, and OS-specific entries
+  - [x] 5.2 Create `rust-toolchain.toml` specifying stable toolchain
+- [x] Task 6: Verify all acceptance criteria (AC: #1-#5)
+  - [x] 6.1 Run `trunk serve` — confirm page loads with "Peach" heading
+  - [x] 6.2 Run `trunk build` — confirm Tailwind classes are in output CSS
+  - [x] 6.3 Run `cargo test -p domain` — confirm domain crate compiles and tests pass natively
+  - [x] 6.4 Inspect `domain/Cargo.toml` — confirm zero browser dependencies
+  - [x] 6.5 Inspect `index.html` — confirm viewport meta tag present
 
 ## Dev Notes
 
@@ -266,8 +266,40 @@ cargo clippy -p domain       # Run before committing
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- Trunk 0.20.2 did not support workspace builds; upgraded to 0.21.14
+- Trunk `<link data-trunk rel="rust">` requires `href="web"` to locate the web crate in a workspace (not `data-cargo-package`)
+- `getrandom` 0.3.x requires explicit WASM backend config: `.cargo/config.toml` with `--cfg getrandom_backend="wasm_js"` and `getrandom = { version = "0.3", features = ["wasm_js"] }` in web crate
+- Trunk.toml `tailwindcss = "4"` caused 404; must specify exact version (e.g., `"4.2.1"`)
 
 ### Completion Notes List
 
+- Created Cargo workspace with `domain` (pure Rust) and `web` (Leptos CSR) crates
+- Domain crate has zero browser dependencies; compiles and passes tests natively with `cargo test -p domain`
+- Web crate renders "Peach" heading with Tailwind CSS utility classes
+- Trunk 0.21.14 configured with Tailwind CSS v4.2.1 standalone CLI (no npm)
+- All 5 acceptance criteria verified and passing
+- Added `.cargo/config.toml` for WASM getrandom backend (required by `rand` 0.9 in domain crate when compiled as WASM dependency)
+
+### Change Log
+
+- 2026-03-03: Initial implementation — project scaffold with Cargo workspace, Leptos CSR, Trunk, and Tailwind CSS v4
+
 ### File List
+
+- `Cargo.toml` (new) — workspace definition
+- `Cargo.lock` (new) — dependency lock file
+- `Trunk.toml` (new) — Trunk build pipeline config
+- `index.html` (new) — Trunk entry point with viewport meta tag
+- `input.css` (new) — Tailwind v4 directives
+- `.gitignore` (new) — dist/, target/, OS files
+- `rust-toolchain.toml` (new) — stable Rust toolchain
+- `.cargo/config.toml` (new) — WASM getrandom backend config
+- `domain/Cargo.toml` (new) — pure Rust domain crate
+- `domain/src/lib.rs` (new) — empty module with placeholder test
+- `web/Cargo.toml` (new) — Leptos CSR web crate
+- `web/src/main.rs` (new) — Leptos mount point with "Peach" heading
+- `docs/implementation-artifacts/1-1-project-scaffold.md` (modified) — story status updated
