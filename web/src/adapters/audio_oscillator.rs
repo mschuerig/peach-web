@@ -10,6 +10,7 @@ use super::audio_context::AudioContextManager;
 /// Shared inner state for a playing oscillator note.
 struct OscillatorHandleInner {
     oscillator: web_sys::OscillatorNode,
+    gain: web_sys::GainNode,
     stopped: bool,
 }
 
@@ -19,10 +20,11 @@ pub struct OscillatorPlaybackHandle {
 }
 
 impl OscillatorPlaybackHandle {
-    fn new(oscillator: web_sys::OscillatorNode) -> Self {
+    fn new(oscillator: web_sys::OscillatorNode, gain: web_sys::GainNode) -> Self {
         Self {
             inner: Rc::new(RefCell::new(OscillatorHandleInner {
                 oscillator,
+                gain,
                 stopped: false,
             })),
         }
@@ -43,7 +45,12 @@ impl PlaybackHandle for OscillatorPlaybackHandle {
     fn stop(&mut self) {
         let mut inner = self.inner.borrow_mut();
         if !inner.stopped {
-            let _ = inner.oscillator.stop();
+            if let Err(e) = inner.oscillator.stop() {
+                log::warn!("Failed to stop oscillator: {e:?}");
+            }
+            if let Err(e) = inner.gain.disconnect() {
+                log::warn!("Failed to disconnect gain node: {e:?}");
+            }
             inner.stopped = true;
         }
     }
@@ -80,51 +87,43 @@ impl OscillatorNotePlayer {
     }
 
     fn prune_stopped(&self) {
-        self.active_handles
-            .borrow_mut()
-            .retain(|h| !h.is_stopped());
+        self.active_handles.borrow_mut().retain(|h| !h.is_stopped());
     }
 
     fn create_and_start(
         &self,
+        ctx_rc: &Rc<RefCell<AudioContext>>,
         frequency: Frequency,
         _velocity: MIDIVelocity,
         amplitude_db: AmplitudeDB,
     ) -> Result<OscillatorPlaybackHandle, AudioError> {
         self.prune_stopped();
 
-        let ctx_rc = self.get_context()?;
         let ctx = ctx_rc.borrow();
 
-        let osc = ctx.create_oscillator().map_err(|e| {
-            AudioError::EngineStartFailed(format!("{:?}", e))
-        })?;
+        let osc = ctx
+            .create_oscillator()
+            .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
         osc.set_type(OscillatorType::Sine);
         osc.frequency().set_value(frequency.raw_value() as f32);
 
-        let gain_node = ctx.create_gain().map_err(|e| {
-            AudioError::EngineStartFailed(format!("{:?}", e))
-        })?;
+        let gain_node = ctx
+            .create_gain()
+            .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
         let gain_linear = 10_f32.powf(amplitude_db.raw_value() / 20.0);
         gain_node.gain().set_value(gain_linear);
 
-        osc.connect_with_audio_node(&gain_node).map_err(|e| {
-            AudioError::EngineStartFailed(format!("{:?}", e))
-        })?;
+        osc.connect_with_audio_node(&gain_node)
+            .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
         gain_node
             .connect_with_audio_node(&ctx.destination())
-            .map_err(|e| {
-                AudioError::EngineStartFailed(format!("{:?}", e))
-            })?;
+            .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
 
-        osc.start().map_err(|e| {
-            AudioError::EngineStartFailed(format!("{:?}", e))
-        })?;
+        osc.start()
+            .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
 
-        let handle = OscillatorPlaybackHandle::new(osc);
-        self.active_handles
-            .borrow_mut()
-            .push(handle.clone_shared());
+        let handle = OscillatorPlaybackHandle::new(osc, gain_node);
+        self.active_handles.borrow_mut().push(handle.clone_shared());
         Ok(handle)
     }
 }
@@ -138,7 +137,8 @@ impl NotePlayer for OscillatorNotePlayer {
         velocity: MIDIVelocity,
         amplitude_db: AmplitudeDB,
     ) -> Result<Self::Handle, AudioError> {
-        self.create_and_start(frequency, velocity, amplitude_db)
+        let ctx_rc = self.get_context()?;
+        self.create_and_start(&ctx_rc, frequency, velocity, amplitude_db)
     }
 
     fn play_for_duration(
@@ -148,21 +148,28 @@ impl NotePlayer for OscillatorNotePlayer {
         velocity: MIDIVelocity,
         amplitude_db: AmplitudeDB,
     ) -> Result<(), AudioError> {
-        let handle = self.create_and_start(frequency, velocity, amplitude_db)?;
+        let ctx_rc = self.get_context()?;
+        let handle = self.create_and_start(&ctx_rc, frequency, velocity, amplitude_db)?;
 
         // Schedule automatic stop using Web Audio's high-precision clock.
-        let ctx_rc = self.get_context()?;
         let ctx = ctx_rc.borrow();
         let stop_time = ctx.current_time() + duration.raw_value();
-        let inner = handle.inner.borrow();
-        inner.oscillator.stop_with_when(stop_time).map_err(|e| {
-            AudioError::EngineStartFailed(format!("{:?}", e))
-        })?;
+        handle
+            .inner
+            .borrow()
+            .oscillator
+            .stop_with_when(stop_time)
+            .map_err(|e| AudioError::PlaybackFailed(format!("{:?}", e)))?;
+
+        // Remove from active_handles: timed notes self-terminate via Web Audio scheduling.
+        // stop_all() won't catch in-progress timed notes, but they're short-lived and
+        // self-terminating. Future stories can add onended listeners if needed.
+        self.active_handles.borrow_mut().pop();
 
         Ok(())
     }
 
-    fn stop_all(&mut self) {
+    fn stop_all(&self) {
         let mut handles = self.active_handles.borrow_mut();
         for handle in handles.iter_mut() {
             handle.stop();

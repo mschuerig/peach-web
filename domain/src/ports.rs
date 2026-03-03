@@ -11,6 +11,8 @@ pub enum AudioError {
     InvalidDuration(String),
     #[error("audio context unavailable")]
     ContextUnavailable,
+    #[error("playback failed: {0}")]
+    PlaybackFailed(String),
 }
 
 /// Handle to a currently playing note. Allows stopping or adjusting the note.
@@ -44,7 +46,7 @@ pub trait NotePlayer {
     ) -> Result<(), AudioError>;
 
     /// Stop all currently playing notes immediately.
-    fn stop_all(&mut self);
+    fn stop_all(&self);
 }
 
 #[cfg(test)]
@@ -73,6 +75,12 @@ mod tests {
     fn test_audio_error_context_unavailable_display() {
         let err = AudioError::ContextUnavailable;
         assert_eq!(err.to_string(), "audio context unavailable");
+    }
+
+    #[test]
+    fn test_audio_error_playback_failed_display() {
+        let err = AudioError::PlaybackFailed("scheduling error".to_string());
+        assert_eq!(err.to_string(), "playback failed: scheduling error");
     }
 
     #[test]
@@ -119,10 +127,10 @@ mod tests {
                 Ok(())
             }
 
-            fn stop_all(&mut self) {}
+            fn stop_all(&self) {}
         }
 
-        let mut player = MockPlayer;
+        let player = MockPlayer;
         let mut handle = player
             .play(
                 Frequency::new(440.0),
