@@ -1,17 +1,25 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
+use leptos_router::hooks::use_navigate;
 
 #[component]
 pub fn StartPage() -> impl IntoView {
+    let navigate = use_navigate();
+    let on_comparison = move |_| {
+        navigate("/training/comparison", Default::default());
+    };
+
     view! {
         <div class="flex flex-col items-center gap-6 py-12">
             <h1 class="sr-only">"Peach"</h1>
 
             <nav aria-label="Training modes" class="flex w-full flex-col items-center gap-6">
-                <A href="/training/comparison"
-                    attr:class="block w-full min-h-11 rounded-lg bg-indigo-600 px-6 py-4 text-center text-lg font-semibold text-white shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400">
+                <button
+                    on:click=on_comparison
+                    class="block w-full min-h-11 rounded-lg bg-indigo-600 px-6 py-4 text-center text-lg font-semibold text-white shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                >
                     "Comparison"
-                </A>
+                </button>
 
                 <A href="/training/pitch-matching"
                     attr:class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">

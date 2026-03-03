@@ -1,6 +1,6 @@
 # Story 1.7: Comparison Training UI
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -69,7 +69,7 @@ so that I can train my pitch discrimination through the core reflexive loop.
   - [x] 5.4 Create `DefaultSettings` adapter
   - [x] 5.5 Create `ProfileObserver` wrapping shared profile
   - [x] 5.6 Create `ComparisonSession` with profile, observers=[ProfileObserver], resettables=[], intervals=[Prime/Up for unison mode]
-  - [x] 5.7 Create `RwSignal`s for UI state: `session_state`, `show_feedback`, `is_last_correct`, `buttons_enabled`
+  - [x] 5.7 Create `RwSignal`s for UI state: `show_feedback`, `is_last_correct`, `buttons_enabled`, `sr_announcement`
   - [x] 5.8 Implement `sync_signals()` closure that reads session state and updates all signals
   - [x] 5.9 Implement async training loop via `wasm_bindgen_futures::spawn_local`: play note1 → wait → on_note1_finished → play note2 → wait → on_note2_finished (if still PlayingNote2) → wait for answer → wait feedback → on_feedback_finished → loop
   - [x] 5.10 Implement answer handler closure: guard on PlayingNote2/AwaitingAnswer states, call `handle_answer(is_higher, timestamp)`, sync signals, schedule `on_feedback_finished` via `gloo_timers::callback::Timeout` after 400ms
@@ -719,6 +719,14 @@ Claude Opus 4.6
 
 - 2026-03-03: Implemented story 1.7 Comparison Training UI — full training loop, keyboard shortcuts, navigation, accessibility, composition root wiring
 - 2026-03-03: Fixed feedback timing (main loop controls feedback duration instead of separate timer), early answer detection (responsive polling during note2), note overlap (stop_all before each note1, stop note2 on early answer), keydown listener cleanup on unmount, play_for_duration now keeps handles for stop_all support
+- 2026-03-03: Code review fixes — Start Page Comparison button Space key support (AC2), eager AudioContext creation for Safari compatibility, corrected task 5.7 description, updated File List
+
+### Code Review Fixes Applied
+
+- **H1 (AC2):** Changed Start Page Comparison link from `<A>` to `<button>` with `use_navigate()` — Space key now activates it
+- **H2 (Safari audio):** Added eager `AudioContext::get_or_create()` in ComparisonView synchronous render path before `spawn_local` — satisfies Safari/iOS user gesture requirement
+- **M1 (Task accuracy):** Fixed task 5.7 description to reflect actual signals created (`sr_announcement` instead of `session_state`)
+- **M2 (File List):** Added `Cargo.lock` and `start_page.rs` to Modified files list
 
 ### Known Issues
 
@@ -731,11 +739,13 @@ New files:
 - web/src/bridge.rs
 
 Modified files:
+- Cargo.lock (updated for new dependencies)
 - web/Cargo.toml (added js-sys, send_wrapper, web-sys features)
 - web/src/adapters/mod.rs (added default_settings module)
 - web/src/adapters/audio_oscillator.rs (play_for_duration keeps handles in active_handles for stop_all support)
 - web/src/main.rs (added bridge module)
 - web/src/app.rs (added shared context providers for PerceptualProfile and AudioContextManager)
+- web/src/components/start_page.rs (Comparison link changed to button for Space key support — AC2)
 - web/src/components/comparison_view.rs (complete rewrite: training loop, UI, keyboard, nav, accessibility)
 - docs/implementation-artifacts/sprint-status.yaml (status: in-progress → review)
 - docs/implementation-artifacts/1-7-comparison-training-ui.md (task checkboxes, dev record, status)
