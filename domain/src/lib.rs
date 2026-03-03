@@ -12,7 +12,9 @@ pub mod types;
 pub use error::DomainError;
 pub use ports::{AudioError, ComparisonObserver, NotePlayer, PlaybackHandle, Resettable, UserSettings};
 pub use profile::{PerceptualNote, PerceptualProfile};
-pub use session::{ComparisonPlaybackData, ComparisonSession, ComparisonSessionState};
+pub use session::{
+    ComparisonPlaybackData, ComparisonSession, ComparisonSessionState, FEEDBACK_DURATION_SECS,
+};
 pub use strategy::{kazez_narrow, kazez_widen, next_comparison, TrainingSettings};
 pub use timeline::{PeriodAggregate, ThresholdTimeline, TimelineDataPoint};
 pub use training::*;

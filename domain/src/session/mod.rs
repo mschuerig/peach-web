@@ -1,3 +1,5 @@
 pub mod comparison_session;
 
-pub use comparison_session::{ComparisonPlaybackData, ComparisonSession, ComparisonSessionState};
+pub use comparison_session::{
+    ComparisonPlaybackData, ComparisonSession, ComparisonSessionState, FEEDBACK_DURATION_SECS,
+};

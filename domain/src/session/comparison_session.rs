@@ -114,10 +114,18 @@ impl ComparisonSession {
     pub fn current_interval(&self) -> Option<DirectedInterval> {
         self.current_comparison.as_ref().map(|c| {
             DirectedInterval::between(c.reference_note(), c.target_note().note)
-                .unwrap_or(DirectedInterval::new(
-                    crate::types::Interval::Prime,
-                    crate::types::Direction::Up,
-                ))
+                .unwrap_or_else(|e| {
+                    eprintln!(
+                        "current_interval: failed to compute interval between {} and {}: {}",
+                        c.reference_note().raw_value(),
+                        c.target_note().note.raw_value(),
+                        e
+                    );
+                    DirectedInterval::new(
+                        crate::types::Interval::Prime,
+                        crate::types::Direction::Up,
+                    )
+                })
         })
     }
 
@@ -246,7 +254,10 @@ impl ComparisonSession {
         self.state = ComparisonSessionState::Idle;
         self.current_comparison = None;
         self.current_playback_data = None;
+        self.last_completed = None;
         self.show_feedback = false;
+        self.is_last_answer_correct = false;
+        self.session_best_cent_difference = None;
     }
 
     /// Stop if running, reset profile, and call reset on all resettables.
@@ -812,6 +823,26 @@ mod tests {
         assert_eq!(session.state(), ComparisonSessionState::Idle);
         assert!(session.current_playback_data().is_none());
         assert!(!session.show_feedback());
+    }
+
+    #[test]
+    fn test_stop_clears_all_session_state() {
+        let mut session = create_session();
+        session.start(default_intervals(), &DefaultTestSettings);
+        session.on_note1_finished();
+        session.on_note2_finished();
+
+        // Answer correctly to populate is_last_answer_correct and session_best
+        let data = session.current_playback_data().unwrap();
+        let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
+        session.handle_answer(is_higher, "2026-03-03T14:00:00Z".to_string());
+        assert!(session.is_last_answer_correct());
+        assert!(session.session_best_cent_difference().is_some());
+
+        session.stop();
+        assert!(!session.is_last_answer_correct());
+        assert_eq!(session.session_best_cent_difference(), None);
+        assert!(session.current_interval().is_none());
     }
 
     #[test]
