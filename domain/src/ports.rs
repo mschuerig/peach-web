@@ -1,3 +1,4 @@
+use crate::records::ComparisonRecord;
 use crate::training::CompletedComparison;
 use crate::tuning::TuningSystem;
 use crate::types::{AmplitudeDB, Frequency, MIDINote, MIDIVelocity, NoteDuration};
@@ -46,6 +47,28 @@ pub trait UserSettings {
     fn vary_loudness(&self) -> f64; // 0.0-1.0 (UnitInterval range)
 }
 
+/// Error type for storage operations (IndexedDB, localStorage).
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum StorageError {
+    #[error("storage write failed: {0}")]
+    WriteFailed(String),
+    #[error("storage read failed: {0}")]
+    ReadFailed(String),
+    #[error("storage delete failed: {0}")]
+    DeleteFailed(String),
+    #[error("database open failed: {0}")]
+    DatabaseOpenFailed(String),
+}
+
+/// Port trait for persisting training data. The web adapter (IndexedDB)
+/// implements async methods directly — this trait defines the non-async
+/// interface for domain-level usage.
+pub trait TrainingDataStore {
+    fn save_comparison(&self, record: ComparisonRecord) -> Result<(), StorageError>;
+    fn fetch_all_comparisons(&self) -> Result<Vec<ComparisonRecord>, StorageError>;
+    fn delete_all(&self) -> Result<(), StorageError>;
+}
+
 /// Port trait for playing audio notes. Implementations live in the web crate.
 pub trait NotePlayer {
     type Handle: PlaybackHandle;
@@ -74,6 +97,37 @@ pub trait NotePlayer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_storage_error_write_failed_display() {
+        let err = StorageError::WriteFailed("disk full".to_string());
+        assert_eq!(err.to_string(), "storage write failed: disk full");
+    }
+
+    #[test]
+    fn test_storage_error_read_failed_display() {
+        let err = StorageError::ReadFailed("corruption".to_string());
+        assert_eq!(err.to_string(), "storage read failed: corruption");
+    }
+
+    #[test]
+    fn test_storage_error_delete_failed_display() {
+        let err = StorageError::DeleteFailed("locked".to_string());
+        assert_eq!(err.to_string(), "storage delete failed: locked");
+    }
+
+    #[test]
+    fn test_storage_error_database_open_failed_display() {
+        let err = StorageError::DatabaseOpenFailed("version mismatch".to_string());
+        assert_eq!(err.to_string(), "database open failed: version mismatch");
+    }
+
+    #[test]
+    fn test_storage_error_is_clone() {
+        let err = StorageError::WriteFailed("test".to_string());
+        let cloned = err.clone();
+        assert_eq!(err.to_string(), cloned.to_string());
+    }
 
     #[test]
     fn test_audio_error_engine_start_failed_display() {

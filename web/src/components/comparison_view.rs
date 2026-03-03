@@ -13,14 +13,16 @@ use web_sys::KeyboardEvent;
 
 use crate::adapters::audio_context::AudioContextManager;
 use crate::adapters::audio_oscillator::OscillatorNotePlayer;
-use crate::adapters::default_settings::DefaultSettings;
-use crate::bridge::ProfileObserver;
-use domain::ports::NotePlayer;
+use crate::adapters::indexeddb_store::IndexedDbStore;
+use crate::adapters::localstorage_settings::LocalStorageSettings;
+use crate::bridge::{DataStoreObserver, ProfileObserver, TimelineObserver, TrendObserver};
+use domain::ports::{ComparisonObserver, NotePlayer};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
     ComparisonSession, ComparisonSessionState, DirectedInterval, Direction, Interval,
-    PerceptualProfile, FEEDBACK_DURATION_SECS,
+    PerceptualProfile, ThresholdTimeline, TrendAnalyzer, FEEDBACK_DURATION_SECS,
 };
+use leptos::reactive::owner::LocalStorage;
 
 const POLL_INTERVAL_MS: u32 = 50;
 
@@ -30,6 +32,12 @@ pub fn ComparisonView() -> impl IntoView {
         use_context().expect("PerceptualProfile not provided");
     let audio_ctx: SendWrapper<Rc<RefCell<AudioContextManager>>> =
         use_context().expect("AudioContextManager not provided");
+    let trend_analyzer: SendWrapper<Rc<RefCell<TrendAnalyzer>>> =
+        use_context().expect("TrendAnalyzer not provided");
+    let timeline: SendWrapper<Rc<RefCell<ThresholdTimeline>>> =
+        use_context().expect("ThresholdTimeline not provided");
+    let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
+        use_context().expect("db_store not provided");
 
     // Eagerly create AudioContext in synchronous render path.
     // This ensures creation happens within the user gesture call stack (click on Start Page),
@@ -38,15 +46,36 @@ pub fn ComparisonView() -> impl IntoView {
         log::error!("Failed to create AudioContext: {e}");
     }
 
-    let settings = DefaultSettings;
+    let settings = LocalStorageSettings;
     let note_player = Rc::new(RefCell::new(OscillatorNotePlayer::new(Rc::clone(&audio_ctx))));
-    let profile_observer = ProfileObserver(Rc::clone(&profile));
+    let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
+
+    // Build observers list
+    let mut observers: Vec<Box<dyn ComparisonObserver>> = vec![
+        Box::new(ProfileObserver(Rc::clone(&profile))),
+        Box::new(TrendObserver(Rc::clone(&trend_analyzer))),
+        Box::new(TimelineObserver(Rc::clone(&timeline))),
+    ];
+    if let Some(store) = db_store.get_untracked() {
+        observers.push(Box::new(DataStoreObserver::new(store, storage_error)));
+    }
 
     let session = Rc::new(RefCell::new(ComparisonSession::new(
         Rc::clone(&profile),
-        vec![Box::new(profile_observer)],
+        observers,
         vec![],
     )));
+
+    // Auto-dismiss storage error after 5 seconds
+    Effect::new(move || {
+        if storage_error.get().is_some() {
+            let signal = storage_error;
+            gloo_timers::callback::Timeout::new(5000, move || {
+                signal.set(None);
+            })
+            .forget();
+        }
+    });
 
     // Signals bridging domain state to UI
     let show_feedback = RwSignal::new(false);
@@ -403,6 +432,22 @@ pub fn ComparisonView() -> impl IntoView {
                     "Profile"
                 </a>
             </nav>
+
+            // Storage error notification — non-blocking, auto-dismissing
+            {move || {
+                if let Some(msg) = storage_error.get() {
+                    view! {
+                        <div
+                            class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-amber-100 border border-amber-400 text-amber-800 px-4 py-2 rounded-lg shadow-md text-sm dark:bg-amber-900 dark:border-amber-700 dark:text-amber-200"
+                            role="alert"
+                        >
+                            {msg}
+                        </div>
+                    }.into_any()
+                } else {
+                    view! { <span></span> }.into_any()
+                }
+            }}
         </div>
     }
 }
