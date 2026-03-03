@@ -58,7 +58,7 @@ development_status:
   epic-2: in-progress
   2-1-settings-view-core-training-parameters: done
   2-2-interval-selection: done
-  2-3-reset-training-data: backlog
+  2-3-reset-training-data: ready-for-dev
   epic-2-retrospective: optional
 
   # Epic 3: Perceptual Profile & Visualization
