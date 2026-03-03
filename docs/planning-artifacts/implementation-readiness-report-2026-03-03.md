@@ -11,9 +11,10 @@ filesIncluded:
   architecture: docs/planning-artifacts/architecture.md
   epics: docs/planning-artifacts/epics.md
   ux: docs/planning-artifacts/ux-design-specification.md
+assessmentType: re-check
 ---
 
-# Implementation Readiness Assessment Report
+# Implementation Readiness Assessment Report (Re-check)
 
 **Date:** 2026-03-03
 **Project:** peach-web
@@ -22,15 +23,19 @@ filesIncluded:
 
 | Document Type | File | Size | Modified |
 |---|---|---|---|
-| PRD | prd.md | 18,194 bytes | Mar 2, 2026 |
-| Architecture | architecture.md | 40,530 bytes | Mar 2, 2026 |
-| Epics & Stories | epics.md | 15,555 bytes | Mar 3, 2026 |
-| UX Design | ux-design-specification.md | 44,160 bytes | Mar 3, 2026 |
+| PRD | prd.md | 18 KB | Mar 2, 2026 |
+| Architecture | architecture.md | 41 KB | Mar 2, 2026 |
+| Epics & Stories | epics.md | 61 KB | Mar 3, 2026 |
+| UX Design | ux-design-specification.md | 44 KB | Mar 3, 2026 |
 
 **Duplicates:** None
 **Missing Documents:** None
 
+**Change since last assessment:** epics.md grew from 15 KB to 61 KB. Frontmatter now shows all 4 workflow steps completed, including `step-03-create-stories` and `step-04-final-validation`.
+
 ## PRD Analysis
+
+No change from previous assessment. PRD is unchanged (same file, same date).
 
 ### Functional Requirements
 
@@ -120,90 +125,93 @@ filesIncluded:
 
 ### PRD Completeness Assessment
 
-The PRD is well-structured and thorough. Requirements are clearly numbered and categorized across 8 functional areas (49 FRs) and 5 non-functional categories (15 NFRs). Phasing is clearly defined across 5 phases. Success criteria are specific and measurable. Risk mitigation is documented. No ambiguous requirements detected.
+Unchanged. The PRD is well-structured and thorough. Requirements are clearly numbered and categorized across 8 functional areas (49 FRs) and 5 non-functional categories (15 NFRs). Phasing is clearly defined across 5 phases. Success criteria are specific and measurable. Risk mitigation is documented. No ambiguous requirements detected.
 
 ## Epic Coverage Validation
 
 ### Coverage Matrix
 
-| FR | Requirement | Epic | Status |
-|---|---|---|---|
-| FR1 | Start comparison training in unison mode | Epic 1 | Covered |
-| FR2 | Start comparison training in interval mode | Epic 5 | Covered |
-| FR3 | Hear two sequential notes at configured duration/loudness | Epic 1 | Covered |
-| FR4 | Answer higher/lower as soon as second note begins | Epic 1 | Covered |
-| FR5 | See brief visual feedback after each answer | Epic 1 | Covered |
-| FR6 | Stop comparison training by navigating away | Epic 1 | Covered |
-| FR7 | Incomplete comparisons discarded silently | Epic 1 | Covered |
-| FR8 | Adaptive algorithm selects next comparison | Epic 1 | Covered |
-| FR9 | Start pitch matching in unison mode | Epic 4 | Covered |
-| FR10 | Start pitch matching in interval mode | Epic 5 | Covered |
-| FR11 | Hear reference note followed by tunable note | Epic 4 | Covered |
-| FR12 | Adjust tunable note pitch via vertical slider | Epic 4 | Covered |
-| FR13 | Commit pitch answer by releasing slider | Epic 4 | Covered |
-| FR14 | See directional feedback with signed cent offset | Epic 4 | Covered |
-| FR15 | Stop pitch matching by navigating away | Epic 4 | Covered |
-| FR16 | View perceptual profile visualization | Epic 3 | Covered |
-| FR17 | View summary statistics (mean, std dev, trend) | Epic 3 | Covered |
-| FR18 | View pitch matching statistics | Epic 3 | Covered |
-| FR19 | See compact profile preview on start page | Epic 3 | Covered |
-| FR20 | Click profile preview to navigate to full profile | Epic 3 | Covered |
-| FR21 | System rebuilds profile from stored records on launch | Epic 1 | Covered |
-| FR22 | Configure training note range | Epic 2 | Covered |
-| FR23 | Configure note duration | Epic 2 | Covered |
-| FR24 | Configure reference pitch | Epic 2 | Covered |
-| FR25 | Select sound source | Epic 2 | Covered |
-| FR26 | Configure loudness variation | Epic 2 | Covered |
-| FR27 | Select directed intervals to train | Epic 2 | Covered |
-| FR28 | Select tuning system | Epic 2 | Covered |
-| FR29 | Reset all training data with confirmation | Epic 2 | Covered |
-| FR30 | Auto-save settings to browser storage | Epic 1 | Covered |
-| FR31 | Play notes at arbitrary frequencies | Epic 1 | Covered |
-| FR32 | Play timed and indefinite notes | Epic 1 | Covered |
-| FR33 | Adjust frequency of playing note in real time | Epic 4 | Covered |
-| FR34 | Vary playback amplitude in decibels | Epic 1 | Covered |
-| FR35 | Activate audio context on first interaction | Epic 1 | Covered |
-| FR36 | Persist comparison training records | Epic 1 | Covered |
-| FR37 | Persist pitch matching training records | Epic 4 | Covered |
-| FR38 | Persist user settings across refreshes/restarts | Epic 1 | Covered |
-| FR39 | Export training records and settings to file | Epic 6 | Covered |
-| FR40 | Import training records and settings from file | Epic 6 | Covered |
-| FR41 | Answer comparisons via keyboard shortcuts | Epic 1 | Covered |
-| FR42 | Start training via keyboard | Epic 1 | Covered |
-| FR43 | Stop training via keyboard (Escape) | Epic 1 | Covered |
-| FR44 | Fine-adjust pitch slider via keyboard | Epic 4 | Covered |
-| FR45 | Commit pitch via keyboard | Epic 4 | Covered |
-| FR46 | Screen reader announcements for feedback events | Epic 6 | Covered |
-| FR47 | Navigate between all views | Epic 6 | Covered |
-| FR48 | Return to start page after training interruption | Epic 1 | Covered |
-| FR49 | Access settings/profile from within training views | Epic 2 | Covered |
+| FR | Requirement | Epic | Story | Status |
+|---|---|---|---|---|
+| FR1 | Start comparison training in unison mode | Epic 1 | Story 1.7 | Covered |
+| FR2 | Start comparison training in interval mode | Epic 5 | Story 5.1 | Covered |
+| FR3 | Hear two sequential notes at configured duration/loudness | Epic 1 | Story 1.6 | Covered |
+| FR4 | Answer higher/lower as soon as second note begins | Epic 1 | Story 1.7 | Covered |
+| FR5 | See brief visual feedback after each answer | Epic 1 | Story 1.7 | Covered |
+| FR6 | Stop comparison training by navigating away | Epic 1 | Story 1.7, 1.9 | Covered |
+| FR7 | Incomplete comparisons discarded silently | Epic 1 | Story 1.6, 1.9 | Covered |
+| FR8 | Adaptive algorithm selects next comparison | Epic 1 | Story 1.3, 1.6 | Covered |
+| FR9 | Start pitch matching in unison mode | Epic 4 | Story 4.3 | Covered |
+| FR10 | Start pitch matching in interval mode | Epic 5 | Story 5.1 | Covered |
+| FR11 | Hear reference note followed by tunable note | Epic 4 | Story 4.1, 4.3 | Covered |
+| FR12 | Adjust tunable note pitch via vertical slider | Epic 4 | Story 4.2 | Covered |
+| FR13 | Commit pitch answer by releasing slider | Epic 4 | Story 4.1, 4.2 | Covered |
+| FR14 | See directional feedback with signed cent offset | Epic 4 | Story 4.3 | Covered |
+| FR15 | Stop pitch matching by navigating away | Epic 4 | Story 4.3 | Covered |
+| FR16 | View perceptual profile visualization | Epic 3 | Story 3.2 | Covered |
+| FR17 | View summary statistics (mean, std dev, trend) | Epic 3 | Story 3.1 | Covered |
+| FR18 | View pitch matching statistics | Epic 3 | Story 3.1 | Covered |
+| FR19 | See compact profile preview on start page | Epic 3 | Story 3.3 | Covered |
+| FR20 | Click profile preview to navigate to full profile | Epic 3 | Story 3.3 | Covered |
+| FR21 | System rebuilds profile from stored records on launch | Epic 1 | Story 1.8 | Covered |
+| FR22 | Configure training note range | Epic 2 | Story 2.1 | Covered |
+| FR23 | Configure note duration | Epic 2 | Story 2.1 | Covered |
+| FR24 | Configure reference pitch | Epic 2 | Story 2.1 | Covered |
+| FR25 | Select sound source | Epic 2 | Story 2.1 | Covered |
+| FR26 | Configure loudness variation | Epic 2 | Story 2.1 | Covered |
+| FR27 | Select directed intervals to train | Epic 2 | Story 2.2 | Covered |
+| FR28 | Select tuning system | Epic 2 | Story 2.1 | Covered |
+| FR29 | Reset all training data with confirmation | Epic 2 | Story 2.3 | Covered |
+| FR30 | Auto-save settings to browser storage | Epic 1 | Story 1.8 | Covered |
+| FR31 | Play notes at arbitrary frequencies | Epic 1 | Story 1.5 | Covered |
+| FR32 | Play timed and indefinite notes | Epic 1 | Story 1.5 | Covered |
+| FR33 | Adjust frequency of playing note in real time | Epic 4 | Story 4.1 | Covered |
+| FR34 | Vary playback amplitude in decibels | Epic 1 | Story 1.5 | Covered |
+| FR35 | Activate audio context on first interaction | Epic 1 | Story 1.5, 1.7 | Covered |
+| FR36 | Persist comparison training records | Epic 1 | Story 1.8 | Covered |
+| FR37 | Persist pitch matching training records | Epic 4 | Story 4.4 | Covered |
+| FR38 | Persist user settings across refreshes/restarts | Epic 1 | Story 1.8 | Covered |
+| FR39 | Export training records and settings to file | Epic 6 | Story 6.3 | Covered |
+| FR40 | Import training records and settings from file | Epic 6 | Story 6.3 | Covered |
+| FR41 | Answer comparisons via keyboard shortcuts | Epic 1 | Story 1.7 | Covered |
+| FR42 | Start training via keyboard | Epic 1 | Story 1.7 | Covered |
+| FR43 | Stop training via keyboard (Escape) | Epic 1 | Story 1.7 | Covered |
+| FR44 | Fine-adjust pitch slider via keyboard | Epic 4 | Story 4.2 | Covered |
+| FR45 | Commit pitch via keyboard | Epic 4 | Story 4.3 | Covered |
+| FR46 | Screen reader announcements for feedback events | Epic 6 | Story 6.2 | Covered |
+| FR47 | Navigate between all views | Epic 6 | Story 6.1 | Covered |
+| FR48 | Return to start page after training interruption | Epic 1 | Story 1.9 | Covered |
+| FR49 | Access settings/profile from within training views | Epic 2 | Story 2.1 | Covered |
 
 ### Missing Requirements
 
-None. All 49 PRD functional requirements are covered by epics.
+None. All 49 PRD functional requirements are covered by epics and traceable to specific stories.
 
 ### Coverage Statistics
 
 - Total PRD FRs: 49
 - FRs covered in epics: 49
+- FRs traceable to stories: 49
 - Coverage percentage: **100%**
 
 ### Epic Load Distribution
 
-| Epic | FRs Covered | Count |
-|---|---|---|
-| Epic 1: Core Comparison Training | FR1,3,4,5,6,7,8,21,30,31,32,34,35,36,38,41,42,43,48 | 19 |
-| Epic 2: Training Customization | FR22,23,24,25,26,27,28,29,49 | 9 |
-| Epic 3: Perceptual Profile & Visualization | FR16,17,18,19,20 | 5 |
-| Epic 4: Pitch Matching Training | FR9,11,12,13,14,15,33,37,44,45 | 10 |
-| Epic 5: Interval Training & Sound Quality | FR2,10 | 2 |
-| Epic 6: Offline, Accessibility & Data Portability | FR39,40,46,47 | 4 |
+| Epic | Stories | FRs Covered | Count |
+|---|---|---|---|
+| Epic 1: Core Comparison Training | 9 | FR1,3,4,5,6,7,8,21,30,31,32,34,35,36,38,41,42,43,48 | 19 |
+| Epic 2: Training Customization | 3 | FR22,23,24,25,26,27,28,29,49 | 9 |
+| Epic 3: Perceptual Profile & Visualization | 3 | FR16,17,18,19,20 | 5 |
+| Epic 4: Pitch Matching Training | 4 | FR9,11,12,13,14,15,33,37,44,45 | 10 |
+| Epic 5: Interval Training & Sound Quality | 2 | FR2,10 | 2 |
+| Epic 6: Offline, Accessibility & Data Portability | 4 | FR39,40,46,47 | 4 |
 
 ## UX Alignment Assessment
 
+No change from previous assessment. PRD, UX, and Architecture remain unchanged.
+
 ### UX Document Status
 
-Found: `ux-design-specification.md` (44,160 bytes, complete with 14 steps)
+Found: `ux-design-specification.md` (44 KB, complete with 14 steps)
 
 ### UX ↔ PRD Alignment
 
@@ -230,9 +238,9 @@ Strong alignment. Architecture directly supports all UX requirements:
 
 ### Minor Alignment Notes
 
-1. **Screen reader scope expansion:** UX specifies announcements for "Training started" and "Training stopped" in addition to feedback events. PRD FR46 mentions only "feedback events." This is an expansion that enhances accessibility — not a conflict.
-2. **Interval route parameters:** UX defines interval mode via query params (`?interval=true`), architecture lists only base route paths. Architecture mentions query params as a "future option." Not a conflict — implementation detail to be resolved in Epic 5.
-3. **Skip link:** UX specifies a "Skip to main content" link not explicitly in PRD, but covered by the WCAG 2.1 AA compliance requirement.
+1. **Screen reader scope expansion:** UX specifies announcements for "Training started" and "Training stopped" in addition to feedback events. PRD FR46 mentions only "feedback events." This is an expansion that enhances accessibility — not a conflict. Story 6.2 correctly covers this expanded scope.
+2. **Interval route parameters:** UX defines interval mode via query params (`?interval=true`), architecture lists only base route paths. Story 5.1 specifies `?interval=true` routing. Not a conflict — resolved at story level.
+3. **Skip link:** UX specifies a "Skip to main content" link not explicitly in PRD, but covered by the WCAG 2.1 AA compliance requirement. Story 1.4 includes this.
 
 ### Warnings
 
@@ -266,23 +274,90 @@ No technical milestone epics. All epics framed around user outcomes.
 - No forward dependencies: PASS
 - No circular dependencies: PASS
 
+### Story Quality Assessment
+
+#### Story Structure & Sizing
+
+| Story | User Value | Independent | Sized Appropriately | Verdict |
+|---|---|---|---|---|
+| 1.1 Project Scaffold | Developer (foundation) | Yes | Yes | PASS |
+| 1.2 Domain Value Types & Tuning | Developer (types) | Uses 1.1 | Yes | PASS |
+| 1.3 Perceptual Profile & Algorithm | Developer (intelligence) | Uses 1.1-1.2 | Yes | PASS |
+| 1.4 App Shell & Routing | User (navigate) | Uses 1.1 | Yes | PASS |
+| 1.5 Audio Engine | User (hear notes) | Uses 1.1 | Yes | PASS |
+| 1.6 Comparison Session State Machine | Developer (domain) | Uses 1.2-1.3, 1.5 | Yes | PASS |
+| 1.7 Comparison Training UI | User (train) | Uses 1.4-1.6 | Yes | PASS |
+| 1.8 Persistence & Profile Hydration | User (data persists) | Uses 1.2-1.3 | Yes | PASS |
+| 1.9 Interruption Handling | User (clean stops) | Uses 1.6-1.7 | Yes | PASS |
+| 2.1 Settings — Core Parameters | User (configure) | Uses Epic 1 | Yes | PASS |
+| 2.2 Interval Selection | User (choose intervals) | Uses 2.1 | Yes | PASS |
+| 2.3 Reset Training Data | User (start fresh) | Uses Epic 1, 2.1 | Yes | PASS |
+| 3.1 Profile View with Statistics | User (see stats) | Uses Epic 1 | Yes | PASS |
+| 3.2 Perceptual Profile Visualization | User (see ability) | Uses 3.1 | Yes | PASS |
+| 3.3 Profile Preview on Start Page | User (glanceable) | Uses 3.2 | Yes | PASS |
+| 4.1 Pitch Matching Session SM | Developer (domain) | Uses Epic 1 | Yes | PASS |
+| 4.2 Vertical Pitch Slider | User (tune by ear) | Uses 4.1 | Yes | PASS |
+| 4.3 Pitch Matching Training UI | User (train) | Uses 4.1-4.2 | Yes | PASS |
+| 4.4 Pitch Matching Persistence | User (data persists) | Uses 4.1 | Yes | PASS |
+| 5.1 Interval Training Mode | User (interval training) | Uses Epics 1-4 | Yes | PASS |
+| 5.2 SoundFont Audio | User (richer sound) | Uses Epic 1 | Yes | PASS |
+| 6.1 Info View & Complete Nav | User (information) | Uses Epic 1 | Yes | PASS |
+| 6.2 Screen Reader Polish | User (accessibility) | Uses Epics 1-5 | Yes | PASS |
+| 6.3 Data Export & Import | User (data portability) | Uses Epic 1 | Yes | PASS |
+| 6.4 Service Worker & Offline | User (offline access) | Uses Epics 1-5 | Yes | PASS |
+
+All 25 stories pass sizing and independence checks.
+
+#### Acceptance Criteria Review
+
+All stories use proper Given/When/Then BDD format. Specific findings:
+
+**Strengths:**
+- Every story has multiple acceptance criteria covering happy path, edge cases, and error conditions
+- FR numbers are embedded directly in acceptance criteria for traceability
+- NFR references (NFR1, NFR2, NFR4, NFR8) appear in relevant stories with specific measurable thresholds
+- Error conditions covered: storage write failures (Story 1.8), invalid import files (Story 6.3), AudioContext suspension (Story 1.9)
+- Empty/cold start states covered: Profile with no data (Story 3.1, 3.2, 3.3), no settings in localStorage (Story 1.8)
+- Accessibility criteria embedded throughout: ARIA attributes, keyboard operability, screen reader announcements, touch targets
+
+**No issues found** with acceptance criteria quality. All are testable, specific, and complete.
+
+#### Dependency Analysis
+
+**Within-Epic Dependencies (all valid):**
+
+- Epic 1: 1.1 → 1.2 → 1.3 (domain chain), 1.1 → 1.4 (app shell), 1.1 → 1.5 (audio), 1.2+1.3+1.5 → 1.6 (session), 1.4+1.6 → 1.7 (UI), 1.2+1.3 → 1.8 (persistence), 1.6+1.7 → 1.9 (interruption). All backward-only.
+- Epic 2: 2.1 independent of 2.2 and 2.3. No forward deps.
+- Epic 3: 3.1 → 3.2 → 3.3 (progressive detail). All backward-only.
+- Epic 4: 4.1 → 4.2+4.3 (session then UI). 4.4 independent of 4.2/4.3. All backward-only.
+- Epic 5: 5.1 and 5.2 independent of each other. No deps.
+- Epic 6: All 4 stories independent of each other. No deps.
+
+**No forward dependencies detected.** No circular dependencies.
+
+### Special Implementation Checks
+
+#### Starter Template Requirement
+
+Architecture specifies: Leptos CSR + Trunk via `cargo generate`.
+Story 1.1 (Project Scaffold): Correctly implements this as the first story. Acceptance criteria specify:
+- Cargo workspace with `domain` and `web` crates
+- `trunk serve` serving the app
+- Tailwind CSS integration
+- Domain crate with zero browser dependencies
+- Viewport meta tag
+
+**Verdict: PASS** — Story 1.1 is the correct starter template story.
+
+#### Brownfield Context
+
+This is a brownfield reimplementation from an iOS app with a complete domain blueprint. The epics document correctly references the domain blueprint as an input document. Domain type names match the blueprint exactly (mentioned in acceptance criteria for Story 1.2). Algorithm formulas reference the blueprint (Kazez formulas in Story 1.3). This context is properly handled.
+
 ### Findings
 
 #### Critical Violations
 
-**CV-1: No individual stories defined**
-
-The epics document contains only epic-level summaries with FR coverage maps. No individual stories exist anywhere in the project. The `stepsCompleted` in epics.md shows only steps 1-2 were completed (validate prerequisites + design epics). Story creation was not completed.
-
-- No acceptance criteria
-- No story sizing
-- No within-epic dependencies defined
-- No Given/When/Then criteria
-- Cannot verify starter template as Epic 1 Story 1
-
-**Impact:** Implementation cannot begin without stories. Developers need stories with clear acceptance criteria to know when work is done.
-
-**Remediation:** Run the create-epics-and-stories workflow to completion, or run `/bmad-bmm-create-story` for each epic to generate stories with acceptance criteria, dependencies, and sizing.
+None.
 
 #### Major Issues
 
@@ -290,9 +365,11 @@ None.
 
 #### Minor Concerns
 
-**MC-1: Epic 6 bundles three distinct concerns** — offline support, accessibility polish, and data portability. Pragmatically acceptable given their small scope (2-4 FRs each).
+**MC-1: Epic 6 bundles three distinct concerns** — offline support (6.4), accessibility polish (6.2), and data portability (6.3). Pragmatically acceptable given their small scope (1-2 stories each, 2-4 FRs each). Each story within Epic 6 is independent, so sprint planning can sequence them freely.
 
-**MC-2: Epic 1 is heavily loaded (19 FRs)** — 40% of all requirements. Justified as it delivers a complete usable app, but will require careful story breakdown.
+**MC-2: Epic 1 carries 19 FRs across 9 stories** — 40% of all requirements. This is justified as it delivers a complete, usable comparison training app. The stories are well-decomposed: domain types → algorithms → audio → state machine → UI → persistence → interruption handling. Sprint planning should account for Epic 1 being the longest epic.
+
+**MC-3: Stories 1.1-1.3 and 1.6 are developer-facing** — These deliver domain infrastructure, not direct user value. However, they are essential building blocks for Stories 1.4-1.9 which deliver user value, and Epic 1 as a whole delivers a complete user experience. This is the correct decomposition for a Rust/WASM project where domain logic precedes UI integration.
 
 ### Best Practices Compliance
 
@@ -302,16 +379,18 @@ None.
 | Functions independently | PASS | PASS | PASS | PASS | PASS | PASS |
 | No forward dependencies | PASS | PASS | PASS | PASS | PASS | PASS |
 | FR traceability | PASS | PASS | PASS | PASS | PASS | PASS |
-| Stories defined | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
-| Acceptance criteria | FAIL | FAIL | FAIL | FAIL | FAIL | FAIL |
+| Stories defined | PASS | PASS | PASS | PASS | PASS | PASS |
+| Acceptance criteria | PASS | PASS | PASS | PASS | PASS | PASS |
+| Given/When/Then format | PASS | PASS | PASS | PASS | PASS | PASS |
+| No circular dependencies | PASS | PASS | PASS | PASS | PASS | PASS |
 
 ## Summary and Recommendations
 
 ### Overall Readiness Status
 
-**NEEDS WORK**
+**READY**
 
-The planning artifacts (PRD, Architecture, UX Design) are exceptionally strong — thorough, well-aligned, and implementation-ready. FR coverage is 100% across 6 well-structured epics with no forward dependencies. However, the epics document is incomplete: it contains only epic summaries without individual stories, acceptance criteria, or story-level dependencies.
+All planning artifacts are complete, well-aligned, and implementation-ready. The critical blocker from the previous assessment (missing stories) has been fully resolved. All 6 epics now contain 25 stories with detailed acceptance criteria in Given/When/Then format, FR traceability, NFR references, and error/edge case coverage.
 
 ### Scorecard
 
@@ -322,31 +401,49 @@ The planning artifacts (PRD, Architecture, UX Design) are exceptionally strong �
 | UX Design Completeness | Excellent — full screen specs, interaction patterns, accessibility | 10/10 |
 | Document Alignment | Strong — PRD, UX, and Architecture mutually consistent | 9/10 |
 | Epic Structure | Strong — user-centric, independent, traceable | 9/10 |
-| Epic FR Coverage | Complete — 49/49 FRs mapped to epics | 10/10 |
-| Story Readiness | Missing — no stories, no acceptance criteria | 0/10 |
-| **Overall** | **NEEDS WORK** | **58/70** |
+| Epic FR Coverage | Complete — 49/49 FRs mapped to epics and stories | 10/10 |
+| Story Readiness | Strong — 25 stories with BDD acceptance criteria, FR/NFR traceability | 9/10 |
+| **Overall** | **READY** | **67/70** |
 
 ### Critical Issues Requiring Immediate Action
 
-1. **Stories must be created before implementation can begin.** The epics document stops at epic summaries. Individual stories with acceptance criteria, sizing, within-epic dependencies, and Given/When/Then criteria are required. This is the single blocker.
+None. All previous critical issues have been resolved.
+
+### Minor Concerns (Non-blocking)
+
+1. **Epic 6 bundles three concerns** — Monitor during sprint planning; stories are independent so can be reordered freely.
+2. **Epic 1 is heavily loaded (9 stories, 19 FRs)** — Plan for this being the longest sprint or split across multiple sprints.
+3. **Developer-facing stories in Epic 1** — Stories 1.1-1.3 and 1.6 deliver domain infrastructure. Necessary and correctly sequenced, but sprint velocity tracking should account for the front-loaded technical work.
 
 ### Recommended Next Steps
 
-1. **Complete epic and story breakdown** — Run `/bmad-bmm-create-epics-and-stories` to resume from where it left off (step 3 onward), or use `/bmad-bmm-create-story` for each epic individually. Start with Epic 1 since it carries 19 FRs and needs the most careful decomposition.
-2. **Verify Epic 1 Story 1 is project scaffold** — The architecture specifies a Leptos CSR + Trunk starter template. The first story should be project initialization from that template.
-3. **Proceed to sprint planning** — Once stories exist, run `/bmad-bmm-sprint-planning` to sequence the work.
+1. **Proceed to sprint planning** — Run `/bmad-bmm-sprint-planning` to sequence stories into sprints. Epic 1 will likely require multiple sprints given its 9-story scope.
+2. **Begin implementation with Story 1.1** — Project scaffold is the natural starting point. The Leptos CSR + Trunk starter template is well-specified.
+3. **Consider creating individual story files** — For implementation, `/bmad-bmm-create-story` can generate dedicated story files with full context for the dev agent.
 
 ### Strengths Worth Highlighting
 
 - The domain blueprint provides exceptional specification clarity — domain algorithms have exact formulas, state machines have defined transitions, and the two-crate architecture enforces separation at compile time.
 - All three planning documents were created with awareness of each other — cross-references are consistent and non-contradictory.
-- The FR coverage map in the epics document provides complete bidirectional traceability.
+- The FR coverage map provides complete bidirectional traceability from PRD to epic to story level.
+- Every story has testable, specific acceptance criteria with proper BDD structure. Error conditions and empty states are covered.
+- NFR references are embedded in relevant stories with measurable thresholds (50ms audio onset, 0.1 cent accuracy, 16ms transitions, 1s hydration).
 - Epic structure follows best practices: user-centric titles, no technical milestones, no forward dependencies, clean sequential dependency chain.
+
+### Comparison with Previous Assessment
+
+| Area | Previous Score | Current Score | Change |
+|---|---|---|---|
+| Story Readiness | 0/10 | 9/10 | +9 (resolved) |
+| Overall | 58/70 | 67/70 | +9 |
+| Status | NEEDS WORK | READY | Upgraded |
+
+The single critical blocker (missing stories) has been comprehensively addressed. The 25 stories added are high quality — well-structured, properly sized, with thorough acceptance criteria.
 
 ### Final Note
 
-This assessment identified 1 critical issue and 2 minor concerns across 5 review areas. The critical issue (missing stories) is the sole blocker to implementation readiness. The planning artifacts themselves are among the strongest I could evaluate — thorough, consistent, and well-structured. Address the story creation gap and this project will be fully ready for implementation.
+This re-check assessment found 0 critical issues and 3 minor non-blocking concerns across 5 review areas. The project has moved from **NEEDS WORK** to **READY** status. All planning artifacts are thorough, consistent, and implementation-ready. This project is cleared for implementation.
 
-**Assessed by:** Implementation Readiness Workflow
+**Assessed by:** Implementation Readiness Workflow (Re-check)
 **Date:** 2026-03-03
 **Project:** peach-web
