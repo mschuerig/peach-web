@@ -1,0 +1,13 @@
+# Third-Party Notices
+
+This file lists third-party components included in or used by Peach,
+along with their licenses and required attributions.
+
+## GeneralUser GS SoundFont
+
+Peach includes the GeneralUser GS SoundFont for instrument sample playback.
+
+- **Creator:** S. Christian Collins
+- **License:** GeneralUser GS License v2.0
+- **Website:** https://schristiancollins.com/generaluser.php
+- **GitHub:** https://github.com/mrbumpy409/GeneralUser-GS
