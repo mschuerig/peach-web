@@ -51,7 +51,7 @@ development_status:
   1-7-comparison-training-ui: done
   1-8-persistence-and-profile-hydration: done
   1-9-interruption-handling: done
-  1-10-code-quality-review: ready-for-dev
+  1-10-code-quality-review: review
   epic-1-retrospective: optional
 
   # Epic 2: Training Customization

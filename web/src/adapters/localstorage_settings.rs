@@ -26,6 +26,7 @@ impl LocalStorageSettings {
     }
 
     /// Write a value to localStorage. Used by Settings UI (story 2.1).
+    #[allow(dead_code)] // Planned for Settings view (Epic 2, story 2.1)
     pub fn set(key: &str, value: &str) {
         if let Some(storage) = web_sys::window()
             .and_then(|w| w.local_storage().ok())
@@ -39,11 +40,13 @@ impl LocalStorageSettings {
 
 impl UserSettings for LocalStorageSettings {
     fn note_range_min(&self) -> MIDINote {
-        MIDINote::new(Self::get_u8("peach.note_range_min", 36))
+        MIDINote::try_new(Self::get_u8("peach.note_range_min", 36))
+            .unwrap_or(MIDINote::new(36))
     }
 
     fn note_range_max(&self) -> MIDINote {
-        MIDINote::new(Self::get_u8("peach.note_range_max", 84))
+        MIDINote::try_new(Self::get_u8("peach.note_range_max", 84))
+            .unwrap_or(MIDINote::new(84))
     }
 
     fn note_duration(&self) -> NoteDuration {
@@ -51,7 +54,8 @@ impl UserSettings for LocalStorageSettings {
     }
 
     fn reference_pitch(&self) -> Frequency {
-        Frequency::new(Self::get_f64("peach.reference_pitch", 440.0))
+        Frequency::try_new(Self::get_f64("peach.reference_pitch", 440.0))
+            .unwrap_or(Frequency::CONCERT_440)
     }
 
     fn tuning_system(&self) -> TuningSystem {

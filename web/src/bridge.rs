@@ -11,7 +11,13 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::indexeddb_store::IndexedDbStore;
 
-pub struct ProfileObserver(pub Rc<RefCell<PerceptualProfile>>);
+pub struct ProfileObserver(Rc<RefCell<PerceptualProfile>>);
+
+impl ProfileObserver {
+    pub fn new(profile: Rc<RefCell<PerceptualProfile>>) -> Self {
+        Self(profile)
+    }
+}
 
 impl ComparisonObserver for ProfileObserver {
     fn comparison_completed(&mut self, completed: &CompletedComparison) {
@@ -65,7 +71,13 @@ impl ComparisonObserver for DataStoreObserver {
     }
 }
 
-pub struct TrendObserver(pub Rc<RefCell<TrendAnalyzer>>);
+pub struct TrendObserver(Rc<RefCell<TrendAnalyzer>>);
+
+impl TrendObserver {
+    pub fn new(analyzer: Rc<RefCell<TrendAnalyzer>>) -> Self {
+        Self(analyzer)
+    }
+}
 
 impl ComparisonObserver for TrendObserver {
     fn comparison_completed(&mut self, completed: &CompletedComparison) {
@@ -74,7 +86,13 @@ impl ComparisonObserver for TrendObserver {
     }
 }
 
-pub struct TimelineObserver(pub Rc<RefCell<ThresholdTimeline>>);
+pub struct TimelineObserver(Rc<RefCell<ThresholdTimeline>>);
+
+impl TimelineObserver {
+    pub fn new(timeline: Rc<RefCell<ThresholdTimeline>>) -> Self {
+        Self(timeline)
+    }
+}
 
 impl ComparisonObserver for TimelineObserver {
     fn comparison_completed(&mut self, completed: &CompletedComparison) {

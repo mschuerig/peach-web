@@ -112,20 +112,8 @@ impl ComparisonSession {
     }
 
     pub fn current_interval(&self) -> Option<DirectedInterval> {
-        self.current_comparison.as_ref().map(|c| {
-            DirectedInterval::between(c.reference_note(), c.target_note().note)
-                .unwrap_or_else(|e| {
-                    eprintln!(
-                        "current_interval: failed to compute interval between {} and {}: {}",
-                        c.reference_note().raw_value(),
-                        c.target_note().note.raw_value(),
-                        e
-                    );
-                    DirectedInterval::new(
-                        crate::types::Interval::Prime,
-                        crate::types::Direction::Up,
-                    )
-                })
+        self.current_comparison.as_ref().and_then(|c| {
+            DirectedInterval::between(c.reference_note(), c.target_note().note).ok()
         })
     }
 

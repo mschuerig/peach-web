@@ -94,7 +94,7 @@ impl PerceptualProfile {
 
     /// Update a note's statistics using Welford's online algorithm.
     /// `cent_offset` is the absolute magnitude of the cent difference presented.
-    /// `is_correct` is accepted for future use but not used in computation.
+    /// `_is_correct` is reserved for per-note accuracy tracking in future epics.
     pub fn update(&mut self, note: MIDINote, cent_offset: f64, _is_correct: bool) {
         assert!(!cent_offset.is_nan(), "cent_offset must not be NaN");
         let stats = &mut self.notes[note.raw_value() as usize];
@@ -138,38 +138,35 @@ impl PerceptualProfile {
             .collect()
     }
 
-    /// Average of per-note means across all trained notes.
-    pub fn overall_mean(&self) -> Option<f64> {
-        let trained: Vec<f64> = self
-            .notes
+    /// Collect the per-note means for all trained notes.
+    fn trained_means(&self) -> Vec<f64> {
+        self.notes
             .iter()
             .filter(|n| n.is_trained())
             .map(|n| n.mean)
-            .collect();
+            .collect()
+    }
 
-        if trained.is_empty() {
+    /// Average of per-note means across all trained notes.
+    pub fn overall_mean(&self) -> Option<f64> {
+        let means = self.trained_means();
+        if means.is_empty() {
             None
         } else {
-            Some(trained.iter().sum::<f64>() / trained.len() as f64)
+            Some(means.iter().sum::<f64>() / means.len() as f64)
         }
     }
 
     /// Sample standard deviation of per-note means across trained notes.
     pub fn overall_std_dev(&self) -> Option<f64> {
-        let trained: Vec<f64> = self
-            .notes
-            .iter()
-            .filter(|n| n.is_trained())
-            .map(|n| n.mean)
-            .collect();
-
-        if trained.len() < 2 {
+        let means = self.trained_means();
+        if means.len() < 2 {
             return None;
         }
 
-        let mean = trained.iter().sum::<f64>() / trained.len() as f64;
+        let avg = means.iter().sum::<f64>() / means.len() as f64;
         let variance =
-            trained.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (trained.len() - 1) as f64;
+            means.iter().map(|v| (v - avg).powi(2)).sum::<f64>() / (means.len() - 1) as f64;
         Some(variance.sqrt())
     }
 
@@ -191,6 +188,7 @@ impl PerceptualProfile {
     }
 
     /// Update aggregate pitch matching statistics using Welford's on abs(cent_error).
+    /// `_note` is reserved for per-note pitch matching accuracy in Epic 4+.
     pub fn update_matching(&mut self, _note: MIDINote, cent_error: f64) {
         assert!(!cent_error.is_nan(), "cent_error must not be NaN");
         let abs_error = cent_error.abs();

@@ -14,7 +14,8 @@ struct OscillatorHandleInner {
     stopped: bool,
 }
 
-/// A handle to a playing oscillator note. Can be cloned (shares inner state).
+/// A handle to a playing oscillator note. Can be cloned (shares inner state via Rc).
+#[derive(Clone)]
 pub struct OscillatorPlaybackHandle {
     inner: Rc<RefCell<OscillatorHandleInner>>,
 }
@@ -27,12 +28,6 @@ impl OscillatorPlaybackHandle {
                 gain,
                 stopped: false,
             })),
-        }
-    }
-
-    fn clone_shared(&self) -> Self {
-        Self {
-            inner: Rc::clone(&self.inner),
         }
     }
 
@@ -123,7 +118,7 @@ impl OscillatorNotePlayer {
             .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
 
         let handle = OscillatorPlaybackHandle::new(osc, gain_node);
-        self.active_handles.borrow_mut().push(handle.clone_shared());
+        self.active_handles.borrow_mut().push(handle.clone());
         Ok(handle)
     }
 }

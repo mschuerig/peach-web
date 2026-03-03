@@ -27,7 +27,11 @@ impl IndexedDbStore {
             .open_with_u32(DB_NAME, DB_VERSION)
             .map_err(|e| StorageError::DatabaseOpenFailed(format!("{e:?}")))?;
 
-        // Handle onupgradeneeded — create object stores
+        // Handle onupgradeneeded — create object stores.
+        // unwrap()s here are acceptable: this JS closure runs synchronously during
+        // IDB upgrade, where event.target()/result() are guaranteed by the browser,
+        // and store creation failure means a fundamentally broken database that
+        // should surface as a panic rather than be silently ignored.
         let on_upgrade = Closure::once(move |event: web_sys::IdbVersionChangeEvent| {
             let db: IdbDatabase = event
                 .target()
@@ -121,6 +125,7 @@ impl IndexedDbStore {
         Ok(records)
     }
 
+    #[allow(dead_code)] // Planned for Reset Training Data (Epic 2, story 2.3)
     pub async fn delete_all(&self) -> Result<(), StorageError> {
         let transaction = self
             .db
@@ -143,6 +148,10 @@ impl IndexedDbStore {
     }
 }
 
+/// Convert an IDB request into a Rust future via a JS Promise wrapper.
+/// unwrap()s in the closures below are for browser-guaranteed invariants:
+/// event.target() is always the IdbRequest, and resolve/reject.call1() only fails
+/// on JS engine-level failures. Returning Result is not possible from JS closures.
 async fn idb_request_to_future(request: IdbRequest) -> Result<JsValue, JsValue> {
     let promise = js_sys::Promise::new(&mut |resolve, reject| {
         let on_success = Closure::once(move |event: web_sys::Event| {

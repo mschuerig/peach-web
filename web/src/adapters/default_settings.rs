@@ -2,6 +2,7 @@ use domain::ports::UserSettings;
 use domain::types::{Frequency, MIDINote, NoteDuration};
 use domain::TuningSystem;
 
+#[allow(dead_code)] // Planned fallback for Settings view (Epic 2, story 2.1)
 pub struct DefaultSettings;
 
 impl UserSettings for DefaultSettings {

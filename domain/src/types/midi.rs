@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::RangeInclusive;
 
 use super::interval::DirectedInterval;
+use crate::error::DomainError;
 
 const NOTE_NAMES: [&str; 12] = [
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
@@ -23,9 +24,18 @@ impl MIDINote {
     }
 
     /// Create a new MIDINote. Panics if value > 127.
+    /// Use `try_new()` when input is not guaranteed valid.
     pub fn new(raw_value: u8) -> Self {
-        assert!(raw_value <= 127, "MIDI note must be 0-127, got {raw_value}");
-        Self { raw_value }
+        Self::try_new(raw_value).expect("MIDI note must be 0-127")
+    }
+
+    /// Fallible constructor: returns `Err` if value > 127.
+    pub fn try_new(raw_value: u8) -> Result<Self, DomainError> {
+        if raw_value > 127 {
+            Err(DomainError::InvalidMIDINote(raw_value))
+        } else {
+            Ok(Self { raw_value })
+        }
     }
 
     /// Standard note name (e.g. "C4", "A4").
@@ -43,14 +53,17 @@ impl MIDINote {
         Self::new(raw_value)
     }
 
-    /// Transpose by a directed interval. Panics if result outside 0-127.
-    pub fn transposed(&self, by: DirectedInterval) -> Self {
+    /// Transpose by a directed interval. Returns `Err` if result outside 0-127.
+    pub fn transposed(&self, by: DirectedInterval) -> Result<Self, DomainError> {
         let new_value = self.raw_value as i16 + by.signed_semitones();
-        assert!(
-            (0..=127).contains(&new_value),
-            "Transposed MIDI note out of range: {new_value}"
-        );
-        Self::new(new_value as u8)
+        if !(0..=127).contains(&new_value) {
+            Err(DomainError::TranspositionOutOfRange {
+                note: self.raw_value,
+                semitones: by.signed_semitones(),
+            })
+        } else {
+            Ok(Self::new(new_value as u8))
+        }
     }
 }
 
@@ -69,12 +82,18 @@ impl MIDIVelocity {
     }
 
     /// Create a new MIDIVelocity. Panics if value is 0 or > 127.
+    /// Use `try_new()` when input is not guaranteed valid.
     pub fn new(raw_value: u8) -> Self {
-        assert!(
-            (1..=127).contains(&raw_value),
-            "MIDI velocity must be 1-127, got {raw_value}"
-        );
-        Self { raw_value }
+        Self::try_new(raw_value).expect("MIDI velocity must be 1-127")
+    }
+
+    /// Fallible constructor: returns `Err` if value is 0 or > 127.
+    pub fn try_new(raw_value: u8) -> Result<Self, DomainError> {
+        if !(1..=127).contains(&raw_value) {
+            Err(DomainError::InvalidMIDIVelocity(raw_value))
+        } else {
+            Ok(Self { raw_value })
+        }
     }
 }
 
@@ -107,6 +126,19 @@ mod tests {
     }
 
     #[test]
+    fn test_midi_note_try_new_valid() {
+        assert!(MIDINote::try_new(0).is_ok());
+        assert!(MIDINote::try_new(60).is_ok());
+        assert!(MIDINote::try_new(127).is_ok());
+    }
+
+    #[test]
+    fn test_midi_note_try_new_invalid() {
+        assert!(MIDINote::try_new(128).is_err());
+        assert!(MIDINote::try_new(255).is_err());
+    }
+
+    #[test]
     fn test_midi_note_random_in_range() {
         for _ in 0..100 {
             let note = MIDINote::random(36..=84);
@@ -120,8 +152,8 @@ mod tests {
         let result = c4.transposed(DirectedInterval::new(
             Interval::PerfectFifth,
             Direction::Up,
-        ));
-        assert_eq!(result.raw_value, 67);
+        )).unwrap();
+        assert_eq!(result.raw_value(), 67);
     }
 
     #[test]
@@ -130,27 +162,27 @@ mod tests {
         let result = g4.transposed(DirectedInterval::new(
             Interval::PerfectFifth,
             Direction::Down,
-        ));
-        assert_eq!(result.raw_value, 60);
+        )).unwrap();
+        assert_eq!(result.raw_value(), 60);
     }
 
     #[test]
-    #[should_panic(expected = "Transposed MIDI note out of range")]
-    fn test_midi_note_transposed_panics_out_of_range() {
+    fn test_midi_note_transposed_out_of_range_returns_error() {
         let high = MIDINote::new(125);
-        high.transposed(DirectedInterval::new(Interval::Octave, Direction::Up));
+        let result = high.transposed(DirectedInterval::new(Interval::Octave, Direction::Up));
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_midi_velocity_valid() {
         let v = MIDIVelocity::new(64);
-        assert_eq!(v.raw_value, 64);
+        assert_eq!(v.raw_value(), 64);
     }
 
     #[test]
     fn test_midi_velocity_boundaries() {
-        assert_eq!(MIDIVelocity::new(1).raw_value, 1);
-        assert_eq!(MIDIVelocity::new(127).raw_value, 127);
+        assert_eq!(MIDIVelocity::new(1).raw_value(), 1);
+        assert_eq!(MIDIVelocity::new(127).raw_value(), 127);
     }
 
     #[test]
@@ -166,10 +198,23 @@ mod tests {
     }
 
     #[test]
+    fn test_midi_velocity_try_new_valid() {
+        assert!(MIDIVelocity::try_new(1).is_ok());
+        assert!(MIDIVelocity::try_new(64).is_ok());
+        assert!(MIDIVelocity::try_new(127).is_ok());
+    }
+
+    #[test]
+    fn test_midi_velocity_try_new_invalid() {
+        assert!(MIDIVelocity::try_new(0).is_err());
+        assert!(MIDIVelocity::try_new(128).is_err());
+    }
+
+    #[test]
     fn test_midi_note_transposed_by_prime() {
         let c4 = MIDINote::new(60);
-        let result = c4.transposed(DirectedInterval::new(Interval::Prime, Direction::Up));
-        assert_eq!(result.raw_value, 60);
+        let result = c4.transposed(DirectedInterval::new(Interval::Prime, Direction::Up)).unwrap();
+        assert_eq!(result.raw_value(), 60);
     }
 
     #[test]
