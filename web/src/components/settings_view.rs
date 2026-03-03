@@ -86,6 +86,14 @@ fn all_directed_intervals() -> Vec<DirectedInterval> {
     result
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum ResetStatus {
+    Idle,
+    Resetting,
+    Success,
+    Error,
+}
+
 #[component]
 pub fn SettingsView() -> impl IntoView {
     let settings = LocalStorageSettings;
@@ -120,8 +128,7 @@ pub fn SettingsView() -> impl IntoView {
         use_context().expect("db_store not provided");
 
     let dialog_ref = NodeRef::<leptos::html::Dialog>::new();
-    // "idle" | "resetting" | "success" | "error"
-    let reset_status = RwSignal::new("idle");
+    let reset_status = RwSignal::new(ResetStatus::Idle);
 
     let open_dialog = move |_| {
         if let Some(dialog) = dialog_ref.get()
@@ -140,37 +147,45 @@ pub fn SettingsView() -> impl IntoView {
     };
 
     let handle_confirm = move |_| {
-        reset_status.set("resetting");
+        reset_status.set(ResetStatus::Resetting);
         let profile = Rc::clone(&*profile);
         let trend = Rc::clone(&*trend);
         let timeline = Rc::clone(&*timeline);
 
         spawn_local(async move {
-            if let Some(store) = db_store.get_untracked() {
-                match store.delete_all().await {
-                    Ok(()) => {
-                        profile.borrow_mut().reset();
-                        profile.borrow_mut().reset_matching();
-                        trend.borrow_mut().reset();
-                        timeline.borrow_mut().reset();
-                        if let Some(dialog) = dialog_ref.get() {
-                            dialog.close();
-                        }
-                        reset_status.set("success");
-                        TimeoutFuture::new(2000).await;
-                        reset_status.set("idle");
+            let db_result = if let Some(store) = db_store.get_untracked() {
+                store.delete_all().await
+            } else {
+                // IndexedDB not loaded — no stored data to delete
+                Ok(())
+            };
+
+            match db_result {
+                Ok(()) => {
+                    {
+                        let mut p = profile.borrow_mut();
+                        p.reset();
+                        p.reset_matching();
                     }
-                    Err(e) => {
-                        web_sys::console::warn_1(
-                            &format!("Failed to delete training data: {e:?}").into(),
-                        );
-                        if let Some(dialog) = dialog_ref.get() {
-                            dialog.close();
-                        }
-                        reset_status.set("error");
-                        TimeoutFuture::new(3000).await;
-                        reset_status.set("idle");
+                    trend.borrow_mut().reset();
+                    timeline.borrow_mut().reset();
+                    if let Some(dialog) = dialog_ref.get() {
+                        dialog.close();
                     }
+                    reset_status.set(ResetStatus::Success);
+                    TimeoutFuture::new(2000).await;
+                    reset_status.set(ResetStatus::Idle);
+                }
+                Err(e) => {
+                    web_sys::console::warn_1(
+                        &format!("Failed to delete training data: {e:?}").into(),
+                    );
+                    if let Some(dialog) = dialog_ref.get() {
+                        dialog.close();
+                    }
+                    reset_status.set(ResetStatus::Error);
+                    TimeoutFuture::new(3000).await;
+                    reset_status.set(ResetStatus::Idle);
                 }
             }
         });
@@ -401,14 +416,14 @@ pub fn SettingsView() -> impl IntoView {
                 </p>
                 <button
                     on:click=open_dialog
-                    disabled=move || reset_status.get() == "resetting"
+                    disabled=move || reset_status.get() == ResetStatus::Resetting
                     class="mt-4 w-full min-h-[44px] rounded-lg bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-800 dark:ring-offset-gray-900 disabled:opacity-50"
                 >
                     {move || match reset_status.get() {
-                        "resetting" => "Resetting\u{2026}",
-                        "success" => "Data Reset",
-                        "error" => "Reset Failed",
-                        _ => "Reset all training data",
+                        ResetStatus::Resetting => "Resetting\u{2026}",
+                        ResetStatus::Success => "Data Reset",
+                        ResetStatus::Error => "Reset Failed",
+                        ResetStatus::Idle => "Reset all training data",
                     }}
                 </button>
             </fieldset>
@@ -416,22 +431,25 @@ pub fn SettingsView() -> impl IntoView {
             // Confirmation dialog
             <dialog
                 node_ref=dialog_ref
+                aria-labelledby="reset-dialog-title"
                 class="rounded-lg p-6 max-w-md mx-auto bg-white text-gray-900 backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
             >
-                <h2 class="text-lg font-bold">"Reset Training Data?"</h2>
+                <h2 id="reset-dialog-title" class="text-lg font-bold">"Reset Training Data?"</h2>
                 <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
                     "This will permanently delete all training data, including your perceptual profile and comparison history. This cannot be undone."
                 </p>
                 <div class="mt-6 flex gap-3 justify-end">
                     <button
                         on:click=handle_cancel
-                        class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                        disabled=move || reset_status.get() == ResetStatus::Resetting
+                        class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
                     >
                         "Cancel"
                     </button>
                     <button
                         on:click=handle_confirm
-                        class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                        disabled=move || reset_status.get() == ResetStatus::Resetting
+                        class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50"
                     >
                         "Delete All Data"
                     </button>
