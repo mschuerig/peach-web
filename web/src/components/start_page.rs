@@ -5,6 +5,7 @@ use leptos_router::hooks::use_navigate;
 #[component]
 pub fn StartPage() -> impl IntoView {
     let navigate = use_navigate();
+    let is_profile_loaded: RwSignal<bool> = use_context().expect("is_profile_loaded not provided");
     let on_comparison = move |_| {
         navigate("/training/comparison", Default::default());
     };
@@ -12,6 +13,14 @@ pub fn StartPage() -> impl IntoView {
     view! {
         <div class="flex flex-col items-center gap-6 py-12">
             <h1 class="sr-only">"Peach"</h1>
+
+            {move || {
+                if !is_profile_loaded.get() {
+                    view! { <p class="text-sm text-gray-500 dark:text-gray-400">"Loading profile..."</p> }.into_any()
+                } else {
+                    view! { <span></span> }.into_any()
+                }
+            }}
 
             <nav aria-label="Training modes" class="flex w-full flex-col items-center gap-6">
                 <button

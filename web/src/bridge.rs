@@ -6,6 +6,7 @@ use domain::records::ComparisonRecord;
 use domain::training::CompletedComparison;
 use domain::{PerceptualProfile, ThresholdTimeline, TrendAnalyzer};
 use leptos::prelude::*;
+use leptos::reactive::owner::LocalStorage;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::indexeddb_store::IndexedDbStore;
@@ -25,14 +26,17 @@ impl ComparisonObserver for ProfileObserver {
 }
 
 pub struct DataStoreObserver {
-    store: Rc<IndexedDbStore>,
+    store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
     error_signal: RwSignal<Option<String>>,
 }
 
 impl DataStoreObserver {
-    pub fn new(store: Rc<IndexedDbStore>, error_signal: RwSignal<Option<String>>) -> Self {
+    pub fn new(
+        store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
+        error_signal: RwSignal<Option<String>>,
+    ) -> Self {
         Self {
-            store,
+            store_signal,
             error_signal,
         }
     }
@@ -40,8 +44,14 @@ impl DataStoreObserver {
 
 impl ComparisonObserver for DataStoreObserver {
     fn comparison_completed(&mut self, completed: &CompletedComparison) {
+        let store = match self.store_signal.get_untracked() {
+            Some(store) => store,
+            None => {
+                log::warn!("IndexedDB not yet available, record not persisted");
+                return;
+            }
+        };
         let record = ComparisonRecord::from_completed(completed);
-        let store = Rc::clone(&self.store);
         let error_signal = self.error_signal;
 
         spawn_local(async move {

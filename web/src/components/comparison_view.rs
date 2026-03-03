@@ -50,15 +50,15 @@ pub fn ComparisonView() -> impl IntoView {
     let note_player = Rc::new(RefCell::new(OscillatorNotePlayer::new(Rc::clone(&audio_ctx))));
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
 
-    // Build observers list
-    let mut observers: Vec<Box<dyn ComparisonObserver>> = vec![
+    // Build observers list — DataStoreObserver holds the signal and checks
+    // store availability on each call, so it works even if IndexedDB
+    // opens after ComparisonView mounts.
+    let observers: Vec<Box<dyn ComparisonObserver>> = vec![
         Box::new(ProfileObserver(Rc::clone(&profile))),
         Box::new(TrendObserver(Rc::clone(&trend_analyzer))),
         Box::new(TimelineObserver(Rc::clone(&timeline))),
+        Box::new(DataStoreObserver::new(db_store, storage_error)),
     ];
-    if let Some(store) = db_store.get_untracked() {
-        observers.push(Box::new(DataStoreObserver::new(store, storage_error)));
-    }
 
     let session = Rc::new(RefCell::new(ComparisonSession::new(
         Rc::clone(&profile),

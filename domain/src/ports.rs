@@ -60,9 +60,13 @@ pub enum StorageError {
     DatabaseOpenFailed(String),
 }
 
-/// Port trait for persisting training data. The web adapter (IndexedDB)
-/// implements async methods directly — this trait defines the non-async
-/// interface for domain-level usage.
+/// Port trait for persisting training data (Blueprint §9.6).
+///
+/// The domain crate has no async runtime, so this trait defines synchronous
+/// signatures. The web adapter (`IndexedDbStore`) provides matching async
+/// methods directly rather than implementing this trait, because IndexedDB
+/// is inherently asynchronous. The trait remains as the canonical domain
+/// contract — future adapters (e.g. in-memory for testing) can implement it.
 pub trait TrainingDataStore {
     fn save_comparison(&self, record: ComparisonRecord) -> Result<(), StorageError>;
     fn fetch_all_comparisons(&self) -> Result<Vec<ComparisonRecord>, StorageError>;
