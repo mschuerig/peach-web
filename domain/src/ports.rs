@@ -1,4 +1,6 @@
-use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteDuration};
+use crate::training::CompletedComparison;
+use crate::tuning::TuningSystem;
+use crate::types::{AmplitudeDB, Frequency, MIDINote, MIDIVelocity, NoteDuration};
 
 /// Error type for audio engine operations.
 #[derive(Debug, thiserror::Error)]
@@ -22,6 +24,26 @@ pub trait PlaybackHandle {
 
     /// Adjust the frequency of the playing note in real time (for pitch matching).
     fn adjust_frequency(&mut self, frequency: Frequency) -> Result<(), AudioError>;
+}
+
+/// Observer for comparison training events.
+pub trait ComparisonObserver {
+    fn comparison_completed(&mut self, completed: &CompletedComparison);
+}
+
+/// Trait for components that can be reset when training data is cleared.
+pub trait Resettable {
+    fn reset(&mut self);
+}
+
+/// Trait for reading user settings. Implementations live in the web crate.
+pub trait UserSettings {
+    fn note_range_min(&self) -> MIDINote;
+    fn note_range_max(&self) -> MIDINote;
+    fn note_duration(&self) -> NoteDuration;
+    fn reference_pitch(&self) -> Frequency;
+    fn tuning_system(&self) -> TuningSystem;
+    fn vary_loudness(&self) -> f64; // 0.0-1.0 (UnitInterval range)
 }
 
 /// Port trait for playing audio notes. Implementations live in the web crate.

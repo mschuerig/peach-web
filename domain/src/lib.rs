@@ -1,6 +1,7 @@
 pub mod error;
 pub mod ports;
 pub mod profile;
+pub mod session;
 pub mod strategy;
 pub mod timeline;
 pub mod training;
@@ -9,8 +10,9 @@ pub mod tuning;
 pub mod types;
 
 pub use error::DomainError;
-pub use ports::{AudioError, NotePlayer, PlaybackHandle};
+pub use ports::{AudioError, ComparisonObserver, NotePlayer, PlaybackHandle, Resettable, UserSettings};
 pub use profile::{PerceptualNote, PerceptualProfile};
+pub use session::{ComparisonPlaybackData, ComparisonSession, ComparisonSessionState};
 pub use strategy::{kazez_narrow, kazez_widen, next_comparison, TrainingSettings};
 pub use timeline::{PeriodAggregate, ThresholdTimeline, TimelineDataPoint};
 pub use training::*;

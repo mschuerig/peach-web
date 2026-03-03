@@ -1,6 +1,6 @@
 # Story 1.6: Comparison Session State Machine
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -36,51 +36,51 @@ so that the domain logic drives the comparison training experience correctly.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add observer and settings port traits to domain (AC: 6,11)
-  - [ ] 1.1 Add `ComparisonObserver` trait to `domain/src/ports.rs`: `fn comparison_completed(&mut self, completed: &CompletedComparison)`
-  - [ ] 1.2 Add `Resettable` trait to `domain/src/ports.rs`: `fn reset(&mut self)`
-  - [ ] 1.3 Add `UserSettings` trait to `domain/src/ports.rs` with getters: `note_range_min`, `note_range_max`, `note_duration`, `reference_pitch`, `tuning_system`, `vary_loudness`
-  - [ ] 1.4 Update `domain/src/lib.rs` to re-export new traits
+- [x] Task 1: Add observer and settings port traits to domain (AC: 6,11)
+  - [x] 1.1 Add `ComparisonObserver` trait to `domain/src/ports.rs`: `fn comparison_completed(&mut self, completed: &CompletedComparison)`
+  - [x] 1.2 Add `Resettable` trait to `domain/src/ports.rs`: `fn reset(&mut self)`
+  - [x] 1.3 Add `UserSettings` trait to `domain/src/ports.rs` with getters: `note_range_min`, `note_range_max`, `note_duration`, `reference_pitch`, `tuning_system`, `vary_loudness`
+  - [x] 1.4 Update `domain/src/lib.rs` to re-export new traits
 
-- [ ] Task 2: Create ComparisonSessionState and ComparisonSession (AC: 1,2)
-  - [ ] 2.1 Create `domain/src/session/mod.rs` with module declarations
-  - [ ] 2.2 Create `domain/src/session/comparison_session.rs` with `ComparisonSessionState` enum (Idle, PlayingNote1, PlayingNote2, AwaitingAnswer, ShowingFeedback)
-  - [ ] 2.3 Create `ComparisonSession` struct with: `Rc<RefCell<PerceptualProfile>>` for profile, `Vec<Box<dyn ComparisonObserver>>` for observers, `Vec<Box<dyn Resettable>>` for resettables, session-level state fields
-  - [ ] 2.4 Implement `new()` constructor accepting all dependencies
-  - [ ] 2.5 Implement observable state accessors: `state()`, `show_feedback()`, `is_last_answer_correct()`, `session_best_cent_difference()`, `current_interval()`
-  - [ ] 2.6 Implement `current_playback_data() -> Option<ComparisonPlaybackData>` for the web layer to read
-  - [ ] 2.7 Add `pub mod session;` to `domain/src/lib.rs` and re-export session types
+- [x] Task 2: Create ComparisonSessionState and ComparisonSession (AC: 1,2)
+  - [x] 2.1 Create `domain/src/session/mod.rs` with module declarations
+  - [x] 2.2 Create `domain/src/session/comparison_session.rs` with `ComparisonSessionState` enum (Idle, PlayingNote1, PlayingNote2, AwaitingAnswer, ShowingFeedback)
+  - [x] 2.3 Create `ComparisonSession` struct with: `Rc<RefCell<PerceptualProfile>>` for profile, `Vec<Box<dyn ComparisonObserver>>` for observers, `Vec<Box<dyn Resettable>>` for resettables, session-level state fields
+  - [x] 2.4 Implement `new()` constructor accepting all dependencies
+  - [x] 2.5 Implement observable state accessors: `state()`, `show_feedback()`, `is_last_answer_correct()`, `session_best_cent_difference()`, `current_interval()`
+  - [x] 2.6 Implement `current_playback_data() -> Option<ComparisonPlaybackData>` for the web layer to read
+  - [x] 2.7 Add `pub mod session;` to `domain/src/lib.rs` and re-export session types
 
-- [ ] Task 3: Implement start and state transitions (AC: 2,3,4,5,7,8,9)
-  - [ ] 3.1 Implement `start(intervals, settings)` — validate non-empty intervals, snapshot tuning_system + reference_pitch + note_duration + vary_loudness from settings, generate first comparison via `next_comparison()`, calculate target amplitude, set state to `PlayingNote1`
-  - [ ] 3.2 Implement `on_note1_finished()` — guard: must be PlayingNote1, transition to PlayingNote2
-  - [ ] 3.3 Implement `on_note2_finished()` — guard: must be PlayingNote2, transition to AwaitingAnswer
-  - [ ] 3.4 Implement `on_feedback_finished()` — guard: must be ShowingFeedback, generate next comparison, set state to PlayingNote1
-  - [ ] 3.5 Implement `calculate_target_amplitude(vary_loudness: f64) -> AmplitudeDB` private method
+- [x] Task 3: Implement start and state transitions (AC: 2,3,4,5,7,8,9)
+  - [x] 3.1 Implement `start(intervals, settings)` — validate non-empty intervals, snapshot tuning_system + reference_pitch + note_duration + vary_loudness from settings, generate first comparison via `next_comparison()`, calculate target amplitude, set state to `PlayingNote1`
+  - [x] 3.2 Implement `on_note1_finished()` — guard: must be PlayingNote1, transition to PlayingNote2
+  - [x] 3.3 Implement `on_note2_finished()` — guard: must be PlayingNote2, transition to AwaitingAnswer
+  - [x] 3.4 Implement `on_feedback_finished()` — guard: must be ShowingFeedback, generate next comparison, set state to PlayingNote1
+  - [x] 3.5 Implement `calculate_target_amplitude(vary_loudness: f64) -> AmplitudeDB` private method
 
-- [ ] Task 4: Implement handle_answer with observer notification (AC: 6,11)
-  - [ ] 4.1 Implement `handle_answer(is_higher, timestamp)` — guard on PlayingNote2 or AwaitingAnswer, create CompletedComparison with session tuning system, update session_best_cent_difference, set show_feedback + is_last_answer_correct, transition to ShowingFeedback
-  - [ ] 4.2 Implement observer notification loop with `std::panic::catch_unwind` for error isolation — log caught panics via `eprintln!` (no browser deps in domain)
+- [x] Task 4: Implement handle_answer with observer notification (AC: 6,11)
+  - [x] 4.1 Implement `handle_answer(is_higher, timestamp)` — guard on PlayingNote2 or AwaitingAnswer, create CompletedComparison with session tuning system, update session_best_cent_difference, set show_feedback + is_last_answer_correct, transition to ShowingFeedback
+  - [x] 4.2 Implement observer notification loop with `std::panic::catch_unwind` for error isolation — log caught panics via `eprintln!` (no browser deps in domain)
 
-- [ ] Task 5: Implement stop and reset (AC: 10)
-  - [ ] 5.1 Implement `stop()` — guard: not idle, reset state to Idle, clear current_comparison, clear session-level transient state
-  - [ ] 5.2 Implement `reset_training_data()` — stop if running, clear last_completed + session_best, call `profile.borrow_mut().reset()`, call `reset()` on each resettable
+- [x] Task 5: Implement stop and reset (AC: 10)
+  - [x] 5.1 Implement `stop()` — guard: not idle, reset state to Idle, clear current_comparison, clear session-level transient state
+  - [x] 5.2 Implement `reset_training_data()` — stop if running, clear last_completed + session_best, call `profile.borrow_mut().reset()`, call `reset()` on each resettable
 
-- [ ] Task 6: Write comprehensive unit tests (AC: all)
-  - [ ] 6.1 Create mock types: `MockObserver` (records calls), `MockResettable` (tracks reset), helper `default_settings() -> impl UserSettings`
-  - [ ] 6.2 Test full lifecycle: idle → start → playingNote1 → on_note1_finished → playingNote2 → on_note2_finished → awaitingAnswer → handle_answer → showingFeedback → on_feedback_finished → playingNote1
-  - [ ] 6.3 Test early answer: playingNote2 → handle_answer (skip awaitingAnswer)
-  - [ ] 6.4 Test start guards: must be idle, must have ≥1 interval
-  - [ ] 6.5 Test handle_answer guards: invalid from Idle, PlayingNote1, ShowingFeedback
-  - [ ] 6.6 Test CompletedComparison: correct timestamp, snapshot tuning system, correct is_correct derivation
-  - [ ] 6.7 Test observer notification: MockObserver receives comparison_completed
-  - [ ] 6.8 Test observer error isolation: panicking observer + normal observer, normal still receives event
-  - [ ] 6.9 Test amplitude: vary_loudness=0 → AmplitudeDB(0.0), vary_loudness=0.5 → within ±2.5
-  - [ ] 6.10 Test session_best tracking: only updates on correct, tracks smallest cent difference
-  - [ ] 6.11 Test stop: returns to idle, clears state
-  - [ ] 6.12 Test reset_training_data: stops, resets profile, calls resettables
-  - [ ] 6.13 `cargo test -p domain` — all existing + new tests pass
-  - [ ] 6.14 `cargo clippy -p domain` — zero warnings
+- [x] Task 6: Write comprehensive unit tests (AC: all)
+  - [x] 6.1 Create mock types: `MockObserver` (records calls), `MockResettable` (tracks reset), helper `default_settings() -> impl UserSettings`
+  - [x] 6.2 Test full lifecycle: idle → start → playingNote1 → on_note1_finished → playingNote2 → on_note2_finished → awaitingAnswer → handle_answer → showingFeedback → on_feedback_finished → playingNote1
+  - [x] 6.3 Test early answer: playingNote2 → handle_answer (skip awaitingAnswer)
+  - [x] 6.4 Test start guards: must be idle, must have ≥1 interval
+  - [x] 6.5 Test handle_answer guards: invalid from Idle, PlayingNote1, ShowingFeedback
+  - [x] 6.6 Test CompletedComparison: correct timestamp, snapshot tuning system, correct is_correct derivation
+  - [x] 6.7 Test observer notification: MockObserver receives comparison_completed
+  - [x] 6.8 Test observer error isolation: panicking observer + normal observer, normal still receives event
+  - [x] 6.9 Test amplitude: vary_loudness=0 → AmplitudeDB(0.0), vary_loudness=0.5 → within ±2.5
+  - [x] 6.10 Test session_best tracking: only updates on correct, tracks smallest cent difference
+  - [x] 6.11 Test stop: returns to idle, clears state
+  - [x] 6.12 Test reset_training_data: stops, resets profile, calls resettables
+  - [x] 6.13 `cargo test -p domain` — all existing + new tests pass
+  - [x] 6.14 `cargo clippy -p domain` — zero warnings
 
 ## Dev Notes
 
@@ -381,10 +381,31 @@ d86e6e1 Add story 1.5 Audio Engine Oscillator and mark as ready-for-dev
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Implemented ComparisonObserver, Resettable, and UserSettings port traits in domain/src/ports.rs
+- Created ComparisonSession state machine with 5 states (Idle, PlayingNote1, PlayingNote2, AwaitingAnswer, ShowingFeedback)
+- Event-driven transitions: start(), on_note1_finished(), on_note2_finished(), handle_answer(), on_feedback_finished(), stop()
+- Observer notification with std::panic::catch_unwind for error isolation
+- ComparisonPlaybackData struct exposes frequencies and amplitude for web layer
+- calculate_target_amplitude() implements loudness variation per blueprint formula
+- reset_training_data() stops session, resets profile, and calls all resettables
+- 35 new unit tests covering all ACs: lifecycle, guards, observers, panic isolation, amplitude, stop, reset
+- Total domain test count: 222 (up from 187), zero clippy warnings
+
+### Change Log
+
+- 2026-03-03: Implemented story 1.6 Comparison Session State Machine
+
 ### File List
+
+- domain/src/ports.rs (MODIFIED — added ComparisonObserver, Resettable, UserSettings traits)
+- domain/src/lib.rs (MODIFIED — added pub mod session, re-exported new traits and session types)
+- domain/src/session/mod.rs (NEW — session module declarations and re-exports)
+- domain/src/session/comparison_session.rs (NEW — ComparisonSession, ComparisonSessionState, ComparisonPlaybackData, tests)
+- docs/implementation-artifacts/sprint-status.yaml (MODIFIED — status updated)
+- docs/implementation-artifacts/1-6-comparison-session-state-machine.md (MODIFIED — story file updated)
