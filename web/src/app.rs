@@ -1,15 +1,26 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use leptos::prelude::*;
 use leptos_router::{
     components::{Route, Router, Routes, A},
     path,
 };
+use send_wrapper::SendWrapper;
 
+use crate::adapters::audio_context::AudioContextManager;
 use crate::components::{
     ComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
+use domain::PerceptualProfile;
 
 #[component]
 pub fn App() -> impl IntoView {
+    let profile = SendWrapper::new(Rc::new(RefCell::new(PerceptualProfile::new())));
+    let audio_ctx_manager = SendWrapper::new(Rc::new(RefCell::new(AudioContextManager::new())));
+    provide_context(profile);
+    provide_context(audio_ctx_manager);
+
     view! {
         <Router>
             <a

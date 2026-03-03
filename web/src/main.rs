@@ -1,5 +1,6 @@
 mod adapters;
 mod app;
+mod bridge;
 mod components;
 
 use leptos::prelude::*;

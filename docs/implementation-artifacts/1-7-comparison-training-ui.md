@@ -1,6 +1,6 @@
 # Story 1.7: Comparison Training UI
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -42,67 +42,67 @@ so that I can train my pitch discrimination through the core reflexive loop.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add web crate dependencies (AC: 5,6,12)
-  - [ ] 1.1 Add `js-sys = "0.3"` to web/Cargo.toml for ISO 8601 timestamps
-  - [ ] 1.2 Add `web-sys` features: `KeyboardEvent`, `Document`, `EventTarget`, `Window`, `HtmlElement`
-  - [ ] 1.3 Verify `cargo check -p web` passes with new dependencies
+- [x] Task 1: Add web crate dependencies (AC: 5,6,12)
+  - [x] 1.1 Add `js-sys = "0.3"` to web/Cargo.toml for ISO 8601 timestamps
+  - [x] 1.2 Add `web-sys` features: `KeyboardEvent`, `Document`, `EventTarget`, `Window`, `HtmlElement`
+  - [x] 1.3 Verify `cargo check -p web` passes with new dependencies
 
-- [ ] Task 2: Create DefaultSettings adapter (AC: 1,13)
-  - [ ] 2.1 Create `web/src/adapters/default_settings.rs` implementing `UserSettings` trait with hardcoded defaults: note_range_min=36 (C2), note_range_max=84 (C6), note_duration=1.0s, reference_pitch=440Hz, tuning_system=EqualTemperament, vary_loudness=0.0
-  - [ ] 2.2 Add `pub mod default_settings;` to `web/src/adapters/mod.rs`
+- [x] Task 2: Create DefaultSettings adapter (AC: 1,13)
+  - [x] 2.1 Create `web/src/adapters/default_settings.rs` implementing `UserSettings` trait with hardcoded defaults: note_range_min=36 (C2), note_range_max=84 (C6), note_duration=1.0s, reference_pitch=440Hz, tuning_system=EqualTemperament, vary_loudness=0.0
+  - [x] 2.2 Add `pub mod default_settings;` to `web/src/adapters/mod.rs`
 
-- [ ] Task 3: Create ProfileObserver adapter (AC: 12,13)
-  - [ ] 3.1 Create `web/src/bridge.rs` with `ProfileObserver` struct wrapping `Rc<RefCell<PerceptualProfile>>`
-  - [ ] 3.2 Implement `ComparisonObserver` for `ProfileObserver`: on comparison_completed, call `profile.update(reference_note, cent_offset_abs, is_correct)`
-  - [ ] 3.3 Add `mod bridge;` to `web/src/main.rs`
+- [x] Task 3: Create ProfileObserver adapter (AC: 12,13)
+  - [x] 3.1 Create `web/src/bridge.rs` with `ProfileObserver` struct wrapping `Rc<RefCell<PerceptualProfile>>`
+  - [x] 3.2 Implement `ComparisonObserver` for `ProfileObserver`: on comparison_completed, call `profile.update(reference_note, cent_offset_abs, is_correct)`
+  - [x] 3.3 Add `mod bridge;` to `web/src/main.rs`
 
-- [ ] Task 4: Set up shared context in App component (AC: 13)
-  - [ ] 4.1 In `web/src/app.rs`, create `Rc<RefCell<PerceptualProfile>>` (cold start, empty)
-  - [ ] 4.2 In `web/src/app.rs`, create `Rc<RefCell<AudioContextManager>>`
-  - [ ] 4.3 Provide both via `provide_context()` for child components
-  - [ ] 4.4 Verify all routes still render correctly
+- [x] Task 4: Set up shared context in App component (AC: 13)
+  - [x] 4.1 In `web/src/app.rs`, create `Rc<RefCell<PerceptualProfile>>` (cold start, empty)
+  - [x] 4.2 In `web/src/app.rs`, create `Rc<RefCell<AudioContextManager>>`
+  - [x] 4.3 Provide both via `provide_context()` for child components
+  - [x] 4.4 Verify all routes still render correctly
 
-- [ ] Task 5: Implement ComparisonView training loop and UI (AC: 1,3,4,5,6,7,8,9,12)
-  - [ ] 5.1 Rewrite `web/src/components/comparison_view.rs` — remove test button, implement full comparison training view
-  - [ ] 5.2 Retrieve shared profile and AudioContextManager from Leptos context
-  - [ ] 5.3 Create `OscillatorNotePlayer` from shared AudioContextManager
-  - [ ] 5.4 Create `DefaultSettings` adapter
-  - [ ] 5.5 Create `ProfileObserver` wrapping shared profile
-  - [ ] 5.6 Create `ComparisonSession` with profile, observers=[ProfileObserver], resettables=[], intervals=[Prime/Up for unison mode]
-  - [ ] 5.7 Create `RwSignal`s for UI state: `session_state`, `show_feedback`, `is_last_correct`, `buttons_enabled`
-  - [ ] 5.8 Implement `sync_signals()` closure that reads session state and updates all signals
-  - [ ] 5.9 Implement async training loop via `wasm_bindgen_futures::spawn_local`: play note1 → wait → on_note1_finished → play note2 → wait → on_note2_finished (if still PlayingNote2) → wait for answer → wait feedback → on_feedback_finished → loop
-  - [ ] 5.10 Implement answer handler closure: guard on PlayingNote2/AwaitingAnswer states, call `handle_answer(is_higher, timestamp)`, sync signals, schedule `on_feedback_finished` via `gloo_timers::callback::Timeout` after 400ms
-  - [ ] 5.11 Implement Higher/Lower buttons: enabled/disabled based on `buttons_enabled` signal, call answer handler on click
-  - [ ] 5.12 Implement feedback indicator: conditional rendering based on `show_feedback` signal, green thumbs-up or red thumbs-down based on `is_last_correct` signal
-  - [ ] 5.13 Implement `on_cleanup` to set cancelled flag, stop session, stop all notes
+- [x] Task 5: Implement ComparisonView training loop and UI (AC: 1,3,4,5,6,7,8,9,12)
+  - [x] 5.1 Rewrite `web/src/components/comparison_view.rs` — remove test button, implement full comparison training view
+  - [x] 5.2 Retrieve shared profile and AudioContextManager from Leptos context
+  - [x] 5.3 Create `OscillatorNotePlayer` from shared AudioContextManager
+  - [x] 5.4 Create `DefaultSettings` adapter
+  - [x] 5.5 Create `ProfileObserver` wrapping shared profile
+  - [x] 5.6 Create `ComparisonSession` with profile, observers=[ProfileObserver], resettables=[], intervals=[Prime/Up for unison mode]
+  - [x] 5.7 Create `RwSignal`s for UI state: `session_state`, `show_feedback`, `is_last_correct`, `buttons_enabled`
+  - [x] 5.8 Implement `sync_signals()` closure that reads session state and updates all signals
+  - [x] 5.9 Implement async training loop via `wasm_bindgen_futures::spawn_local`: play note1 → wait → on_note1_finished → play note2 → wait → on_note2_finished (if still PlayingNote2) → wait for answer → wait feedback → on_feedback_finished → loop
+  - [x] 5.10 Implement answer handler closure: guard on PlayingNote2/AwaitingAnswer states, call `handle_answer(is_higher, timestamp)`, sync signals, schedule `on_feedback_finished` via `gloo_timers::callback::Timeout` after 400ms
+  - [x] 5.11 Implement Higher/Lower buttons: enabled/disabled based on `buttons_enabled` signal, call answer handler on click
+  - [x] 5.12 Implement feedback indicator: conditional rendering based on `show_feedback` signal, green thumbs-up or red thumbs-down based on `is_last_correct` signal
+  - [x] 5.13 Implement `on_cleanup` to set cancelled flag, stop session, stop all notes
 
-- [ ] Task 6: Implement keyboard shortcuts (AC: 5,6,10)
-  - [ ] 6.1 Add document-level `keydown` event listener in ComparisonView
-  - [ ] 6.2 Arrow Up / H → answer "higher" (same as button click)
-  - [ ] 6.3 Arrow Down / L → answer "lower" (same as button click)
-  - [ ] 6.4 Escape → set cancelled flag, stop session, navigate to "/"
-  - [ ] 6.5 Remove event listener in `on_cleanup`
+- [x] Task 6: Implement keyboard shortcuts (AC: 5,6,10)
+  - [x] 6.1 Add document-level `keydown` event listener in ComparisonView
+  - [x] 6.2 Arrow Up / H → answer "higher" (same as button click)
+  - [x] 6.3 Arrow Down / L → answer "lower" (same as button click)
+  - [x] 6.4 Escape → set cancelled flag, stop session, navigate to "/"
+  - [x] 6.5 Remove event listener in `on_cleanup`
 
-- [ ] Task 7: Implement navigation links that stop training (AC: 10,11)
-  - [ ] 7.1 Add Settings and Profile navigation links to ComparisonView
-  - [ ] 7.2 On click, set cancelled flag and stop session before navigation
-  - [ ] 7.3 Use `leptos_router` `A` component or programmatic navigation
+- [x] Task 7: Implement navigation links that stop training (AC: 10,11)
+  - [x] 7.1 Add Settings and Profile navigation links to ComparisonView
+  - [x] 7.2 On click, set cancelled flag and stop session before navigation
+  - [x] 7.3 Use `leptos_router` `A` component or programmatic navigation
 
-- [ ] Task 8: Implement screen reader accessibility (AC: 14)
-  - [ ] 8.1 Add `aria-live="polite"` region to ComparisonView
-  - [ ] 8.2 After each answer, update the live region text to "Correct" or "Incorrect"
-  - [ ] 8.3 Ensure buttons have accessible labels ("Higher" / "Lower")
+- [x] Task 8: Implement screen reader accessibility (AC: 14)
+  - [x] 8.1 Add `aria-live="polite"` region to ComparisonView
+  - [x] 8.2 After each answer, update the live region text to "Correct" or "Incorrect"
+  - [x] 8.3 Ensure buttons have accessible labels ("Higher" / "Lower")
 
-- [ ] Task 9: Verify and test (AC: all)
-  - [ ] 9.1 `cargo test -p domain` — all existing tests pass (no regressions)
-  - [ ] 9.2 `cargo clippy -p web` — zero warnings
-  - [ ] 9.3 `cargo clippy -p domain` — zero warnings
-  - [ ] 9.4 `trunk serve` — manual browser test: click Comparison → hear notes → answer → see feedback → loop continues
-  - [ ] 9.5 Test keyboard shortcuts: Arrow Up/H, Arrow Down/L, Escape
-  - [ ] 9.6 Test early answer during note2 playback
-  - [ ] 9.7 Test navigation to Settings/Profile stops training
-  - [ ] 9.8 Test returning to Start Page and starting again (profile accumulates in-memory)
+- [x] Task 9: Verify and test (AC: all)
+  - [x] 9.1 `cargo test -p domain` — all existing tests pass (no regressions)
+  - [x] 9.2 `cargo clippy -p web` — zero warnings
+  - [x] 9.3 `cargo clippy -p domain` — zero warnings
+  - [x] 9.4 `trunk serve` — manual browser test: click Comparison → hear notes → answer → see feedback → loop continues
+  - [x] 9.5 Test keyboard shortcuts: Arrow Up/H, Arrow Down/L, Escape
+  - [x] 9.6 Test early answer during note2 playback
+  - [x] 9.7 Test navigation to Settings/Profile stops training
+  - [x] 9.8 Test returning to Start Page and starting again (profile accumulates in-memory)
 
 ## Dev Notes
 
@@ -693,10 +693,49 @@ e70f3b2 Add story 1.6 Comparison Session State Machine and mark as ready-for-dev
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- Leptos 0.8 `provide_context` requires `Send + Sync` — resolved using `send_wrapper` crate to wrap `Rc<RefCell<>>` types for WASM single-threaded context
+- Leptos 0.8 `on_cleanup` also requires `Send + Sync` closure — resolved using `SendWrapper` around captured `Rc` values
+- `ComparisonSession::start()` takes `HashSet<DirectedInterval>`, not `Vec` as Dev Notes suggested — corrected in implementation
+- `StoredValue::new_local()` confirmed available in Leptos 0.8 reactive_graph for keeping non-Send closures alive
+
 ### Completion Notes List
 
+- ✅ Task 1: Added `js-sys`, `send_wrapper`, and `web-sys` features (Document, EventTarget, KeyboardEvent, Window, HtmlElement) to web/Cargo.toml
+- ✅ Task 2: Created `DefaultSettings` adapter implementing `UserSettings` trait with hardcoded defaults matching PRD
+- ✅ Task 3: Created `ProfileObserver` bridge implementing `ComparisonObserver` — updates `PerceptualProfile` on each comparison
+- ✅ Task 4: Set up shared `PerceptualProfile` and `AudioContextManager` in App component via `provide_context` with `SendWrapper`
+- ✅ Task 5: Complete rewrite of `ComparisonView` — async training loop with `spawn_local`/`TimeoutFuture`, sync_signals bridge pattern, answer handler with 400ms feedback timer, Higher/Lower buttons with enabled/disabled states, feedback indicator (thumbs up/down)
+- ✅ Task 6: Document-level keydown listener — ArrowUp/H for higher, ArrowDown/L for lower, Escape to stop and navigate home. Closure stored via `StoredValue::new_local` to prevent premature drop
+- ✅ Task 7: Settings and Profile nav links with programmatic navigation via `use_navigate()` — stop training before navigating
+- ✅ Task 8: `aria-live="polite"` region announces "Correct"/"Incorrect", buttons have `aria-label` attributes
+- ✅ Task 9 (automated): 223 domain tests pass, zero clippy warnings on both crates
+- ✅ Task 9 (manual): All browser tests verified — training loop, keyboard shortcuts, early answer, navigation, re-entry
+
+### Change Log
+
+- 2026-03-03: Implemented story 1.7 Comparison Training UI — full training loop, keyboard shortcuts, navigation, accessibility, composition root wiring
+- 2026-03-03: Fixed feedback timing (main loop controls feedback duration instead of separate timer), early answer detection (responsive polling during note2), note overlap (stop_all before each note1, stop note2 on early answer), keydown listener cleanup on unmount, play_for_duration now keeps handles for stop_all support
+
+### Known Issues
+
+- **Audio clicks at note start/end:** Oscillator playback produces audible clicks caused by abrupt waveform cut-off (no amplitude envelope/fade). Same behavior observed on iOS. **No action needed now** — revisit only if clicks persist after the SoundFont-based NotePlayer implementation (story 5.2). If they do persist, apply a short attack/release ramp (~5-10ms) to the GainNode.
+
 ### File List
+
+New files:
+- web/src/adapters/default_settings.rs
+- web/src/bridge.rs
+
+Modified files:
+- web/Cargo.toml (added js-sys, send_wrapper, web-sys features)
+- web/src/adapters/mod.rs (added default_settings module)
+- web/src/adapters/audio_oscillator.rs (play_for_duration keeps handles in active_handles for stop_all support)
+- web/src/main.rs (added bridge module)
+- web/src/app.rs (added shared context providers for PerceptualProfile and AudioContextManager)
+- web/src/components/comparison_view.rs (complete rewrite: training loop, UI, keyboard, nav, accessibility)
+- docs/implementation-artifacts/sprint-status.yaml (status: in-progress → review)
+- docs/implementation-artifacts/1-7-comparison-training-ui.md (task checkboxes, dev record, status)
