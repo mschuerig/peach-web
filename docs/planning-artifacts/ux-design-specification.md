@@ -393,9 +393,9 @@ Peach requires audio output to function. This is a fundamental constraint of the
 |---|---|
 | `/` | Start Page |
 | `/training/comparison` | Comparison Training (unison) |
-| `/training/comparison?interval=true` | Comparison Training (interval) |
+| `/training/comparison?intervals=M3u,M3d,...` | Comparison Training (interval) |
 | `/training/pitch-matching` | Pitch Matching Training (unison) |
-| `/training/pitch-matching?interval=true` | Pitch Matching Training (interval) |
+| `/training/pitch-matching?intervals=M3u,M3d,...` | Pitch Matching Training (interval) |
 | `/profile` | Profile View |
 | `/settings` | Settings View |
 | `/info` | Info View |

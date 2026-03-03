@@ -1166,12 +1166,12 @@ User can train comparison and pitch matching with musical intervals (minor secon
 **Given** I click "Interval Comparison" (FR2)
 **When** the training view loads
 **Then** the ComparisonSession starts with the user's selected intervals from Settings (not just prime/up)
-**And** the route is `/training/comparison?interval=true`
+**And** the route is `/training/comparison?intervals=<comma-separated interval codes>` (e.g., `?intervals=M3u,M3d,m6u,M6d`)
 
 **Given** I click "Interval Pitch Matching" (FR10)
 **When** the training view loads
 **Then** the PitchMatchingSession starts with the user's selected intervals
-**And** the route is `/training/pitch-matching?interval=true`
+**And** the route is `/training/pitch-matching?intervals=<comma-separated interval codes>`
 
 **Given** training is in interval mode
 **When** a comparison or challenge is generated
