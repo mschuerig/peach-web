@@ -1,6 +1,6 @@
 # Story 1.5: Audio Engine (Oscillator)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -358,6 +358,25 @@ Used Option A (sync trait) as recommended in Dev Notes. All NotePlayer methods r
 - `web/src/adapters/audio_oscillator.rs` — NEW: OscillatorNotePlayer, OscillatorPlaybackHandle
 - `web/src/components/comparison_view.rs` — MODIFIED: temporary test button
 
+## Senior Developer Review (AI)
+
+**Reviewer:** Michael (via Claude Opus 4.6) on 2026-03-03
+
+**Findings:** 3 High, 3 Medium, 1 Low — all fixed.
+
+**Fixes Applied:**
+
+1. **H1 — Memory leak in active_handles for timed notes** (audio_oscillator.rs): Timed-play handles were never pruned because the Web Audio scheduled stop didn't update the Rust `stopped` flag. Fix: Remove timed handles from `active_handles` after scheduling `stop_with_when()` since they self-terminate.
+2. **H2 — `let _ = oscillator.stop()` violated error handling rules** (audio_oscillator.rs:46): Replaced with `if let Err(e) = ... { log::warn!(...) }` pattern for both oscillator stop and gain node disconnect.
+3. **H3 — GainNode not stored in handle** (audio_oscillator.rs): Added `gain` field to `OscillatorHandleInner`. On `stop()`, the GainNode is now disconnected from the audio graph to prevent orphaned node accumulation.
+4. **M1 — `stop_all(&mut self)` inconsistent with `play(&self)`** (ports.rs, audio_oscillator.rs): Changed `NotePlayer::stop_all` from `&mut self` to `&self` since `active_handles` uses interior mutability (`RefCell`). Eliminates unnecessary `borrow_mut()` requirement for callers.
+5. **M2 — Double `get_context()` borrow in `play_for_duration`** (audio_oscillator.rs): Refactored `create_and_start` to accept `&Rc<RefCell<AudioContext>>` parameter. Callers now get the context once and pass it through.
+6. **M3 — Semantically wrong error variant for scheduling errors** (ports.rs, audio_oscillator.rs): Added `AudioError::PlaybackFailed(String)` variant. `stop_with_when` errors now map to `PlaybackFailed` instead of misusing `EngineStartFailed`.
+7. **L1 — Missing Default impl for AudioContextManager** (audio_context.rs): Added `#[derive(Default)]`.
+
+**Verification:** 187 domain tests pass. Clippy zero warnings. WASM build succeeds.
+
 ## Change Log
 
 - 2026-03-03: Implemented story 1.5 — Audio Engine (Oscillator). Added port traits in domain crate, AudioContextManager for lazy AudioContext lifecycle, OscillatorNotePlayer with Web Audio implementation, and temporary test button for manual verification.
+- 2026-03-03: Code review fixes — Fixed memory leak in timed-play handle tracking, replaced error swallowing with logging, stored GainNode in handle for proper cleanup, changed stop_all to &self, eliminated double context borrow, added PlaybackFailed error variant, added Default derive for AudioContextManager. 187 domain tests pass, clippy clean.
