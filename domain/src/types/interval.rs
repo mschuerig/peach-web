@@ -30,7 +30,7 @@ impl Interval {
 
     /// Determine the interval between two notes. Errors if distance > 12 semitones.
     pub fn between(reference: MIDINote, target: MIDINote) -> Result<Interval, DomainError> {
-        let diff = (target.raw_value as i16 - reference.raw_value as i16).unsigned_abs() as u8;
+        let diff = (target.raw_value() as i16 - reference.raw_value() as i16).unsigned_abs() as u8;
         Self::from_semitones(diff)
     }
 
@@ -82,7 +82,7 @@ impl DirectedInterval {
     pub fn between(reference: MIDINote, target: MIDINote) -> Result<Self, DomainError> {
         let interval = Interval::between(reference, target)?;
         // Prime is always Up (same note). Otherwise Up if target >= reference.
-        let direction = if target.raw_value >= reference.raw_value {
+        let direction = if target.raw_value() >= reference.raw_value() {
             Direction::Up
         } else {
             Direction::Down
@@ -196,5 +196,13 @@ mod tests {
     fn test_direction_serde_camel_case() {
         let json = serde_json::to_string(&Direction::Up).unwrap();
         assert_eq!(json, "\"up\"");
+    }
+
+    #[test]
+    fn test_directed_interval_serde_roundtrip() {
+        let di = DirectedInterval::new(Interval::MajorThird, Direction::Down);
+        let json = serde_json::to_string(&di).unwrap();
+        let parsed: DirectedInterval = serde_json::from_str(&json).unwrap();
+        assert_eq!(di, parsed);
     }
 }

@@ -3,11 +3,16 @@ use serde::{Deserialize, Serialize};
 /// Frequency in Hz — must be > 0.0.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Frequency {
-    pub raw_value: f64,
+    raw_value: f64,
 }
 
 impl Frequency {
     pub const CONCERT_440: Frequency = Frequency { raw_value: 440.0 };
+
+    /// Access the raw frequency value in Hz.
+    pub fn raw_value(&self) -> f64 {
+        self.raw_value
+    }
 
     /// Create a new Frequency. Panics if value <= 0.0 (programming error invariant).
     pub fn new(raw_value: f64) -> Self {
@@ -41,5 +46,13 @@ mod tests {
     #[should_panic(expected = "Frequency must be > 0.0")]
     fn test_frequency_panics_on_negative() {
         Frequency::new(-1.0);
+    }
+
+    #[test]
+    fn test_frequency_serde_roundtrip() {
+        let f = Frequency::new(440.0);
+        let json = serde_json::to_string(&f).unwrap();
+        let parsed: Frequency = serde_json::from_str(&json).unwrap();
+        assert_eq!(f, parsed);
     }
 }

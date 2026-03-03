@@ -15,12 +15,12 @@ fn test_equal_temperament_precision_all_midi_notes() {
         let expected = 440.0 * 2.0_f64.powf((midi as f64 - 69.0) / 12.0);
 
         // Convert frequency difference to cents: 1200 * log2(computed/expected)
-        let cent_error = 1200.0 * (computed.raw_value / expected).log2();
+        let cent_error = 1200.0 * (computed.raw_value() / expected).log2();
 
         assert!(
             cent_error.abs() < 0.1,
             "MIDI {midi}: computed {}, expected {}, cent error {cent_error}",
-            computed.raw_value,
+            computed.raw_value(),
             expected
         );
     }
@@ -31,7 +31,7 @@ fn test_equal_temperament_precision_all_midi_notes() {
 fn test_a4_exact_frequency() {
     let note = DetunedMIDINote::from(MIDINote::new(69));
     let freq = TuningSystem::EqualTemperament.frequency(note, Frequency::CONCERT_440);
-    assert_eq!(freq.raw_value, 440.0);
+    assert_eq!(freq.raw_value(), 440.0);
 }
 
 /// Verify detuned note frequency calculation precision.
@@ -48,12 +48,12 @@ fn test_detuned_note_precision() {
 
     // Expected: 440 * 2^(50/1200) ≈ 452.893
     let expected = 440.0 * 2.0_f64.powf(50.0 / 1200.0);
-    let cent_error = 1200.0 * (freq.raw_value / expected).log2();
+    let cent_error = 1200.0 * (freq.raw_value() / expected).log2();
 
     assert!(
         cent_error.abs() < 0.1,
         "Detuned A4+50c: computed {}, expected {expected}, cent error {cent_error}",
-        freq.raw_value
+        freq.raw_value()
     );
 }
 
@@ -65,13 +65,13 @@ fn test_known_frequencies() {
 
     // Middle C (C4, MIDI 60) ≈ 261.6256 Hz
     let c4 = et.frequency_for_note(MIDINote::new(60), reference);
-    assert!((c4.raw_value - 261.6256).abs() < 0.001);
+    assert!((c4.raw_value() - 261.6256).abs() < 0.001);
 
     // A3 (MIDI 57) = 220.0 Hz
     let a3 = et.frequency_for_note(MIDINote::new(57), reference);
-    assert!((a3.raw_value - 220.0).abs() < 1e-10);
+    assert!((a3.raw_value() - 220.0).abs() < 1e-10);
 
     // A5 (MIDI 81) = 880.0 Hz
     let a5 = et.frequency_for_note(MIDINote::new(81), reference);
-    assert!((a5.raw_value - 880.0).abs() < 1e-10);
+    assert!((a5.raw_value() - 880.0).abs() < 1e-10);
 }

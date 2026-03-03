@@ -37,7 +37,18 @@ mod tests {
             note: MIDINote::new(60),
             offset: Cents::new(15.0),
         };
-        assert_eq!(detuned.note.raw_value, 60);
+        assert_eq!(detuned.note.raw_value(), 60);
         assert_eq!(detuned.offset.raw_value, 15.0);
+    }
+
+    #[test]
+    fn test_detuned_serde_roundtrip() {
+        let d = DetunedMIDINote {
+            note: MIDINote::new(60),
+            offset: Cents::new(15.0),
+        };
+        let json = serde_json::to_string(&d).unwrap();
+        let parsed: DetunedMIDINote = serde_json::from_str(&json).unwrap();
+        assert_eq!(d, parsed);
     }
 }
