@@ -1,6 +1,6 @@
 # Story 1.6: Comparison Session State Machine
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -395,11 +395,12 @@ Claude Opus 4.6
 - calculate_target_amplitude() implements loudness variation per blueprint formula
 - reset_training_data() stops session, resets profile, and calls all resettables
 - 35 new unit tests covering all ACs: lifecycle, guards, observers, panic isolation, amplitude, stop, reset
-- Total domain test count: 222 (up from 187), zero clippy warnings
+- Total domain test count: 223 (up from 187), zero clippy warnings
 
 ### Change Log
 
 - 2026-03-03: Implemented story 1.6 Comparison Session State Machine
+- 2026-03-03: Code review fixes — stop() now resets all session-level state (AC10), FEEDBACK_DURATION_SECS re-exported, current_interval() logs errors instead of silent fallback
 
 ### File List
 
