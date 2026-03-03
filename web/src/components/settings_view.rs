@@ -270,10 +270,10 @@ pub fn SettingsView() -> impl IntoView {
                 </div>
 
                 // Interval Selection
-                <div>
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <fieldset>
+                    <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">
                         "Interval Selection"
-                    </span>
+                    </legend>
                     <div class="mt-2 space-y-1">
                         {all_directed_intervals().into_iter().map(|di| {
                             let label_text = interval_label(di.interval, di.direction);
@@ -282,6 +282,10 @@ pub fn SettingsView() -> impl IntoView {
                                     <input
                                         type="checkbox"
                                         prop:checked=move || selected_intervals.get().contains(&di)
+                                        disabled=move || {
+                                            let set = selected_intervals.get();
+                                            set.len() == 1 && set.contains(&di)
+                                        }
                                         on:change=move |ev| {
                                             let checked = target_checked(&ev);
                                             selected_intervals.update(|set| {
@@ -294,8 +298,9 @@ pub fn SettingsView() -> impl IntoView {
                                             let mut intervals: Vec<DirectedInterval> =
                                                 selected_intervals.get().into_iter().collect();
                                             intervals.sort_by_key(|d| (d.interval, d.direction));
-                                            if let Ok(json) = serde_json::to_string(&intervals) {
-                                                LocalStorageSettings::set("peach.intervals", &json);
+                                            match serde_json::to_string(&intervals) {
+                                                Ok(json) => LocalStorageSettings::set("peach.intervals", &json),
+                                                Err(e) => log::error!("Failed to serialize intervals: {e}"),
                                             }
                                         }
                                         class="h-5 w-5 accent-indigo-600 dark:accent-indigo-400"
@@ -305,7 +310,7 @@ pub fn SettingsView() -> impl IntoView {
                             }
                         }).collect::<Vec<_>>()}
                     </div>
-                </div>
+                </fieldset>
             </div>
 
             <A

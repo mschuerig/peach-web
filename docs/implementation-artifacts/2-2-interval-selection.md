@@ -1,6 +1,6 @@
 # Story 2.2: Interval Selection
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -312,6 +312,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-04: Implemented story 2.2 — Interval Selection (all tasks complete)
+- 2026-03-04: Code review fixes — accessibility (`<fieldset>`/`<legend>`), disabled state for last checkbox (AC3 UX), serialization error logging
 
 ### File List
 
