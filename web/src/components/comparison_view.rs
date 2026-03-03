@@ -54,9 +54,9 @@ pub fn ComparisonView() -> impl IntoView {
     // store availability on each call, so it works even if IndexedDB
     // opens after ComparisonView mounts.
     let observers: Vec<Box<dyn ComparisonObserver>> = vec![
-        Box::new(ProfileObserver(Rc::clone(&profile))),
-        Box::new(TrendObserver(Rc::clone(&trend_analyzer))),
-        Box::new(TimelineObserver(Rc::clone(&timeline))),
+        Box::new(ProfileObserver::new(Rc::clone(&profile))),
+        Box::new(TrendObserver::new(Rc::clone(&trend_analyzer))),
+        Box::new(TimelineObserver::new(Rc::clone(&timeline))),
         Box::new(DataStoreObserver::new(db_store, storage_error)),
     ];
 
@@ -83,25 +83,41 @@ pub fn ComparisonView() -> impl IntoView {
     let buttons_enabled = RwSignal::new(false);
     let sr_announcement = RwSignal::new(String::new());
 
-    // Sync all signals from session state
+    // Sync all UI signals from session state — extracted for readability
+    fn sync_session_to_signals(
+        session: &RefCell<ComparisonSession>,
+        show_feedback: RwSignal<bool>,
+        is_last_correct: RwSignal<bool>,
+        buttons_enabled: RwSignal<bool>,
+        sr_announcement: RwSignal<String>,
+    ) {
+        let s = session.borrow();
+        show_feedback.set(s.show_feedback());
+        is_last_correct.set(s.is_last_answer_correct());
+        let state = s.state();
+        buttons_enabled.set(
+            state == ComparisonSessionState::PlayingNote2
+                || state == ComparisonSessionState::AwaitingAnswer,
+        );
+        if s.show_feedback() {
+            sr_announcement.set(if s.is_last_answer_correct() {
+                "Correct".into()
+            } else {
+                "Incorrect".into()
+            });
+        }
+    }
+
     let sync_signals = {
         let session = Rc::clone(&session);
         move || {
-            let s = session.borrow();
-            show_feedback.set(s.show_feedback());
-            is_last_correct.set(s.is_last_answer_correct());
-            let state = s.state();
-            buttons_enabled.set(
-                state == ComparisonSessionState::PlayingNote2
-                    || state == ComparisonSessionState::AwaitingAnswer,
+            sync_session_to_signals(
+                &session,
+                show_feedback,
+                is_last_correct,
+                buttons_enabled,
+                sr_announcement,
             );
-            if s.show_feedback() {
-                sr_announcement.set(if s.is_last_answer_correct() {
-                    "Correct".into()
-                } else {
-                    "Incorrect".into()
-                });
-            }
         }
     };
 
@@ -227,8 +243,8 @@ pub fn ComparisonView() -> impl IntoView {
     // Visibility change handler — interrupts training when tab is hidden
     let visibility_handler = Closure::<dyn FnMut(web_sys::Event)>::new({
         let interrupt = Rc::clone(&interrupt_and_navigate);
+        let document = document.clone();
         move |_event: web_sys::Event| {
-            let document = web_sys::window().unwrap().document().unwrap();
             if document.hidden() {
                 (*interrupt)();
             }
@@ -294,6 +310,9 @@ pub fn ComparisonView() -> impl IntoView {
     }
 
     // Start the async training loop
+    // SAFETY (RefCell borrows): WASM is single-threaded. Event handlers (on_answer,
+    // interruption) can only execute at `.await` yield points. All RefCell borrows
+    // in this loop are dropped before each `.await`, so overlapping borrows are impossible.
     {
         let session = Rc::clone(&session);
         let note_player = Rc::clone(&note_player);

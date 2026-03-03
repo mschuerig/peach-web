@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::error::DomainError;
+
 /// Frequency in Hz — must be > 0.0.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Frequency {
@@ -14,10 +16,19 @@ impl Frequency {
         self.raw_value
     }
 
-    /// Create a new Frequency. Panics if value <= 0.0 (programming error invariant).
+    /// Create a new Frequency. Panics if value is not positive and finite.
+    /// Use `try_new()` when input is not guaranteed valid.
     pub fn new(raw_value: f64) -> Self {
-        assert!(raw_value > 0.0, "Frequency must be > 0.0, got {raw_value}");
-        Self { raw_value }
+        Self::try_new(raw_value).expect("Frequency must be positive and finite")
+    }
+
+    /// Fallible constructor: returns `Err` if value is <= 0.0, NaN, or infinite.
+    pub fn try_new(raw_value: f64) -> Result<Self, DomainError> {
+        if raw_value <= 0.0 || raw_value.is_nan() || raw_value.is_infinite() {
+            Err(DomainError::InvalidFrequency(raw_value))
+        } else {
+            Ok(Self { raw_value })
+        }
     }
 }
 
@@ -37,15 +48,46 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Frequency must be > 0.0")]
+    #[should_panic(expected = "Frequency must be positive and finite")]
     fn test_frequency_panics_on_zero() {
         Frequency::new(0.0);
     }
 
     #[test]
-    #[should_panic(expected = "Frequency must be > 0.0")]
+    #[should_panic(expected = "Frequency must be positive and finite")]
     fn test_frequency_panics_on_negative() {
         Frequency::new(-1.0);
+    }
+
+    #[test]
+    fn test_try_new_valid() {
+        assert!(Frequency::try_new(440.0).is_ok());
+        assert_eq!(Frequency::try_new(440.0).unwrap().raw_value(), 440.0);
+    }
+
+    #[test]
+    fn test_try_new_zero() {
+        assert!(Frequency::try_new(0.0).is_err());
+    }
+
+    #[test]
+    fn test_try_new_negative() {
+        assert!(Frequency::try_new(-1.0).is_err());
+    }
+
+    #[test]
+    fn test_try_new_nan() {
+        assert!(Frequency::try_new(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn test_try_new_infinity() {
+        assert!(Frequency::try_new(f64::INFINITY).is_err());
+    }
+
+    #[test]
+    fn test_try_new_boundary() {
+        assert!(Frequency::try_new(f64::MIN_POSITIVE).is_ok());
     }
 
     #[test]

@@ -19,6 +19,9 @@ use domain::{PerceptualProfile, ThresholdTimeline, TrendAnalyzer};
 
 #[component]
 pub fn App() -> impl IntoView {
+    // SendWrapper is required because Leptos 0.8 provide_context requires Send + Sync,
+    // but Rc<RefCell<T>> doesn't implement those traits. SendWrapper is safe here because
+    // WASM is single-threaded — the Send + Sync bounds are never actually exercised.
     let profile = SendWrapper::new(Rc::new(RefCell::new(PerceptualProfile::new())));
     let audio_ctx_manager = SendWrapper::new(Rc::new(RefCell::new(AudioContextManager::new())));
     let trend_analyzer = SendWrapper::new(Rc::new(RefCell::new(TrendAnalyzer::new())));

@@ -19,7 +19,12 @@ pub struct ComparisonRecord {
 
 impl ComparisonRecord {
     /// Construct a flat persistence record from a completed comparison.
-    /// Uses `Interval::between()` for interval field, defaults to 0 on error.
+    ///
+    /// The `interval` field stores semitone distance. `Interval::between()` returns
+    /// `Err` when the distance exceeds one octave (13+ semitones), which can happen
+    /// with large transposition intervals. Defaulting to 0 (Prime) is safe here
+    /// because this field is informational for the storage schema, not used for
+    /// any logic that depends on accurate interval reconstruction.
     pub fn from_completed(completed: &CompletedComparison) -> Self {
         let comparison = completed.comparison();
         let interval = Interval::between(
