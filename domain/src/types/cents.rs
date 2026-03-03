@@ -39,4 +39,12 @@ mod tests {
         let c = Cents::new(0.0);
         assert_eq!(c.magnitude(), 0.0);
     }
+
+    #[test]
+    fn test_cents_serde_roundtrip() {
+        let c = Cents::new(-25.5);
+        let json = serde_json::to_string(&c).unwrap();
+        let parsed: Cents = serde_json::from_str(&json).unwrap();
+        assert_eq!(c, parsed);
+    }
 }

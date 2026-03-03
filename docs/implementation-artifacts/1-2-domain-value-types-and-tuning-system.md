@@ -1,6 +1,6 @@
 # Story 1.2: Domain Value Types & Tuning System
 
-Status: review
+Status: done
 
 ## Story
 
@@ -267,7 +267,7 @@ Claude Opus 4.6
 - Clamping types silently clamp: NoteDuration (0.3-3.0), AmplitudeDB (-90.0..12.0 f32), UnitInterval (0.0-1.0)
 - SoundSourceID defaults to "sf2:8:80" on empty string
 - All serde: struct fields snake_case, enum variants camelCase
-- 56 inline unit tests + 4 integration tests = 60 total, all pass
+- 79 inline unit tests + 4 integration tests = 83 total, all pass
 - Zero clippy warnings
 - Zero browser dependencies — pure native Rust
 - Added `serde_json` as dev-dependency for serialization round-trip tests
@@ -290,7 +290,27 @@ Claude Opus 4.6
 - domain/src/tuning.rs (new — TuningSystem with frequency() and cent_offset())
 - domain/tests/tuning_accuracy.rs (new — integration test for frequency precision)
 - domain/Cargo.toml (modified — added serde_json dev-dependency)
+- Cargo.lock (modified — auto-generated dependency lockfile)
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Code Review Agent (Claude Opus 4.6) | **Date:** 2026-03-03
+
+**Findings (6 fixed, 1 deferred):**
+
+- **[FIXED][HIGH] H1 — Public fields bypassed constructor invariants:** `raw_value` was `pub` on MIDINote, MIDIVelocity, Frequency, NoteDuration, AmplitudeDB, UnitInterval, SoundSourceID. Direct struct construction bypassed panic/clamping invariants. Fixed: fields made private, `pub fn raw_value()` getters added. All cross-module consumers updated.
+- **[FIXED][MEDIUM] M1 — `TuningSystem::frequency()` ignored `self`:** Both variants produced identical 12-TET results. Fixed: decompose MIDI distance into octaves + remainder interval, look up tuning-system-specific cent offset via `cent_offset()`, convert to Hz via `ref * 2^(cents/1200)`. JI now produces correct pure-ratio frequencies (e.g., P5 = 3/2 = 660 Hz, M3 = 5/4 = 550 Hz). 7 new JI tests added.
+- **[FIXED][MEDIUM] M2 — NaN passed through clamping constructors:** `f64::NAN.clamp()` returns NaN, bypassing clamping on NoteDuration, AmplitudeDB, UnitInterval. Fixed: `assert!(!raw_value.is_nan())` added before clamping.
+- **[FIXED][MEDIUM] M3 — Missing serde round-trip tests:** Only enum types had serde tests. Fixed: added round-trip tests for all 10 struct types (MIDINote, MIDIVelocity, Cents, Frequency, NoteDuration, AmplitudeDB, UnitInterval, SoundSourceID, DetunedMIDINote, DirectedInterval).
+- **[FIXED][LOW] L1 — Cargo.lock not in File List:** Added to File List.
+- **[FIXED][LOW] L2 — Missing MIDINote::transposed Prime test:** Added `test_midi_note_transposed_by_prime`.
+- **[FIXED][LOW] L3 — Missing MIDINote::random edge cases:** Added `test_midi_note_random_single_element_range` and `test_midi_note_random_full_range`.
+
+**Test count:** 60 → 83 (23 new tests: 10 serde round-trip, 3 NaN panic, 3 MIDINote edge cases, 7 JI frequency)
+
+**Outcome:** All issues resolved.
 
 ## Change Log
 
 - 2026-03-03: Implemented all domain value types and tuning system (Story 1.2) — 13 new files, 60 tests
+- 2026-03-03: Code review fixes — private fields with getters (H1), NaN guards (M2), serde round-trip tests (M3), edge case tests (L2, L3), TuningSystem JI frequency fix (M1) — 83 tests total

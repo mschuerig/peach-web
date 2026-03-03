@@ -13,10 +13,15 @@ const NOTE_NAMES: [&str; 12] = [
     Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
 )]
 pub struct MIDINote {
-    pub raw_value: u8,
+    raw_value: u8,
 }
 
 impl MIDINote {
+    /// Access the raw MIDI note value (0-127).
+    pub fn raw_value(&self) -> u8 {
+        self.raw_value
+    }
+
     /// Create a new MIDINote. Panics if value > 127.
     pub fn new(raw_value: u8) -> Self {
         assert!(raw_value <= 127, "MIDI note must be 0-127, got {raw_value}");
@@ -54,10 +59,15 @@ impl MIDINote {
     Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
 )]
 pub struct MIDIVelocity {
-    pub raw_value: u8,
+    raw_value: u8,
 }
 
 impl MIDIVelocity {
+    /// Access the raw MIDI velocity value (1-127).
+    pub fn raw_value(&self) -> u8 {
+        self.raw_value
+    }
+
     /// Create a new MIDIVelocity. Panics if value is 0 or > 127.
     pub fn new(raw_value: u8) -> Self {
         assert!(
@@ -153,5 +163,42 @@ mod tests {
     #[should_panic(expected = "MIDI velocity must be 1-127")]
     fn test_midi_velocity_panics_on_128() {
         MIDIVelocity::new(128);
+    }
+
+    #[test]
+    fn test_midi_note_transposed_by_prime() {
+        let c4 = MIDINote::new(60);
+        let result = c4.transposed(DirectedInterval::new(Interval::Prime, Direction::Up));
+        assert_eq!(result.raw_value, 60);
+    }
+
+    #[test]
+    fn test_midi_note_random_single_element_range() {
+        let note = MIDINote::random(42..=42);
+        assert_eq!(note.raw_value, 42);
+    }
+
+    #[test]
+    fn test_midi_note_random_full_range() {
+        for _ in 0..100 {
+            let note = MIDINote::random(0..=127);
+            assert!(note.raw_value <= 127);
+        }
+    }
+
+    #[test]
+    fn test_midi_note_serde_roundtrip() {
+        let note = MIDINote::new(60);
+        let json = serde_json::to_string(&note).unwrap();
+        let parsed: MIDINote = serde_json::from_str(&json).unwrap();
+        assert_eq!(note, parsed);
+    }
+
+    #[test]
+    fn test_midi_velocity_serde_roundtrip() {
+        let vel = MIDIVelocity::new(100);
+        let json = serde_json::to_string(&vel).unwrap();
+        let parsed: MIDIVelocity = serde_json::from_str(&json).unwrap();
+        assert_eq!(vel, parsed);
     }
 }
