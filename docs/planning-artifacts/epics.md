@@ -2,6 +2,8 @@
 stepsCompleted:
   - step-01-validate-prerequisites
   - step-02-design-epics
+  - step-03-create-stories
+  - step-04-final-validation
 inputDocuments:
   - docs/planning-artifacts/prd.md
   - docs/planning-artifacts/architecture.md
@@ -252,3 +254,1122 @@ User can train comparison and pitch matching with musical intervals (minor secon
 ### Epic 6: Offline Support, Accessibility Polish & Data Portability
 App works fully offline after initial load via Service Worker. Complete screen reader support for all feedback events. Info view. User can export and import training data in JSON format.
 **FRs covered:** FR39, FR40, FR46, FR47
+
+## Epic 1: Core Comparison Training
+
+User can open Peach, click "Comparison," hear two notes via oscillator, answer higher/lower via click or keyboard, see feedback, and keep training. Data persists across sessions. The adaptive algorithm targets weak spots from the start.
+
+### Story 1.1: Project Scaffold
+
+**As a** developer,
+**I want** a working Cargo workspace with Leptos CSR, Trunk, and Tailwind CSS configured,
+**So that** I have a solid foundation to build the application on.
+
+**Acceptance Criteria:**
+
+**Given** a fresh checkout of the repository
+**When** I run `trunk serve`
+**Then** the application compiles and serves a page at localhost
+**And** the page displays "Peach" as a heading
+
+**Given** the workspace is set up
+**When** I inspect the project structure
+**Then** there is a `domain` crate with `src/lib.rs` and zero browser dependencies in Cargo.toml
+**And** there is a `web` crate with `src/main.rs` that depends on the domain crate
+**And** there is a workspace-level `Cargo.toml`
+
+**Given** Tailwind CSS is configured
+**When** the app is built with `trunk build`
+**Then** Tailwind utility classes are processed and included in the output CSS
+
+**Given** the project builds
+**When** I run `cargo test -p domain`
+**Then** the domain crate compiles and tests pass (even if empty)
+**And** the domain crate has no `web-sys`, `wasm-bindgen`, or `leptos` dependencies
+
+**Given** the `index.html` entry point
+**When** I inspect it
+**Then** it includes `<meta name="viewport" content="width=device-width, initial-scale=1">`
+
+### Story 1.2: Domain Value Types & Tuning System
+
+**As a** developer,
+**I want** all domain value types and the tuning system implemented with unit tests,
+**So that** the foundational types are correct, precise, and ready for use by sessions and profiles.
+
+**Acceptance Criteria:**
+
+**Given** the domain crate
+**When** I construct a MIDINote with rawValue 60
+**Then** it succeeds and `name` returns "C4"
+**And** rawValue 69 returns "A4"
+
+**Given** a MIDINote
+**When** I construct with a value outside 0-127
+**Then** it panics (programming error invariant)
+
+**Given** a MIDINote
+**When** I call `random(in: 36..=84)`
+**Then** the result is within that range
+
+**Given** a MIDINote with rawValue 60
+**When** I call `transposed(by: DirectedInterval(perfectFifth, up))`
+**Then** the result has rawValue 67
+
+**Given** Cents, Frequency, DetunedMIDINote, NoteDuration, MIDIVelocity, AmplitudeDB, UnitInterval, SoundSourceID
+**When** constructed
+**Then** each enforces its constraints: Frequency panics on <= 0, NoteDuration clamps to 0.3-3.0, UnitInterval clamps to 0.0-1.0, MIDIVelocity panics outside 1-127
+
+**Given** Interval enum
+**When** I call `between(MIDINote(60), MIDINote(67))`
+**Then** it returns `perfectFifth`
+**And** distance > 12 returns an error
+
+**Given** DirectedInterval
+**When** I call `between(MIDINote(60), MIDINote(67))`
+**Then** it returns `DirectedInterval(perfectFifth, up)`
+**And** `between(MIDINote(67), MIDINote(60))` returns `DirectedInterval(perfectFifth, down)`
+
+**Given** TuningSystem::EqualTemperament with referencePitch 440Hz
+**When** I convert `DetunedMIDINote(MIDINote(69), Cents(0.0))` to frequency
+**Then** the result is exactly 440.0 Hz
+
+**Given** TuningSystem with equal temperament
+**When** I convert various MIDI notes to frequencies
+**Then** results are accurate to within 0.1 cent of mathematically correct values (NFR2)
+
+**Given** TuningSystem::JustIntonation
+**When** I query cent offsets for all intervals
+**Then** values match the blueprint table (e.g. perfectFifth = 701.955 cents)
+
+**Given** all types are implemented
+**When** I run `cargo test -p domain`
+**Then** all tests pass with zero browser dependencies
+
+### Story 1.3: Perceptual Profile & Adaptive Algorithm
+
+**As a** developer,
+**I want** the perceptual profile, adaptive algorithm, trend analyzer, and threshold timeline implemented with unit tests,
+**So that** the core intelligence of the app is correct and ready for integration.
+
+**Acceptance Criteria:**
+
+**Given** a fresh PerceptualProfile
+**When** I call `update(MIDINote(60), centOffset: 50.0, isCorrect: true)`
+**Then** note 60's mean is 50.0, sampleCount is 1, stdDev is 0.0
+
+**Given** multiple updates for the same note
+**When** I check statistics
+**Then** mean and stdDev match Welford's online algorithm
+**And** results are identical to manual computation of mean and sample standard deviation
+
+**Given** trained and untrained notes in the profile
+**When** I call `weakSpots(count: 10)`
+**Then** untrained notes rank weakest (infinite score)
+**And** among trained notes, higher mean = weaker
+
+**Given** trained notes in the profile
+**When** I query `overallMean` and `overallStdDev`
+**Then** overallMean is the average of per-note means across trained notes
+**And** overallStdDev is sample std dev of per-note means
+**And** both return None when no notes are trained
+
+**Given** pitch matching accumulators
+**When** I call `updateMatching` with multiple samples
+**Then** matchingMeanAbs tracks running mean of absolute errors via Welford's
+**And** matchingStdDev is correct for 2+ samples
+**And** returns None when count is 0
+
+**Given** `profile.reset()` is called
+**When** I check statistics
+**Then** all 128 notes return to defaults and matching accumulators are zeroed
+
+**Given** KazezNoteStrategy with a correct last answer at 50 cents
+**When** nextComparison is called
+**Then** new magnitude = kazezNarrow(50.0) ≈ 32.3 cents, clamped to [min, max]
+
+**Given** KazezNoteStrategy with an incorrect last answer at 50 cents
+**When** nextComparison is called
+**Then** new magnitude = kazezWiden(50.0) ≈ 81.8 cents, clamped to [min, max]
+
+**Given** no previous comparison and no profile data
+**When** nextComparison is called
+**Then** magnitude defaults to maxCentDifference (100 cents — cold start)
+
+**Given** no previous comparison but profile has overallMean
+**When** nextComparison is called
+**Then** magnitude starts at overallMean, clamped to difficulty range
+
+**Given** nextComparison generates a comparison
+**When** the reference note is selected
+**Then** it falls within the configured note range
+**And** the target note stays within MIDI 0-127 after interval transposition
+
+**Given** TrendAnalyzer with fewer than 20 data points
+**When** trend is queried
+**Then** it returns None (insufficient data)
+
+**Given** TrendAnalyzer with 20+ points where later half is >5% lower
+**When** trend is queried
+**Then** it returns "improving"
+
+**Given** ThresholdTimeline receives comparison data
+**When** data points are added
+**Then** they are recorded with timestamp, centOffset, isCorrect, referenceNote
+**And** daily aggregation produces correct meanThreshold and counts
+
+### Story 1.4: App Shell & Routing
+
+**As a** musician,
+**I want** to see a start page with a Comparison training button and navigate between views,
+**So that** I can access the app's features from a clean, simple hub.
+
+**Acceptance Criteria:**
+
+**Given** the app is loaded in a browser
+**When** I navigate to `/`
+**Then** I see the Start Page with a "Comparison" button as the primary action
+**And** I see navigation links for Settings, Profile, and Info
+**And** no onboarding, tutorial, or welcome message is shown
+
+**Given** I am on the Start Page
+**When** I click the Settings link
+**Then** I navigate to `/settings` and see a placeholder Settings view
+**And** I can navigate back to the Start Page
+
+**Given** I am on the Start Page
+**When** I click the Profile link
+**Then** I navigate to `/profile` and see a placeholder Profile view
+
+**Given** I am on any secondary view
+**When** I navigate back
+**Then** I return to the Start Page (hub-and-spoke navigation)
+
+**Given** the routes are configured
+**When** I access `/training/comparison`
+**Then** a placeholder Comparison Training view loads
+
+**Given** the app is rendered
+**When** I inspect the HTML
+**Then** a "Skip to main content" link is present at the top of the page
+**And** semantic HTML elements are used for navigation and main content areas
+
+**Given** the layout
+**When** viewed on any viewport width
+**Then** content is centered at a comfortable maximum width on desktop
+**And** single-column layout works on mobile without horizontal scrolling
+
+### Story 1.5: Audio Engine (Oscillator)
+
+**As a** musician,
+**I want** to hear notes played through my browser,
+**So that** I can begin ear training with accurate audio.
+
+**Acceptance Criteria:**
+
+**Given** OscillatorNotePlayer is implemented
+**When** I call play with a frequency, duration, velocity, and amplitudeDB
+**Then** a sine wave plays at the specified frequency via Web Audio OscillatorNode + GainNode
+**And** the note stops after the specified duration (FR32)
+
+**Given** OscillatorNotePlayer is implemented
+**When** I call play with no duration (indefinite mode)
+**Then** the note plays continuously until explicitly stopped via PlaybackHandle.stop() (FR32)
+
+**Given** the audio engine
+**When** a note is triggered
+**Then** audio onset occurs within 50ms (NFR1)
+
+**Given** a note is playing
+**When** it was created with an AmplitudeDB offset
+**Then** the GainNode adjusts volume by the specified decibel offset relative to baseline (FR34)
+
+**Given** no user gesture has occurred
+**When** the app loads
+**Then** no AudioContext is created (FR35)
+
+**Given** the user clicks a training button (first gesture)
+**When** the AudioContext is created
+**Then** it is stored in a shared reference (Rc<RefCell<AudioContext>>) for reuse
+**And** subsequent audio operations use this same context
+
+**Given** an active AudioContext
+**When** stopAll() is called
+**Then** all currently playing notes stop immediately
+
+**Given** the audio engine plays a specific frequency
+**When** the frequency is measured
+**Then** it is accurate to the Web Audio API's precision for the requested value (FR31)
+
+### Story 1.6: Comparison Session State Machine
+
+**As a** developer,
+**I want** the ComparisonSession state machine implemented with its full training loop and observer pattern,
+**So that** the domain logic drives the comparison training experience correctly.
+
+**Acceptance Criteria:**
+
+**Given** ComparisonSession is constructed with injected dependencies
+**When** it is in `idle` state
+**Then** no audio is playing and no training loop is running
+
+**Given** ComparisonSession is idle
+**When** start(intervals) is called with at least one interval
+**Then** state transitions to `playingNote1`
+**And** the tuning system is snapshot from userSettings for the session
+
+**Given** the training loop is running
+**When** a comparison is generated
+**Then** the reference note plays at velocity 63, amplitudeDB 0.0
+**And** then the target note plays at velocity 63 with calculated amplitude variation
+**And** both play for the configured noteDuration (FR3)
+
+**Given** state is `playingNote1`
+**When** the reference note finishes
+**Then** state transitions to `playingNote2`
+
+**Given** state is `playingNote2`
+**When** the target note finishes and no answer was given
+**Then** state transitions to `awaitingAnswer`
+
+**Given** state is `playingNote2` or `awaitingAnswer`
+**When** handleAnswer(isHigher) is called
+**Then** the target note stops if still playing
+**And** a CompletedComparison is created with timestamp and session tuning system
+**And** all observers receive comparisonCompleted(completed)
+**And** state transitions to `showingFeedback` for 400ms (FR4)
+
+**Given** state is `showingFeedback`
+**When** 400ms elapses
+**Then** showFeedback becomes false and the next comparison begins
+
+**Given** varyLoudness is 0.0
+**When** target amplitude is calculated
+**Then** amplitudeDB is 0.0
+
+**Given** varyLoudness is > 0.0
+**When** target amplitude is calculated
+**Then** amplitudeDB is random in [-varyLoudness * 5.0, +varyLoudness * 5.0]
+
+**Given** session is running
+**When** stop() is called
+**Then** all audio stops, async tasks cancel, state returns to idle, incomplete comparison is discarded (FR7)
+
+**Given** the observer pattern
+**When** an observer throws an error
+**Then** the error is caught internally and logged — never propagated to the session
+
+### Story 1.7: Comparison Training UI
+
+**As a** musician,
+**I want** to click "Comparison," hear two notes, answer higher/lower via click or keyboard, see brief feedback, and keep training,
+**So that** I can train my pitch discrimination through the core reflexive loop.
+
+**Acceptance Criteria:**
+
+**Given** I am on the Start Page
+**When** I click the "Comparison" button
+**Then** I navigate to the Comparison Training view
+**And** the AudioContext activates (FR35)
+**And** the first comparison begins immediately — no countdown, no delay (FR1)
+
+**Given** I am on the Start Page
+**When** I press Enter or Space with the Comparison button focused
+**Then** training starts identically to clicking (FR42)
+
+**Given** state is `playingNote1`
+**When** the reference note is playing
+**Then** Higher and Lower buttons are visually disabled and not clickable/pressable
+
+**Given** state is `playingNote2`
+**When** the target note begins playing
+**Then** Higher and Lower buttons become enabled immediately (FR4 — early answer)
+
+**Given** buttons are enabled
+**When** I click "Higher" or press Arrow Up / H
+**Then** my answer is registered as "higher" and both buttons disable immediately (FR41)
+
+**Given** buttons are enabled
+**When** I click "Lower" or press Arrow Down / L
+**Then** my answer is registered as "lower" and both buttons disable immediately (FR41)
+
+**Given** a correct answer
+**When** feedback displays
+**Then** a green thumbs-up indicator appears for ~400ms (FR5)
+
+**Given** an incorrect answer
+**When** feedback displays
+**Then** a red thumbs-down indicator appears for ~400ms with same visual weight, position, and duration as correct feedback (FR5)
+
+**Given** feedback is showing
+**When** ~400ms elapses
+**Then** the indicator disappears and the next comparison begins automatically
+
+**Given** I am in Comparison Training
+**When** I press Escape
+**Then** training stops and I return to the Start Page (FR43)
+
+**Given** I am in Comparison Training
+**When** I click Settings or Profile links
+**Then** training stops and I navigate to the selected view (FR6)
+
+**Given** the UIObserver bridge is implemented
+**When** domain session state changes
+**Then** corresponding Leptos signals update and UI re-renders affected elements
+
+**Given** the composition root
+**When** the app starts
+**Then** all dependencies are wired: adapters → domain services → sessions → UI (blueprint §11)
+
+**Given** the Comparison Training view
+**When** I inspect the HTML
+**Then** an `aria-live="polite"` region exists
+**And** "Correct" or "Incorrect" is announced to screen readers after each answer
+
+### Story 1.8: Persistence & Profile Hydration
+
+**As a** musician,
+**I want** my training data and settings to persist across page refreshes and browser restarts,
+**So that** my perceptual profile accumulates over time and my preferences are remembered.
+
+**Acceptance Criteria:**
+
+**Given** the IndexedDB adapter is implemented
+**When** a comparison is completed during training
+**Then** a ComparisonRecord is saved to `comparison_records` in the `peach` database (FR36)
+**And** the record contains: referenceNote, targetNote, centOffset, isCorrect, interval, tuningSystem, timestamp
+
+**Given** records exist in IndexedDB
+**When** fetchAllComparisons() is called
+**Then** all records are returned sorted by timestamp ascending
+
+**Given** the localStorage adapter is implemented
+**When** a setting changes
+**Then** it is immediately saved with `peach.` prefix keys (FR30)
+
+**Given** settings exist in localStorage
+**When** the app loads
+**Then** settings are read and applied (FR38)
+
+**Given** no settings exist in localStorage
+**When** the app loads
+**Then** sensible defaults are used: noteRangeMin=36, noteRangeMax=84, noteDuration=1.0, referencePitch=440, tuningSystem=equalTemperament, varyLoudness=0.0
+
+**Given** comparison records exist in IndexedDB
+**When** the app launches
+**Then** all records are replayed through profile.update() to rebuild the PerceptualProfile (FR21)
+**And** TrendAnalyzer and ThresholdTimeline are hydrated from the same records
+**And** hydration completes in under 1 second for up to 10,000 records (NFR4)
+
+**Given** the profile has been hydrated
+**When** the user starts training
+**Then** the adaptive algorithm uses hydrated profile data to select the first comparison
+
+**Given** a storage write operation
+**When** the write fails
+**Then** the user is informed that data may not have been saved (NFR8)
+**And** training continues — non-blocking
+
+**Given** training records have been saved
+**When** the page is refreshed, browser crashes, or device restarts
+**Then** all previously saved records are intact (NFR6)
+
+### Story 1.9: Interruption Handling
+
+**As a** musician,
+**I want** training to stop cleanly when I switch tabs or encounter an audio interruption,
+**So that** no data is lost and I can resume training with one click.
+
+**Acceptance Criteria:**
+
+**Given** training is in progress
+**When** I switch to another browser tab
+**Then** training stops immediately, audio stops, incomplete comparison is discarded silently (FR7, FR48)
+
+**Given** training was interrupted by tab switch
+**When** I return to the Peach tab
+**Then** I see the Start Page (FR48)
+**And** I can start training again with one click
+
+**Given** training is in progress
+**When** the browser suspends the AudioContext
+**Then** training stops with the same behavior as tab hidden (FR48)
+
+**Given** training is in progress
+**When** I navigate to Settings or Profile
+**Then** training stops and incomplete comparison is discarded (FR6)
+
+**Given** any interruption occurs
+**When** training stops
+**Then** no error dialogs are shown
+**And** no "resume session" prompts appear
+**And** no session summary is displayed
+
+**Given** training was interrupted
+**When** I start training again
+**Then** the algorithm uses my existing profile — no data was lost
+**And** training begins from the adaptive algorithm's current state
+
+## Epic 2: Training Customization
+
+User can configure their training experience — note range, note duration, reference pitch, sound source, loudness variation, tuning system — and reset all training data if desired. Settings accessible from within training views.
+
+### Story 2.1: Settings View — Core Training Parameters
+
+**As a** musician,
+**I want** to configure my training note range, note duration, reference pitch, sound source, loudness variation, and tuning system,
+**So that** I can personalize my training experience to match my instrument and goals.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to the Settings view
+**When** the view loads
+**Then** all settings display their current values from localStorage
+**And** if no values exist, sensible defaults are shown (noteRangeMin=36/C2, noteRangeMax=84/C6, noteDuration=1.0s, referencePitch=440Hz, varyLoudness=0%, tuningSystem=Equal Temperament)
+
+**Given** the note range controls (FR22)
+**When** I adjust the lower bound
+**Then** it is constrained to valid MIDI note values and cannot exceed the upper bound
+**And** the change is immediately saved to localStorage
+
+**Given** the note range controls (FR22)
+**When** I adjust the upper bound
+**Then** it is constrained to valid MIDI note values and cannot go below the lower bound
+**And** the change is immediately saved to localStorage
+
+**Given** the note duration control (FR23)
+**When** I adjust the duration
+**Then** it is constrained to 0.3-3.0 seconds
+**And** the change is immediately saved to localStorage
+
+**Given** the reference pitch control (FR24)
+**When** I select a reference pitch (440Hz, 442Hz, 432Hz, 415Hz, or custom)
+**Then** the selection is immediately saved to localStorage
+
+**Given** the sound source control (FR25)
+**When** I select a sound source from the dropdown
+**Then** the selection is immediately saved to localStorage
+
+**Given** the loudness variation control (FR26)
+**When** I adjust the slider
+**Then** it is constrained to 0-100%
+**And** the change is immediately saved to localStorage
+
+**Given** the tuning system control (FR28)
+**When** I select Equal Temperament or Just Intonation
+**Then** the selection is immediately saved to localStorage
+
+**Given** any setting has been changed
+**When** I return to training
+**Then** the new setting takes effect on the next comparison
+
+**Given** I access Settings from within a training view (FR49)
+**When** the Settings view loads
+**Then** training has already stopped (handled by Epic 1 navigation)
+**And** I see the fully functional Settings view with all controls
+
+**Given** the Settings view
+**When** I navigate back
+**Then** I return to the Start Page
+
+**Given** the Settings view on any device
+**When** I interact with controls
+**Then** all controls have minimum 44x44px touch targets
+**And** all controls are keyboard-accessible
+
+### Story 2.2: Interval Selection
+
+**As a** musician,
+**I want** to select which directed intervals I want to train,
+**So that** I can focus on specific intervals that are relevant to my musical practice.
+
+**Acceptance Criteria:**
+
+**Given** the interval selection control in Settings (FR27)
+**When** the control loads
+**Then** all directed intervals are displayed (13 intervals × 2 directions, with prime always up-only)
+**And** currently selected intervals are checked
+**And** default selection is prime/up only (unison)
+
+**Given** the interval multi-select
+**When** I check or uncheck an interval
+**Then** the selection is immediately saved to localStorage
+
+**Given** the interval selection
+**When** I deselect all intervals
+**Then** at least one interval must remain selected (prime/up cannot be deselected if it's the last one)
+
+**Given** intervals are displayed
+**When** I read the labels
+**Then** each shows the interval name and direction (e.g. "Minor Second Up", "Perfect Fifth Down")
+
+**Given** interval selection has been changed
+**When** I start training
+**Then** the session uses only the selected intervals for comparison generation
+
+### Story 2.3: Reset Training Data
+
+**As a** musician,
+**I want** to reset all my training data with a confirmation step,
+**So that** I can start fresh if I choose to, without accidentally losing my data.
+
+**Acceptance Criteria:**
+
+**Given** the Settings view
+**When** I see the "Reset all training data" button
+**Then** it is visually distinct as a destructive action (FR29)
+
+**Given** I click the reset button
+**When** the confirmation dialog appears
+**Then** it clearly states that all training data will be permanently deleted
+**And** it requires explicit confirmation before proceeding
+
+**Given** I confirm the reset
+**When** the reset executes
+**Then** all comparison records are deleted from IndexedDB
+**And** the PerceptualProfile is reset (all 128 notes to defaults, matching accumulators zeroed)
+**And** the TrendAnalyzer is reset
+**And** the ThresholdTimeline is reset
+**And** if a training session is active, it is stopped first
+
+**Given** I cancel the confirmation dialog
+**When** the dialog closes
+**Then** no data is deleted and the Settings view remains unchanged
+
+**Given** a reset has completed
+**When** I start training
+**Then** the adaptive algorithm begins at cold-start difficulty (100 cents)
+**And** the profile preview shows the empty state
+
+## Epic 3: Perceptual Profile & Visualization
+
+User can see their pitch discrimination ability visualized on a piano keyboard with confidence band, view summary statistics (mean threshold, standard deviation, trend), and see a compact profile preview on the start page.
+
+### Story 3.1: Profile View with Summary Statistics
+
+**As a** musician,
+**I want** to view my detection threshold statistics and pitch matching accuracy,
+**So that** I can understand my pitch discrimination ability in concrete numbers.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/profile`
+**When** the Profile view loads
+**Then** it replaces the placeholder from Epic 1 with the full profile view
+**And** I see a back navigation link to the Start Page
+
+**Given** comparison training data exists
+**When** I view summary statistics (FR17)
+**Then** I see the overall mean detection threshold in cents
+**And** I see the standard deviation
+**And** I see a trend indicator (improving/stable/declining)
+
+**Given** fewer than 20 comparison records exist
+**When** I view the trend indicator
+**Then** the trend indicator is hidden (insufficient data)
+
+**Given** pitch matching data exists
+**When** I view pitch matching statistics (FR18)
+**Then** I see the mean absolute error in cents
+**And** I see the standard deviation
+**And** I see the sample count
+
+**Given** no pitch matching data exists
+**When** I view the Profile view
+**Then** the pitch matching statistics section is hidden or shows dashes
+
+**Given** no training data exists at all (cold start)
+**When** I view the Profile view
+**Then** statistics show dashes ("—") instead of numbers
+**And** the trend indicator is hidden
+**And** text reads "Start training to build your profile."
+
+**Given** the Profile view
+**When** I inspect the HTML
+**Then** statistics use semantic HTML with appropriate headings
+**And** the view is keyboard-navigable
+
+### Story 3.2: Perceptual Profile Visualization
+
+**As a** musician,
+**I want** to see my pitch discrimination ability visualized across the piano keyboard,
+**So that** I can see where my hearing is strong and where it needs work.
+
+**Acceptance Criteria:**
+
+**Given** the Profile view with training data (FR16)
+**When** the visualization renders
+**Then** I see a horizontal piano keyboard strip with stylized key rectangles
+**And** a confidence band area chart is overlaid above the keyboard
+**And** the Y-axis is inverted (lower = better discrimination)
+**And** note names appear at octave boundaries (C2, C3, C4, etc.)
+
+**Given** training data exists for some notes
+**When** the visualization renders (sparse state)
+**Then** the band renders where data exists
+**And** the band fades or is absent where no data exists
+**And** no interpolation across large gaps
+
+**Given** extensive training data (populated state)
+**When** the visualization renders
+**Then** a continuous confidence band is visible across the trained range
+
+**Given** no training data (empty state)
+**When** the visualization renders
+**Then** the piano keyboard renders fully
+**And** the band is absent or shown as a faint uniform placeholder at 100 cents
+
+**Given** the visualization is implemented in Canvas or SVG
+**When** the view is resized
+**Then** the visualization uses the full available width
+
+**Given** the visualization
+**When** I inspect the HTML
+**Then** it has an ARIA role and label on the container
+**And** a text alternative: "Perceptual profile: average detection threshold X cents across Y trained notes"
+
+**Given** `prefers-color-scheme: dark` is set
+**When** the visualization renders
+**Then** colors adapt appropriately for dark mode
+
+### Story 3.3: Profile Preview on Start Page
+
+**As a** musician,
+**I want** to see a compact profile preview on the start page that I can click to view details,
+**So that** I get a glanceable snapshot of my progress every time I open Peach.
+
+**Acceptance Criteria:**
+
+**Given** the Start Page
+**When** it loads with training data (FR19)
+**Then** a compact profile preview is visible showing the same band shape as the full visualization
+**And** no axis labels or numerical values are shown in the preview
+
+**Given** the Start Page with no training data
+**When** it loads (FR19)
+**Then** the profile preview shows a subtle placeholder shape
+
+**Given** the profile preview
+**When** I click it (FR20)
+**Then** I navigate to the full Profile view at `/profile`
+
+**Given** the profile preview
+**When** I inspect the HTML
+**Then** it has an accessible label: "Your pitch profile. Click to view details."
+**And** if data exists: "Your pitch profile. Average threshold: X cents. Click to view details."
+
+**Given** the profile preview
+**When** I use keyboard navigation
+**Then** it is focusable and activatable via Enter/Space
+
+## Epic 4: Pitch Matching Training
+
+User can do pitch matching training — hear a reference note, tune a note by ear using a vertical slider with real-time pitch adjustment, see directional feedback with cent accuracy. Matching data persists and feeds into the profile.
+
+### Story 4.1: Pitch Matching Session State Machine
+
+**As a** developer,
+**I want** the PitchMatchingSession state machine implemented with challenge generation, pitch adjustment, and commit logic,
+**So that** the domain logic correctly drives the pitch matching training experience.
+
+**Acceptance Criteria:**
+
+**Given** PitchMatchingSession is constructed with injected dependencies (notePlayer, profile, observers, userSettings)
+**When** it is in `idle` state
+**Then** no audio is playing and no training loop is running
+
+**Given** PitchMatchingSession is idle
+**When** start(intervals) is called
+**Then** state transitions to `playingReference`
+**And** a challenge is generated with a random reference note in the configured range
+**And** the reference note plays for the configured duration at velocity 63
+
+**Given** generateChallenge is called
+**When** generating the challenge
+**Then** the reference note is random within the note range (adjusted for interval transposition)
+**And** the target note is the reference transposed by the selected interval
+**And** initialCentOffset is random in [-20.0, +20.0] cents
+
+**Given** state is `playingReference`
+**When** the reference note finishes playing
+**Then** the tunable note starts at the initial cent offset from the target frequency
+**And** state transitions to `awaitingSliderTouch`
+
+**Given** state is `awaitingSliderTouch`
+**When** adjustPitch(value) is called (first slider interaction)
+**Then** state transitions to `playingTunable`
+
+**Given** state is `playingTunable`
+**When** adjustPitch(value) is called with value in [-1.0, +1.0]
+**Then** the tunable note's frequency is adjusted in real time (FR33)
+**And** the frequency calculation uses: `referenceFrequency * pow(2.0, (value * 20.0) / 1200.0)`
+
+**Given** state is `playingTunable`
+**When** commitPitch(value) is called (slider released, FR13)
+**Then** the tunable note stops immediately
+**And** userCentError is calculated as `1200.0 * log2(userFrequency / referenceFrequency)`
+**And** a CompletedPitchMatching is created with all fields and current timestamp
+**And** all observers receive pitchMatchingCompleted(result)
+**And** state transitions to `showingFeedback` for 400ms
+
+**Given** state is `showingFeedback`
+**When** 400ms elapses
+**Then** the next reference note plays (loop continues)
+
+**Given** session is running
+**When** stop() is called
+**Then** all audio stops, async tasks cancel, state returns to idle
+
+### Story 4.2: Vertical Pitch Slider
+
+**As a** musician,
+**I want** a vertical slider that I can drag to tune a note by ear,
+**So that** I can practice pitch matching using only my hearing as a guide.
+
+**Acceptance Criteria:**
+
+**Given** the Vertical Pitch Slider component
+**When** rendered
+**Then** it is vertically oriented, occupying most of the training view height
+**And** it has a large thumb/handle for comfortable dragging
+**And** there are no markings, tick marks, or center indicators
+
+**Given** the slider is in active state
+**When** I drag the thumb with a mouse
+**Then** the slider value changes continuously as I drag
+**And** up = sharper (positive), down = flatter (negative)
+
+**Given** the slider is in active state
+**When** I drag with touch
+**Then** the slider responds to touch drag identically to mouse drag
+
+**Given** the slider is in active state
+**When** I press Arrow Up (FR44)
+**Then** the pitch adjusts by a fine increment (upward/sharper)
+
+**Given** the slider is in active state
+**When** I press Arrow Down (FR44)
+**Then** the pitch adjusts by a fine increment (downward/flatter)
+
+**Given** the slider is being dragged
+**When** I release (mouse up / touch end)
+**Then** the commit event fires with the current slider value
+
+**Given** the slider
+**When** it starts a new challenge
+**Then** it always begins at the same physical center position regardless of the pitch offset
+
+**Given** the slider in inactive state (during reference playback)
+**When** displayed
+**Then** it appears dimmed/disabled and does not respond to input
+
+**Given** the slider
+**When** I inspect the HTML
+**Then** it has ARIA role "slider" and label "Pitch adjustment"
+**And** it is keyboard-operable
+
+### Story 4.3: Pitch Matching Training UI
+
+**As a** musician,
+**I want** to start pitch matching from the start page, tune notes by ear with real-time audio feedback, and see how close I was after each attempt,
+**So that** I can develop my pitch matching ability through deliberate practice.
+
+**Acceptance Criteria:**
+
+**Given** I am on the Start Page
+**When** I click the "Pitch Matching" button (FR9)
+**Then** I navigate to the Pitch Matching Training view
+**And** the AudioContext activates
+**And** the first reference note plays immediately
+
+**Given** state is `playingReference`
+**When** the reference note is playing
+**Then** the slider is visible but dimmed/disabled (FR11)
+
+**Given** state is `awaitingSliderTouch` or `playingTunable`
+**When** the tunable note is playing
+**Then** the slider is active and I can drag it
+**And** the pitch changes in real time as I drag — no visual proximity feedback, ear only (FR12, FR33)
+
+**Given** I release the slider
+**When** feedback displays (FR14)
+**Then** I see a directional arrow (up for sharp, down for flat) or dot (dead center)
+**And** I see the signed cent offset (e.g. "+4 cents", "-22 cents")
+**And** the color indicates proximity: green (<10 cents), yellow (10-30 cents), red (>30 cents)
+**And** feedback persists for ~400ms
+
+**Given** I am in Pitch Matching Training
+**When** I press Enter or Space (FR45)
+**Then** the pitch is committed (same as releasing the slider)
+
+**Given** I am in Pitch Matching Training
+**When** I press Escape or click Settings/Profile
+**Then** training stops and I navigate away (FR15)
+**And** incomplete attempt is discarded
+
+**Given** the UIObserver bridge
+**When** PitchMatchingSession state changes
+**Then** corresponding Leptos signals update and UI re-renders
+
+**Given** the Pitch Matching Training view
+**When** I inspect the HTML
+**Then** an `aria-live="polite"` region announces feedback (e.g. "4 cents sharp", "Dead center")
+
+### Story 4.4: Pitch Matching Persistence
+
+**As a** musician,
+**I want** my pitch matching results to persist and feed into my perceptual profile,
+**So that** my matching accuracy is tracked over time.
+
+**Acceptance Criteria:**
+
+**Given** the IndexedDB adapter
+**When** a pitch matching attempt is completed
+**Then** a PitchMatchingRecord is saved to `pitch_matching_records` in the `peach` database (FR37)
+**And** the record contains: referenceNote, targetNote, initialCentOffset, userCentError, interval, tuningSystem, timestamp
+
+**Given** pitch matching records exist in IndexedDB
+**When** fetchAllPitchMatchings() is called
+**Then** all records are returned sorted by timestamp ascending
+
+**Given** a pitch matching attempt is completed
+**When** the PitchMatchingObserver fires
+**Then** the PerceptualProfile's matching accumulators are updated via `updateMatching()`
+
+**Given** pitch matching records exist in IndexedDB
+**When** the app launches
+**Then** all pitch matching records are replayed through `profile.updateMatching()` during hydration
+**And** the Profile view shows pitch matching statistics (FR18, from Epic 3)
+
+**Given** a storage write fails during pitch matching
+**When** the error occurs
+**Then** the user is informed (NFR8)
+**And** training continues
+
+## Epic 5: Interval Training & Sound Quality
+
+User can train comparison and pitch matching with musical intervals (minor second through octave). Richer instrument sounds available via SoundFont. Interval selection setting and sound source selection become fully meaningful.
+
+### Story 5.1: Interval Training Mode
+
+**As a** musician,
+**I want** to train comparison and pitch matching with musical intervals,
+**So that** I can develop my ability to hear pitch differences within specific interval contexts.
+
+**Acceptance Criteria:**
+
+**Given** the Start Page
+**When** it loads
+**Then** I see "Interval Comparison" and "Interval Pitch Matching" buttons below a visual separator (FR2, FR10)
+**And** these buttons are secondary prominence (below the primary Comparison and Pitch Matching buttons)
+
+**Given** I click "Interval Comparison" (FR2)
+**When** the training view loads
+**Then** the ComparisonSession starts with the user's selected intervals from Settings (not just prime/up)
+**And** the route is `/training/comparison?interval=true`
+
+**Given** I click "Interval Pitch Matching" (FR10)
+**When** the training view loads
+**Then** the PitchMatchingSession starts with the user's selected intervals
+**And** the route is `/training/pitch-matching?interval=true`
+
+**Given** training is in interval mode
+**When** a comparison or challenge is generated
+**Then** a random interval is selected from the user's configured interval set
+**And** the target note is transposed from the reference by that interval
+
+**Given** training is in interval mode
+**When** the training view renders
+**Then** a target interval label is visible showing the current interval name and direction (e.g. "Perfect Fifth Up")
+**And** this label is hidden in unison mode
+
+**Given** interval mode training
+**When** I answer a comparison or commit a pitch
+**Then** the record includes the correct interval semitone distance
+**And** the next challenge may use a different interval from the selected set
+
+**Given** the user has selected no non-prime intervals in Settings
+**When** they click an interval training button
+**Then** training starts with only prime/up (effectively unison mode — same as regular mode)
+
+### Story 5.2: SoundFont Audio
+
+**As a** musician,
+**I want** to hear richer instrument sounds during training,
+**So that** training feels more musical and the sound source setting becomes meaningful.
+
+**Acceptance Criteria:**
+
+**Given** the app loads
+**When** SoundFont loading begins
+**Then** the SoundFont file is fetched asynchronously via `fetch()`
+**And** the Start Page is interactive immediately with oscillator fallback
+**And** no loading indicator is shown — loading is invisible to the user
+
+**Given** the SoundFont has loaded successfully
+**When** training starts
+**Then** the SoundFontNotePlayer renders notes using OxiSynth with the selected preset
+**And** the swap from oscillator to SoundFont is silent — no interruption
+
+**Given** the SoundFont fails to load
+**When** training starts
+**Then** the OscillatorNotePlayer continues as the fallback
+**And** no error message is shown (oscillators are a valid sound source)
+
+**Given** SoundFontNotePlayer is active
+**When** a note is played
+**Then** the AudioBuffer is rendered from the SoundFont preset via OxiSynth
+**And** playback uses AudioBufferSourceNode
+
+**Given** SoundFontNotePlayer is active during pitch matching
+**When** adjustFrequency is called
+**Then** the pitch is adjusted via `.detune` on the AudioBufferSourceNode (within ±20 cents range)
+
+**Given** the SoundFont has been loaded once
+**When** the app is visited again
+**Then** the browser cache serves the SoundFont — load is near-instant
+
+**Given** the sound source setting (FR25, from Epic 2)
+**When** the user selects a different sound source
+**Then** the SoundFont preset changes accordingly
+**And** the change takes effect on the next note played
+
+## Epic 6: Offline Support, Accessibility Polish & Data Portability
+
+App works fully offline after initial load via Service Worker. Complete screen reader support for all feedback events. Info view. User can export and import training data in JSON format.
+
+### Story 6.1: Info View & Complete Navigation
+
+**As a** musician,
+**I want** to see basic app information and navigate smoothly between all views,
+**So that** I know what I'm using and can access every part of the app.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/info`
+**When** the Info view loads (FR47)
+**Then** I see the app name (Peach), developer name, copyright notice, and version number
+**And** the content is minimal and static
+
+**Given** the Info view
+**When** I navigate back
+**Then** I return to the Start Page
+
+**Given** the Start Page
+**When** I look at the navigation
+**Then** I see links/buttons for all views: Comparison, Pitch Matching, Interval Comparison, Interval Pitch Matching, Settings, Profile, Info (FR47)
+
+**Given** all routes are implemented
+**When** I navigate between any views
+**Then** client-side routing handles all transitions without full page reloads
+**And** hub-and-spoke model is maintained (all views one level deep from start page)
+
+### Story 6.2: Screen Reader Accessibility Polish
+
+**As a** musician using a screen reader,
+**I want** all training feedback and state changes announced,
+**So that** I can train my pitch discrimination with full accessibility.
+
+**Acceptance Criteria:**
+
+**Given** comparison training (FR46)
+**When** I answer a comparison
+**Then** the screen reader announces "Correct" or "Incorrect"
+
+**Given** pitch matching training (FR46)
+**When** I commit a pitch
+**Then** the screen reader announces the result (e.g. "4 cents sharp", "27 cents flat", "Dead center")
+
+**Given** any training mode
+**When** training starts
+**Then** the screen reader announces "Training started"
+
+**Given** any training mode
+**When** training stops
+**Then** the screen reader announces "Training stopped"
+
+**Given** interval training mode
+**When** the interval changes between challenges
+**Then** the screen reader announces the target interval (e.g. "Target interval: Perfect Fifth Up")
+
+**Given** all `aria-live` regions
+**When** reviewed for completeness
+**Then** all training feedback events across comparison, pitch matching, and interval modes have announcements
+**And** announcements use `aria-live="polite"` to avoid interrupting the user
+
+**Given** all interactive elements across all views
+**When** audited for accessibility
+**Then** visible focus indicators are present on every interactive element
+**And** tab order follows visual order in every view
+**And** all custom components (profile visualization, pitch slider, feedback indicators) have appropriate ARIA roles and labels
+
+### Story 6.3: Data Export & Import
+
+**As a** musician,
+**I want** to export my training data and settings to a file and import them back,
+**So that** I can back up my data, transfer it between browsers, or share it with my iOS app.
+
+**Acceptance Criteria:**
+
+**Given** the Settings view (or a dedicated section)
+**When** I click "Export Data" (FR39)
+**Then** a JSON file is generated containing all comparison records, all pitch matching records, and all settings
+**And** the file is downloaded to my device with a descriptive filename (e.g. `peach-export-2026-03-03.json`)
+
+**Given** the export file
+**When** I inspect its contents
+**Then** comparison records match the ComparisonRecord schema
+**And** pitch matching records match the PitchMatchingRecord schema
+**And** settings are included as key-value pairs
+**And** timestamps are ISO 8601 strings
+
+**Given** the Settings view
+**When** I click "Import Data" (FR40)
+**Then** a file picker opens for selecting a JSON file
+
+**Given** I select a valid export file
+**When** the import executes
+**Then** all comparison records from the file are saved to IndexedDB
+**And** all pitch matching records from the file are saved to IndexedDB
+**And** settings from the file are applied to localStorage
+**And** the PerceptualProfile is rebuilt from the combined record set
+
+**Given** I select an invalid or corrupted file
+**When** the import is attempted
+**Then** an error message is shown
+**And** no existing data is modified
+
+**Given** existing data and an import
+**When** the import completes
+**Then** imported records are merged with existing records (no duplicates based on timestamp)
+
+### Story 6.4: Service Worker & Offline Support
+
+**As a** musician,
+**I want** Peach to work fully offline after the first visit,
+**So that** I can train anywhere without needing an internet connection.
+
+**Acceptance Criteria:**
+
+**Given** the first visit to Peach
+**When** the page loads
+**Then** a Service Worker is registered (NFR11)
+**And** all static assets are cached: WASM binary, JS, CSS, HTML, and audio data (SoundFont)
+
+**Given** the Service Worker is installed
+**When** I visit Peach without an internet connection
+**Then** the app loads and functions fully from the cache (NFR10)
+**And** all training modes work without any network requests
+
+**Given** the cached assets
+**When** I check the total size
+**Then** WASM binary plus all assets are under 2 MB gzipped (soft target, NFR12)
+
+**Given** a new version of Peach is deployed
+**When** I visit the app with an internet connection
+**Then** the Service Worker detects the update and caches new assets
+**And** the update is applied on the next page load (no disruptive in-app update)
+
+**Given** the Service Worker is active
+**When** I use the app normally
+**Then** there is no perceptible difference in behavior compared to online usage
