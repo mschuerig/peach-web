@@ -466,6 +466,19 @@ pub fn SettingsView() -> impl IntoView {
                         None => return,
                     };
 
+                    // Reject files larger than 10 MB to prevent browser OOM
+                    if file.size() > 10_000_000.0 {
+                        let msg = "File too large (max 10 MB)".to_string();
+                        sr_announcement.set(msg.clone());
+                        ie_status.set(ImportExportStatus::Error(msg));
+                        spawn_local(async move {
+                            TimeoutFuture::new(3000).await;
+                            ie_status.set(ImportExportStatus::Idle);
+                        });
+                        input.set_value("");
+                        return;
+                    }
+
                     let reader = match web_sys::FileReader::new() {
                         Ok(r) => r,
                         Err(e) => {
@@ -490,6 +503,9 @@ pub fn SettingsView() -> impl IntoView {
 
                         match data_portability::parse_import_file(&content) {
                             Ok(parsed) => {
+                                for warning in &parsed.warnings {
+                                    web_sys::console::warn_1(&warning.into());
+                                }
                                 import_data_signal.set(Some(parsed));
                                 if let Some(dialog) = import_dialog_ref.get() {
                                     let _ = dialog.show_modal();

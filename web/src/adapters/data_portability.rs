@@ -69,6 +69,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
         ts_a.cmp(ts_b)
     });
 
+    // NOTE: No RFC 4180 CSV escaping applied. Safe because all field values are
+    // numeric, boolean, or fixed enum strings that never contain commas or quotes.
+    // If user-provided string fields are added in the future, escaping must be added.
     for record in &all_records {
         match record {
             Record::Comparison(r) => {
@@ -140,8 +143,6 @@ fn trigger_download(content: &str, filename: &str) -> Result<(), String> {
     a.set_href(&url);
     a.set_download(filename);
     a.click();
-
-    let _ = Url::revoke_object_url(&url);
 
     Ok(())
 }
@@ -316,7 +317,7 @@ pub async fn import_merge(
         .fetch_all_comparisons()
         .await
         .map_err(|e| format!("Failed to fetch comparisons: {e:?}"))?;
-    let existing_comparison_ts: HashSet<String> = existing_comparisons
+    let mut existing_comparison_ts: HashSet<String> = existing_comparisons
         .iter()
         .map(|r| truncate_timestamp_to_second(&r.timestamp))
         .collect();
@@ -325,7 +326,7 @@ pub async fn import_merge(
         .fetch_all_pitch_matchings()
         .await
         .map_err(|e| format!("Failed to fetch pitch matchings: {e:?}"))?;
-    let existing_pm_ts: HashSet<String> = existing_pitch_matchings
+    let mut existing_pm_ts: HashSet<String> = existing_pitch_matchings
         .iter()
         .map(|r| truncate_timestamp_to_second(&r.timestamp))
         .collect();
@@ -346,6 +347,7 @@ pub async fn import_merge(
                 .save_comparison(record)
                 .await
                 .map_err(|e| format!("Failed to save comparison: {e:?}"))?;
+            existing_comparison_ts.insert(ts);
             result.comparison_imported += 1;
         }
     }
@@ -359,6 +361,7 @@ pub async fn import_merge(
                 .save_pitch_matching(record)
                 .await
                 .map_err(|e| format!("Failed to save pitch matching: {e:?}"))?;
+            existing_pm_ts.insert(ts);
             result.pitch_matching_imported += 1;
         }
     }
