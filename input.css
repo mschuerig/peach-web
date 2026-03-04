@@ -2,3 +2,23 @@
 
 @source "./web/src/**/*.rs";
 @source "./domain/src/**/*.rs";
+
+:root {
+    --pv-key-white: #ffffff;
+    --pv-key-black: #1a1a1a;
+    --pv-key-border: #cccccc;
+    --pv-band-fill: rgba(99, 102, 241, 0.3);
+    --pv-band-stroke: rgb(99, 102, 241);
+    --pv-label-color: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --pv-key-white: #374151;
+        --pv-key-black: #111827;
+        --pv-key-border: #4b5563;
+        --pv-band-fill: rgba(129, 140, 248, 0.3);
+        --pv-band-stroke: rgb(129, 140, 248);
+        --pv-label-color: #9ca3af;
+    }
+}
