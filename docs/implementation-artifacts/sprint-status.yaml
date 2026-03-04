@@ -65,7 +65,7 @@ development_status:
   epic-3: in-progress
   3-1-profile-view-with-summary-statistics: done
   3-2-perceptual-profile-visualization: done
-  3-3-profile-preview-on-start-page: backlog
+  3-3-profile-preview-on-start-page: ready-for-dev
   epic-3-retrospective: optional
 
   # Epic 4: Pitch Matching Training
