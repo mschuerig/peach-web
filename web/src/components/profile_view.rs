@@ -7,6 +7,8 @@ use send_wrapper::SendWrapper;
 
 use domain::{PerceptualProfile, Trend, TrendAnalyzer};
 
+use super::profile_visualization::ProfileVisualization;
+
 /// Format an optional f64 value to 1 decimal place with " cents" suffix, or em dash.
 fn format_cents(value: Option<f64>) -> String {
     match value {
@@ -30,6 +32,8 @@ pub fn ProfileView() -> impl IntoView {
     view! {
         <div class="py-12">
             <h1 class="text-2xl font-bold dark:text-white">"Profile"</h1>
+
+            <ProfileVisualization />
 
             {move || {
                 if !is_profile_loaded.get() {

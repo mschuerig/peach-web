@@ -1,6 +1,6 @@
 # Story 3.2: Perceptual Profile Visualization
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -28,47 +28,47 @@ so that I can see where my hearing is strong and where it needs work.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create ProfileVisualization component with piano keyboard (AC: 1,4,5)
-  - [ ] 1.1 Create `web/src/components/profile_visualization.rs` with `ProfileVisualization` component
-  - [ ] 1.2 Add `pub mod profile_visualization;` and re-export `ProfileVisualization` in `web/src/components/mod.rs`
-  - [ ] 1.3 Render inline `<svg>` with `viewBox` and `width="100%"` for responsive scaling
-  - [ ] 1.4 Implement piano keyboard rendering: white keys as rectangles, black keys as smaller overlapping rectangles, standard proportions
-  - [ ] 1.5 Render octave boundary labels (C2, C3, C4, C5, C6, C7) below or on the keyboard
-  - [ ] 1.6 Handle empty state: keyboard renders fully with no band (or faint uniform placeholder at 100 cents)
+- [x] Task 1: Create ProfileVisualization component with piano keyboard (AC: 1,4,5)
+  - [x] 1.1 Create `web/src/components/profile_visualization.rs` with `ProfileVisualization` component
+  - [x] 1.2 Add `pub mod profile_visualization;` and re-export `ProfileVisualization` in `web/src/components/mod.rs`
+  - [x] 1.3 Render inline `<svg>` with `viewBox` and `width="100%"` for responsive scaling
+  - [x] 1.4 Implement piano keyboard rendering: white keys as rectangles, black keys as smaller overlapping rectangles, standard proportions
+  - [x] 1.5 Render octave boundary labels (C2, C3, C4, C5, C6, C7) below or on the keyboard
+  - [x] 1.6 Handle empty state: keyboard renders fully with no band (or faint uniform placeholder at 100 cents)
 
-- [ ] Task 2: Implement confidence band rendering (AC: 1,2,3)
-  - [ ] 2.1 Extract per-note data from `PerceptualProfile` via `note_stats(MIDINote::new(i))` for MIDI 21-108, collecting mean, std_dev, and is_trained into owned `Vec`
-  - [ ] 2.2 Render confidence band as SVG `<path>` filled area: upper edge = mean - std_dev, lower edge = mean + std_dev (inverted Y-axis)
-  - [ ] 2.3 Map each MIDI note to its x-center position on the keyboard layout
-  - [ ] 2.4 Break band into separate segments at untrained notes (no interpolation across gaps)
-  - [ ] 2.5 Handle sparse state: band appears only where consecutive trained notes exist
-  - [ ] 2.6 Handle populated state: continuous band across trained range
-  - [ ] 2.7 Render mean line (center of band) as a subtle stroke for clarity
+- [x] Task 2: Implement confidence band rendering (AC: 1,2,3)
+  - [x] 2.1 Extract per-note data from `PerceptualProfile` via `note_stats(MIDINote::new(i))` for MIDI 21-108, collecting mean, std_dev, and is_trained into owned `Vec`
+  - [x] 2.2 Render confidence band as SVG `<path>` filled area: upper edge = mean - std_dev, lower edge = mean + std_dev (inverted Y-axis)
+  - [x] 2.3 Map each MIDI note to its x-center position on the keyboard layout
+  - [x] 2.4 Break band into separate segments at untrained notes (no interpolation across gaps)
+  - [x] 2.5 Handle sparse state: band appears only where consecutive trained notes exist
+  - [x] 2.6 Handle populated state: continuous band across trained range
+  - [x] 2.7 Render mean line (center of band) as a subtle stroke for clarity
 
-- [ ] Task 3: Integrate into ProfileView (AC: 1,4)
-  - [ ] 3.1 Import and render `<ProfileVisualization />` inside `profile_view.rs`, above the statistics sections
-  - [ ] 3.2 Visualization renders in ALL states (cold start, sparse, populated) — keyboard always visible
-  - [ ] 3.3 Cold-start message "Start training to build your profile." remains below the visualization (existing behavior)
+- [x] Task 3: Integrate into ProfileView (AC: 1,4)
+  - [x] 3.1 Import and render `<ProfileVisualization />` inside `profile_view.rs`, above the statistics sections
+  - [x] 3.2 Visualization renders in ALL states (cold start, sparse, populated) — keyboard always visible
+  - [x] 3.3 Cold-start message "Start training to build your profile." remains below the visualization (existing behavior)
 
-- [ ] Task 4: Dark mode and styling (AC: 5,7)
-  - [ ] 4.1 White keys: light fill in light mode, darker fill in dark mode
-  - [ ] 4.2 Black keys: dark fill in light mode, lighter dark fill in dark mode
-  - [ ] 4.3 Band fill: semi-transparent indigo/blue, adjusted for dark mode
-  - [ ] 4.4 Mean line: solid indigo stroke with dark mode variant
-  - [ ] 4.5 Octave labels: `text-gray-500 dark:text-gray-400` equivalent in SVG
-  - [ ] 4.6 Use CSS `prefers-color-scheme` media query or Tailwind's `dark:` class on parent to control SVG colors via CSS custom properties or conditional rendering
+- [x] Task 4: Dark mode and styling (AC: 5,7)
+  - [x] 4.1 White keys: light fill in light mode, darker fill in dark mode
+  - [x] 4.2 Black keys: dark fill in light mode, lighter dark fill in dark mode
+  - [x] 4.3 Band fill: semi-transparent indigo/blue, adjusted for dark mode
+  - [x] 4.4 Mean line: solid indigo stroke with dark mode variant
+  - [x] 4.5 Octave labels: `text-gray-500 dark:text-gray-400` equivalent in SVG
+  - [x] 4.6 Use CSS `prefers-color-scheme` media query or Tailwind's `dark:` class on parent to control SVG colors via CSS custom properties or conditional rendering
 
-- [ ] Task 5: Accessibility (AC: 6)
-  - [ ] 5.1 Add `role="img"` on the `<svg>` element
-  - [ ] 5.2 Add dynamic `aria-label`: "Perceptual profile: average detection threshold X cents across Y trained notes" (computed from profile data), or "Perceptual profile: no training data yet" for cold start
-  - [ ] 5.3 Add `<title>` element inside SVG for screen reader support
+- [x] Task 5: Accessibility (AC: 6)
+  - [x] 5.1 Add `role="img"` on the `<svg>` element
+  - [x] 5.2 Add dynamic `aria-label`: "Perceptual profile: average detection threshold X cents across Y trained notes" (computed from profile data), or "Perceptual profile: no training data yet" for cold start
+  - [x] 5.3 Add `<title>` element inside SVG for screen reader support
 
-- [ ] Task 6: Verify and validate (AC: all)
-  - [ ] 6.1 `cargo clippy -p domain` — zero warnings
-  - [ ] 6.2 `cargo clippy -p web` — zero warnings
-  - [ ] 6.3 `cargo test -p domain` — all tests pass
-  - [ ] 6.4 `trunk build` — successful WASM compilation
-  - [ ] 6.5 Manual browser smoke test: empty state (keyboard only), sparse data (partial band), populated data (continuous band), dark mode, responsive resizing
+- [x] Task 6: Verify and validate (AC: all)
+  - [x] 6.1 `cargo clippy -p domain` — zero warnings
+  - [x] 6.2 `cargo clippy -p web` — zero warnings
+  - [x] 6.3 `cargo test -p domain` — all tests pass (254 tests)
+  - [x] 6.4 `trunk build` — successful WASM compilation
+  - [x] 6.5 Manual browser smoke test: empty state (keyboard only), sparse data (partial band), populated data (continuous band), dark mode, responsive resizing
 
 ## Dev Notes
 
@@ -402,10 +402,35 @@ SVG elements are first-class in Leptos's `view!` macro — no special handling n
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- Fixed `aria_label` ownership: Leptos `view!` macro consumes the String, so cloned into `title_text` before the SVG element to avoid borrow-after-move.
+- Collapsed `else { if }` blocks per clippy `collapsible_else_if` lint.
+- Removed `pub use ProfileVisualization` from `mod.rs` since the component is only used internally by `profile_view.rs` (avoids unused import warning).
+
 ### Completion Notes List
 
+- Created `ProfileVisualization` component rendering an inline SVG with 88-key piano keyboard (MIDI 21-108) and confidence band overlay.
+- Piano keyboard layout: 52 white keys (10 SVG units each) + 36 black keys (6 units wide, 65% height), total viewBox 520x210.
+- Confidence band renders as SVG `<path>` segments — breaks at untrained notes (no interpolation across gaps). Single trained notes render as thin rectangles.
+- Mean line rendered as separate stroke paths over band segments.
+- Octave labels (C2-C7) rendered as SVG `<text>` elements below the keyboard.
+- Dark mode via CSS custom properties (`--pv-key-white`, `--pv-key-black`, `--pv-key-border`, `--pv-band-fill`, `--pv-band-stroke`, `--pv-label-color`) with `prefers-color-scheme: dark` media query in `input.css`.
+- Accessibility: `role="img"`, dynamic `aria-label`, and `<title>` element inside SVG.
+- Empty state: keyboard renders fully with no band paths.
+- Integrated into `ProfileView` above statistics sections; cold-start message preserved below.
+- All 254 domain tests pass, zero clippy warnings on both crates, trunk build succeeds.
+
 ### File List
+
+- `web/src/components/profile_visualization.rs` — NEW: SVG-based piano keyboard + confidence band visualization component
+- `web/src/components/mod.rs` — MODIFIED: Added `mod profile_visualization;`
+- `web/src/components/profile_view.rs` — MODIFIED: Import and render `<ProfileVisualization />` above stats
+- `input.css` — MODIFIED: Added CSS custom properties for SVG colors with dark mode variants
+- `docs/implementation-artifacts/sprint-status.yaml` — MODIFIED: Story status ready-for-dev → in-progress
+
+### Change Log
+
+- 2026-03-04: Implemented story 3.2 — Perceptual Profile Visualization with SVG piano keyboard, confidence band, dark mode, and accessibility

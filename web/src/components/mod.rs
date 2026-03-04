@@ -2,6 +2,7 @@ mod comparison_view;
 mod info_view;
 mod pitch_matching_view;
 mod profile_view;
+mod profile_visualization;
 mod settings_view;
 mod start_page;
 
