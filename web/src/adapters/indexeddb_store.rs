@@ -164,6 +164,43 @@ impl IndexedDbStore {
         Ok(records)
     }
 
+    pub async fn fetch_all_pitch_matchings(
+        &self,
+    ) -> Result<Vec<PitchMatchingRecord>, StorageError> {
+        let transaction = self
+            .db
+            .transaction_with_str_and_mode(PITCH_MATCHING_STORE, IdbTransactionMode::Readonly)
+            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
+
+        let store = transaction
+            .object_store(PITCH_MATCHING_STORE)
+            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
+
+        let index = store
+            .index(TIMESTAMP_INDEX)
+            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
+
+        let request = index
+            .get_all()
+            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
+
+        let result = idb_request_to_future(request)
+            .await
+            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
+
+        let array: js_sys::Array = result.unchecked_into();
+        let mut records = Vec::with_capacity(array.length() as usize);
+
+        for i in 0..array.length() {
+            let value = array.get(i);
+            let record: PitchMatchingRecord = serde_wasm_bindgen::from_value(value)
+                .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
+            records.push(record);
+        }
+
+        Ok(records)
+    }
+
     pub async fn delete_all(&self) -> Result<(), StorageError> {
         let store_names = [COMPARISON_STORE, PITCH_MATCHING_STORE];
         let transaction = self
