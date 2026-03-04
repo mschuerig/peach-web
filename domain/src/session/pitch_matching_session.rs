@@ -188,7 +188,7 @@ impl PitchMatchingSession {
 
         let value = value.clamp(-1.0, 1.0);
         let challenge = self.current_challenge.expect("challenge must exist in PlayingTunable");
-        let user_cent_error = value * 20.0;
+        let user_cent_error = challenge.initial_cent_offset() + value * 20.0;
 
         let completed = CompletedPitchMatching::new(
             challenge.reference_note(),
@@ -320,7 +320,11 @@ impl PitchMatchingSession {
         let target_freq = self
             .target_frequency
             .expect("target_frequency must exist when adjusting pitch");
-        let cent_offset = value * 20.0;
+        let initial_offset = self
+            .current_challenge
+            .expect("challenge must exist when adjusting pitch")
+            .initial_cent_offset();
+        let cent_offset = initial_offset + value * 20.0;
         Frequency::new(target_freq.raw_value() * 2.0_f64.powf(cent_offset / 1200.0))
     }
 
@@ -620,17 +624,21 @@ mod tests {
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_finished();
 
+        let initial_offset = session.current_challenge().unwrap().initial_cent_offset();
+
         // First touch
         session.adjust_pitch(0.0);
 
-        // At value=0.0, adjusted frequency should equal target frequency
+        // At value=0.0, adjusted frequency should equal initial detuned frequency
+        // (slider center = no adjustment from initial detuning)
         let freq = session.adjust_pitch(0.0).unwrap();
         let target_freq = session.target_frequency.unwrap();
+        let expected = target_freq.raw_value() * 2.0_f64.powf(initial_offset / 1200.0);
         assert!(
-            (freq.raw_value() - target_freq.raw_value()).abs() < 1e-10,
-            "At value=0.0, adjusted freq ({}) should equal target freq ({})",
+            (freq.raw_value() - expected).abs() < 1e-10,
+            "At value=0.0, adjusted freq ({}) should equal detuned freq ({})",
             freq.raw_value(),
-            target_freq.raw_value()
+            expected
         );
     }
 
@@ -642,10 +650,11 @@ mod tests {
         session.adjust_pitch(0.0); // transition to PlayingTunable
 
         let target_freq = session.target_frequency.unwrap().raw_value();
+        let initial_offset = session.current_challenge().unwrap().initial_cent_offset();
 
-        // At +1.0: offset = +20 cents
+        // At +1.0: offset = initial_offset + 20 cents
         let freq_high = session.adjust_pitch(1.0).unwrap();
-        let expected_high = target_freq * 2.0_f64.powf(20.0 / 1200.0);
+        let expected_high = target_freq * 2.0_f64.powf((initial_offset + 20.0) / 1200.0);
         assert!(
             (freq_high.raw_value() - expected_high).abs() < 1e-10,
             "At +1.0: got {}, expected {}",
@@ -653,9 +662,9 @@ mod tests {
             expected_high
         );
 
-        // At -1.0: offset = -20 cents
+        // At -1.0: offset = initial_offset - 20 cents
         let freq_low = session.adjust_pitch(-1.0).unwrap();
-        let expected_low = target_freq * 2.0_f64.powf(-20.0 / 1200.0);
+        let expected_low = target_freq * 2.0_f64.powf((initial_offset - 20.0) / 1200.0);
         assert!(
             (freq_low.raw_value() - expected_low).abs() < 1e-10,
             "At -1.0: got {}, expected {}",
@@ -672,10 +681,11 @@ mod tests {
         session.adjust_pitch(0.0); // transition to PlayingTunable
 
         let target_freq = session.target_frequency.unwrap().raw_value();
+        let initial_offset = session.current_challenge().unwrap().initial_cent_offset();
 
         // Value beyond +1.0 should be clamped to +1.0
         let freq = session.adjust_pitch(2.0).unwrap();
-        let expected = target_freq * 2.0_f64.powf(20.0 / 1200.0); // +20 cents max
+        let expected = target_freq * 2.0_f64.powf((initial_offset + 20.0) / 1200.0);
         assert!(
             (freq.raw_value() - expected).abs() < 1e-10,
             "Value 2.0 should be clamped to 1.0: got {}, expected {}",
@@ -685,7 +695,7 @@ mod tests {
 
         // Value below -1.0 should be clamped to -1.0
         let freq = session.adjust_pitch(-5.0).unwrap();
-        let expected = target_freq * 2.0_f64.powf(-20.0 / 1200.0); // -20 cents max
+        let expected = target_freq * 2.0_f64.powf((initial_offset - 20.0) / 1200.0);
         assert!(
             (freq.raw_value() - expected).abs() < 1e-10,
             "Value -5.0 should be clamped to -1.0: got {}, expected {}",
@@ -735,12 +745,19 @@ mod tests {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_finished();
+        let initial_offset = session.current_challenge().unwrap().initial_cent_offset();
         session.adjust_pitch(0.5);
         session.commit_pitch(0.5, "2026-03-04T10:00:00Z".to_string());
 
         let completed_calls = calls.borrow();
-        // user_cent_error = value * 20.0 = 0.5 * 20.0 = 10.0
-        assert!((completed_calls[0].user_cent_error() - 10.0).abs() < f64::EPSILON);
+        // user_cent_error = initial_offset + value * 20.0
+        let expected = initial_offset + 0.5 * 20.0;
+        assert!(
+            (completed_calls[0].user_cent_error() - expected).abs() < f64::EPSILON,
+            "Expected user_cent_error {}, got {}",
+            expected,
+            completed_calls[0].user_cent_error()
+        );
     }
 
     #[test]
@@ -748,12 +765,19 @@ mod tests {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_finished();
+        let initial_offset = session.current_challenge().unwrap().initial_cent_offset();
         session.adjust_pitch(-0.75);
         session.commit_pitch(-0.75, "2026-03-04T10:00:00Z".to_string());
 
         let completed_calls = calls.borrow();
-        // user_cent_error = -0.75 * 20.0 = -15.0
-        assert!((completed_calls[0].user_cent_error() - (-15.0)).abs() < f64::EPSILON);
+        // user_cent_error = initial_offset + (-0.75 * 20.0)
+        let expected = initial_offset - 15.0;
+        assert!(
+            (completed_calls[0].user_cent_error() - expected).abs() < f64::EPSILON,
+            "Expected user_cent_error {}, got {}",
+            expected,
+            completed_calls[0].user_cent_error()
+        );
     }
 
     #[test]

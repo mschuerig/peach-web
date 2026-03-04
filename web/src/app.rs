@@ -88,6 +88,37 @@ pub fn App() -> impl IntoView {
                     }
                 }
 
+                // Pitch matching hydration
+                match store.fetch_all_pitch_matchings().await {
+                    Ok(records) => {
+                        let mut prof = profile_for_hydration.borrow_mut();
+                        let mut skipped = 0u32;
+
+                        for record in &records {
+                            let note = match MIDINote::try_new(record.reference_note) {
+                                Ok(n) => n,
+                                Err(_) => {
+                                    skipped += 1;
+                                    continue;
+                                }
+                            };
+
+                            prof.update_matching(note, record.user_cent_error.abs());
+                        }
+
+                        if skipped > 0 {
+                            log::warn!("Skipped {skipped} pitch matching records with invalid MIDI note values during hydration");
+                        }
+                        log::info!(
+                            "Profile pitch matching hydrated from {} records",
+                            records.len() - skipped as usize
+                        );
+                    }
+                    Err(e) => {
+                        log::error!("Failed to fetch pitch matching records for hydration: {e}");
+                    }
+                }
+
                 db_store.set(Some(store));
             }
             Err(e) => {

@@ -1,6 +1,6 @@
 # Story 4.4: Pitch Matching Persistence
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,19 +24,19 @@ so that my matching accuracy is tracked over time and survives page refreshes.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `fetch_all_pitch_matchings()` in IndexedDB adapter (AC: #1)
-  - [ ] 1.1 Add `pub async fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>` to `IndexedDbStore`
-  - [ ] 1.2 Mirror `fetch_all_comparisons()` exactly: open readonly transaction on `PITCH_MATCHING_STORE`, query via `TIMESTAMP_INDEX`, deserialize each record
-- [ ] Task 2: Add pitch matching hydration to `app.rs` (AC: #2, #3, #5)
-  - [ ] 2.1 After comparison hydration block, add `store.fetch_all_pitch_matchings().await`
-  - [ ] 2.2 For each record: `MIDINote::try_new(record.reference_note)` with skip-on-invalid (same pattern as comparisons)
-  - [ ] 2.3 Call `prof.update_matching(note, record.user_cent_error.abs())` for each valid record
-  - [ ] 2.4 Log skipped count and total hydrated count
-- [ ] Task 3: Verify end-to-end (AC: #4, #5)
-  - [ ] 3.1 `cargo test -p domain` — confirm no regressions
-  - [ ] 3.2 `trunk build` — confirm WASM compilation
-  - [ ] 3.3 `cargo clippy` — zero warnings
-  - [ ] 3.4 Manual browser test: do pitch matching, refresh page, verify profile stats persist
+- [x] Task 1: Implement `fetch_all_pitch_matchings()` in IndexedDB adapter (AC: #1)
+  - [x] 1.1 Add `pub async fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>` to `IndexedDbStore`
+  - [x] 1.2 Mirror `fetch_all_comparisons()` exactly: open readonly transaction on `PITCH_MATCHING_STORE`, query via `TIMESTAMP_INDEX`, deserialize each record
+- [x] Task 2: Add pitch matching hydration to `app.rs` (AC: #2, #3, #5)
+  - [x] 2.1 After comparison hydration block, add `store.fetch_all_pitch_matchings().await`
+  - [x] 2.2 For each record: `MIDINote::try_new(record.reference_note)` with skip-on-invalid (same pattern as comparisons)
+  - [x] 2.3 Call `prof.update_matching(note, record.user_cent_error.abs())` for each valid record
+  - [x] 2.4 Log skipped count and total hydrated count
+- [x] Task 3: Verify end-to-end (AC: #4, #5)
+  - [x] 3.1 `cargo test -p domain` — confirm no regressions (293 tests pass)
+  - [x] 3.2 `trunk build` — confirm WASM compilation
+  - [x] 3.3 `cargo clippy` — zero warnings
+  - [x] 3.4 Manual browser test: do pitch matching, refresh page, verify profile stats persist
 
 ## Dev Notes
 
@@ -198,10 +198,30 @@ Convention: story creation commit → implementation commit → code review fixe
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- Bug fix (from 4.3): Tunable note started immediately after reference note instead of waiting for slider touch. Root cause: training loop in `pitch_matching_view.rs` called `note_player.play()` right after `on_reference_finished()`. Fix: moved tunable note playback to `slider_on_change` handler, triggered on first touch (AwaitingSliderTouch → PlayingTunable transition).
+- Bug fix (from 4.3): Touching slider without moving always showed "dead center". Root cause: `calculate_adjusted_frequency()` and `commit_pitch()` ignored `initial_cent_offset` — slider center (0.0) mapped directly to the target frequency (correct answer). Fix: both functions now incorporate `initial_cent_offset`: `cent_offset = initial_offset + value * 20.0`.
+
 ### Completion Notes List
 
+- Task 1: Added `fetch_all_pitch_matchings()` to `IndexedDbStore`, mirroring `fetch_all_comparisons()` with `PITCH_MATCHING_STORE` and `PitchMatchingRecord` types
+- Task 2: Added pitch matching hydration block in `app.rs` after comparison hydration, before `db_store.set()` and `is_profile_loaded.set(true)` — uses same skip-on-invalid pattern with `MIDINote::try_new()`, calls `prof.update_matching(note, record.user_cent_error.abs())`
+- Task 3: All automated checks pass (293 domain tests, trunk build, clippy zero warnings). Manual browser test revealed two bugs from story 4.3 — both fixed.
+- AC#4 (storage write error notification) was already implemented in story 4.3 — no changes needed
+- AC#5 satisfied: `is_profile_loaded.set(true)` executes after both comparison and pitch matching hydration complete
+- Bug fixes: Fixed tunable note timing (waits for slider touch) and cent error calculation (accounts for initial_cent_offset)
+
 ### File List
+
+- `web/src/adapters/indexeddb_store.rs` — added `fetch_all_pitch_matchings()` method
+- `web/src/app.rs` — added pitch matching hydration block after comparison hydration
+- `domain/src/session/pitch_matching_session.rs` — fixed `calculate_adjusted_frequency()` and `commit_pitch()` to incorporate `initial_cent_offset`; updated 5 related tests
+- `web/src/components/pitch_matching_view.rs` — moved tunable note playback from training loop to `slider_on_change` (starts on first touch)
+
+### Change Log
+
+- 2026-03-04: Implemented pitch matching persistence read path and hydration (Tasks 1-3)
+- 2026-03-04: Fixed two pitch matching bugs from story 4.3 — tunable note timing and cent error calculation

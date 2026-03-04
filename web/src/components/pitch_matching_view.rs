@@ -201,12 +201,30 @@ pub fn PitchMatchingView() -> impl IntoView {
         let handler = SendWrapper::new({
             let session = Rc::clone(&session);
             let tunable_handle = Rc::clone(&tunable_handle);
+            let note_player = Rc::clone(&note_player);
             move |value: f64| {
-                if let Some(freq) = session.borrow_mut().adjust_pitch(value)
-                    && let Some(ref mut h) = *tunable_handle.borrow_mut()
-                    && let Err(e) = h.adjust_frequency(freq)
-                {
-                    log::warn!("Failed to adjust frequency: {e}");
+                let was_awaiting = session.borrow().state()
+                    == PitchMatchingSessionState::AwaitingSliderTouch;
+                if let Some(freq) = session.borrow_mut().adjust_pitch(value) {
+                    if was_awaiting {
+                        // First touch: start the tunable note
+                        match note_player.borrow().play(
+                            freq,
+                            MIDIVelocity::new(PITCH_MATCHING_VELOCITY),
+                            AmplitudeDB::new(0.0),
+                        ) {
+                            Ok(handle) => {
+                                tunable_handle.borrow_mut().replace(handle);
+                            }
+                            Err(e) => {
+                                log::error!("Tunable note playback failed: {e}");
+                            }
+                        }
+                    } else if let Some(ref mut h) = *tunable_handle.borrow_mut()
+                        && let Err(e) = h.adjust_frequency(freq)
+                    {
+                        log::warn!("Failed to adjust frequency: {e}");
+                    }
                 }
             }
         });
@@ -426,20 +444,8 @@ pub fn PitchMatchingView() -> impl IntoView {
                 session.borrow_mut().on_reference_finished();
                 sync();
 
-                // === AwaitingSliderTouch → PlayingTunable phase ===
-                // Start tunable note (indefinite — no duration)
-                match note_player.borrow().play(
-                    data.tunable_frequency,
-                    MIDIVelocity::new(PITCH_MATCHING_VELOCITY),
-                    AmplitudeDB::new(0.0),
-                ) {
-                    Ok(handle) => {
-                        tunable_handle.borrow_mut().replace(handle);
-                    }
-                    Err(e) => {
-                        log::error!("Tunable note playback failed: {e}");
-                    }
-                }
+                // === AwaitingSliderTouch phase ===
+                // Tunable note will start when user touches the slider (see slider_on_change)
 
                 // Enable slider and reset to center for new challenge
                 reset_trigger.set(reset_trigger.get_untracked() + 1);
