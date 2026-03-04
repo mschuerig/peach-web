@@ -204,8 +204,9 @@ pub fn PitchMatchingView() -> impl IntoView {
             move |value: f64| {
                 if let Some(freq) = session.borrow_mut().adjust_pitch(value)
                     && let Some(ref mut h) = *tunable_handle.borrow_mut()
+                    && let Err(e) = h.adjust_frequency(freq)
                 {
-                    let _ = h.adjust_frequency(freq);
+                    log::warn!("Failed to adjust frequency: {e}");
                 }
             }
         });
@@ -279,36 +280,15 @@ pub fn PitchMatchingView() -> impl IntoView {
         })
     };
 
-    // Keyboard handler: Escape to interrupt, Enter/Space to commit
+    // Keyboard handler: Escape to interrupt training.
+    // Enter/Space commit is handled by the VerticalPitchSlider's own on_keydown,
+    // which fires on_commit with the correct slider value.
     let keydown_handler = {
-        let on_commit = Rc::clone(&on_commit);
         let interrupt = Rc::clone(&interrupt_and_navigate);
-        let session = Rc::clone(&session);
         Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
-            match ev.key().as_str() {
-                "Enter" | " " => {
-                    ev.prevent_default();
-                    let state = session.borrow().state();
-                    if state == PitchMatchingSessionState::PlayingTunable {
-                        // Commit at current slider value — slider tracks its own value,
-                        // but we need the session's perspective. Use 0.0 as the current
-                        // value is already applied via adjust_pitch.
-                        // Actually, the slider fires on_commit with its current value,
-                        // so keyboard Enter/Space should also commit. We use the last
-                        // adjusted value. Since the session tracks the value internally,
-                        // we pass 0.0 to commit at whatever the current adjustment is.
-                        // Note: The VerticalPitchSlider's on_keydown already handles
-                        // Enter/Space and fires on_commit with its current value.
-                        // This document-level handler is a backup for when the slider
-                        // doesn't have focus.
-                        on_commit(0.0);
-                    }
-                }
-                "Escape" => {
-                    ev.prevent_default();
-                    (*interrupt)();
-                }
-                _ => {}
+            if ev.key() == "Escape" {
+                ev.prevent_default();
+                (*interrupt)();
             }
         })
     };
