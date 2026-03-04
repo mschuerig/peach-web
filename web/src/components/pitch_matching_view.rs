@@ -304,6 +304,15 @@ pub fn PitchMatchingView() -> impl IntoView {
             sync();
         }
     };
+    let on_nav_start = {
+        let on_nav_away = on_nav_away.clone();
+        let navigate = navigate.clone();
+        move |ev: leptos::ev::MouseEvent| {
+            ev.prevent_default();
+            on_nav_away();
+            navigate("/", Default::default());
+        }
+    };
     let on_nav_settings = {
         let on_nav_away = on_nav_away.clone();
         let navigate = navigate.clone();
@@ -320,6 +329,15 @@ pub fn PitchMatchingView() -> impl IntoView {
             ev.prevent_default();
             on_nav_away();
             navigate("/profile", Default::default());
+        }
+    };
+    let on_nav_info = {
+        let on_nav_away = on_nav_away.clone();
+        let navigate = navigate.clone();
+        move |ev: leptos::ev::MouseEvent| {
+            ev.prevent_default();
+            on_nav_away();
+            navigate("/info", Default::default());
         }
     };
 
@@ -524,6 +542,36 @@ pub fn PitchMatchingView() -> impl IntoView {
 
     view! {
         <div class="py-12">
+            <nav aria-label="Page navigation" class="flex gap-6 text-sm mb-6">
+                <a
+                    href="/"
+                    on:click=on_nav_start
+                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                    "Start"
+                </a>
+                <a
+                    href="/settings"
+                    on:click=on_nav_settings
+                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                    "Settings"
+                </a>
+                <a
+                    href="/profile"
+                    on:click=on_nav_profile
+                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                    "Profile"
+                </a>
+                <a
+                    href="/info"
+                    on:click=on_nav_info
+                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                    "Info"
+                </a>
+            </nav>
             <h1 class="text-2xl font-bold dark:text-white">
                 {if is_interval_mode { "Interval Pitch Matching" } else { "Pitch Matching Training" }}
             </h1>
@@ -573,24 +621,6 @@ pub fn PitchMatchingView() -> impl IntoView {
                     reset_trigger=reset_trigger.into()
                 />
             </div>
-
-            // Navigation links
-            <nav class="mt-8 flex justify-center gap-6">
-                <a
-                    href="/settings"
-                    on:click=on_nav_settings
-                    class="min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
-                >
-                    "Settings"
-                </a>
-                <a
-                    href="/profile"
-                    on:click=on_nav_profile
-                    class="min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
-                >
-                    "Profile"
-                </a>
-            </nav>
 
             // Storage error notification
             {move || {

@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use leptos::prelude::*;
-use leptos_router::components::A;
 use send_wrapper::SendWrapper;
 
 use domain::{PerceptualProfile, Trend, TrendAnalyzer};
 
+use super::page_nav::PageNav;
 use super::profile_visualization::ProfileVisualization;
 
 /// Format an optional f64 value to 1 decimal place with " cents" suffix, or em dash.
@@ -31,6 +31,7 @@ pub fn ProfileView() -> impl IntoView {
 
     view! {
         <div class="py-12">
+            <PageNav current="profile" />
             <h1 class="text-2xl font-bold dark:text-white">"Profile"</h1>
 
             <ProfileVisualization />
@@ -158,12 +159,6 @@ pub fn ProfileView() -> impl IntoView {
                 }.into_any()
             }}
 
-            <A
-                href="/"
-                attr:class="mt-8 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
-                "Back to Start"
-            </A>
         </div>
     }
 }
