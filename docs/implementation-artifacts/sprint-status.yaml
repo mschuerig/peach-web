@@ -62,8 +62,8 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Perceptual Profile & Visualization
-  epic-3: backlog
-  3-1-profile-view-with-summary-statistics: backlog
+  epic-3: in-progress
+  3-1-profile-view-with-summary-statistics: ready-for-dev
   3-2-perceptual-profile-visualization: backlog
   3-3-profile-preview-on-start-page: backlog
   epic-3-retrospective: optional
