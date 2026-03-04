@@ -20,8 +20,8 @@ pub const FEEDBACK_DURATION_SECS: f64 = 0.4;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ComparisonSessionState {
     Idle,
-    PlayingNote1,
-    PlayingNote2,
+    PlayingReferenceNote,
+    PlayingTargetNote,
     AwaitingAnswer,
     ShowingFeedback,
 }
@@ -123,7 +123,7 @@ impl ComparisonSession {
 
     /// Start a new comparison training session.
     ///
-    /// Snapshots settings, generates the first comparison, transitions to PlayingNote1.
+    /// Snapshots settings, generates the first comparison, transitions to PlayingReferenceNote.
     /// Panics if not idle or if intervals is empty.
     pub fn start(&mut self, intervals: HashSet<DirectedInterval>, settings: &dyn UserSettings) {
         assert_eq!(
@@ -149,38 +149,38 @@ impl ComparisonSession {
 
         // Generate first comparison
         self.generate_next_comparison();
-        self.state = ComparisonSessionState::PlayingNote1;
+        self.state = ComparisonSessionState::PlayingReferenceNote;
     }
 
-    /// Called when note 1 playback finishes. Transitions to PlayingNote2.
-    pub fn on_note1_finished(&mut self) {
+    /// Called when reference note playback finishes. Transitions to PlayingTargetNote.
+    pub fn on_reference_note_finished(&mut self) {
         assert_eq!(
             self.state,
-            ComparisonSessionState::PlayingNote1,
-            "on_note1_finished() requires PlayingNote1 state"
+            ComparisonSessionState::PlayingReferenceNote,
+            "on_reference_note_finished() requires PlayingReferenceNote state"
         );
-        self.state = ComparisonSessionState::PlayingNote2;
+        self.state = ComparisonSessionState::PlayingTargetNote;
     }
 
-    /// Called when note 2 playback finishes. Transitions to AwaitingAnswer.
-    pub fn on_note2_finished(&mut self) {
+    /// Called when target note playback finishes. Transitions to AwaitingAnswer.
+    pub fn on_target_note_finished(&mut self) {
         assert_eq!(
             self.state,
-            ComparisonSessionState::PlayingNote2,
-            "on_note2_finished() requires PlayingNote2 state"
+            ComparisonSessionState::PlayingTargetNote,
+            "on_target_note_finished() requires PlayingTargetNote state"
         );
         self.state = ComparisonSessionState::AwaitingAnswer;
     }
 
     /// Handle the user's answer (higher/lower).
     ///
-    /// Valid from PlayingNote2 (early answer) or AwaitingAnswer.
+    /// Valid from PlayingTargetNote (early answer) or AwaitingAnswer.
     /// Creates CompletedComparison, notifies observers, transitions to ShowingFeedback.
     pub fn handle_answer(&mut self, is_higher: bool, timestamp: String) {
         assert!(
-            self.state == ComparisonSessionState::PlayingNote2
+            self.state == ComparisonSessionState::PlayingTargetNote
                 || self.state == ComparisonSessionState::AwaitingAnswer,
-            "handle_answer() requires PlayingNote2 or AwaitingAnswer state"
+            "handle_answer() requires PlayingTargetNote or AwaitingAnswer state"
         );
 
         let comparison = self
@@ -226,7 +226,7 @@ impl ComparisonSession {
     }
 
     /// Called when the feedback display period finishes.
-    /// Generates next comparison, transitions to PlayingNote1.
+    /// Generates next comparison, transitions to PlayingReferenceNote.
     pub fn on_feedback_finished(&mut self) {
         assert_eq!(
             self.state,
@@ -235,7 +235,7 @@ impl ComparisonSession {
         );
         self.show_feedback = false;
         self.generate_next_comparison();
-        self.state = ComparisonSessionState::PlayingNote1;
+        self.state = ComparisonSessionState::PlayingReferenceNote;
     }
 
     /// Stop the session and return to Idle.
@@ -492,10 +492,10 @@ mod tests {
     // --- AC2: Start tests ---
 
     #[test]
-    fn test_start_transitions_to_playing_note1() {
+    fn test_start_transitions_to_playing_reference_note() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        assert_eq!(session.state(), ComparisonSessionState::PlayingNote1);
+        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
     }
 
     #[test]
@@ -511,7 +511,7 @@ mod tests {
     fn test_start_panics_when_not_idle() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        // Already in PlayingNote1, should panic
+        // Already in PlayingReferenceNote, should panic
         session.start(default_intervals(), &DefaultTestSettings);
     }
 
@@ -534,24 +534,24 @@ mod tests {
         assert!((data.duration.raw_value() - 1.0).abs() < f64::EPSILON);
     }
 
-    // --- AC4: Note1 to Note2 transition ---
+    // --- AC4: ReferenceNote to TargetNote transition ---
 
     #[test]
-    fn test_on_note1_finished_transitions_to_playing_note2() {
+    fn test_on_reference_note_finished_transitions_to_playing_target_note() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingNote2);
+        session.on_reference_note_finished();
+        assert_eq!(session.state(), ComparisonSessionState::PlayingTargetNote);
     }
 
-    // --- AC5: Note2 to AwaitingAnswer ---
+    // --- AC5: TargetNote to AwaitingAnswer ---
 
     #[test]
-    fn test_on_note2_finished_transitions_to_awaiting_answer() {
+    fn test_on_target_note_finished_transitions_to_awaiting_answer() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         assert_eq!(session.state(), ComparisonSessionState::AwaitingAnswer);
     }
 
@@ -561,21 +561,21 @@ mod tests {
     fn test_handle_answer_from_awaiting_transitions_to_showing_feedback() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         assert_eq!(session.state(), ComparisonSessionState::ShowingFeedback);
         assert!(session.show_feedback());
     }
 
-    // --- AC6 early answer: handle_answer from PlayingNote2 ---
+    // --- AC6 early answer: handle_answer from PlayingTargetNote ---
 
     #[test]
-    fn test_early_answer_from_playing_note2() {
+    fn test_early_answer_from_playing_target_note() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        // Answer while still playing note 2 (early answer)
+        session.on_reference_note_finished();
+        // Answer while still playing target note (early answer)
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         assert_eq!(session.state(), ComparisonSessionState::ShowingFeedback);
     }
@@ -586,11 +586,11 @@ mod tests {
     fn test_on_feedback_finished_generates_next_comparison() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         session.on_feedback_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingNote1);
+        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
         assert!(!session.show_feedback());
         assert!(session.current_playback_data().is_some());
     }
@@ -604,16 +604,16 @@ mod tests {
         // Idle
         assert_eq!(session.state(), ComparisonSessionState::Idle);
 
-        // Start → PlayingNote1
+        // Start → PlayingReferenceNote
         session.start(default_intervals(), &DefaultTestSettings);
-        assert_eq!(session.state(), ComparisonSessionState::PlayingNote1);
+        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
 
-        // on_note1_finished → PlayingNote2
-        session.on_note1_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingNote2);
+        // on_reference_note_finished → PlayingTargetNote
+        session.on_reference_note_finished();
+        assert_eq!(session.state(), ComparisonSessionState::PlayingTargetNote);
 
-        // on_note2_finished → AwaitingAnswer
-        session.on_note2_finished();
+        // on_target_note_finished → AwaitingAnswer
+        session.on_target_note_finished();
         assert_eq!(session.state(), ComparisonSessionState::AwaitingAnswer);
 
         // handle_answer → ShowingFeedback
@@ -621,33 +621,33 @@ mod tests {
         assert_eq!(session.state(), ComparisonSessionState::ShowingFeedback);
         assert!(session.show_feedback());
 
-        // on_feedback_finished → PlayingNote1 (next cycle)
+        // on_feedback_finished → PlayingReferenceNote (next cycle)
         session.on_feedback_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingNote1);
+        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
         assert!(!session.show_feedback());
     }
 
     // --- Guard tests ---
 
     #[test]
-    #[should_panic(expected = "handle_answer() requires PlayingNote2 or AwaitingAnswer state")]
+    #[should_panic(expected = "handle_answer() requires PlayingTargetNote or AwaitingAnswer state")]
     fn test_handle_answer_invalid_from_idle() {
         let mut session = create_session();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
     }
 
     #[test]
-    #[should_panic(expected = "on_note1_finished() requires PlayingNote1 state")]
-    fn test_on_note1_finished_from_idle_panics() {
+    #[should_panic(expected = "on_reference_note_finished() requires PlayingReferenceNote state")]
+    fn test_on_reference_note_finished_from_idle_panics() {
         let mut session = create_session();
-        session.on_note1_finished();
+        session.on_reference_note_finished();
     }
 
     #[test]
-    #[should_panic(expected = "on_note2_finished() requires PlayingNote2 state")]
-    fn test_on_note2_finished_from_idle_panics() {
+    #[should_panic(expected = "on_target_note_finished() requires PlayingTargetNote state")]
+    fn test_on_target_note_finished_from_idle_panics() {
         let mut session = create_session();
-        session.on_note2_finished();
+        session.on_target_note_finished();
     }
 
     #[test]
@@ -658,20 +658,20 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "handle_answer() requires PlayingNote2 or AwaitingAnswer state")]
-    fn test_handle_answer_from_playing_note1_panics() {
+    #[should_panic(expected = "handle_answer() requires PlayingTargetNote or AwaitingAnswer state")]
+    fn test_handle_answer_from_playing_reference_note_panics() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
     }
 
     #[test]
-    #[should_panic(expected = "handle_answer() requires PlayingNote2 or AwaitingAnswer state")]
+    #[should_panic(expected = "handle_answer() requires PlayingTargetNote or AwaitingAnswer state")]
     fn test_handle_answer_from_showing_feedback_panics() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         // Now in ShowingFeedback — should panic
         session.handle_answer(false, "2026-03-03T14:01:00Z".to_string());
@@ -683,8 +683,8 @@ mod tests {
     fn test_completed_comparison_has_correct_timestamp() {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         let timestamp = "2026-03-03T14:30:00Z".to_string();
         session.handle_answer(true, timestamp.clone());
 
@@ -697,8 +697,8 @@ mod tests {
     fn test_completed_comparison_has_snapshot_tuning_system() {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
 
         let completed_calls = calls.borrow();
@@ -712,8 +712,8 @@ mod tests {
     fn test_completed_comparison_is_correct_derivation() {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
 
         // Get the current comparison's target direction
         let data = session.current_playback_data().unwrap();
@@ -733,8 +733,8 @@ mod tests {
     fn test_observer_receives_comparison_completed() {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
 
         assert_eq!(calls.borrow().len(), 1);
@@ -758,8 +758,8 @@ mod tests {
         );
 
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
 
         // Normal observer should still receive the event despite panicking observer
@@ -827,7 +827,7 @@ mod tests {
     fn test_stop_returns_to_idle() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
+        session.on_reference_note_finished();
         session.stop();
         assert_eq!(session.state(), ComparisonSessionState::Idle);
         assert!(session.current_playback_data().is_none());
@@ -838,8 +838,8 @@ mod tests {
     fn test_stop_clears_all_session_state() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
 
         // Answer correctly to populate is_last_answer_correct and session_best
         let data = session.current_playback_data().unwrap();
@@ -872,8 +872,8 @@ mod tests {
         let data = session.current_playback_data().unwrap();
         let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
 
-        session.on_note1_finished();
-        session.on_note2_finished();
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
         // Answer correctly
         session.handle_answer(is_higher, "2026-03-03T14:00:00Z".to_string());
         assert!(session.session_best_cent_difference().is_some());
@@ -889,8 +889,8 @@ mod tests {
             let data = session.current_playback_data().unwrap();
             let is_higher =
                 data.target_frequency.raw_value() > data.reference_frequency.raw_value();
-            session.on_note1_finished();
-            session.on_note2_finished();
+            session.on_reference_note_finished();
+            session.on_target_note_finished();
             session.handle_answer(
                 is_higher,
                 format!("2026-03-03T14:0{}:00Z", i),

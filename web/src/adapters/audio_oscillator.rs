@@ -157,7 +157,7 @@ impl NotePlayer for OscillatorNotePlayer {
             .map_err(|e| AudioError::PlaybackFailed(format!("{:?}", e)))?;
 
         // Keep handle in active_handles so stop_all() can stop it early
-        // (e.g., when the user answers during note2 playback).
+        // (e.g., when the user answers during target note playback).
         // Handles are pruned on next create_and_start, or cleared by stop_all().
 
         Ok(())

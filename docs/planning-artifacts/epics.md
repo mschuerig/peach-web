@@ -515,7 +515,7 @@ User can open Peach, click "Comparison," hear two notes via oscillator, answer h
 
 **Given** ComparisonSession is idle
 **When** start(intervals) is called with at least one interval
-**Then** state transitions to `playingNote1`
+**Then** state transitions to `playingReferenceNote`
 **And** the tuning system is snapshot from userSettings for the session
 
 **Given** the training loop is running
@@ -524,15 +524,15 @@ User can open Peach, click "Comparison," hear two notes via oscillator, answer h
 **And** then the target note plays at velocity 63 with calculated amplitude variation
 **And** both play for the configured noteDuration (FR3)
 
-**Given** state is `playingNote1`
+**Given** state is `playingReferenceNote`
 **When** the reference note finishes
-**Then** state transitions to `playingNote2`
+**Then** state transitions to `playingTargetNote`
 
-**Given** state is `playingNote2`
+**Given** state is `playingTargetNote`
 **When** the target note finishes and no answer was given
 **Then** state transitions to `awaitingAnswer`
 
-**Given** state is `playingNote2` or `awaitingAnswer`
+**Given** state is `playingTargetNote` or `awaitingAnswer`
 **When** handleAnswer(isHigher) is called
 **Then** the target note stops if still playing
 **And** a CompletedComparison is created with timestamp and session tuning system
@@ -577,11 +577,11 @@ User can open Peach, click "Comparison," hear two notes via oscillator, answer h
 **When** I press Enter or Space with the Comparison button focused
 **Then** training starts identically to clicking (FR42)
 
-**Given** state is `playingNote1`
+**Given** state is `playingReferenceNote`
 **When** the reference note is playing
 **Then** Higher and Lower buttons are visually disabled and not clickable/pressable
 
-**Given** state is `playingNote2`
+**Given** state is `playingTargetNote`
 **When** the target note begins playing
 **Then** Higher and Lower buttons become enabled immediately (FR4 — early answer)
 

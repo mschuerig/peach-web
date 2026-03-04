@@ -95,7 +95,7 @@ pub fn ComparisonView() -> impl IntoView {
         is_last_correct.set(s.is_last_answer_correct());
         let state = s.state();
         buttons_enabled.set(
-            state == ComparisonSessionState::PlayingNote2
+            state == ComparisonSessionState::PlayingTargetNote
                 || state == ComparisonSessionState::AwaitingAnswer,
         );
         if s.show_feedback() {
@@ -136,7 +136,7 @@ pub fn ComparisonView() -> impl IntoView {
                 return;
             }
             let state = session.borrow().state();
-            if state != ComparisonSessionState::PlayingNote2
+            if state != ComparisonSessionState::PlayingTargetNote
                 && state != ComparisonSessionState::AwaitingAnswer
             {
                 log::info!("User pressed {answer_str} — ignored (state: {state:?})");
@@ -340,7 +340,7 @@ pub fn ComparisonView() -> impl IntoView {
 
                 let duration_ms = (data.duration.raw_value() * 1000.0) as u32;
 
-                // === PlayingNote1 phase (buttons disabled) ===
+                // === PlayingReferenceNote phase (buttons disabled) ===
                 note_player.borrow().stop_all(); // Stop any lingering audio
                 if let Err(e) = note_player.borrow().play_for_duration(
                     data.reference_frequency,
@@ -348,9 +348,9 @@ pub fn ComparisonView() -> impl IntoView {
                     MIDIVelocity::new(63),
                     AmplitudeDB::new(0.0),
                 ) {
-                    log::error!("Note1 playback failed: {e}");
+                    log::error!("Reference note playback failed: {e}");
                 }
-                // Wait for note1 duration with responsive cancellation
+                // Wait for reference note duration with responsive cancellation
                 let mut elapsed = 0u32;
                 while elapsed < duration_ms {
                     if cancelled.get() {
@@ -363,20 +363,20 @@ pub fn ComparisonView() -> impl IntoView {
                     break;
                 }
 
-                // Transition: PlayingNote1 → PlayingNote2
-                session.borrow_mut().on_note1_finished();
+                // Transition: PlayingReferenceNote → PlayingTargetNote
+                session.borrow_mut().on_reference_note_finished();
                 sync();
 
-                // === PlayingNote2 phase (buttons enabled — early answer possible) ===
+                // === PlayingTargetNote phase (buttons enabled — early answer possible) ===
                 if let Err(e) = note_player.borrow().play_for_duration(
                     data.target_frequency,
                     data.duration,
                     MIDIVelocity::new(63),
                     data.target_amplitude_db,
                 ) {
-                    log::error!("Note2 playback failed: {e}");
+                    log::error!("Target note playback failed: {e}");
                 }
-                // Wait for note2 duration OR early answer
+                // Wait for target note duration OR early answer
                 elapsed = 0;
                 while elapsed < duration_ms {
                     if cancelled.get() {
@@ -393,14 +393,14 @@ pub fn ComparisonView() -> impl IntoView {
                     break;
                 }
 
-                // On early answer, stop note2 audio immediately
+                // On early answer, stop target note audio immediately
                 if session.borrow().state() == ComparisonSessionState::ShowingFeedback {
                     note_player.borrow().stop_all();
                 }
 
                 // Transition to AwaitingAnswer if no early answer was given
-                if session.borrow().state() == ComparisonSessionState::PlayingNote2 {
-                    session.borrow_mut().on_note2_finished();
+                if session.borrow().state() == ComparisonSessionState::PlayingTargetNote {
+                    session.borrow_mut().on_target_note_finished();
                     sync();
                 }
 

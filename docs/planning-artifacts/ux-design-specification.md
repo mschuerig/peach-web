@@ -451,8 +451,8 @@ Peach requires audio output to function. This is a fundamental constraint of the
 
 | State | Higher/Lower Buttons | Feedback | Description |
 |---|---|---|---|
-| `playingNote1` | Disabled | Hidden | Reference note playing |
-| `playingNote2` | **Enabled** | Hidden | Target note playing — early answer allowed |
+| `playingReferenceNote` | Disabled | Hidden | Reference note playing |
+| `playingTargetNote` | **Enabled** | Hidden | Target note playing — early answer allowed |
 | `awaitingAnswer` | Enabled | Hidden | Both notes finished, waiting for input |
 | `showingFeedback` | Disabled | Visible (400ms) | Brief result display |
 
@@ -825,7 +825,7 @@ Aligned with PRD phases:
 
 | Pattern | Rule |
 |---|---|
-| Disabled state | Visually dimmed. Not clickable. Used during `playingNote1` and `showingFeedback` states. |
+| Disabled state | Visually dimmed. Not clickable. Used during `playingReferenceNote` and `showingFeedback` states. |
 | Enabled state | Full visual weight. Clickable and keyboard-accessible. |
 | Click feedback | Immediate state change — no delay, no animation. Button disables instantly on click. |
 | Touch targets | Minimum 44x44px on all interactive elements. |
