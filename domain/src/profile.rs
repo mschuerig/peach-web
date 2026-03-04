@@ -199,6 +199,11 @@ impl PerceptualProfile {
         self.matching_m2 += delta * delta2;
     }
 
+    /// Number of pitch matching samples recorded.
+    pub fn matching_count(&self) -> u32 {
+        self.matching_count
+    }
+
     /// Mean absolute pitch matching error, or None if no data.
     pub fn matching_mean(&self) -> Option<f64> {
         if self.matching_count > 0 {
@@ -503,6 +508,23 @@ mod tests {
         let json = serde_json::to_string(&profile).unwrap();
         let parsed: PerceptualProfile = serde_json::from_str(&json).unwrap();
         assert_eq!(profile, parsed);
+    }
+
+    // --- Matching count getter ---
+
+    #[test]
+    fn test_matching_count_returns_sample_count() {
+        let mut profile = PerceptualProfile::new();
+        assert_eq!(profile.matching_count(), 0);
+
+        profile.update_matching(MIDINote::new(60), 3.0);
+        assert_eq!(profile.matching_count(), 1);
+
+        profile.update_matching(MIDINote::new(72), -5.0);
+        assert_eq!(profile.matching_count(), 2);
+
+        profile.update_matching(MIDINote::new(60), 7.0);
+        assert_eq!(profile.matching_count(), 3);
     }
 
     // --- Default trait ---
