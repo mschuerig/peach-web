@@ -11,9 +11,10 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::KeyboardEvent;
 
 use crate::adapters::audio_context::AudioContextManager;
-use crate::adapters::audio_oscillator::{OscillatorNotePlayer, OscillatorPlaybackHandle};
+use crate::adapters::audio_soundfont::WorkletBridge;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
+use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
 use crate::bridge::PitchMatchingDataStoreObserver;
 use crate::components::pitch_slider::VerticalPitchSlider;
 use crate::interval_codes::{interval_label, parse_intervals_param};
@@ -36,6 +37,8 @@ pub fn PitchMatchingView() -> impl IntoView {
         use_context().expect("AudioContextManager not provided");
     let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
         use_context().expect("db_store not provided");
+    let worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, LocalStorage> =
+        use_context().expect("worklet_bridge not provided");
 
     // Eagerly create AudioContext in synchronous render path.
     // This ensures creation happens within the user gesture call stack (click on Start Page),
@@ -56,7 +59,13 @@ pub fn PitchMatchingView() -> impl IntoView {
     let interval_label_text: RwSignal<String> = RwSignal::new(String::new());
 
     let settings = LocalStorageSettings;
-    let note_player = Rc::new(RefCell::new(OscillatorNotePlayer::new(Rc::clone(&audio_ctx))));
+    let sound_source = LocalStorageSettings::get_string("peach.sound_source")
+        .unwrap_or_else(|| "oscillator:sine".to_string());
+    let note_player = Rc::new(RefCell::new(create_note_player(
+        &sound_source,
+        Rc::clone(&audio_ctx),
+        worklet_bridge.get_untracked(),
+    )));
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
 
     // Build observers — PitchMatchingSession already updates profile directly,
@@ -92,7 +101,7 @@ pub fn PitchMatchingView() -> impl IntoView {
     let reset_trigger = RwSignal::new(0u32);
 
     // Tunable note handle for real-time frequency adjustment
-    let tunable_handle: Rc<RefCell<Option<OscillatorPlaybackHandle>>> =
+    let tunable_handle: Rc<RefCell<Option<UnifiedPlaybackHandle>>> =
         Rc::new(RefCell::new(None));
 
     // Sync UI signals from session state

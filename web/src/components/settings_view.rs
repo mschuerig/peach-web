@@ -8,6 +8,7 @@ use leptos_router::components::A;
 use send_wrapper::SendWrapper;
 use wasm_bindgen_futures::spawn_local;
 
+use crate::adapters::audio_soundfont::SF2Preset;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use domain::ports::UserSettings;
@@ -93,6 +94,8 @@ pub fn SettingsView() -> impl IntoView {
         LocalStorageSettings::get_string("peach.sound_source")
             .unwrap_or_else(|| "oscillator:sine".to_string()),
     );
+    let sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage> =
+        use_context().expect("sf2_presets not provided");
     let selected_intervals = RwSignal::new(LocalStorageSettings::get_selected_intervals());
 
     // Reset training data
@@ -293,7 +296,20 @@ pub fn SettingsView() -> impl IntoView {
                             sound_source.set(val);
                         }
                     >
-                        <option value="oscillator:sine">"Sine Oscillator"</option>
+                        {move || {
+                            let mut presets = sf2_presets.get();
+                            if presets.is_empty() {
+                                // Fallback when SoundFont is unavailable
+                                vec![view! { <option value={"oscillator:sine".to_string()}>{"Sine Oscillator".to_string()}</option> }]
+                            } else {
+                                presets.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                                presets.into_iter().map(|p| {
+                                    let value = format!("sf2:{}:{}", p.bank, p.program);
+                                    let label = p.name.clone();
+                                    view! { <option value={value}>{label}</option> }
+                                }).collect::<Vec<_>>()
+                            }
+                        }}
                     </select>
                 </div>
 
