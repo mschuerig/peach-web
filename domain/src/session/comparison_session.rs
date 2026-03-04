@@ -211,6 +211,13 @@ impl ComparisonSession {
         self.is_last_answer_correct = completed.is_correct();
         self.show_feedback = true;
 
+        #[cfg(feature = "training-log")]
+        log::info!(
+            "Answer was {} (target was {})",
+            if completed.is_correct() { "\u{2713} CORRECT" } else { "\u{2717} WRONG" },
+            if comparison.is_target_higher() { "higher" } else { "lower" },
+        );
+
         // Notify observers with panic isolation
         self.notify_observers(&completed);
 
@@ -293,6 +300,30 @@ impl ComparisonSession {
             duration: self.session_note_duration,
             target_amplitude_db,
         });
+
+        #[cfg(feature = "training-log")]
+        {
+            let interval_str = DirectedInterval::between(
+                comparison.reference_note(),
+                comparison.target_note().note,
+            )
+            .map_or("?".to_string(), |di| format!("{:?}{:?}", di.interval, di.direction));
+            let tuning_str = match self.session_tuning_system {
+                TuningSystem::EqualTemperament => "ET",
+                TuningSystem::JustIntonation => "JI",
+            };
+            log::info!(
+                "Comparison: ref={} {:.2}Hz @0.0dB, target {:.2}Hz @{:.1}dB, offset={:.1}, interval={}, tuning={}, higher={}",
+                comparison.reference_note().raw_value(),
+                reference_frequency.raw_value(),
+                target_frequency.raw_value(),
+                target_amplitude_db.raw_value(),
+                comparison.target_note().offset.raw_value,
+                interval_str,
+                tuning_str,
+                comparison.is_target_higher(),
+            );
+        }
     }
 
     fn random_interval(&self) -> DirectedInterval {

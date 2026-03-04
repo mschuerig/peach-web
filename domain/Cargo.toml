@@ -3,10 +3,14 @@ name = "domain"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+training-log = ["dep:log"]
+
 [dependencies]
 serde = { workspace = true }
 thiserror = "2"
 rand = "0.9"
+log = { version = "0.4", optional = true }
 
 [dev-dependencies]
 serde_json = "1"
