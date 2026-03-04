@@ -71,7 +71,7 @@ development_status:
   # Epic 4: Pitch Matching Training
   epic-4: in-progress
   4-1-pitch-matching-session-state-machine: done
-  4-2-vertical-pitch-slider: backlog
+  4-2-vertical-pitch-slider: ready-for-dev
   4-3-pitch-matching-training-ui: backlog
   4-4-pitch-matching-persistence: backlog
   epic-4-retrospective: optional
