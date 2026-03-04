@@ -19,7 +19,7 @@ pub fn InfoView() -> impl IntoView {
                         <p>
                             <a
                                 href="mailto:michael@schuerig.de"
-                                class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                class="rounded text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
                             >
                                 "michael@schuerig.de"
                             </a>
@@ -37,7 +37,7 @@ pub fn InfoView() -> impl IntoView {
                                     href="https://github.com/mschuerig/peach-web"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                    class="rounded text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
                                 >
                                     "mschuerig/peach-web"
                                 </a>
@@ -62,7 +62,7 @@ pub fn InfoView() -> impl IntoView {
                             href="http://www.schristiancollins.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                            class="rounded text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
                         >
                             "schristiancollins.com"
                         </a>

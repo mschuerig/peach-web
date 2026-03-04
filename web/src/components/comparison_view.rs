@@ -210,6 +210,7 @@ pub fn ComparisonView() -> impl IntoView {
         let note_player = Rc::clone(&note_player);
         let sync = sync_signals.clone();
         move || {
+            sr_announcement.set("Training stopped".into());
             cancelled.set(true);
             session.borrow_mut().stop();
             note_player.borrow().stop_all();
@@ -379,6 +380,7 @@ pub fn ComparisonView() -> impl IntoView {
         spawn_local(async move {
             session.borrow_mut().start(intervals_from_query, &settings);
             sync();
+            sr_announcement.set("Training started".into());
 
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;
 
@@ -552,7 +554,7 @@ pub fn ComparisonView() -> impl IntoView {
             </div>
 
             // Screen reader live region
-            <div aria-live="polite" class="sr-only">
+            <div aria-live="polite" aria-atomic="true" class="sr-only">
                 {move || sr_announcement.get()}
             </div>
 
