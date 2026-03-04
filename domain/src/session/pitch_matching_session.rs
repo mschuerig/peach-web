@@ -151,20 +151,8 @@ impl PitchMatchingSession {
             PitchMatchingSessionState::PlayingReference,
             "on_reference_finished() requires PlayingReference state"
         );
-
-        // Compute tunable frequency: target + initial cent offset
-        let challenge = self.current_challenge.expect("challenge must exist in PlayingReference");
-        let target_freq = self.target_frequency.expect("target_frequency must exist in PlayingReference");
-        let initial_offset = challenge.initial_cent_offset();
-        let tunable_frequency = Frequency::new(
-            target_freq.raw_value() * 2.0_f64.powf(initial_offset / 1200.0),
-        );
-
-        // Update playback data with tunable frequency
-        if let Some(ref mut data) = self.current_playback_data {
-            data.tunable_frequency = tunable_frequency;
-        }
-
+        // Tunable playback data (with initial cent offset) is already computed
+        // in generate_next_challenge() — no recomputation needed here.
         self.state = PitchMatchingSessionState::AwaitingSliderTouch;
     }
 
@@ -174,6 +162,7 @@ impl PitchMatchingSession {
     /// If PlayingTunable: returns adjusted frequency.
     /// Returns `None` if in wrong state.
     pub fn adjust_pitch(&mut self, value: f64) -> Option<Frequency> {
+        let value = value.clamp(-1.0, 1.0);
         match self.state {
             PitchMatchingSessionState::AwaitingSliderTouch => {
                 self.state = PitchMatchingSessionState::PlayingTunable;
@@ -197,6 +186,7 @@ impl PitchMatchingSession {
             "commit_pitch() requires PlayingTunable state"
         );
 
+        let value = value.clamp(-1.0, 1.0);
         let challenge = self.current_challenge.expect("challenge must exist in PlayingTunable");
         let user_cent_error = value * 20.0;
 
@@ -252,7 +242,6 @@ impl PitchMatchingSession {
     /// Stop if running, reset matching accumulators, and call reset on all resettables.
     pub fn reset_training_data(&mut self) {
         self.stop();
-        self.last_completed = None;
         self.profile.borrow_mut().reset_matching();
         for resettable in &mut self.resettables {
             resettable.reset();
@@ -306,6 +295,9 @@ impl PitchMatchingSession {
                 self.session_note_range.max().raw_value(),
             ),
         };
+
+        // Ensure valid range — if interval exceeds note range, clamp to edge
+        let min_raw = min_raw.min(max_raw);
 
         let reference_note = MIDINote::random(min_raw..=max_raw);
         let target_note = reference_note
@@ -548,6 +540,30 @@ mod tests {
         assert!(challenge.reference_note().raw_value() <= 84 - 7);
     }
 
+    #[test]
+    fn test_challenge_generation_narrow_range_does_not_panic() {
+        // Note range narrower than the interval — should not panic
+        struct NarrowRangeSettings;
+        impl UserSettings for NarrowRangeSettings {
+            fn note_range(&self) -> NoteRange {
+                NoteRange::new(MIDINote::new(60), MIDINote::new(65)) // only 5 semitones
+            }
+            fn note_duration(&self) -> NoteDuration { NoteDuration::new(1.0) }
+            fn reference_pitch(&self) -> Frequency { Frequency::CONCERT_440 }
+            fn tuning_system(&self) -> TuningSystem { TuningSystem::EqualTemperament }
+            fn vary_loudness(&self) -> f64 { 0.0 }
+        }
+
+        let mut intervals = HashSet::new();
+        intervals.insert(DirectedInterval::new(Interval::PerfectFifth, Direction::Up)); // 7 semitones > 5
+
+        let mut session = create_session();
+        // Should not panic despite interval exceeding note range
+        session.start(intervals, &NarrowRangeSettings);
+        assert_eq!(session.state(), PitchMatchingSessionState::PlayingReference);
+        assert!(session.current_challenge().is_some());
+    }
+
     // --- AC4: Reference finished transition ---
 
     #[test]
@@ -562,12 +578,25 @@ mod tests {
     fn test_on_reference_finished_provides_tunable_frequency_with_offset() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
+
+        // Verify tunable frequency matches target * 2^(offset/1200) formula
+        let challenge = *session.current_challenge().unwrap();
+        let target_freq = TuningSystem::EqualTemperament
+            .frequency_for_note(challenge.target_note(), Frequency::CONCERT_440);
+        let expected_tunable = Frequency::new(
+            target_freq.raw_value()
+                * 2.0_f64.powf(challenge.initial_cent_offset() / 1200.0),
+        );
+
         session.on_reference_finished();
 
         let data = session.current_playback_data().unwrap();
-        // Tunable frequency should be different from target due to offset
-        // (unless offset is exactly 0, which is extremely unlikely)
-        assert!(data.tunable_frequency.raw_value() > 0.0);
+        assert!(
+            (data.tunable_frequency.raw_value() - expected_tunable.raw_value()).abs() < 1e-10,
+            "tunable_frequency ({}) should match target * 2^(offset/1200) ({})",
+            data.tunable_frequency.raw_value(),
+            expected_tunable.raw_value()
+        );
     }
 
     // --- AC5: First slider interaction ---
@@ -632,6 +661,36 @@ mod tests {
             "At -1.0: got {}, expected {}",
             freq_low.raw_value(),
             expected_low
+        );
+    }
+
+    #[test]
+    fn test_adjust_pitch_clamps_value_beyond_range() {
+        let mut session = create_session();
+        session.start(default_intervals(), &DefaultTestSettings);
+        session.on_reference_finished();
+        session.adjust_pitch(0.0); // transition to PlayingTunable
+
+        let target_freq = session.target_frequency.unwrap().raw_value();
+
+        // Value beyond +1.0 should be clamped to +1.0
+        let freq = session.adjust_pitch(2.0).unwrap();
+        let expected = target_freq * 2.0_f64.powf(20.0 / 1200.0); // +20 cents max
+        assert!(
+            (freq.raw_value() - expected).abs() < 1e-10,
+            "Value 2.0 should be clamped to 1.0: got {}, expected {}",
+            freq.raw_value(),
+            expected
+        );
+
+        // Value below -1.0 should be clamped to -1.0
+        let freq = session.adjust_pitch(-5.0).unwrap();
+        let expected = target_freq * 2.0_f64.powf(-20.0 / 1200.0); // -20 cents max
+        assert!(
+            (freq.raw_value() - expected).abs() < 1e-10,
+            "Value -5.0 should be clamped to -1.0: got {}, expected {}",
+            freq.raw_value(),
+            expected
         );
     }
 

@@ -1,6 +1,6 @@
 # Story 4.1: Pitch Matching Session State Machine
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -455,6 +455,7 @@ No issues encountered during implementation.
 ### Change Log
 
 - 2026-03-04: Implemented story 4.1 — PitchMatchingSession state machine with all acceptance criteria satisfied
+- 2026-03-04: Code review fixes applied — 4 MEDIUM issues fixed: (M1) guard against panic when note range narrower than interval, (M2) clamp slider value to [-1.0, +1.0] in adjust_pitch/commit_pitch, (M3) remove redundant tunable frequency computation in on_reference_finished, (M4) strengthen tunable frequency test to verify formula. Also fixed L1: remove redundant last_completed=None in reset_training_data. Added 2 new tests (narrow range edge case, value clamping). 293 tests pass, zero clippy warnings.
 
 ### File List
 
