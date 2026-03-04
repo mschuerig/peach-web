@@ -301,7 +301,7 @@ peach-web/
 | Constants | `SCREAMING_SNAKE_CASE` | `FEEDBACK_DURATION`, `REFERENCE_MIDI_NOTE` |
 | Modules, files | `snake_case` | `tuning.rs`, `pitch_matching.rs` |
 | Trait names | `PascalCase` | `NotePlayer`, `ComparisonObserver` |
-| Enum variants | `PascalCase` | `PlayingNote1`, `AwaitingAnswer` |
+| Enum variants | `PascalCase` | `PlayingReferenceNote`, `AwaitingAnswer` |
 | Type parameters | Single uppercase or `PascalCase` | `T`, `E` |
 
 **Leptos Component Functions:**

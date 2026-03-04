@@ -153,7 +153,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 | Variables, fields | `snake_case` | `reference_note`, `sample_count` |
 | Constants | `SCREAMING_SNAKE_CASE` | `FEEDBACK_DURATION`, `REFERENCE_MIDI_NOTE` |
 | Modules, files | `snake_case` | `tuning.rs`, `pitch_matching.rs` |
-| Enum variants | `PascalCase` | `PlayingNote1`, `AwaitingAnswer` |
+| Enum variants | `PascalCase` | `PlayingReferenceNote`, `AwaitingAnswer` |
 | Leptos components | `PascalCase` functions | `fn StartPage()`, `fn ComparisonView()` |
 
 **Domain Blueprint Fidelity (critical):**
