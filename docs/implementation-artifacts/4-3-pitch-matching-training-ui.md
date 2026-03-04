@@ -1,6 +1,6 @@
 # Story 4.3: Pitch Matching Training UI
 
-Status: review
+Status: done
 
 ## Story
 
@@ -294,7 +294,7 @@ Claude Opus 4.6
 - PitchMatchingProfileObserver removed: PitchMatchingSession already calls profile.update_matching() directly in commit_pitch(), unlike ComparisonSession which delegates to observers. Adding the observer would double-count.
 - IndexedDB version bumped from 1 to 2 to add pitch_matching_records object store (story 4.4 was going to handle persistence, but Task 1.2 explicitly requires saving PitchMatchingRecords)
 - delete_all() updated to clear both comparison_records and pitch_matching_records stores in a single transaction
-- Document-level Enter/Space keydown handler: backup for when slider doesn't have focus. The VerticalPitchSlider's own keydown already fires on_commit when focused.
+- Document-level Enter/Space keydown handler removed during code review: unreachable in practice (reaching PlayingTunable requires slider interaction which implies focus), and passed incorrect value (0.0). The VerticalPitchSlider's own keydown handles Enter/Space with the correct slider value.
 
 ### Completion Notes List
 
@@ -312,6 +312,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-04: Implemented story 4.3 — Pitch Matching Training UI with full training loop, slider integration, feedback display, interruption handling, and start page button fix
+- 2026-03-04: Code review fixes — (H1) removed dead-code document-level Enter/Space handler that passed incorrect value 0.0; (M1) replaced `let _ = adjust_frequency()` with proper error logging per project rules
 
 ### File List
 
