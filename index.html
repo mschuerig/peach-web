@@ -8,8 +8,14 @@
     <link data-trunk rel="rust" href="web" data-wasm-opt="z" />
     <link data-trunk rel="copy-dir" href="web/assets/soundfont" />
     <link data-trunk rel="copy-file" href=".cache/GeneralUser-GS.sf2" />
+    <link data-trunk rel="copy-file" href="sw.js" />
   </head>
   <body>
     <noscript>This app requires JavaScript and WebAssembly.</noscript>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
+    </script>
   </body>
 </html>
