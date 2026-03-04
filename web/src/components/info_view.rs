@@ -59,7 +59,7 @@ pub fn InfoView() -> impl IntoView {
                     <p class="mt-2 text-gray-700 dark:text-gray-300">
                         "\"GeneralUser GS\" SoundFont by S. Christian Collins — "
                         <a
-                            href="http://www.schristiancollins.com"
+                            href="https://www.schristiancollins.com"
                             target="_blank"
                             rel="noopener noreferrer"
                             class="rounded text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"

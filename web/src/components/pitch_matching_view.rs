@@ -168,6 +168,8 @@ pub fn PitchMatchingView() -> impl IntoView {
             feedback_text.set(text);
             feedback_color.set(color);
             sr_announcement.set(sr);
+        } else {
+            sr_announcement.set(String::new());
         }
 
         if is_interval_mode
@@ -295,7 +297,6 @@ pub fn PitchMatchingView() -> impl IntoView {
         let tunable_handle = Rc::clone(&tunable_handle);
         let sync = sync_signals.clone();
         move || {
-            sr_announcement.set("Training stopped".into());
             cancelled.set(true);
             session.borrow_mut().stop();
             if let Some(ref mut h) = *tunable_handle.borrow_mut() {
@@ -303,6 +304,7 @@ pub fn PitchMatchingView() -> impl IntoView {
             }
             note_player.borrow().stop_all();
             sync();
+            sr_announcement.set("Training stopped".into());
         }
     };
     let on_nav_start = {
