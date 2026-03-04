@@ -130,16 +130,20 @@ pub fn ComparisonView() -> impl IntoView {
         let sync = sync_signals.clone();
         let cancelled = Rc::clone(&cancelled);
         Rc::new(move |is_higher: bool| {
+            let answer_str = if is_higher { "higher" } else { "lower" };
             if cancelled.get() {
+                log::info!("User pressed {answer_str} — ignored (cancelled)");
                 return;
             }
             let state = session.borrow().state();
             if state != ComparisonSessionState::PlayingNote2
                 && state != ComparisonSessionState::AwaitingAnswer
             {
+                log::info!("User pressed {answer_str} — ignored (state: {state:?})");
                 return;
             }
 
+            log::info!("User pressed {answer_str}");
             let timestamp = js_sys::Date::new_0()
                 .to_iso_string()
                 .as_string()

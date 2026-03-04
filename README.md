@@ -58,6 +58,12 @@ trunk build --release
 
 The output goes to `dist/`.
 
+## Feature Flags
+
+| Feature | Crate | Description |
+|---------|-------|-------------|
+| `training-log` | `domain` | Logs every comparison and answer result to the browser console via the `log` crate. Enabled by default in the `web` crate. Disable by removing the feature from `web/Cargo.toml` when no longer needed. |
+
 ## Running Tests
 
 ```bash

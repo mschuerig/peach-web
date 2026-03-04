@@ -27,8 +27,16 @@ impl Comparison {
     }
 
     /// Whether the target is tuned higher than the reference.
+    ///
+    /// Accounts for both the interval (MIDI note difference) and the
+    /// microtonal detuning offset. The semitone difference is converted
+    /// to cents and combined with the offset to determine the overall
+    /// pitch direction.
     pub fn is_target_higher(&self) -> bool {
-        self.target_note.offset.raw_value > 0.0
+        let semitone_cents =
+            (self.target_note.note.raw_value() as f64 - self.reference_note.raw_value() as f64)
+                * 100.0;
+        semitone_cents + self.target_note.offset.raw_value > 0.0
     }
 
     /// Whether the user's answer (higher/lower) is correct.
@@ -119,6 +127,32 @@ mod tests {
             DetunedMIDINote {
                 note: MIDINote::new(60),
                 offset: Cents::new(0.0),
+            },
+        );
+        assert!(!comp.is_target_higher());
+    }
+
+    #[test]
+    fn test_is_target_higher_interval_up_with_negative_offset() {
+        // Major third up (4 semitones = 400 cents) with -50 cent offset = +350 cents net
+        let comp = Comparison::new(
+            MIDINote::new(79),
+            DetunedMIDINote {
+                note: MIDINote::new(83),
+                offset: Cents::new(-50.0),
+            },
+        );
+        assert!(comp.is_target_higher());
+    }
+
+    #[test]
+    fn test_is_target_higher_interval_down_with_positive_offset() {
+        // Perfect fifth down (7 semitones = -700 cents) with +50 cent offset = -650 cents net
+        let comp = Comparison::new(
+            MIDINote::new(67),
+            DetunedMIDINote {
+                note: MIDINote::new(60),
+                offset: Cents::new(50.0),
             },
         );
         assert!(!comp.is_target_higher());
