@@ -1,6 +1,6 @@
 # Story 3.1: Profile View with Summary Statistics
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -284,6 +284,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-04: Implemented story 3.1 — Profile View with Summary Statistics
+- 2026-03-04: Code review fixes — removed redundant "Trend:" prefix from aria-label (M1), hid stats sections during cold-start to show only the message (M2)
 
 ### File List
 

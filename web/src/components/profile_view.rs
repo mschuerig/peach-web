@@ -59,95 +59,97 @@ pub fn ProfileView() -> impl IntoView {
                 drop(trend);
 
                 view! {
-                    <div class="mt-6 space-y-8">
+                    <div class="mt-6">
                         {if cold_start {
                             Some(view! {
                                 <p class="text-gray-500 dark:text-gray-400">
                                     "Start training to build your profile."
                                 </p>
-                            })
+                            }.into_any())
                         } else {
-                            None
-                        }}
-
-                        <section aria-labelledby="comparison-heading">
-                            <h2 id="comparison-heading" class="text-lg font-semibold dark:text-white">
-                                "Comparison Training"
-                            </h2>
-                            <dl class="mt-3 space-y-4">
-                                <div>
-                                    <dt class="text-sm text-gray-500 dark:text-gray-400">
-                                        "Mean Detection Threshold"
-                                    </dt>
-                                    <dd class="text-2xl font-bold dark:text-white">
-                                        {overall_mean}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt class="text-sm text-gray-500 dark:text-gray-400">
-                                        "Standard Deviation"
-                                    </dt>
-                                    <dd class="text-2xl font-bold dark:text-white">
-                                        {overall_std_dev}
-                                    </dd>
-                                </div>
-                                {match trend_value {
-                                    Some(t) => {
-                                        let (label, color) = match t {
-                                            Trend::Improving => ("Improving", "text-green-600 dark:text-green-400"),
-                                            Trend::Stable => ("Stable", "text-gray-600 dark:text-gray-400"),
-                                            Trend::Declining => ("Declining", "text-amber-600 dark:text-amber-400"),
-                                        };
-                                        Some(view! {
+                            Some(view! {
+                                <div class="space-y-8">
+                                    <section aria-labelledby="comparison-heading">
+                                        <h2 id="comparison-heading" class="text-lg font-semibold dark:text-white">
+                                            "Comparison Training"
+                                        </h2>
+                                        <dl class="mt-3 space-y-4">
                                             <div>
                                                 <dt class="text-sm text-gray-500 dark:text-gray-400">
-                                                    "Trend"
+                                                    "Mean Detection Threshold"
                                                 </dt>
-                                                <dd
-                                                    class=format!("text-2xl font-bold {color}")
-                                                    aria-label=format!("Trend: {label}")
-                                                >
-                                                    {label}
+                                                <dd class="text-2xl font-bold dark:text-white">
+                                                    {overall_mean}
                                                 </dd>
                                             </div>
-                                        })
-                                    }
-                                    None => None,
-                                }}
-                            </dl>
-                        </section>
+                                            <div>
+                                                <dt class="text-sm text-gray-500 dark:text-gray-400">
+                                                    "Standard Deviation"
+                                                </dt>
+                                                <dd class="text-2xl font-bold dark:text-white">
+                                                    {overall_std_dev}
+                                                </dd>
+                                            </div>
+                                            {match trend_value {
+                                                Some(t) => {
+                                                    let (label, color) = match t {
+                                                        Trend::Improving => ("Improving", "text-green-600 dark:text-green-400"),
+                                                        Trend::Stable => ("Stable", "text-gray-600 dark:text-gray-400"),
+                                                        Trend::Declining => ("Declining", "text-amber-600 dark:text-amber-400"),
+                                                    };
+                                                    Some(view! {
+                                                        <div>
+                                                            <dt class="text-sm text-gray-500 dark:text-gray-400">
+                                                                "Trend"
+                                                            </dt>
+                                                            <dd
+                                                                class=format!("text-2xl font-bold {color}")
+                                                                aria-label=label
+                                                            >
+                                                                {label}
+                                                            </dd>
+                                                        </div>
+                                                    })
+                                                }
+                                                None => None,
+                                            }}
+                                        </dl>
+                                    </section>
 
-                        <section aria-labelledby="matching-heading">
-                            <h2 id="matching-heading" class="text-lg font-semibold dark:text-white">
-                                "Pitch Matching"
-                            </h2>
-                            <dl class="mt-3 space-y-4">
-                                <div>
-                                    <dt class="text-sm text-gray-500 dark:text-gray-400">
-                                        "Mean Absolute Error"
-                                    </dt>
-                                    <dd class="text-2xl font-bold dark:text-white">
-                                        {matching_mean_str}
-                                    </dd>
+                                    <section aria-labelledby="matching-heading">
+                                        <h2 id="matching-heading" class="text-lg font-semibold dark:text-white">
+                                            "Pitch Matching"
+                                        </h2>
+                                        <dl class="mt-3 space-y-4">
+                                            <div>
+                                                <dt class="text-sm text-gray-500 dark:text-gray-400">
+                                                    "Mean Absolute Error"
+                                                </dt>
+                                                <dd class="text-2xl font-bold dark:text-white">
+                                                    {matching_mean_str}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt class="text-sm text-gray-500 dark:text-gray-400">
+                                                    "Standard Deviation"
+                                                </dt>
+                                                <dd class="text-2xl font-bold dark:text-white">
+                                                    {matching_std_dev_str}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt class="text-sm text-gray-500 dark:text-gray-400">
+                                                    "Sample Count"
+                                                </dt>
+                                                <dd class="text-2xl font-bold dark:text-white">
+                                                    {matching_count_str}
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </section>
                                 </div>
-                                <div>
-                                    <dt class="text-sm text-gray-500 dark:text-gray-400">
-                                        "Standard Deviation"
-                                    </dt>
-                                    <dd class="text-2xl font-bold dark:text-white">
-                                        {matching_std_dev_str}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt class="text-sm text-gray-500 dark:text-gray-400">
-                                        "Sample Count"
-                                    </dt>
-                                    <dd class="text-2xl font-bold dark:text-white">
-                                        {matching_count_str}
-                                    </dd>
-                                </div>
-                            </dl>
-                        </section>
+                            }.into_any())
+                        }}
                     </div>
                 }.into_any()
             }}
