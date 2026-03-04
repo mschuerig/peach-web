@@ -1,6 +1,6 @@
 # Story 6.2: Screen Reader Accessibility Polish
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -189,9 +189,12 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-04: Implemented story 6.2 — added training started/stopped announcements, aria-atomic on live regions, fixed focus indicators in info_view.rs, completed full accessibility audit
+- 2026-03-04: Code review fixes — fixed "Training stopped" announcement overwritten by sync(), added sr_announcement clearing for consecutive identical values, added focus rings to dialog buttons, fixed http→https URL in info_view
 
 ### File List
 
 - web/src/components/comparison_view.rs (modified — training started/stopped announcements, aria-atomic)
 - web/src/components/pitch_matching_view.rs (modified — training started/stopped announcements, aria-atomic)
-- web/src/components/info_view.rs (modified — added focus ring classes to 3 links)
+- web/src/components/info_view.rs (modified — added focus ring classes to 3 links, fixed http→https)
+- web/src/components/settings_view.rs (modified — added focus ring classes to dialog buttons)
+- docs/implementation-artifacts/sprint-status.yaml (modified — story status update)

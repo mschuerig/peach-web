@@ -128,6 +128,8 @@ pub fn ComparisonView() -> impl IntoView {
             } else {
                 "Incorrect".into()
             });
+        } else {
+            sr_announcement.set(String::new());
         }
         if is_interval_mode
             && let Some(di) = s.current_interval()
@@ -210,11 +212,11 @@ pub fn ComparisonView() -> impl IntoView {
         let note_player = Rc::clone(&note_player);
         let sync = sync_signals.clone();
         move || {
-            sr_announcement.set("Training stopped".into());
             cancelled.set(true);
             session.borrow_mut().stop();
             note_player.borrow().stop_all();
             sync();
+            sr_announcement.set("Training stopped".into());
         }
     };
     let on_nav_start = {
