@@ -35,7 +35,7 @@ pub fn PageNav(current: &'static str) -> impl IntoView {
             } else {
                 None
             }}
-            {if current != "info" {
+            {if current == "start" {
                 Some(view! {
                     <A href="/info"
                         attr:class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200">

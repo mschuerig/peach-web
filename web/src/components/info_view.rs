@@ -47,7 +47,8 @@ pub fn InfoView() -> impl IntoView {
                             <dt>"License:"</dt>
                             <dd>"MIT"</dd>
                         </div>
-                        <div>
+                        <div class="flex gap-2">
+                            <dt>"Copyright:"</dt>
                             <dd>"\u{00A9} 2026 Michael Schürig"</dd>
                         </div>
                     </dl>

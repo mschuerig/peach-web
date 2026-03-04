@@ -1,6 +1,6 @@
 # Story 6.1: Info View & Complete Navigation
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -167,12 +167,12 @@ None — clean implementation with no issues.
 
 ### Completion Notes List
 
-- Created `PageNav` component with `current` prop that omits the active page's link; uses gray link styling matching start page utility nav
+- Created `PageNav` component with `current` prop that omits the active page's link; uses gray link styling matching start page utility nav; Info link only shown on start page
 - Replaced InfoView skeleton with full content: app name, version, developer info (with mailto link), GitHub link, license, copyright, and SoundFont acknowledgment
 - Used semantic HTML: `<section>` groups, `<address>` for developer contact, `<dl>` for project details, external `<a>` tags with `target="_blank" rel="noopener noreferrer"`
-- Added PageNav to Settings view (`current="settings"`) and Profile view (`current="profile"`)
-- All existing "Back to Start" links preserved at bottom of each view
-- InfoView "Back to Start" updated from `mt-4` to `mt-8` for consistency with Settings/Profile
+- Added PageNav to all views: Settings (`current="settings"`), Profile (`current="profile"`), Info (`current="info"`), StartPage (`current="start"`), and both training views (ComparisonView, PitchMatchingView)
+- Unified navigation: replaced per-view bottom nav links and StartPage utility nav with consistent top PageNav across all views
+- Training view nav links use `on_nav_away()` handlers to properly stop sessions before navigating
 - All routes verified accessible; hub-and-spoke model maintained
 - Keyboard navigation works via standard `<a>`/`<A>` elements (Tab + Enter)
 - `cargo clippy`, `cargo test -p domain`, and `trunk build` all pass cleanly
@@ -184,10 +184,14 @@ None — clean implementation with no issues.
 | `web/src/components/page_nav.rs` | Created |
 | `web/src/components/mod.rs` | Modified (added `mod page_nav`) |
 | `web/src/components/info_view.rs` | Modified (full content + PageNav) |
-| `web/src/components/settings_view.rs` | Modified (added PageNav) |
-| `web/src/components/profile_view.rs` | Modified (added PageNav) |
+| `web/src/components/settings_view.rs` | Modified (added PageNav, removed bottom nav) |
+| `web/src/components/profile_view.rs` | Modified (added PageNav, removed bottom nav) |
+| `web/src/components/start_page.rs` | Modified (replaced utility nav with PageNav) |
+| `web/src/components/comparison_view.rs` | Modified (replaced bottom nav with top PageNav using on_nav_away) |
+| `web/src/components/pitch_matching_view.rs` | Modified (replaced bottom nav with top PageNav using on_nav_away) |
 | `docs/implementation-artifacts/sprint-status.yaml` | Modified (status → in-progress → review) |
 
 ### Change Log
 
-- 2026-03-04: Implemented story 6.1 — created PageNav shared component, full InfoView content, added PageNav to Settings and Profile views
+- 2026-03-04: Implemented story 6.1 — created PageNav shared component, full InfoView content, unified navigation across all views
+- 2026-03-04: Code review fixes — fixed orphaned `<dd>` in InfoView `<dl>`, limited Info link to start page only
