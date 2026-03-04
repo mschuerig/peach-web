@@ -79,7 +79,7 @@ development_status:
   # Epic 5: Interval Training & Sound Quality
   epic-5: in-progress
   5-1-interval-training-mode: done
-  5-2-soundfont-audio: backlog
+  5-2-soundfont-audio: ready-for-dev
   epic-5-retrospective: optional
 
   # Epic 6: Offline Support, Accessibility Polish & Data Portability
