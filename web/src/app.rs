@@ -7,9 +7,13 @@ use leptos_router::{
     path,
 };
 use send_wrapper::SendWrapper;
-use wasm_bindgen_futures::spawn_local;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::{spawn_local, JsFuture};
+use web_sys::MessagePort;
 
 use crate::adapters::audio_context::AudioContextManager;
+use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
     ComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
@@ -28,13 +32,17 @@ pub fn App() -> impl IntoView {
     let timeline = SendWrapper::new(Rc::new(RefCell::new(ThresholdTimeline::new())));
     let is_profile_loaded = RwSignal::new(false);
     let db_store = RwSignal::new_local(None::<Rc<IndexedDbStore>>);
+    let worklet_bridge = RwSignal::new_local(None::<Rc<RefCell<WorkletBridge>>>);
+    let sf2_presets = RwSignal::new_local(Vec::<SF2Preset>::new());
 
     provide_context(profile.clone());
-    provide_context(audio_ctx_manager);
+    provide_context(audio_ctx_manager.clone());
     provide_context(trend_analyzer.clone());
     provide_context(timeline.clone());
     provide_context(is_profile_loaded);
     provide_context(db_store);
+    provide_context(worklet_bridge);
+    provide_context(sf2_presets);
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);
@@ -129,8 +137,29 @@ pub fn App() -> impl IntoView {
         is_profile_loaded.set(true);
     });
 
+    // Async SoundFont + AudioWorklet initialization (runs in parallel with hydration)
+    {
+        let audio_ctx_manager = Rc::clone(&*audio_ctx_manager);
+        spawn_local(async move {
+            match init_worklet_bridge(audio_ctx_manager).await {
+                Ok((bridge, presets)) => {
+                    log::info!(
+                        "SoundFont worklet initialized with {} presets",
+                        presets.len()
+                    );
+                    worklet_bridge.set(Some(Rc::new(RefCell::new(bridge))));
+                    sf2_presets.set(presets);
+                }
+                Err(e) => {
+                    log::warn!("SoundFont worklet init failed (oscillator fallback): {e}");
+                }
+            }
+        });
+    }
+
     view! {
         <Router>
+
             <a
                 href="#main-content"
                 class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-3 focus:bg-white focus:text-black dark:focus:bg-gray-900 dark:focus:text-white"
@@ -163,4 +192,210 @@ pub fn App() -> impl IntoView {
             </main>
         </Router>
     }
+}
+
+/// Initialize the AudioWorklet bridge for SoundFont synthesis.
+///
+/// Sequence:
+/// 1. Create AudioContext (may start suspended — resumes on user gesture)
+/// 2. Fetch and compile the synth WASM module
+/// 3. Register the AudioWorklet processor JS
+/// 4. Create AudioWorkletNode, wait for 'ready'
+/// 5. Fetch the SF2 file, send to worklet, wait for 'soundFontLoaded'
+async fn init_worklet_bridge(
+    audio_ctx_manager: Rc<RefCell<AudioContextManager>>,
+) -> Result<(WorkletBridge, Vec<SF2Preset>), String> {
+    // Step 1: Get or create AudioContext
+    let ctx_rc = audio_ctx_manager
+        .borrow_mut()
+        .get_or_create()
+        .map_err(|e| format!("AudioContext creation failed: {e}"))?;
+
+    // Extract the audio_worklet promise and destination synchronously, then drop borrow
+    let add_module_promise = {
+        let ctx = ctx_rc.borrow();
+        let audio_worklet = ctx
+            .audio_worklet()
+            .map_err(|e| format!("audioWorklet unavailable: {e:?}"))?;
+        audio_worklet
+            .add_module("/soundfont/synth-processor.js")
+            .map_err(|e| format!("addModule failed: {e:?}"))?
+    };
+
+    // Step 2: Fetch the synth WASM module (concurrent with addModule)
+    let wasm_response = JsFuture::from(
+        web_sys::window()
+            .ok_or("no window")?
+            .fetch_with_str("/soundfont/synth_worklet.wasm"),
+    )
+    .await
+    .map_err(|e| format!("fetch synth WASM failed: {e:?}"))?;
+    let wasm_response: web_sys::Response = wasm_response
+        .dyn_into()
+        .map_err(|_| "fetch didn't return Response")?;
+    let wasm_buffer = JsFuture::from(
+        wasm_response
+            .array_buffer()
+            .map_err(|e| format!("arrayBuffer failed: {e:?}"))?,
+    )
+    .await
+    .map_err(|e| format!("arrayBuffer promise failed: {e:?}"))?;
+
+    // Compile the WASM module
+    let wasm_module = JsFuture::from(js_sys::WebAssembly::compile(&wasm_buffer))
+        .await
+        .map_err(|e| format!("WASM compile failed: {e:?}"))?;
+
+    // Step 3: Ensure addModule has completed
+    JsFuture::from(add_module_promise)
+        .await
+        .map_err(|e| format!("addModule promise failed: {e:?}"))?;
+
+    // Step 4: Create AudioWorkletNode with WASM module in processorOptions
+    // Borrow ctx briefly for node creation, then drop
+    let (node, port) = {
+        let ctx = ctx_rc.borrow();
+        let options = web_sys::AudioWorkletNodeOptions::new();
+        let processor_options = js_sys::Object::new();
+        js_sys::Reflect::set(&processor_options, &"wasmModule".into(), &wasm_module)
+            .map_err(|e| format!("set processorOptions failed: {e:?}"))?;
+        options.set_processor_options(Some(&processor_options));
+        // Request stereo output
+        let output_channels = js_sys::Array::new();
+        output_channels.push(&JsValue::from(2));
+        options.set_output_channel_count(&output_channels);
+
+        let node =
+            web_sys::AudioWorkletNode::new_with_options(&ctx, "synth-processor", &options)
+                .map_err(|e| format!("AudioWorkletNode creation failed: {e:?}"))?;
+
+        // Connect to destination
+        node.connect_with_audio_node(&ctx.destination())
+            .map_err(|e| format!("connect to destination failed: {e:?}"))?;
+
+        let port = node.port().map_err(|e| format!("no port: {e:?}"))?;
+        (node, port)
+    };
+
+    // Wait for 'ready' message from worklet
+    let _ = wait_for_worklet_message(&port, "ready").await?;
+
+    // Step 5: Fetch SF2 file and send to worklet
+    let sf2_response = JsFuture::from(
+        web_sys::window()
+            .ok_or("no window")?
+            .fetch_with_str("/GeneralUser-GS.sf2"),
+    )
+    .await
+    .map_err(|e| format!("fetch SF2 failed: {e:?}"))?;
+    let sf2_response: web_sys::Response = sf2_response
+        .dyn_into()
+        .map_err(|_| "fetch SF2 didn't return Response")?;
+    let sf2_buffer = JsFuture::from(
+        sf2_response
+            .array_buffer()
+            .map_err(|e| format!("SF2 arrayBuffer failed: {e:?}"))?,
+    )
+    .await
+    .map_err(|e| format!("SF2 arrayBuffer promise failed: {e:?}"))?;
+
+    // Send SF2 data to worklet
+    let load_msg = js_sys::Object::new();
+    js_sys::Reflect::set(&load_msg, &"type".into(), &"loadSoundFont".into())
+        .map_err(|e| format!("{e:?}"))?;
+    js_sys::Reflect::set(&load_msg, &"data".into(), &sf2_buffer)
+        .map_err(|e| format!("{e:?}"))?;
+    port.post_message(&load_msg)
+        .map_err(|e| format!("postMessage loadSoundFont failed: {e:?}"))?;
+
+    // Wait for 'soundFontLoaded' and extract preset list
+    let sf2_msg_data = wait_for_worklet_message(&port, "soundFontLoaded").await?;
+    let presets = parse_sf2_presets(&sf2_msg_data);
+
+    Ok((WorkletBridge::new(node), presets))
+}
+
+/// Wait for a specific message type from the worklet port.
+/// Returns the message data JsValue on success.
+async fn wait_for_worklet_message(
+    port: &MessagePort,
+    expected_type: &str,
+) -> Result<JsValue, String> {
+    let expected = expected_type.to_string();
+    let (sender, receiver) = futures_channel::oneshot::channel::<Result<JsValue, String>>();
+    let sender = Rc::new(RefCell::new(Some(sender)));
+
+    let callback = {
+        let sender = Rc::clone(&sender);
+        let expected = expected.clone();
+        Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
+            let data = event.data();
+            let msg_type = js_sys::Reflect::get(&data, &"type".into())
+                .ok()
+                .and_then(|v| v.as_string());
+            if let Some(ref t) = msg_type {
+                if t == &expected {
+                    if let Some(s) = sender.borrow_mut().take() {
+                        let _ = s.send(Ok(data));
+                    }
+                } else if t == "error" {
+                    let err_msg = js_sys::Reflect::get(&data, &"message".into())
+                        .ok()
+                        .and_then(|v| v.as_string())
+                        .unwrap_or_else(|| "unknown worklet error".to_string());
+                    if let Some(s) = sender.borrow_mut().take() {
+                        let _ = s.send(Err(err_msg));
+                    }
+                }
+            }
+        })
+    };
+
+    port.set_onmessage(Some(callback.as_ref().unchecked_ref()));
+
+    let result = receiver
+        .await
+        .map_err(|_| format!("channel closed waiting for '{expected}'"))?;
+
+    // Clear the handler (will be replaced or re-set as needed)
+    port.set_onmessage(None);
+
+    // Keep closure alive until we're done
+    drop(callback);
+
+    result
+}
+
+/// Parse SF2 preset list from the `soundFontLoaded` message data.
+fn parse_sf2_presets(data: &JsValue) -> Vec<SF2Preset> {
+    let presets_array = match js_sys::Reflect::get(data, &"presets".into())
+        .ok()
+        .and_then(|v| v.dyn_into::<js_sys::Array>().ok())
+    {
+        Some(arr) => arr,
+        None => return Vec::new(),
+    };
+
+    let mut presets = Vec::new();
+    for i in 0..presets_array.length() {
+        let item = presets_array.get(i);
+        let bank = js_sys::Reflect::get(&item, &"bank".into())
+            .ok()
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as u16;
+        let program = js_sys::Reflect::get(&item, &"program".into())
+            .ok()
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as u16;
+        let name = js_sys::Reflect::get(&item, &"name".into())
+            .ok()
+            .and_then(|v| v.as_string())
+            .unwrap_or_default();
+        presets.push(SF2Preset {
+            name,
+            bank,
+            program,
+        });
+    }
+    presets
 }

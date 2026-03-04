@@ -4,3 +4,9 @@ dist = "dist"
 
 [tools]
 tailwindcss = "4.2.1"
+
+# Build the synth-worklet WASM module and copy to assets before Trunk builds
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "cargo build --target wasm32-unknown-unknown -p synth-worklet --release && { cmp -s target/wasm32-unknown-unknown/release/synth_worklet.wasm web/assets/soundfont/synth_worklet.wasm || cp target/wasm32-unknown-unknown/release/synth_worklet.wasm web/assets/soundfont/; }"]

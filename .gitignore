@@ -1,5 +1,9 @@
 dist/
 target/
+.cache/
+
+# Build artifact copied by Trunk pre-build hook
+web/assets/soundfont/synth_worklet.wasm
 
 # IDE
 .idea/

@@ -1,6 +1,6 @@
 # Story 5.2: SoundFont Audio
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -28,103 +28,74 @@ so that training feels more musical and the sound source setting becomes meaning
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add OxiSynth dependency and SoundFont asset (AC: #4)
-  - [ ] 1.1 Add `oxisynth = "0.1.0"` to `web/Cargo.toml`
-  - [ ] 1.2 Source a small SF2 file (piano or similar, ideally < 5 MB) and place in `web/assets/soundfont/`
-  - [ ] 1.3 Configure Trunk to copy the SF2 asset and worklet JS file to `dist/` — add `<link data-trunk rel="copy-dir" href="web/assets/soundfont" />` or equivalent in `index.html`
-  - [ ] 1.4 **Build spike:** Add the dependency and run `trunk build` to confirm OxiSynth compiles to WASM. If `getrandom` feature issues arise, add `[patch]` or feature unification in workspace `Cargo.toml`. Resolve before proceeding.
+- [x] Task 1: Add OxiSynth dependency and SoundFont asset (AC: #4)
+  - [x] 1.1 Add `oxisynth = "0.1.0"` to separate `synth-worklet/Cargo.toml` crate (Option A from Dev Notes)
+  - [x] 1.2 Use existing GeneralUser GS SF2 from `bin/download-sf2.sh` (cached at `.cache/GeneralUser-GS.sf2`, 32 MB)
+  - [x] 1.3 Configure Trunk to copy SF2 and worklet assets to `dist/` via `<link data-trunk>` in `index.html` + pre-build hook in `Trunk.toml`
+  - [x] 1.4 Build spike passed: OxiSynth compiles cleanly to wasm32-unknown-unknown, 222KB output
 
-- [ ] Task 2: Create synth WASM module for AudioWorklet (AC: #4, #5)
-  - [ ] 2.1 Create `web/src/synth_worklet/mod.rs` — a separate compilation unit with `#[no_mangle]` C-style exports for the AudioWorklet to call
-  - [ ] 2.2 Export `synth_new(sample_rate: f32) -> *mut Synth` — creates a Synth with `SynthDescriptor { sample_rate, reverb_active: false, chorus_active: false, .. }`
-  - [ ] 2.3 Export `synth_load_soundfont(synth: *mut Synth, data: *const u8, len: usize) -> i32` — loads SF2 bytes, calls `add_font()`, returns sfont_id or -1 on failure
-  - [ ] 2.4 Export `synth_select_program(synth: *mut Synth, sfont_id: i32, bank: u32, preset: u8)`
-  - [ ] 2.5 Export `synth_note_on(synth: *mut Synth, key: u8, vel: u8)` and `synth_note_off(synth: *mut Synth, key: u8)`
-  - [ ] 2.6 Export `synth_pitch_bend(synth: *mut Synth, bend_value: u16)` — for real-time pitch adjustment (MIDI pitch bend, center = 8192)
-  - [ ] 2.7 Export `synth_render(synth: *mut Synth, left: *mut f32, right: *mut f32, len: usize)` — renders `len` samples into the provided buffers by calling `synth.write_f32()`
-  - [ ] 2.8 Export `synth_all_notes_off(synth: *mut Synth)` — sends all-notes-off CC to stop all voices
-  - [ ] **ALTERNATIVE approach (simpler):** Instead of a separate WASM build, compile the synth exports as part of the main `web` crate WASM binary. The AudioWorklet JS loads the *same* `.wasm` file that Trunk produces and calls the `#[no_mangle]` exports directly. This avoids a second Cargo build target. Investigate feasibility — if Trunk/wasm-bindgen interfere with raw exports, fall back to a separate `synth-worklet` crate in the workspace.
+- [x] Task 2: Create synth WASM module for AudioWorklet (AC: #4, #5)
+  - [x] 2.1 Created `synth-worklet/src/lib.rs` as separate workspace crate with `#[no_mangle]` C-style exports
+  - [x] 2.2 Export `synth_new(sample_rate: f32) -> *mut Synth`
+  - [x] 2.3 Export `synth_load_soundfont(synth, data, len) -> i32`
+  - [x] 2.4 Export `synth_select_program(synth, bank, preset)`
+  - [x] 2.5 Export `synth_note_on(synth, key, vel)` and `synth_note_off(synth, key)`
+  - [x] 2.6 Export `synth_pitch_bend(synth, bend_value)`
+  - [x] 2.7 Export `synth_render(synth, left, right, len)` using `write_f32()`
+  - [x] 2.8 Export `synth_all_notes_off(synth)`
+  - [x] Also exports `alloc`/`dealloc` for WASM memory management
+  - [x] Used Option A (separate crate) — Trunk pre-build hook handles compilation and asset copy
 
-- [ ] Task 3: Create AudioWorklet processor JS file (AC: #4, #5)
-  - [ ] 3.1 Create `web/assets/soundfont/synth-processor.js` — the AudioWorkletProcessor subclass (~50 lines of JS)
-  - [ ] 3.2 In `constructor()`: receive the compiled `WebAssembly.Module` via `processorOptions`, instantiate it, call `synth_new(sampleRate)` to create the synth instance
-  - [ ] 3.3 Handle `port.onmessage` for commands from the main thread:
-    - `{ type: 'loadSoundFont', data: ArrayBuffer }` — copy bytes into WASM memory, call `synth_load_soundfont()`, then `synth_select_program()` with default preset
-    - `{ type: 'noteOn', key: u8, vel: u8 }` — call `synth_note_on()`
-    - `{ type: 'noteOff', key: u8 }` — call `synth_note_off()`
-    - `{ type: 'pitchBend', value: u16 }` — call `synth_pitch_bend()`
-    - `{ type: 'selectProgram', bank: u32, preset: u8 }` — call `synth_select_program()`
-    - `{ type: 'allNotesOff' }` — call `synth_all_notes_off()`
-  - [ ] 3.4 In `process(inputs, outputs, parameters)`: call `synth_render(left_ptr, right_ptr, 128)` to fill the 128-sample output buffer each frame. Return `true` to keep the processor alive.
-  - [ ] 3.5 Post `{ type: 'ready' }` back to main thread after WASM instantiation succeeds
-  - [ ] 3.6 Post `{ type: 'soundFontLoaded' }` after successful SoundFont load
+- [x] Task 3: Create AudioWorklet processor JS file (AC: #4, #5)
+  - [x] 3.1 Created `web/assets/soundfont/synth-processor.js` (~80 lines)
+  - [x] 3.2 Constructor receives `WebAssembly.Module` via `processorOptions`, instantiates synchronously
+  - [x] 3.3 Handles all message types: loadSoundFont, noteOn, noteOff, pitchBend, selectProgram, allNotesOff
+  - [x] 3.4 `process()` calls `synth_render()` to fill 128-sample output buffers per frame
+  - [x] 3.5 Posts `{ type: 'ready' }` after WASM instantiation
+  - [x] 3.6 Posts `{ type: 'soundFontLoaded' }` after successful SF2 load
 
-- [ ] Task 4: Implement SoundFontNotePlayer adapter (AC: #2, #4, #5)
-  - [ ] 4.1 Create `web/src/adapters/audio_soundfont.rs`
-  - [ ] 4.2 Implement `WorkletBridge` struct — manages the AudioWorkletNode and message passing:
-    - Holds `web_sys::AudioWorkletNode` and its `MessagePort`
-    - Methods: `send_note_on(key, vel)`, `send_note_off(key)`, `send_pitch_bend(value)`, `send_all_notes_off()`, `send_select_program(bank, preset)`
-    - Uses `port.post_message()` for all communication
-  - [ ] 4.3 Implement `SoundFontNotePlayer` struct holding `Rc<RefCell<WorkletBridge>>`
-  - [ ] 4.4 Implement `NotePlayer` trait on `SoundFontNotePlayer`:
-    - `play()`: convert `Frequency` to nearest MIDI note + fractional cents, send `noteOn` message, set initial pitch bend for cent offset, return `SoundFontPlaybackHandle`
-    - `play_for_duration()`: same as `play()`, but schedule a `noteOff` after `duration` using `gloo_timers::callback::Timeout` (the synth will render the release tail naturally)
-    - `stop_all()`: send `allNotesOff` message
-  - [ ] 4.5 Implement `SoundFontPlaybackHandle` struct:
-    - Holds `Rc<RefCell<WorkletBridge>>`, the MIDI `key`, and the original MIDI note for cent offset calculation
-    - `stop()`: sends `noteOff` for this key
-    - `adjust_frequency()`: compute cent difference between new frequency and original MIDI note frequency, convert to MIDI pitch bend value (center 8192, range ±200 cents = ±8192), send `pitchBend` message
-  - [ ] 4.6 Frequency-to-MIDI conversion helpers (same as before — these are correct):
-    ```rust
-    fn frequency_to_midi(freq: f64) -> u8
-    fn frequency_to_cents_from_midi(freq: f64, midi_note: u8) -> f64
-    ```
-  - [ ] 4.7 Use velocity parameter — pass to `noteOn` message (unlike oscillator which ignores it)
-  - [ ] 4.8 Register module in `web/src/adapters/mod.rs`
+- [x] Task 4: Implement SoundFontNotePlayer adapter (AC: #2, #4, #5)
+  - [x] 4.1 Created `web/src/adapters/audio_soundfont.rs`
+  - [x] 4.2 Implemented `WorkletBridge` with all message-passing methods
+  - [x] 4.3 Implemented `SoundFontNotePlayer` holding `Rc<RefCell<WorkletBridge>>`
+  - [x] 4.4 Implemented `NotePlayer` trait with frequency-to-MIDI conversion and initial pitch bend
+  - [x] 4.5 Implemented `SoundFontPlaybackHandle` with `stop()` and `adjust_frequency()` via pitch bend
+  - [x] 4.6 Frequency-to-MIDI helpers: `frequency_to_midi()`, `frequency_to_cents_from_midi()`, `cents_to_pitch_bend()`
+  - [x] 4.7 Velocity parameter passed to noteOn message
+  - [x] 4.8 Registered module in `web/src/adapters/mod.rs`
 
-- [ ] Task 5: Implement unified NotePlayer enum wrapper (AC: #2, #3)
-  - [ ] 5.1 Create `web/src/adapters/note_player.rs` with `UnifiedNotePlayer` enum wrapping `OscillatorNotePlayer` and `SoundFontNotePlayer`
-  - [ ] 5.2 Create `UnifiedPlaybackHandle` enum wrapping `OscillatorPlaybackHandle` and `SoundFontPlaybackHandle`
-  - [ ] 5.3 Implement `NotePlayer` trait on `UnifiedNotePlayer` delegating to inner variant
-  - [ ] 5.4 Implement `PlaybackHandle` trait on `UnifiedPlaybackHandle` delegating to inner variant
-  - [ ] 5.5 Add factory function: `create_note_player(sound_source: &str, audio_ctx, worklet_bridge_option) -> UnifiedNotePlayer`
+- [x] Task 5: Implement unified NotePlayer enum wrapper (AC: #2, #3)
+  - [x] 5.1 Created `web/src/adapters/note_player.rs` with `UnifiedNotePlayer` enum
+  - [x] 5.2 Created `UnifiedPlaybackHandle` enum
+  - [x] 5.3 Implemented `NotePlayer` trait delegating to inner variant
+  - [x] 5.4 Implemented `PlaybackHandle` trait delegating to inner variant
+  - [x] 5.5 Added `create_note_player()` factory with sound source parsing and program selection
 
-- [ ] Task 6: Async SoundFont + worklet initialization at app startup (AC: #1, #6)
-  - [ ] 6.1 In `web/src/app.rs`, add `worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>>` signal (local, starts as `None`)
-  - [ ] 6.2 In `spawn_local` block, perform the initialization sequence:
-    1. `fetch()` the synth WASM module bytes
-    2. Compile the WASM module via `WebAssembly.compile()`
-    3. Register the AudioWorklet processor: `audio_ctx.audioWorklet.addModule('synth-processor.js')`
-    4. Create `AudioWorkletNode`, passing the compiled WASM module in `processorOptions`
-    5. Connect the AudioWorkletNode to `AudioContext.destination`
-    6. Wait for `{ type: 'ready' }` message from the worklet
-    7. `fetch()` the SF2 file, send bytes to worklet via `{ type: 'loadSoundFont', data }`
-    8. Wait for `{ type: 'soundFontLoaded' }` confirmation
-  - [ ] 6.3 On success: wrap the AudioWorkletNode/port in `WorkletBridge`, set signal to `Some(bridge)`
-  - [ ] 6.4 On failure at any step: log warning, leave signal as `None` (oscillator fallback)
-  - [ ] 6.5 Provide the bridge signal as Leptos context for views to consume
-  - [ ] 6.6 Browser caching handled automatically by `fetch()` — no special cache logic needed
-  - [ ] 6.7 **AudioContext timing:** The AudioWorklet registration must happen after the AudioContext is created. But AudioContext creation requires a user gesture. Two options:
-    - Option A: Create AudioContext eagerly in `spawn_local` (may be suspended until user gesture), register worklet, then resume on first training click
-    - Option B: Defer worklet registration until first training view mount (when AudioContext is created via user gesture). This delays SoundFont availability but is safer for Safari/iOS.
-    - Prefer Option A with a note that the AudioContext may start suspended — the existing resume-on-gesture pattern in training views handles this.
+- [x] Task 6: Async SoundFont + worklet initialization at app startup (AC: #1, #6)
+  - [x] 6.1 Added `worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>>` in `app.rs`
+  - [x] 6.2 Implemented full async init sequence in separate `spawn_local` (parallel with hydration)
+  - [x] 6.3 On success: wraps in `WorkletBridge`, sets signal
+  - [x] 6.4 On failure: logs warning, leaves `None` (oscillator fallback)
+  - [x] 6.5 Bridge signal provided as Leptos context
+  - [x] 6.6 Browser caching via standard `fetch()` — no special logic
+  - [x] 6.7 Used Option A: AudioContext created eagerly, may start suspended, training views resume on gesture
 
-- [ ] Task 7: Update training views to use UnifiedNotePlayer (AC: #2, #3)
-  - [ ] 7.1 In `comparison_view.rs`: replace `OscillatorNotePlayer::new()` with `create_note_player()` that checks worklet bridge signal and sound source setting
-  - [ ] 7.2 In `pitch_matching_view.rs`: same replacement. Change `tunable_handle` type from `Option<OscillatorPlaybackHandle>` to `Option<UnifiedPlaybackHandle>`
-  - [ ] 7.3 Both views: read `peach.sound_source` from `LocalStorageSettings` to decide which variant to create
-  - [ ] 7.4 If worklet bridge signal is `None` (still loading or failed), create `OscillatorNotePlayer` variant regardless of setting
+- [x] Task 7: Update training views to use UnifiedNotePlayer (AC: #2, #3)
+  - [x] 7.1 `comparison_view.rs`: uses `create_note_player()` with worklet bridge signal and sound source setting
+  - [x] 7.2 `pitch_matching_view.rs`: same, with `UnifiedPlaybackHandle` for tunable handle
+  - [x] 7.3 Both views read `peach.sound_source` from localStorage
+  - [x] 7.4 Falls back to oscillator when bridge is `None`
 
-- [ ] Task 8: Update Settings view sound source dropdown (AC: #7)
-  - [ ] 8.1 Add SoundFont preset options to the sound source `<select>` element (currently only "Sine Oscillator")
-  - [ ] 8.2 Parse `SoundSourceID` format: `"oscillator:sine"` for oscillator, `"sf2:<bank>:<preset>"` for SoundFont presets
-  - [ ] 8.3 Sound source change auto-saves to `peach.sound_source` in localStorage (existing pattern)
-  - [ ] 8.4 Change takes effect on next note played (next training session start or next comparison)
+- [x] Task 8: Update Settings view sound source dropdown (AC: #7)
+  - [x] 8.1 Added 8 SoundFont preset options (Piano, Electric Piano, Nylon Guitar, Flute, Oboe, Clarinet, Violin, Synth Square)
+  - [x] 8.2 Uses `sf2:<bank>:<preset>` format for SoundFont, `oscillator:sine` for oscillator
+  - [x] 8.3 Existing auto-save pattern preserved
+  - [x] 8.4 Change takes effect on next training session start
 
-- [ ] Task 9: Verify and test (AC: all)
-  - [ ] 9.1 `cargo test -p domain` — confirm no regressions
-  - [ ] 9.2 `trunk build` — confirm WASM compilation with new OxiSynth dependency
-  - [ ] 9.3 `cargo clippy` — zero warnings
+- [x] Task 9: Verify and test (AC: all)
+  - [x] 9.1 `cargo test -p domain` — 293 tests pass, zero regressions
+  - [x] 9.2 `trunk build` — succeeds with synth-worklet pre-build hook
+  - [x] 9.3 `cargo clippy` — zero warnings across all three crates
   - [ ] 9.4 Manual browser test: app loads, start page interactive immediately, training works with oscillator while SF2 loads
   - [ ] 9.5 Manual browser test: after worklet is ready, start training — hear SoundFont audio with real-time synthesis (no pre-rendering stutter)
   - [ ] 9.6 Manual browser test: pitch matching — slider adjusts pitch smoothly in real-time via pitch bend
@@ -535,10 +506,52 @@ Convention: story creation commit -> implementation commit -> code review fixes 
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- OxiSynth 0.1.0 compiles cleanly to wasm32-unknown-unknown with no getrandom issues
+- synth_worklet.wasm output: 222KB (release, opt-level z, LTO)
+- GeneralUser GS SF2: 32MB, downloaded via `bin/download-sf2.sh` to `.cache/`
+- Trunk pre-build hook handles synth-worklet build + asset copy automatically
+- Clippy clean across all 3 crates (domain, web, synth-worklet)
+- No domain crate changes — 293 tests pass unchanged
+
 ### Completion Notes List
 
+- **Task 1:** Created `synth-worklet` workspace crate (Option A from Dev Notes). SF2 sourced from existing iOS project download script. Trunk pre-build hook automates synth WASM build. Added `.cache/` and `web/assets/soundfont/synth_worklet.wasm` to .gitignore.
+- **Task 2:** All 8 C-style exports implemented plus `alloc`/`dealloc` for WASM memory management. Used `write_f32()` for sample rendering. `SoundFont::load()` uses `Cursor` to wrap raw bytes.
+- **Task 3:** AudioWorkletProcessor JS (~80 lines) handles WASM instantiation, message routing, and real-time audio rendering in `process()`.
+- **Task 4:** `WorkletBridge` wraps MessagePort communication. `SoundFontNotePlayer` implements `NotePlayer` trait with frequency-to-MIDI conversion and pitch bend for fractional cent offsets. `play_for_duration` uses `gloo_timers::callback::Timeout` for noteOff scheduling.
+- **Task 5:** `UnifiedNotePlayer`/`UnifiedPlaybackHandle` enums delegate to Oscillator or SoundFont variants. `create_note_player()` factory parses `sf2:bank:preset` format and sends selectProgram.
+- **Task 6:** Async init runs in parallel with hydration. Structured to avoid holding RefCell borrows across await points (clippy `await_holding_refcell_ref`). Uses `futures_channel::oneshot` for worklet message waiting.
+- **Task 7:** Both training views now use `create_note_player()` with worklet bridge signal. PitchMatchingView's tunable_handle changed from `OscillatorPlaybackHandle` to `UnifiedPlaybackHandle`. Fallback to oscillator is automatic when bridge is `None`.
+- **Task 8:** Added 8 SoundFont presets from GeneralUser GS (Piano, E.Piano, Guitar, Flute, Oboe, Clarinet, Violin, Synth) to Settings dropdown.
+- **Task 9:** Automated tests pass (293 domain, trunk build, clippy). Manual browser tests pending user verification.
+
 ### File List
+
+New files:
+- synth-worklet/Cargo.toml
+- synth-worklet/src/lib.rs
+- web/assets/soundfont/synth-processor.js
+- web/src/adapters/audio_soundfont.rs
+- web/src/adapters/note_player.rs
+
+Modified files:
+- .gitignore
+- Cargo.toml (workspace members)
+- Trunk.toml (pre-build hook)
+- index.html (copy-dir and copy-file directives)
+- web/Cargo.toml (futures-channel, web-sys features)
+- web/src/adapters/mod.rs (register new modules)
+- web/src/app.rs (worklet bridge signal, async init)
+- web/src/components/comparison_view.rs (UnifiedNotePlayer)
+- web/src/components/pitch_matching_view.rs (UnifiedNotePlayer + UnifiedPlaybackHandle)
+- web/src/components/settings_view.rs (SoundFont preset options)
+- docs/implementation-artifacts/sprint-status.yaml (status update)
+- docs/implementation-artifacts/5-2-soundfont-audio.md (this file)
+
+## Change Log
+
+- 2026-03-04: Implemented story 5.2 SoundFont Audio — AudioWorklet real-time synthesis with OxiSynth, separate synth-worklet WASM crate, UnifiedNotePlayer abstraction, async SoundFont loading with oscillator fallback, 8 instrument presets in Settings
