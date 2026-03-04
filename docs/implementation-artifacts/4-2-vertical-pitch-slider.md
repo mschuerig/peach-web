@@ -1,6 +1,6 @@
 # Story 4.2: Vertical Pitch Slider
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -237,6 +237,7 @@ Recent commits (last 5):
 ## Change Log
 
 - 2026-03-04: Implemented VerticalPitchSlider component — custom pointer-events-based vertical slider with unified mouse/touch/keyboard interaction, ARIA accessibility, and Tailwind dark mode styling. Used `Callback<f64>` for idiomatic Leptos component callback props. Added web-sys features: `DomRect`, `Element`, `MouseEvent`, `PointerEvent`.
+- 2026-03-04: Code review fixes — replaced `let _ =` on pointer capture calls with proper error logging (H1), added `on:pointercancel` handler to prevent stuck drag state (M1), added `enabled` guard to `on_pointermove`/`on_pointerup` for mid-drag disable robustness (M2), formatted `aria-valuenow` to 2 decimal places for screen reader clarity (M3), fixed `MouseEvent` alphabetical ordering in Cargo.toml (L1).
 
 ## Dev Agent Record
 

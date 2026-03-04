@@ -60,13 +60,15 @@ pub fn VerticalPitchSlider(
         dragging.set(true);
         if let Some(target) = ev.current_target() {
             let el: web_sys::Element = target.unchecked_into();
-            let _ = el.set_pointer_capture(ev.pointer_id());
+            if let Err(e) = el.set_pointer_capture(ev.pointer_id()) {
+                web_sys::console::warn_1(&format!("setPointerCapture failed: {e:?}").into());
+            }
         }
         on_change.run(new_value);
     };
 
     let on_pointermove = move |ev: web_sys::PointerEvent| {
-        if !dragging.get_untracked() {
+        if !dragging.get_untracked() || !enabled.get_untracked() {
             return;
         }
         let new_value = value_from_pointer(&ev);
@@ -81,9 +83,20 @@ pub fn VerticalPitchSlider(
         dragging.set(false);
         if let Some(target) = ev.current_target() {
             let el: web_sys::Element = target.unchecked_into();
-            let _ = el.release_pointer_capture(ev.pointer_id());
+            if let Err(e) = el.release_pointer_capture(ev.pointer_id()) {
+                web_sys::console::warn_1(
+                    &format!("releasePointerCapture failed: {e:?}").into(),
+                );
+            }
         }
-        on_commit.run(value.get_untracked());
+        if enabled.get_untracked() {
+            on_commit.run(value.get_untracked());
+        }
+    };
+
+    let on_pointercancel = move |_ev: web_sys::PointerEvent| {
+        dragging.set(false);
+        // Pointer capture is implicitly released by the browser on cancel
     };
 
     let on_keydown = move |ev: web_sys::KeyboardEvent| {
@@ -131,11 +144,12 @@ pub fn VerticalPitchSlider(
             aria-orientation="vertical"
             aria-valuemin="-1"
             aria-valuemax="1"
-            aria-valuenow=move || value.get().to_string()
+            aria-valuenow=move || format!("{:.2}", value.get())
             tabindex="0"
             on:pointerdown=on_pointerdown
             on:pointermove=on_pointermove
             on:pointerup=on_pointerup
+            on:pointercancel=on_pointercancel
             on:keydown=on_keydown
         >
             <div class="h-full w-2 rounded-full bg-gray-200 dark:bg-gray-700" />
