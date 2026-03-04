@@ -1,6 +1,6 @@
 # Story 6.3: Data Export & Import
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -318,6 +318,7 @@ No debug issues encountered.
 ### Change Log
 
 - 2026-03-04: Implemented story 6.3 Data Export & Import — all 8 tasks complete
+- 2026-03-04: Code review fixes — removed premature blob URL revoke (H1), fixed merge dedup within imported file (H2), added file size limit 10MB (M2), log import warnings to console (M1), added CSV escaping limitation comment (L1)
 
 ### File List
 
