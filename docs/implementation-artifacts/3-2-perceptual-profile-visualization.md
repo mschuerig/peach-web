@@ -1,6 +1,6 @@
 # Story 3.2: Perceptual Profile Visualization
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -434,3 +434,4 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-04: Implemented story 3.2 — Perceptual Profile Visualization with SVG piano keyboard, confidence band, dark mode, and accessibility
+- 2026-03-04: Code review fixes — eliminated layout shift (keyboard renders during loading), fixed invisible mean line for single trained notes, removed unnecessary clone, added precondition doc to white_key_x()

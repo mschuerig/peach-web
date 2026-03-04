@@ -50,6 +50,7 @@ fn note_x_center(midi: u8) -> f64 {
 
 /// Compute the white key's x position (left edge) relative to keyboard start.
 /// Returns None for black keys.
+/// Precondition: midi >= MIDI_MIN (21). Lower values cause u32 underflow.
 fn white_key_x(midi: u8) -> Option<f64> {
     if !IS_WHITE[(midi % 12) as usize] {
         return None;
@@ -152,6 +153,15 @@ fn build_mean_segments(notes: &[NoteData]) -> Vec<String> {
 
 /// Build SVG path for a mean line across a run of trained notes.
 fn mean_path(run: &[&NoteData]) -> String {
+    if run.len() == 1 {
+        // Single note: short horizontal tick mark
+        let n = run[0];
+        let x = note_x_center(n.midi);
+        let y = cents_to_y(n.mean);
+        let hw = 2.0;
+        return format!("M {:.1},{:.1} L {:.1},{:.1}", x - hw, y, x + hw, y);
+    }
+
     let mut d = String::new();
     for (i, n) in run.iter().enumerate() {
         let x = note_x_center(n.midi);
@@ -179,38 +189,7 @@ pub fn ProfileVisualization() -> impl IntoView {
 
     view! {
         {move || {
-            if !is_profile_loaded.get() {
-                return view! { <div></div> }.into_any();
-            }
-
-            let prof = profile_rc.borrow();
-            let notes: Vec<NoteData> = (MIDI_MIN..=MIDI_MAX)
-                .map(|i| {
-                    let stat = prof.note_stats(MIDINote::new(i));
-                    NoteData {
-                        midi: i,
-                        mean: stat.mean(),
-                        std_dev: stat.std_dev(),
-                        is_trained: stat.is_trained(),
-                    }
-                })
-                .collect();
-            let trained_count = notes.iter().filter(|n| n.is_trained).count();
-            let avg_threshold = prof.overall_mean();
-            drop(prof);
-
-            let aria_label = if trained_count == 0 {
-                "Perceptual profile: no training data yet".to_string()
-            } else {
-                format!(
-                    "Perceptual profile: average detection threshold {:.1} cents across {} trained notes",
-                    avg_threshold.unwrap_or(0.0),
-                    trained_count
-                )
-            };
-            let title_text = aria_label.clone();
-
-            // Keyboard geometry
+            // Keyboard geometry (static — always renders regardless of profile load state)
             let white_keys: Vec<f64> = (MIDI_MIN..=MIDI_MAX)
                 .filter_map(white_key_x)
                 .collect();
@@ -220,15 +199,49 @@ pub fn ProfileVisualization() -> impl IntoView {
                 .map(|m| note_x_center(m) - BLACK_KEY_WIDTH / 2.0)
                 .collect();
 
-            // Band and mean line paths
-            let band_segments = build_band_segments(&notes);
-            let mean_segments = build_mean_segments(&notes);
-
-            // Octave labels
             let octave_labels: Vec<(f64, String)> = OCTAVE_LABEL_MIDIS
                 .iter()
                 .map(|&m| (note_x_center(m), MIDINote::new(m).name()))
                 .collect();
+
+            // Profile-dependent data (guarded to avoid RefCell conflicts during hydration)
+            let (aria_label, band_segments, mean_segments) = if is_profile_loaded.get() {
+                let prof = profile_rc.borrow();
+                let notes: Vec<NoteData> = (MIDI_MIN..=MIDI_MAX)
+                    .map(|i| {
+                        let stat = prof.note_stats(MIDINote::new(i));
+                        NoteData {
+                            midi: i,
+                            mean: stat.mean(),
+                            std_dev: stat.std_dev(),
+                            is_trained: stat.is_trained(),
+                        }
+                    })
+                    .collect();
+                let trained_count = notes.iter().filter(|n| n.is_trained).count();
+                let avg_threshold = prof.overall_mean();
+                drop(prof);
+
+                let label = if trained_count == 0 {
+                    "Perceptual profile: no training data yet".to_string()
+                } else {
+                    format!(
+                        "Perceptual profile: average detection threshold {:.1} cents across {} trained notes",
+                        avg_threshold.unwrap_or(0.0),
+                        trained_count
+                    )
+                };
+                let bands = build_band_segments(&notes);
+                let means = build_mean_segments(&notes);
+                (label, bands, means)
+            } else {
+                (
+                    "Perceptual profile: no training data yet".to_string(),
+                    Vec::new(),
+                    Vec::new(),
+                )
+            };
+            let title_text = aria_label.clone();
 
             view! {
                 <svg
@@ -236,7 +249,7 @@ pub fn ProfileVisualization() -> impl IntoView {
                     width="100%"
                     class="mt-6"
                     role="img"
-                    aria-label=aria_label.clone()
+                    aria-label=aria_label
                 >
                     <title>{title_text}</title>
 
