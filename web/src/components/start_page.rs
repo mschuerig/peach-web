@@ -3,6 +3,9 @@ use leptos_router::components::A;
 use leptos_router::hooks::use_navigate;
 
 use super::ProfilePreview;
+use crate::adapters::localstorage_settings::LocalStorageSettings;
+use crate::interval_codes::encode_intervals;
+use domain::Interval;
 
 #[component]
 pub fn StartPage() -> impl IntoView {
@@ -17,6 +20,42 @@ pub fn StartPage() -> impl IntoView {
         let navigate = navigate.clone();
         move |_| {
             navigate("/training/pitch-matching", Default::default());
+        }
+    };
+    let on_interval_comparison = {
+        let navigate = navigate.clone();
+        move |_| {
+            let intervals = LocalStorageSettings::get_selected_intervals();
+            let has_non_prime = intervals
+                .iter()
+                .any(|di| di.interval != Interval::Prime);
+            let code = if has_non_prime {
+                encode_intervals(&intervals)
+            } else {
+                "P1".to_string()
+            };
+            navigate(
+                &format!("/training/comparison?intervals={code}"),
+                Default::default(),
+            );
+        }
+    };
+    let on_interval_pitch_matching = {
+        let navigate = navigate.clone();
+        move |_| {
+            let intervals = LocalStorageSettings::get_selected_intervals();
+            let has_non_prime = intervals
+                .iter()
+                .any(|di| di.interval != Interval::Prime);
+            let code = if has_non_prime {
+                encode_intervals(&intervals)
+            } else {
+                "P1".to_string()
+            };
+            navigate(
+                &format!("/training/pitch-matching?intervals={code}"),
+                Default::default(),
+            );
         }
     };
 
@@ -43,15 +82,19 @@ pub fn StartPage() -> impl IntoView {
 
                 <hr class="w-full border-gray-300 dark:border-gray-600" />
 
-                <A href="/training/comparison"
-                    attr:class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                <button
+                    on:click=on_interval_comparison
+                    class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
                     "Interval Comparison"
-                </A>
+                </button>
 
-                <A href="/training/pitch-matching"
-                    attr:class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                <button
+                    on:click=on_interval_pitch_matching
+                    class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
                     "Interval Pitch Matching"
-                </A>
+                </button>
             </nav>
 
             <nav aria-label="Utility" class="flex gap-6 pt-4 text-sm">
