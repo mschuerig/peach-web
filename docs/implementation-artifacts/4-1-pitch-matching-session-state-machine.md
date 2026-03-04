@@ -1,6 +1,6 @@
 # Story 4.1: Pitch Matching Session State Machine
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -42,79 +42,79 @@ so that the domain logic correctly drives the pitch matching training experience
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add PitchMatchingObserver trait to ports.rs (AC: 11)
-  - [ ] 1.1 Add `use crate::training::CompletedPitchMatching;` import to ports.rs
-  - [ ] 1.2 Define `PitchMatchingObserver` trait with `fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching)`
-  - [ ] 1.3 Export `PitchMatchingObserver` from `lib.rs`
+- [x] Task 1: Add PitchMatchingObserver trait to ports.rs (AC: 11)
+  - [x] 1.1 Add `use crate::training::CompletedPitchMatching;` import to ports.rs
+  - [x] 1.2 Define `PitchMatchingObserver` trait with `fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching)`
+  - [x] 1.3 Export `PitchMatchingObserver` from `lib.rs`
 
-- [ ] Task 2: Add PitchMatchingRecord to records.rs (AC: 12)
-  - [ ] 2.1 Add `use crate::training::CompletedPitchMatching;` import
-  - [ ] 2.2 Define `PitchMatchingRecord` struct with fields: `reference_note: u8`, `target_note: u8`, `initial_cent_offset: f64`, `user_cent_error: f64`, `interval: u8`, `tuning_system: String`, `timestamp: String`
-  - [ ] 2.3 Derive `Clone, Debug, PartialEq, Serialize, Deserialize` (same as `ComparisonRecord`)
-  - [ ] 2.4 Implement `from_completed(&CompletedPitchMatching) -> Self` following the same pattern as `ComparisonRecord::from_completed`
-  - [ ] 2.5 Export `PitchMatchingRecord` from `lib.rs`
-  - [ ] 2.6 Write unit tests: field extraction, interval calculation, serde roundtrip, interval-exceeds-octave default
+- [x] Task 2: Add PitchMatchingRecord to records.rs (AC: 12)
+  - [x] 2.1 Add `use crate::training::CompletedPitchMatching;` import
+  - [x] 2.2 Define `PitchMatchingRecord` struct with fields: `reference_note: u8`, `target_note: u8`, `initial_cent_offset: f64`, `user_cent_error: f64`, `interval: u8`, `tuning_system: String`, `timestamp: String`
+  - [x] 2.3 Derive `Clone, Debug, PartialEq, Serialize, Deserialize` (same as `ComparisonRecord`)
+  - [x] 2.4 Implement `from_completed(&CompletedPitchMatching) -> Self` following the same pattern as `ComparisonRecord::from_completed`
+  - [x] 2.5 Export `PitchMatchingRecord` from `lib.rs`
+  - [x] 2.6 Write unit tests: field extraction, interval calculation, serde roundtrip, interval-exceeds-octave default
 
-- [ ] Task 3: Extend TrainingDataStore trait (AC: 13)
-  - [ ] 3.1 Add `use crate::records::PitchMatchingRecord;` import to ports.rs
-  - [ ] 3.2 Add `fn save_pitch_matching(&self, record: PitchMatchingRecord) -> Result<(), StorageError>` to TrainingDataStore
-  - [ ] 3.3 Add `fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>` to TrainingDataStore
-  - [ ] 3.4 Update any existing TrainingDataStore implementations (currently none in domain crate — the web crate's `IndexedDbStore` does not implement this trait directly, so no breaking changes)
+- [x] Task 3: Extend TrainingDataStore trait (AC: 13)
+  - [x] 3.1 Add `use crate::records::PitchMatchingRecord;` import to ports.rs
+  - [x] 3.2 Add `fn save_pitch_matching(&self, record: PitchMatchingRecord) -> Result<(), StorageError>` to TrainingDataStore
+  - [x] 3.3 Add `fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>` to TrainingDataStore
+  - [x] 3.4 Update any existing TrainingDataStore implementations (currently none in domain crate — the web crate's `IndexedDbStore` does not implement this trait directly, so no breaking changes)
 
-- [ ] Task 4: Create PitchMatchingSession state machine (AC: 1,2,3,4,5,6,7,8,9,10,14)
-  - [ ] 4.1 Create `domain/src/session/pitch_matching_session.rs`
-  - [ ] 4.2 Define `PitchMatchingSessionState` enum: `Idle`, `PlayingReference`, `AwaitingSliderTouch`, `PlayingTunable`, `ShowingFeedback`
-  - [ ] 4.3 Define `PitchMatchingPlaybackData` struct: `reference_frequency: Frequency`, `tunable_frequency: Frequency`, `duration: NoteDuration`
-  - [ ] 4.4 Define `PitchMatchingSession` struct with fields (see Dev Notes)
-  - [ ] 4.5 Implement `new(profile, observers, resettables)` constructor
-  - [ ] 4.6 Implement observable state accessors: `state()`, `show_feedback()`, `last_completed()`, `current_challenge()`, `current_playback_data()`, `current_interval()`
-  - [ ] 4.7 Implement `start(intervals, settings)` — guard Idle state, snapshot settings, generate first challenge, transition to PlayingReference
-  - [ ] 4.8 Implement `on_reference_finished()` — guard PlayingReference, compute tunable frequency with initial cent offset, transition to AwaitingSliderTouch
-  - [ ] 4.9 Implement `adjust_pitch(value: f64) -> Option<Frequency>` — if AwaitingSliderTouch transition to PlayingTunable, if PlayingTunable calculate and return adjusted frequency
-  - [ ] 4.10 Implement `commit_pitch(value: f64, timestamp: String)` — guard PlayingTunable, calculate user_cent_error, create CompletedPitchMatching, notify observers, update profile, transition to ShowingFeedback
-  - [ ] 4.11 Implement `on_feedback_finished()` — guard ShowingFeedback, generate next challenge, transition to PlayingReference
-  - [ ] 4.12 Implement `stop()` — return to Idle, clear all session state (noop if already Idle)
-  - [ ] 4.13 Implement `reset_training_data()` — stop, reset matching accumulators, call resettables
-  - [ ] 4.14 Implement private `generate_challenge(interval)` helper
-  - [ ] 4.15 Implement private `random_interval()` helper (same pattern as ComparisonSession)
-  - [ ] 4.16 Implement private `notify_observers(completed)` with panic isolation via `catch_unwind`
+- [x] Task 4: Create PitchMatchingSession state machine (AC: 1,2,3,4,5,6,7,8,9,10,14)
+  - [x] 4.1 Create `domain/src/session/pitch_matching_session.rs`
+  - [x] 4.2 Define `PitchMatchingSessionState` enum: `Idle`, `PlayingReference`, `AwaitingSliderTouch`, `PlayingTunable`, `ShowingFeedback`
+  - [x] 4.3 Define `PitchMatchingPlaybackData` struct: `reference_frequency: Frequency`, `tunable_frequency: Frequency`, `duration: NoteDuration`
+  - [x] 4.4 Define `PitchMatchingSession` struct with fields (see Dev Notes)
+  - [x] 4.5 Implement `new(profile, observers, resettables)` constructor
+  - [x] 4.6 Implement observable state accessors: `state()`, `show_feedback()`, `last_completed()`, `current_challenge()`, `current_playback_data()`, `current_interval()`
+  - [x] 4.7 Implement `start(intervals, settings)` — guard Idle state, snapshot settings, generate first challenge, transition to PlayingReference
+  - [x] 4.8 Implement `on_reference_finished()` — guard PlayingReference, compute tunable frequency with initial cent offset, transition to AwaitingSliderTouch
+  - [x] 4.9 Implement `adjust_pitch(value: f64) -> Option<Frequency>` — if AwaitingSliderTouch transition to PlayingTunable, if PlayingTunable calculate and return adjusted frequency
+  - [x] 4.10 Implement `commit_pitch(value: f64, timestamp: String)` — guard PlayingTunable, calculate user_cent_error, create CompletedPitchMatching, notify observers, update profile, transition to ShowingFeedback
+  - [x] 4.11 Implement `on_feedback_finished()` — guard ShowingFeedback, generate next challenge, transition to PlayingReference
+  - [x] 4.12 Implement `stop()` — return to Idle, clear all session state (noop if already Idle)
+  - [x] 4.13 Implement `reset_training_data()` — stop, reset matching accumulators, call resettables
+  - [x] 4.14 Implement private `generate_challenge(interval)` helper
+  - [x] 4.15 Implement private `random_interval()` helper (same pattern as ComparisonSession)
+  - [x] 4.16 Implement private `notify_observers(completed)` with panic isolation via `catch_unwind`
 
-- [ ] Task 5: Update session/mod.rs and lib.rs exports (AC: all)
-  - [ ] 5.1 Add `pub mod pitch_matching_session;` to `session/mod.rs`
-  - [ ] 5.2 Add `pub use pitch_matching_session::{PitchMatchingPlaybackData, PitchMatchingSession, PitchMatchingSessionState};` to `session/mod.rs`
-  - [ ] 5.3 Add re-exports in `lib.rs` for `PitchMatchingSession`, `PitchMatchingSessionState`, `PitchMatchingPlaybackData`, `PitchMatchingObserver`, `PitchMatchingRecord`
+- [x] Task 5: Update session/mod.rs and lib.rs exports (AC: all)
+  - [x] 5.1 Add `pub mod pitch_matching_session;` to `session/mod.rs`
+  - [x] 5.2 Add `pub use pitch_matching_session::{PitchMatchingPlaybackData, PitchMatchingSession, PitchMatchingSessionState};` to `session/mod.rs`
+  - [x] 5.3 Add re-exports in `lib.rs` for `PitchMatchingSession`, `PitchMatchingSessionState`, `PitchMatchingPlaybackData`, `PitchMatchingObserver`, `PitchMatchingRecord`
 
-- [ ] Task 6: Write comprehensive tests (AC: all)
-  - [ ] 6.1 Mock types: `MockPitchMatchingObserver`, `PanickingPitchMatchingObserver`, `MockResettable`, `DefaultTestSettings` (reuse pattern from comparison_session tests)
-  - [ ] 6.2 Test idle state defaults (AC1)
-  - [ ] 6.3 Test start transitions to PlayingReference (AC2)
-  - [ ] 6.4 Test start generates challenge with valid playback data (AC2, AC3)
-  - [ ] 6.5 Test start panics when not idle (guard)
-  - [ ] 6.6 Test start panics with empty intervals (guard)
-  - [ ] 6.7 Test on_reference_finished transitions to AwaitingSliderTouch (AC4)
-  - [ ] 6.8 Test on_reference_finished provides tunable frequency with offset (AC4)
-  - [ ] 6.9 Test adjust_pitch from AwaitingSliderTouch transitions to PlayingTunable (AC5)
-  - [ ] 6.10 Test adjust_pitch returns correct frequency calculation (AC6)
-  - [ ] 6.11 Test adjust_pitch at value=0.0 returns target frequency (AC6)
-  - [ ] 6.12 Test adjust_pitch at boundaries ±1.0 (AC6)
-  - [ ] 6.13 Test commit_pitch creates CompletedPitchMatching and notifies observers (AC7)
-  - [ ] 6.14 Test commit_pitch transitions to ShowingFeedback (AC7)
-  - [ ] 6.15 Test commit_pitch user_cent_error calculation (AC7)
-  - [ ] 6.16 Test on_feedback_finished generates next challenge and loops (AC8)
-  - [ ] 6.17 Test full lifecycle: Idle → PlayingReference → AwaitingSliderTouch → PlayingTunable → ShowingFeedback → PlayingReference
-  - [ ] 6.18 Test stop returns to idle and clears state (AC9)
-  - [ ] 6.19 Test stop from idle is noop (AC9)
-  - [ ] 6.20 Test observer panic isolation (AC10)
-  - [ ] 6.21 Test reset_training_data stops session, resets matching, calls resettables (AC14)
-  - [ ] 6.22 Test challenge generation respects note range with interval transposition (AC3)
-  - [ ] 6.23 Test initial_cent_offset is within [-20.0, +20.0] range (AC3)
-  - [ ] 6.24 State guard tests: invalid state transitions panic with descriptive messages
+- [x] Task 6: Write comprehensive tests (AC: all)
+  - [x] 6.1 Mock types: `MockPitchMatchingObserver`, `PanickingPitchMatchingObserver`, `MockResettable`, `DefaultTestSettings` (reuse pattern from comparison_session tests)
+  - [x] 6.2 Test idle state defaults (AC1)
+  - [x] 6.3 Test start transitions to PlayingReference (AC2)
+  - [x] 6.4 Test start generates challenge with valid playback data (AC2, AC3)
+  - [x] 6.5 Test start panics when not idle (guard)
+  - [x] 6.6 Test start panics with empty intervals (guard)
+  - [x] 6.7 Test on_reference_finished transitions to AwaitingSliderTouch (AC4)
+  - [x] 6.8 Test on_reference_finished provides tunable frequency with offset (AC4)
+  - [x] 6.9 Test adjust_pitch from AwaitingSliderTouch transitions to PlayingTunable (AC5)
+  - [x] 6.10 Test adjust_pitch returns correct frequency calculation (AC6)
+  - [x] 6.11 Test adjust_pitch at value=0.0 returns target frequency (AC6)
+  - [x] 6.12 Test adjust_pitch at boundaries ±1.0 (AC6)
+  - [x] 6.13 Test commit_pitch creates CompletedPitchMatching and notifies observers (AC7)
+  - [x] 6.14 Test commit_pitch transitions to ShowingFeedback (AC7)
+  - [x] 6.15 Test commit_pitch user_cent_error calculation (AC7)
+  - [x] 6.16 Test on_feedback_finished generates next challenge and loops (AC8)
+  - [x] 6.17 Test full lifecycle: Idle → PlayingReference → AwaitingSliderTouch → PlayingTunable → ShowingFeedback → PlayingReference
+  - [x] 6.18 Test stop returns to idle and clears state (AC9)
+  - [x] 6.19 Test stop from idle is noop (AC9)
+  - [x] 6.20 Test observer panic isolation (AC10)
+  - [x] 6.21 Test reset_training_data stops session, resets matching, calls resettables (AC14)
+  - [x] 6.22 Test challenge generation respects note range with interval transposition (AC3)
+  - [x] 6.23 Test initial_cent_offset is within [-20.0, +20.0] range (AC3)
+  - [x] 6.24 State guard tests: invalid state transitions panic with descriptive messages
 
-- [ ] Task 7: Verify and validate (AC: all)
-  - [ ] 7.1 `cargo clippy -p domain` — zero warnings
-  - [ ] 7.2 `cargo clippy -p web` — zero warnings (no web changes expected, but verify no breakage from TrainingDataStore extension)
-  - [ ] 7.3 `cargo test -p domain` — all tests pass (existing 254 + new tests)
-  - [ ] 7.4 `trunk build` — successful WASM compilation
+- [x] Task 7: Verify and validate (AC: all)
+  - [x] 7.1 `cargo clippy -p domain` — zero warnings
+  - [x] 7.2 `cargo clippy -p web` — zero warnings (no web changes expected, but verify no breakage from TrainingDataStore extension)
+  - [x] 7.3 `cargo test -p domain` — all tests pass (existing 254 + new tests)
+  - [x] 7.4 `trunk build` — successful WASM compilation
 
 ## Dev Notes
 
@@ -433,10 +433,35 @@ Recent commits (last 5):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+No issues encountered during implementation.
+
 ### Completion Notes List
 
+- Implemented PitchMatchingObserver trait in ports.rs with `pitch_matching_completed(&mut self, completed: &CompletedPitchMatching)` method
+- Extended TrainingDataStore trait with `save_pitch_matching()` and `fetch_all_pitch_matchings()` methods
+- Added PitchMatchingRecord struct to records.rs with `from_completed()` constructor following ComparisonRecord pattern
+- Created PitchMatchingSession state machine with 5 states: Idle → PlayingReference → AwaitingSliderTouch → PlayingTunable → ShowingFeedback
+- Session follows ComparisonSession pattern: injected dependencies, settings snapshot, observer notification with panic isolation via `catch_unwind`
+- Key domain methods: `start()`, `on_reference_finished()`, `adjust_pitch()` → `Option<Frequency>`, `commit_pitch()`, `on_feedback_finished()`, `stop()`, `reset_training_data()`
+- `adjust_pitch()` returns `Option<Frequency>` (None for wrong state) — domain owns all pitch math, web layer just applies frequencies
+- Frequency calculation: `target_freq * 2^(value * 20 / 1200)` maps slider [-1,+1] to ±20 cents
+- Challenge generation ensures reference note range-adjusted for interval transposition
+- All 291 domain tests pass (254 existing + 37 new). Zero clippy warnings. Trunk build succeeds.
+
+### Change Log
+
+- 2026-03-04: Implemented story 4.1 — PitchMatchingSession state machine with all acceptance criteria satisfied
+
 ### File List
+
+- `domain/src/session/pitch_matching_session.rs` (new) — PitchMatchingSession state machine, states, playback data, tests
+- `domain/src/ports.rs` (modified) — Added PitchMatchingObserver trait, extended TrainingDataStore
+- `domain/src/records.rs` (modified) — Added PitchMatchingRecord struct with from_completed and tests
+- `domain/src/session/mod.rs` (modified) — Added pitch_matching_session module and re-exports
+- `domain/src/lib.rs` (modified) — Added re-exports for PitchMatchingObserver, PitchMatchingRecord, PitchMatchingSession, PitchMatchingSessionState, PitchMatchingPlaybackData, PITCH_MATCHING_VELOCITY
+- `docs/implementation-artifacts/sprint-status.yaml` (modified) — Updated story status
+- `docs/implementation-artifacts/4-1-pitch-matching-session-state-machine.md` (modified) — Task checkboxes, dev record, status
