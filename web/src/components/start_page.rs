@@ -7,8 +7,17 @@ use super::ProfilePreview;
 #[component]
 pub fn StartPage() -> impl IntoView {
     let navigate = use_navigate();
-    let on_comparison = move |_| {
-        navigate("/training/comparison", Default::default());
+    let on_comparison = {
+        let navigate = navigate.clone();
+        move |_| {
+            navigate("/training/comparison", Default::default());
+        }
+    };
+    let on_pitch_matching = {
+        let navigate = navigate.clone();
+        move |_| {
+            navigate("/training/pitch-matching", Default::default());
+        }
     };
 
     view! {
@@ -25,10 +34,12 @@ pub fn StartPage() -> impl IntoView {
                     "Comparison"
                 </button>
 
-                <A href="/training/pitch-matching"
-                    attr:class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                <button
+                    on:click=on_pitch_matching
+                    class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
                     "Pitch Matching"
-                </A>
+                </button>
 
                 <hr class="w-full border-gray-300 dark:border-gray-600" />
 

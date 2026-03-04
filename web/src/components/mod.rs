@@ -11,7 +11,7 @@ mod start_page;
 pub use comparison_view::ComparisonView;
 pub use info_view::InfoView;
 pub use pitch_matching_view::PitchMatchingView;
-pub use pitch_slider::VerticalPitchSlider;
+// VerticalPitchSlider is used internally by PitchMatchingView via crate::components::pitch_slider
 pub use profile_preview::ProfilePreview;
 pub use profile_view::ProfileView;
 pub use settings_view::SettingsView;
