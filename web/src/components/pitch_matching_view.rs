@@ -16,13 +16,15 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::bridge::PitchMatchingDataStoreObserver;
 use crate::components::pitch_slider::VerticalPitchSlider;
+use crate::interval_codes::{decode_intervals, interval_label};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
-    PitchMatchingSession, PitchMatchingSessionState, PerceptualProfile, FEEDBACK_DURATION_SECS,
-    PITCH_MATCHING_VELOCITY,
+    DirectedInterval, Direction, Interval, PitchMatchingSession, PitchMatchingSessionState,
+    PerceptualProfile, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
 };
 use leptos::reactive::owner::LocalStorage;
+use leptos_router::hooks::use_query_map;
 
 const POLL_INTERVAL_MS: u32 = 50;
 
@@ -41,6 +43,30 @@ pub fn PitchMatchingView() -> impl IntoView {
     if let Err(e) = audio_ctx.borrow_mut().get_or_create() {
         log::error!("Failed to create AudioContext: {e}");
     }
+
+    // Parse interval mode from query params
+    let query = use_query_map();
+    let intervals_from_query = {
+        let param = query.read_untracked().get("intervals").unwrap_or_default();
+        if param.is_empty() {
+            let mut set = std::collections::HashSet::new();
+            set.insert(DirectedInterval::new(Interval::Prime, Direction::Up));
+            set
+        } else {
+            let decoded = decode_intervals(&param);
+            if decoded.is_empty() {
+                let mut set = std::collections::HashSet::new();
+                set.insert(DirectedInterval::new(Interval::Prime, Direction::Up));
+                set
+            } else {
+                decoded
+            }
+        }
+    };
+    let is_interval_mode = intervals_from_query
+        .iter()
+        .any(|di| di.interval != Interval::Prime);
+    let interval_label_text: RwSignal<String> = RwSignal::new(String::new());
 
     let settings = LocalStorageSettings;
     let note_player = Rc::new(RefCell::new(OscillatorNotePlayer::new(Rc::clone(&audio_ctx))));
@@ -91,6 +117,8 @@ pub fn PitchMatchingView() -> impl IntoView {
         feedback_color: RwSignal<String>,
         feedback_arrow: RwSignal<String>,
         sr_announcement: RwSignal<String>,
+        interval_label_text: RwSignal<String>,
+        is_interval_mode: bool,
     ) {
         let s = session.borrow();
         let state = s.state();
@@ -145,6 +173,16 @@ pub fn PitchMatchingView() -> impl IntoView {
             feedback_color.set(color);
             sr_announcement.set(sr);
         }
+
+        if is_interval_mode
+            && let Some(di) = s.current_interval()
+        {
+            if di.interval != Interval::Prime {
+                interval_label_text.set(interval_label(di.interval, di.direction));
+            } else {
+                interval_label_text.set(String::new());
+            }
+        }
     }
 
     let sync_signals = {
@@ -158,6 +196,8 @@ pub fn PitchMatchingView() -> impl IntoView {
                 feedback_color,
                 feedback_arrow,
                 sr_announcement,
+                interval_label_text,
+                is_interval_mode,
             );
         }
     };
@@ -398,8 +438,7 @@ pub fn PitchMatchingView() -> impl IntoView {
         let cancelled = Rc::clone(&cancelled);
         let sync = sync_signals.clone();
         spawn_local(async move {
-            let intervals = LocalStorageSettings::get_selected_intervals();
-            session.borrow_mut().start(intervals, &settings);
+            session.borrow_mut().start(intervals_from_query, &settings);
             sync();
 
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;
@@ -487,7 +526,19 @@ pub fn PitchMatchingView() -> impl IntoView {
 
     view! {
         <div class="py-12">
-            <h1 class="text-2xl font-bold dark:text-white">"Pitch Matching Training"</h1>
+            <h1 class="text-2xl font-bold dark:text-white">
+                {if is_interval_mode { "Interval Pitch Matching" } else { "Pitch Matching Training" }}
+            </h1>
+
+            // Interval label — only visible in interval mode
+            {move || {
+                let label = interval_label_text.get();
+                if !label.is_empty() {
+                    view! { <p class="mt-2 text-lg text-indigo-600 dark:text-indigo-400 font-medium">{label}</p> }.into_any()
+                } else {
+                    view! { <span></span> }.into_any()
+                }
+            }}
 
             // Feedback indicator
             <div class="flex items-center justify-center h-16" aria-hidden="true">

@@ -37,29 +37,7 @@ fn target_checked(ev: &web_sys::Event) -> bool {
         .unwrap_or(false)
 }
 
-/// Human-readable label for an interval with direction.
-fn interval_label(interval: Interval, direction: Direction) -> String {
-    let name = match interval {
-        Interval::Prime => return "Prime".to_string(),
-        Interval::MinorSecond => "Minor Second",
-        Interval::MajorSecond => "Major Second",
-        Interval::MinorThird => "Minor Third",
-        Interval::MajorThird => "Major Third",
-        Interval::PerfectFourth => "Perfect Fourth",
-        Interval::Tritone => "Tritone",
-        Interval::PerfectFifth => "Perfect Fifth",
-        Interval::MinorSixth => "Minor Sixth",
-        Interval::MajorSixth => "Major Sixth",
-        Interval::MinorSeventh => "Minor Seventh",
-        Interval::MajorSeventh => "Major Seventh",
-        Interval::Octave => "Octave",
-    };
-    let dir = match direction {
-        Direction::Up => "Up",
-        Direction::Down => "Down",
-    };
-    format!("{name} {dir}")
-}
+use crate::interval_codes::interval_label;
 
 /// All 25 directed intervals in display order.
 fn all_directed_intervals() -> Vec<DirectedInterval> {

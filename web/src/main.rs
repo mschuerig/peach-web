@@ -2,6 +2,7 @@ mod adapters;
 mod app;
 mod bridge;
 mod components;
+mod interval_codes;
 
 use leptos::prelude::*;
 
