@@ -20,6 +20,26 @@ pub fn decode_intervals(code: &str) -> HashSet<DirectedInterval> {
         .collect()
 }
 
+/// Parse an intervals query parameter into a set, falling back to Prime/Up
+/// if the parameter is empty or contains no valid codes.
+pub fn parse_intervals_param(param: &str) -> HashSet<DirectedInterval> {
+    if param.is_empty() {
+        return prime_up_set();
+    }
+    let decoded = decode_intervals(param);
+    if decoded.is_empty() {
+        prime_up_set()
+    } else {
+        decoded
+    }
+}
+
+fn prime_up_set() -> HashSet<DirectedInterval> {
+    let mut set = HashSet::new();
+    set.insert(DirectedInterval::new(Interval::Prime, Direction::Up));
+    set
+}
+
 /// Human-readable label for an interval with direction (e.g. "Perfect Fifth Up").
 pub fn interval_label(interval: Interval, direction: Direction) -> String {
     let name = match interval {
@@ -46,6 +66,8 @@ pub fn interval_label(interval: Interval, direction: Direction) -> String {
 
 fn encode_one(di: &DirectedInterval) -> String {
     let base = match di.interval {
+        // Prime is always encoded as "P1" regardless of direction —
+        // the UI only exposes Prime/Up, and decode always returns Prime/Up.
         Interval::Prime => return "P1".to_string(),
         Interval::MinorSecond => "m2",
         Interval::MajorSecond => "M2",
@@ -203,6 +225,28 @@ mod tests {
         assert_eq!(encoded, "P5d");
         let decoded = decode_intervals(&encoded);
         assert_eq!(set, decoded);
+    }
+
+    #[test]
+    fn test_parse_intervals_param_empty() {
+        let set = parse_intervals_param("");
+        assert_eq!(set.len(), 1);
+        assert!(set.contains(&DirectedInterval::new(Interval::Prime, Direction::Up)));
+    }
+
+    #[test]
+    fn test_parse_intervals_param_valid() {
+        let set = parse_intervals_param("M3u,P5d");
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&DirectedInterval::new(Interval::MajorThird, Direction::Up)));
+        assert!(set.contains(&DirectedInterval::new(Interval::PerfectFifth, Direction::Down)));
+    }
+
+    #[test]
+    fn test_parse_intervals_param_all_invalid() {
+        let set = parse_intervals_param("GARBAGE,INVALID");
+        assert_eq!(set.len(), 1);
+        assert!(set.contains(&DirectedInterval::new(Interval::Prime, Direction::Up)));
     }
 
     #[test]

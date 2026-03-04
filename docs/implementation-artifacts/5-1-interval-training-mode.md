@@ -1,6 +1,6 @@
 # Story 5.1: Interval Training Mode
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -292,3 +292,4 @@ Claude Opus 4.6
 ## Change Log
 
 - 2026-03-04: Implemented story 5.1 Interval Training Mode — added interval code encode/decode utilities, updated Start Page with interval navigation buttons using query params, updated ComparisonView and PitchMatchingView to support interval mode with query param parsing and interval label display, fixed bug where regular mode used Settings intervals instead of unison
+- 2026-03-04: Code review fixes — extracted shared `parse_intervals_param()` to `interval_codes.rs` eliminating 17 lines of duplication in both training views, added screen reader announcements for interval label changes (accessibility), deduplicated interval button handlers in start_page.rs, documented Prime/Down encoding behavior, added 3 tests for `parse_intervals_param`, removed unused imports

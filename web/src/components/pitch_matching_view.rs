@@ -16,12 +16,12 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::bridge::PitchMatchingDataStoreObserver;
 use crate::components::pitch_slider::VerticalPitchSlider;
-use crate::interval_codes::{decode_intervals, interval_label};
+use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
-    DirectedInterval, Direction, Interval, PitchMatchingSession, PitchMatchingSessionState,
-    PerceptualProfile, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
+    Interval, PitchMatchingSession, PitchMatchingSessionState, PerceptualProfile,
+    FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -48,20 +48,7 @@ pub fn PitchMatchingView() -> impl IntoView {
     let query = use_query_map();
     let intervals_from_query = {
         let param = query.read_untracked().get("intervals").unwrap_or_default();
-        if param.is_empty() {
-            let mut set = std::collections::HashSet::new();
-            set.insert(DirectedInterval::new(Interval::Prime, Direction::Up));
-            set
-        } else {
-            let decoded = decode_intervals(&param);
-            if decoded.is_empty() {
-                let mut set = std::collections::HashSet::new();
-                set.insert(DirectedInterval::new(Interval::Prime, Direction::Up));
-                set
-            } else {
-                decoded
-            }
-        }
+        parse_intervals_param(&param)
     };
     let is_interval_mode = intervals_from_query
         .iter()
@@ -178,7 +165,9 @@ pub fn PitchMatchingView() -> impl IntoView {
             && let Some(di) = s.current_interval()
         {
             if di.interval != Interval::Prime {
-                interval_label_text.set(interval_label(di.interval, di.direction));
+                let label = interval_label(di.interval, di.direction);
+                sr_announcement.set(label.clone());
+                interval_label_text.set(label);
             } else {
                 interval_label_text.set(String::new());
             }

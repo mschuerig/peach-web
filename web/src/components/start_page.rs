@@ -7,6 +7,22 @@ use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::interval_codes::encode_intervals;
 use domain::Interval;
 
+fn navigate_with_intervals(navigate: &impl Fn(&str, leptos_router::NavigateOptions), path: &str) {
+    let intervals = LocalStorageSettings::get_selected_intervals();
+    let has_non_prime = intervals
+        .iter()
+        .any(|di| di.interval != Interval::Prime);
+    let code = if has_non_prime {
+        encode_intervals(&intervals)
+    } else {
+        "P1".to_string()
+    };
+    navigate(
+        &format!("{path}?intervals={code}"),
+        Default::default(),
+    );
+}
+
 #[component]
 pub fn StartPage() -> impl IntoView {
     let navigate = use_navigate();
@@ -25,37 +41,13 @@ pub fn StartPage() -> impl IntoView {
     let on_interval_comparison = {
         let navigate = navigate.clone();
         move |_| {
-            let intervals = LocalStorageSettings::get_selected_intervals();
-            let has_non_prime = intervals
-                .iter()
-                .any(|di| di.interval != Interval::Prime);
-            let code = if has_non_prime {
-                encode_intervals(&intervals)
-            } else {
-                "P1".to_string()
-            };
-            navigate(
-                &format!("/training/comparison?intervals={code}"),
-                Default::default(),
-            );
+            navigate_with_intervals(&navigate, "/training/comparison");
         }
     };
     let on_interval_pitch_matching = {
         let navigate = navigate.clone();
         move |_| {
-            let intervals = LocalStorageSettings::get_selected_intervals();
-            let has_non_prime = intervals
-                .iter()
-                .any(|di| di.interval != Interval::Prime);
-            let code = if has_non_prime {
-                encode_intervals(&intervals)
-            } else {
-                "P1".to_string()
-            };
-            navigate(
-                &format!("/training/pitch-matching?intervals={code}"),
-                Default::default(),
-            );
+            navigate_with_intervals(&navigate, "/training/pitch-matching");
         }
     };
 
