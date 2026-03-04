@@ -5,9 +5,12 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
 use send_wrapper::SendWrapper;
+use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::audio_soundfont::SF2Preset;
+use crate::adapters::data_portability;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use domain::ports::UserSettings;
@@ -71,6 +74,16 @@ enum ResetStatus {
     Resetting,
     Success,
     Error,
+}
+
+#[derive(Clone, PartialEq)]
+enum ImportExportStatus {
+    Idle,
+    Exporting,
+    ExportSuccess,
+    Importing,
+    ImportSuccess(String),
+    Error(String),
 }
 
 #[component]
@@ -400,6 +413,294 @@ pub fn SettingsView() -> impl IntoView {
                     </div>
                 </fieldset>
             </div>
+
+            // Data Management (Export / Import)
+            {
+                let ie_status = RwSignal::new(ImportExportStatus::Idle);
+                let sr_announcement = RwSignal::new(String::new());
+                let import_dialog_ref = NodeRef::<leptos::html::Dialog>::new();
+                let import_data_signal: RwSignal<Option<data_portability::ParsedImportData>> = RwSignal::new(None);
+                let file_input_ref = NodeRef::<leptos::html::Input>::new();
+
+                let handle_export = {
+                    move |_| {
+                        ie_status.set(ImportExportStatus::Exporting);
+                        spawn_local(async move {
+                            let result = if let Some(store) = db_store.get_untracked() {
+                                data_portability::export_all_data(&store).await
+                            } else {
+                                Err("Database not available".to_string())
+                            };
+                            match result {
+                                Ok(()) => {
+                                    ie_status.set(ImportExportStatus::ExportSuccess);
+                                    sr_announcement.set("Data exported".into());
+                                    TimeoutFuture::new(2000).await;
+                                    ie_status.set(ImportExportStatus::Idle);
+                                }
+                                Err(e) => {
+                                    let msg = format!("Export failed: {e}");
+                                    sr_announcement.set(msg.clone());
+                                    ie_status.set(ImportExportStatus::Error(msg));
+                                    TimeoutFuture::new(3000).await;
+                                    ie_status.set(ImportExportStatus::Idle);
+                                }
+                            }
+                        });
+                    }
+                };
+
+                let handle_import_click = move |_| {
+                    if let Some(input) = file_input_ref.get() {
+                        input.click();
+                    }
+                };
+
+                let handle_file_selected = move |_| {
+                    let input = match file_input_ref.get() {
+                        Some(i) => i,
+                        None => return,
+                    };
+                    let file = match input.files().and_then(|fl| fl.get(0)) {
+                        Some(f) => f,
+                        None => return,
+                    };
+
+                    let reader = match web_sys::FileReader::new() {
+                        Ok(r) => r,
+                        Err(e) => {
+                            let msg = format!("Failed to create FileReader: {e:?}");
+                            sr_announcement.set(msg.clone());
+                            ie_status.set(ImportExportStatus::Error(msg));
+                            return;
+                        }
+                    };
+
+                    let reader_clone = reader.clone();
+                    let onload = Closure::once(move |_event: web_sys::Event| {
+                        let content = match reader_clone.result() {
+                            Ok(val) => val.as_string().unwrap_or_default(),
+                            Err(e) => {
+                                let msg = format!("Failed to read file: {e:?}");
+                                sr_announcement.set(msg.clone());
+                                ie_status.set(ImportExportStatus::Error(msg));
+                                return;
+                            }
+                        };
+
+                        match data_portability::parse_import_file(&content) {
+                            Ok(parsed) => {
+                                import_data_signal.set(Some(parsed));
+                                if let Some(dialog) = import_dialog_ref.get() {
+                                    let _ = dialog.show_modal();
+                                }
+                            }
+                            Err(e) => {
+                                let msg = format!("Import failed: {e}");
+                                sr_announcement.set(msg.clone());
+                                ie_status.set(ImportExportStatus::Error(msg));
+                                spawn_local(async move {
+                                    TimeoutFuture::new(3000).await;
+                                    ie_status.set(ImportExportStatus::Idle);
+                                });
+                            }
+                        }
+                    });
+
+                    reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+                    onload.forget();
+                    let _ = reader.read_as_text(&file);
+                    // Reset input so the same file can be selected again
+                    input.set_value("");
+                };
+
+                let handle_import_replace = move |_| {
+                    ie_status.set(ImportExportStatus::Importing);
+                    if let Some(dialog) = import_dialog_ref.get() {
+                        dialog.close();
+                    }
+                    let data = import_data_signal.get_untracked();
+                    spawn_local(async move {
+                        if let Some(data) = data.as_ref() {
+                            let result = if let Some(store) = db_store.get_untracked() {
+                                data_portability::import_replace(&store, data).await
+                            } else {
+                                Err("Database not available".to_string())
+                            };
+                            match result {
+                                Ok(count) => {
+                                    let msg = format!("{count} records imported");
+                                    sr_announcement.set(msg.clone());
+                                    ie_status.set(ImportExportStatus::ImportSuccess(msg));
+                                    TimeoutFuture::new(1500).await;
+                                    data_portability::reload_page();
+                                }
+                                Err(e) => {
+                                    let msg = format!("Import failed: {e}");
+                                    sr_announcement.set(msg.clone());
+                                    ie_status.set(ImportExportStatus::Error(msg));
+                                    TimeoutFuture::new(3000).await;
+                                    ie_status.set(ImportExportStatus::Idle);
+                                }
+                            }
+                        }
+                    });
+                };
+
+                let handle_import_merge = move |_| {
+                    ie_status.set(ImportExportStatus::Importing);
+                    if let Some(dialog) = import_dialog_ref.get() {
+                        dialog.close();
+                    }
+                    let data = import_data_signal.get_untracked();
+                    spawn_local(async move {
+                        if let Some(data) = data.as_ref() {
+                            let result = if let Some(store) = db_store.get_untracked() {
+                                data_portability::import_merge(&store, data).await
+                            } else {
+                                Err("Database not available".to_string())
+                            };
+                            match result {
+                                Ok(r) => {
+                                    let imported = r.comparison_imported + r.pitch_matching_imported;
+                                    let skipped = r.comparison_skipped + r.pitch_matching_skipped;
+                                    let msg = format!("{imported} records imported, {skipped} duplicates skipped");
+                                    sr_announcement.set(msg.clone());
+                                    ie_status.set(ImportExportStatus::ImportSuccess(msg));
+                                    TimeoutFuture::new(1500).await;
+                                    data_portability::reload_page();
+                                }
+                                Err(e) => {
+                                    let msg = format!("Import failed: {e}");
+                                    sr_announcement.set(msg.clone());
+                                    ie_status.set(ImportExportStatus::Error(msg));
+                                    TimeoutFuture::new(3000).await;
+                                    ie_status.set(ImportExportStatus::Idle);
+                                }
+                            }
+                        }
+                    });
+                };
+
+                let handle_import_cancel = move |_| {
+                    if let Some(dialog) = import_dialog_ref.get() {
+                        dialog.close();
+                    }
+                    import_data_signal.set(None);
+                };
+
+                view! {
+                    <fieldset class="mt-8 border-t border-gray-200 pt-6 dark:border-gray-700">
+                        <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            "Data Management"
+                        </legend>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            "Export your training data as CSV or import data from another device. Compatible with the iOS app."
+                        </p>
+
+                        <div class="mt-4 flex gap-3">
+                            <button
+                                on:click=handle_export
+                                disabled=move || !matches!(ie_status.get(), ImportExportStatus::Idle)
+                                class="flex-1 min-h-[44px] rounded-lg bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:bg-indigo-700 dark:hover:bg-indigo-800 dark:ring-offset-gray-900 disabled:opacity-50"
+                            >
+                                {move || match ie_status.get() {
+                                    ImportExportStatus::Exporting => "Exporting\u{2026}".to_string(),
+                                    ImportExportStatus::ExportSuccess => "Exported!".to_string(),
+                                    _ => "Export Data".to_string(),
+                                }}
+                            </button>
+                            <button
+                                on:click=handle_import_click
+                                disabled=move || !matches!(ie_status.get(), ImportExportStatus::Idle)
+                                class="flex-1 min-h-[44px] rounded-lg bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:bg-indigo-700 dark:hover:bg-indigo-800 dark:ring-offset-gray-900 disabled:opacity-50"
+                            >
+                                {move || match ie_status.get() {
+                                    ImportExportStatus::Importing => "Importing\u{2026}".to_string(),
+                                    ImportExportStatus::ImportSuccess(ref msg) => msg.clone(),
+                                    _ => "Import Data".to_string(),
+                                }}
+                            </button>
+                        </div>
+
+                        // Hidden file input for import
+                        <input
+                            node_ref=file_input_ref
+                            type="file"
+                            accept=".csv"
+                            on:change=handle_file_selected
+                            class="sr-only"
+                            aria-label="Select CSV file to import"
+                        />
+
+                        // Status message
+                        {move || {
+                            if let ImportExportStatus::Error(ref msg) = ie_status.get() {
+                                Some(view! {
+                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
+                                        {msg.clone()}
+                                    </p>
+                                })
+                            } else {
+                                None
+                            }
+                        }}
+
+                        // Screen reader announcement
+                        <div aria-live="polite" aria-atomic="true" class="sr-only">
+                            {move || sr_announcement.get()}
+                        </div>
+
+                        // Import mode dialog
+                        <dialog
+                            node_ref=import_dialog_ref
+                            aria-labelledby="import-dialog-title"
+                            class="rounded-lg p-6 max-w-md mx-auto bg-white text-gray-900 backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
+                        >
+                            <h2 id="import-dialog-title" class="text-lg font-bold">"Import Training Data"</h2>
+                            <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                                {move || {
+                                    if let Some(ref data) = import_data_signal.get() {
+                                        let warnings_text = if data.warnings.is_empty() {
+                                            String::new()
+                                        } else {
+                                            format!(" ({} rows skipped with warnings)", data.warnings.len())
+                                        };
+                                        format!(
+                                            "Found {} comparison records and {} pitch matching records.{} How would you like to import?",
+                                            data.comparisons.len(),
+                                            data.pitch_matchings.len(),
+                                            warnings_text,
+                                        )
+                                    } else {
+                                        String::new()
+                                    }
+                                }}
+                            </p>
+                            <div class="mt-6 flex flex-col gap-3">
+                                <button
+                                    on:click=handle_import_replace
+                                    class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-800 dark:ring-offset-gray-900"
+                                >
+                                    "Replace All Data"
+                                </button>
+                                <button
+                                    on:click=handle_import_merge
+                                    class="min-h-[44px] rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:bg-indigo-700 dark:hover:bg-indigo-800 dark:ring-offset-gray-900"
+                                >
+                                    "Merge with Existing"
+                                </button>
+                                <button
+                                    on:click=handle_import_cancel
+                                    class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:ring-offset-gray-900"
+                                >
+                                    "Cancel"
+                                </button>
+                            </div>
+                        </dialog>
+                    </fieldset>
+                }
+            }
 
             // Reset Training Data
             <fieldset class="mt-8 border-t border-gray-200 pt-6 dark:border-gray-700">

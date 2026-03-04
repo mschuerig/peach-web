@@ -1,6 +1,6 @@
 # Story 6.3: Data Export & Import
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -30,66 +30,66 @@ so that I can back up my data, transfer it between browsers, or exchange it with
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add interval code conversion helpers to domain crate (AC: #2)
-  - [ ] 1.1 Add `to_interval_code()` function that converts the web's `interval: u8` (semitones 0-12) to iOS interval codes: `P1`, `m2`, `M2`, `m3`, `M3`, `P4`, `A4`/`d5`, `P5`, `m6`, `M6`, `m7`, `M7`, `P8`
-  - [ ] 1.2 Add `from_interval_code()` function that parses iOS interval code string back to `u8` semitones
-  - [ ] 1.3 Add `midi_note_name()` function that converts MIDI note number to name string (e.g. 60 → "C4", 61 → "C#4"). Use sharps only (matching iOS convention seen in export)
-  - [ ] 1.4 Place these in a new `domain/src/portability.rs` module (or add to existing `types/` if better fit)
-  - [ ] 1.5 Write unit tests for all conversions (round-trip: semitones → code → semitones)
+- [x] Task 1: Add interval code conversion helpers to domain crate (AC: #2)
+  - [x] 1.1 Add `to_interval_code()` function that converts the web's `interval: u8` (semitones 0-12) to iOS interval codes: `P1`, `m2`, `M2`, `m3`, `M3`, `P4`, `A4`/`d5`, `P5`, `m6`, `M6`, `m7`, `M7`, `P8`
+  - [x] 1.2 Add `from_interval_code()` function that parses iOS interval code string back to `u8` semitones
+  - [x] 1.3 Add `midi_note_name()` function that converts MIDI note number to name string (e.g. 60 → "C4", 61 → "C#4"). Use sharps only (matching iOS convention seen in export)
+  - [x] 1.4 Place these in a new `domain/src/portability.rs` module (or add to existing `types/` if better fit)
+  - [x] 1.5 Write unit tests for all conversions (round-trip: semitones → code → semitones)
 
-- [ ] Task 2: Implement CSV export functionality in web crate (AC: #1, #2)
-  - [ ] 2.1 Create `web/src/adapters/data_portability.rs` module with `export_all_data()` async function
-  - [ ] 2.2 Fetch all comparison records from IndexedDB via `IndexedDbStore::fetch_all_comparisons()`
-  - [ ] 2.3 Fetch all pitch matching records via `IndexedDbStore::fetch_all_pitch_matchings()`
-  - [ ] 2.4 Write CSV header: `trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,initialCentOffset,userCentError`
-  - [ ] 2.5 For each comparison record: write row with `trainingType=comparison`, convert interval u8 to code, add note names, truncate timestamp to second, leave `initialCentOffset` and `userCentError` empty
-  - [ ] 2.6 For each pitch matching record: write row with `trainingType=pitchMatching`, convert interval, add note names, leave `centOffset` and `isCorrect` empty
-  - [ ] 2.7 Trigger browser download using `web_sys::Blob` + `web_sys::Url::create_object_url_with_blob()` + dynamically created `<a>` element with `download` attribute
-  - [ ] 2.8 Filename format: `peach-training-data-YYYY-MM-DD.csv`
+- [x] Task 2: Implement CSV export functionality in web crate (AC: #1, #2)
+  - [x] 2.1 Create `web/src/adapters/data_portability.rs` module with `export_all_data()` async function
+  - [x] 2.2 Fetch all comparison records from IndexedDB via `IndexedDbStore::fetch_all_comparisons()`
+  - [x] 2.3 Fetch all pitch matching records via `IndexedDbStore::fetch_all_pitch_matchings()`
+  - [x] 2.4 Write CSV header: `trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,initialCentOffset,userCentError`
+  - [x] 2.5 For each comparison record: write row with `trainingType=comparison`, convert interval u8 to code, add note names, truncate timestamp to second, leave `initialCentOffset` and `userCentError` empty
+  - [x] 2.6 For each pitch matching record: write row with `trainingType=pitchMatching`, convert interval, add note names, leave `centOffset` and `isCorrect` empty
+  - [x] 2.7 Trigger browser download using `web_sys::Blob` + `web_sys::Url::create_object_url_with_blob()` + dynamically created `<a>` element with `download` attribute
+  - [x] 2.8 Filename format: `peach-training-data-YYYY-MM-DD.csv`
 
-- [ ] Task 3: Implement CSV parser for import (AC: #3, #7)
-  - [ ] 3.1 Add `parse_import_file()` function to `data_portability.rs` that reads the CSV text content
-  - [ ] 3.2 Validate header row matches expected columns (case-sensitive)
-  - [ ] 3.3 For each data row: check `trainingType` column to determine record type
-  - [ ] 3.4 For `comparison` rows: parse `referenceNote`, `targetNote`, `centOffset`, `isCorrect`, convert interval code to u8, read `tuningSystem`, `timestamp` → construct `ComparisonRecord`
-  - [ ] 3.5 For `pitchMatching` rows: parse `referenceNote`, `targetNote`, `initialCentOffset`, `userCentError`, convert interval code, read `tuningSystem`, `timestamp` → construct `PitchMatchingRecord`
-  - [ ] 3.6 `referenceNoteName` and `targetNoteName` columns are informational only on import — derive from MIDI number, do not rely on them
-  - [ ] 3.7 Return a structured result (`ParsedImportData` with `Vec<ComparisonRecord>`, `Vec<PitchMatchingRecord>`) or descriptive error
+- [x] Task 3: Implement CSV parser for import (AC: #3, #7)
+  - [x] 3.1 Add `parse_import_file()` function to `data_portability.rs` that reads the CSV text content
+  - [x] 3.2 Validate header row matches expected columns (case-sensitive)
+  - [x] 3.3 For each data row: check `trainingType` column to determine record type
+  - [x] 3.4 For `comparison` rows: parse `referenceNote`, `targetNote`, `centOffset`, `isCorrect`, convert interval code to u8, read `tuningSystem`, `timestamp` → construct `ComparisonRecord`
+  - [x] 3.5 For `pitchMatching` rows: parse `referenceNote`, `targetNote`, `initialCentOffset`, `userCentError`, convert interval code, read `tuningSystem`, `timestamp` → construct `PitchMatchingRecord`
+  - [x] 3.6 `referenceNoteName` and `targetNoteName` columns are informational only on import — derive from MIDI number, do not rely on them
+  - [x] 3.7 Return a structured result (`ParsedImportData` with `Vec<ComparisonRecord>`, `Vec<PitchMatchingRecord>`) or descriptive error
 
-- [ ] Task 4: Implement import with replace mode (AC: #4, #5, #8)
-  - [ ] 4.1 Add `import_replace()` async function to `data_portability.rs`
-  - [ ] 4.2 Call `IndexedDbStore::delete_all()` to clear existing records
-  - [ ] 4.3 Save all parsed comparison records to IndexedDB (iterate and call `save_comparison()` for each)
-  - [ ] 4.4 Save all parsed pitch matching records to IndexedDB
-  - [ ] 4.5 Return import count for success message
+- [x] Task 4: Implement import with replace mode (AC: #4, #5, #8)
+  - [x] 4.1 Add `import_replace()` async function to `data_portability.rs`
+  - [x] 4.2 Call `IndexedDbStore::delete_all()` to clear existing records
+  - [x] 4.3 Save all parsed comparison records to IndexedDB (iterate and call `save_comparison()` for each)
+  - [x] 4.4 Save all parsed pitch matching records to IndexedDB
+  - [x] 4.5 Return import count for success message
 
-- [ ] Task 5: Implement import with merge mode (AC: #4, #6, #8)
-  - [ ] 5.1 Add `import_merge()` async function to `data_portability.rs`
-  - [ ] 5.2 Fetch existing comparison records and build a `HashSet` of timestamps truncated to second
-  - [ ] 5.3 For each imported comparison record: truncate timestamp to second, check against existing comparison timestamp set, skip if duplicate, save if new
-  - [ ] 5.4 Fetch existing pitch matching records, build separate `HashSet` of truncated timestamps
-  - [ ] 5.5 For each imported pitch matching record: same dedup logic against pitch matching timestamps
-  - [ ] 5.6 Return counts: imported, skipped duplicates (separate counts per type)
+- [x] Task 5: Implement import with merge mode (AC: #4, #6, #8)
+  - [x] 5.1 Add `import_merge()` async function to `data_portability.rs`
+  - [x] 5.2 Fetch existing comparison records and build a `HashSet` of timestamps truncated to second
+  - [x] 5.3 For each imported comparison record: truncate timestamp to second, check against existing comparison timestamp set, skip if duplicate, save if new
+  - [x] 5.4 Fetch existing pitch matching records, build separate `HashSet` of truncated timestamps
+  - [x] 5.5 For each imported pitch matching record: same dedup logic against pitch matching timestamps
+  - [x] 5.6 Return counts: imported, skipped duplicates (separate counts per type)
 
-- [ ] Task 6: Rebuild PerceptualProfile after import (AC: #5, #6)
-  - [ ] 6.1 After import (replace or merge), trigger full profile rehydration by reloading the page
-  - [ ] 6.2 Call `window().location().reload()` after import completes — this re-runs the full startup hydration sequence which rebuilds profile from all stored records
+- [x] Task 6: Rebuild PerceptualProfile after import (AC: #5, #6)
+  - [x] 6.1 After import (replace or merge), trigger full profile rehydration by reloading the page
+  - [x] 6.2 Call `window().location().reload()` after import completes — this re-runs the full startup hydration sequence which rebuilds profile from all stored records
 
-- [ ] Task 7: Add export/import UI to settings view (AC: #1, #3, #4, #8)
-  - [ ] 7.1 Add a "Data Management" `<fieldset>` section between the settings section and the Danger Zone
-  - [ ] 7.2 Add "Export Data" button styled consistently with other settings buttons
-  - [ ] 7.3 Add "Import Data" button that triggers a hidden `<input type="file" accept=".csv">` element
-  - [ ] 7.4 On file selected: parse the file, then show a `<dialog>` with "Replace all data" / "Merge with existing data" / "Cancel" options (reuse dialog pattern from reset confirmation)
-  - [ ] 7.5 Show success message with record counts after import completes (before page reload)
-  - [ ] 7.6 Show error message if file is invalid or import fails
-  - [ ] 7.7 Add screen reader announcement for export/import completion via `sr_announcement` signal pattern
+- [x] Task 7: Add export/import UI to settings view (AC: #1, #3, #4, #8)
+  - [x] 7.1 Add a "Data Management" `<fieldset>` section between the settings section and the Danger Zone
+  - [x] 7.2 Add "Export Data" button styled consistently with other settings buttons
+  - [x] 7.3 Add "Import Data" button that triggers a hidden `<input type="file" accept=".csv">` element
+  - [x] 7.4 On file selected: parse the file, then show a `<dialog>` with "Replace all data" / "Merge with existing data" / "Cancel" options (reuse dialog pattern from reset confirmation)
+  - [x] 7.5 Show success message with record counts after import completes (before page reload)
+  - [x] 7.6 Show error message if file is invalid or import fails
+  - [x] 7.7 Add screen reader announcement for export/import completion via `sr_announcement` signal pattern
 
-- [ ] Task 8: Handle edge cases (AC: #7)
-  - [ ] 8.1 Empty file → show "File is empty" error
-  - [ ] 8.2 File with only header row and no data rows → show "No records found in file"
-  - [ ] 8.3 File with wrong/missing header → show "Invalid file format" error
-  - [ ] 8.4 Row with invalid `trainingType` value → skip row, count as warning
-  - [ ] 8.5 Row with unparseable numeric fields → skip row, count as warning
+- [x] Task 8: Handle edge cases (AC: #7)
+  - [x] 8.1 Empty file → show "File is empty" error
+  - [x] 8.2 File with only header row and no data rows → show "No records found in file"
+  - [x] 8.3 File with wrong/missing header → show "Invalid file format" error
+  - [x] 8.4 Row with invalid `trainingType` value → skip row, count as warning
+  - [x] 8.5 Row with unparseable numeric fields → skip row, count as warning
 
 ## Dev Notes
 
@@ -298,10 +298,32 @@ Recent commits show:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+No debug issues encountered.
+
 ### Completion Notes List
 
+- Task 1: Created `domain/src/portability.rs` with `to_interval_code()`, `from_interval_code()`, `midi_note_name()`, and `truncate_timestamp_to_second()`. All 13 unit tests pass including round-trip and iOS sample data validation.
+- Task 2: Implemented `export_all_data()` in `web/src/adapters/data_portability.rs`. Records are sorted chronologically (interleaved by type) matching iOS format. Download triggered via Blob + anchor element pattern.
+- Task 3: Implemented `parse_import_file()` with full CSV parsing, header validation, row-by-row type discrimination, and structured error/warning reporting.
+- Task 4: Implemented `import_replace()` — deletes all existing data then saves imported records one-by-one.
+- Task 5: Implemented `import_merge()` — builds HashSets of existing timestamps (truncated to second) per record type, deduplicates imported records, returns detailed counts.
+- Task 6: Implemented `reload_page()` helper that calls `window().location().reload()` to trigger full profile rehydration after import.
+- Task 7: Added "Data Management" fieldset to settings view with Export/Import buttons, hidden file input, import mode dialog (Replace All / Merge / Cancel), status messages, error display, and screen reader announcements.
+- Task 8: Edge cases handled in `parse_import_file()`: empty file, header-only, wrong header, invalid trainingType (skipped with warning), unparseable fields (skipped with warning).
+
+### Change Log
+
+- 2026-03-04: Implemented story 6.3 Data Export & Import — all 8 tasks complete
+
 ### File List
+
+- domain/src/portability.rs (new)
+- domain/src/lib.rs (modified — added `pub mod portability;`)
+- web/src/adapters/data_portability.rs (new)
+- web/src/adapters/mod.rs (modified — added `pub mod data_portability;`)
+- web/src/components/settings_view.rs (modified — added Data Management section)
+- web/Cargo.toml (modified — added web-sys features: Blob, BlobPropertyBag, File, FileList, FileReader, HtmlAnchorElement, HtmlInputElement, Url)
