@@ -87,5 +87,5 @@ development_status:
   6-1-info-view-and-complete-navigation: done
   6-2-screen-reader-accessibility-polish: done
   6-3-data-export-and-import: done
-  6-4-service-worker-and-offline-support: backlog
+  6-4-service-worker-and-offline-support: ready-for-dev
   epic-6-retrospective: optional
