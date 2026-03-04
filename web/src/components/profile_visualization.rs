@@ -7,41 +7,41 @@ use send_wrapper::SendWrapper;
 use domain::{MIDINote, PerceptualProfile};
 
 /// Per-note data extracted from PerceptualProfile for rendering.
-struct NoteData {
-    midi: u8,
-    mean: f64,
-    std_dev: f64,
-    is_trained: bool,
+pub(crate) struct NoteData {
+    pub(crate) midi: u8,
+    pub(crate) mean: f64,
+    pub(crate) std_dev: f64,
+    pub(crate) is_trained: bool,
 }
 
 // Piano range: MIDI 21 (A0) to MIDI 108 (C8) — 88 keys, 52 white + 36 black.
-const MIDI_MIN: u8 = 21;
-const MIDI_MAX: u8 = 108;
-const WHITE_KEY_WIDTH: f64 = 10.0;
-const BLACK_KEY_WIDTH: f64 = 6.0;
-const KEYBOARD_Y: f64 = 140.0;
-const KEYBOARD_HEIGHT: f64 = 60.0;
-const BLACK_KEY_HEIGHT: f64 = 39.0;
-const CHART_TOP: f64 = 10.0;
-const CHART_BOTTOM: f64 = 135.0;
-const MAX_CENTS: f64 = 200.0;
-const VIEWBOX_WIDTH: f64 = 520.0;
-const VIEWBOX_HEIGHT: f64 = 210.0;
+pub(crate) const MIDI_MIN: u8 = 21;
+pub(crate) const MIDI_MAX: u8 = 108;
+pub(crate) const WHITE_KEY_WIDTH: f64 = 10.0;
+pub(crate) const BLACK_KEY_WIDTH: f64 = 6.0;
+pub(crate) const KEYBOARD_Y: f64 = 140.0;
+pub(crate) const KEYBOARD_HEIGHT: f64 = 60.0;
+pub(crate) const BLACK_KEY_HEIGHT: f64 = 39.0;
+pub(crate) const CHART_TOP: f64 = 10.0;
+pub(crate) const CHART_BOTTOM: f64 = 135.0;
+pub(crate) const MAX_CENTS: f64 = 200.0;
+pub(crate) const VIEWBOX_WIDTH: f64 = 520.0;
+pub(crate) const VIEWBOX_HEIGHT: f64 = 210.0;
 
 /// Note positions within an octave in white-key units.
 /// C=0, C#=0.5, D=1, D#=1.5, E=2, F=3, F#=3.5, G=4, G#=4.5, A=5, A#=5.5, B=6
-const NOTE_OFFSETS: [f64; 12] = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0];
+pub(crate) const NOTE_OFFSETS: [f64; 12] = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0];
 
 /// Whether a note (by chromatic index) is a white key.
-const IS_WHITE: [bool; 12] = [
+pub(crate) const IS_WHITE: [bool; 12] = [
     true, false, true, false, true, true, false, true, false, true, false, true,
 ];
 
 /// MIDI 21 (A0) absolute position: octave 1 * 7 + offset 5 = 12.
-const FIRST_KEY_POSITION: f64 = 12.0;
+pub(crate) const FIRST_KEY_POSITION: f64 = 12.0;
 
 /// Compute the x-center for any MIDI note on the keyboard layout.
-fn note_x_center(midi: u8) -> f64 {
+pub(crate) fn note_x_center(midi: u8) -> f64 {
     let octave = (midi / 12) as f64;
     let note = (midi % 12) as usize;
     let abs_position = octave * 7.0 + NOTE_OFFSETS[note];
@@ -51,7 +51,7 @@ fn note_x_center(midi: u8) -> f64 {
 /// Compute the white key's x position (left edge) relative to keyboard start.
 /// Returns None for black keys.
 /// Precondition: midi >= MIDI_MIN (21). Lower values cause u32 underflow.
-fn white_key_x(midi: u8) -> Option<f64> {
+pub(crate) fn white_key_x(midi: u8) -> Option<f64> {
     if !IS_WHITE[(midi % 12) as usize] {
         return None;
     }
@@ -65,13 +65,13 @@ fn white_key_x(midi: u8) -> Option<f64> {
 }
 
 /// Map a cent value to Y coordinate (inverted: lower cents = higher on screen).
-fn cents_to_y(cents: f64) -> f64 {
+pub(crate) fn cents_to_y(cents: f64) -> f64 {
     let clamped = cents.clamp(0.0, MAX_CENTS);
     CHART_TOP + (clamped / MAX_CENTS) * (CHART_BOTTOM - CHART_TOP)
 }
 
 /// Build SVG path data for confidence band segments (no interpolation across gaps).
-fn build_band_segments(notes: &[NoteData]) -> Vec<String> {
+pub(crate) fn build_band_segments(notes: &[NoteData]) -> Vec<String> {
     let mut segments = Vec::new();
     let mut run: Vec<&NoteData> = Vec::new();
 
@@ -90,7 +90,7 @@ fn build_band_segments(notes: &[NoteData]) -> Vec<String> {
 }
 
 /// Build SVG path for a single band segment (consecutive trained notes).
-fn band_path(run: &[&NoteData]) -> String {
+pub(crate) fn band_path(run: &[&NoteData]) -> String {
     if run.len() == 1 {
         // Single note: thin rectangle
         let n = run[0];
@@ -133,7 +133,7 @@ fn band_path(run: &[&NoteData]) -> String {
 }
 
 /// Build SVG path data for mean line segments.
-fn build_mean_segments(notes: &[NoteData]) -> Vec<String> {
+pub(crate) fn build_mean_segments(notes: &[NoteData]) -> Vec<String> {
     let mut segments = Vec::new();
     let mut run: Vec<&NoteData> = Vec::new();
 
@@ -152,7 +152,7 @@ fn build_mean_segments(notes: &[NoteData]) -> Vec<String> {
 }
 
 /// Build SVG path for a mean line across a run of trained notes.
-fn mean_path(run: &[&NoteData]) -> String {
+pub(crate) fn mean_path(run: &[&NoteData]) -> String {
     if run.len() == 1 {
         // Single note: short horizontal tick mark
         let n = run[0];
