@@ -1,5 +1,6 @@
 use crate::records::ComparisonRecord;
-use crate::training::CompletedComparison;
+use crate::records::PitchMatchingRecord;
+use crate::training::{CompletedComparison, CompletedPitchMatching};
 use crate::tuning::TuningSystem;
 use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteRange, NoteDuration};
 
@@ -30,6 +31,11 @@ pub trait PlaybackHandle {
 /// Observer for comparison training events.
 pub trait ComparisonObserver {
     fn comparison_completed(&mut self, completed: &CompletedComparison);
+}
+
+/// Observer for pitch matching training events.
+pub trait PitchMatchingObserver {
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching);
 }
 
 /// Trait for components that can be reset when training data is cleared.
@@ -69,6 +75,8 @@ pub enum StorageError {
 pub trait TrainingDataStore {
     fn save_comparison(&self, record: ComparisonRecord) -> Result<(), StorageError>;
     fn fetch_all_comparisons(&self) -> Result<Vec<ComparisonRecord>, StorageError>;
+    fn save_pitch_matching(&self, record: PitchMatchingRecord) -> Result<(), StorageError>;
+    fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>;
     fn delete_all(&self) -> Result<(), StorageError>;
 }
 

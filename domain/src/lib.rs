@@ -12,13 +12,15 @@ pub mod types;
 
 pub use error::DomainError;
 pub use ports::{
-    AudioError, ComparisonObserver, NotePlayer, PlaybackHandle, Resettable, StorageError,
-    TrainingDataStore, UserSettings,
+    AudioError, ComparisonObserver, NotePlayer, PitchMatchingObserver, PlaybackHandle, Resettable,
+    StorageError, TrainingDataStore, UserSettings,
 };
-pub use records::ComparisonRecord;
+pub use records::{ComparisonRecord, PitchMatchingRecord};
 pub use profile::{PerceptualNote, PerceptualProfile};
 pub use session::{
     ComparisonPlaybackData, ComparisonSession, ComparisonSessionState, FEEDBACK_DURATION_SECS,
+    PitchMatchingPlaybackData, PitchMatchingSession, PitchMatchingSessionState,
+    PITCH_MATCHING_VELOCITY,
 };
 pub use strategy::{kazez_narrow, kazez_widen, next_comparison, TrainingSettings};
 pub use timeline::{PeriodAggregate, ThresholdTimeline, TimelineDataPoint};
