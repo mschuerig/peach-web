@@ -1,6 +1,6 @@
 # Story 3.1: Profile View with Summary Statistics
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -28,42 +28,42 @@ so that I can understand my pitch discrimination ability in concrete numbers.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `matching_count()` getter to PerceptualProfile (AC: 4)
-  - [ ] 1.1 Add `pub fn matching_count(&self) -> u32` to `PerceptualProfile` in `domain/src/profile.rs` — returns the private `matching_count` field
-  - [ ] 1.2 Add unit test `test_matching_count_returns_sample_count` verifying count increments after `update_matching()` calls
+- [x] Task 1: Add `matching_count()` getter to PerceptualProfile (AC: 4)
+  - [x] 1.1 Add `pub fn matching_count(&self) -> u32` to `PerceptualProfile` in `domain/src/profile.rs` — returns the private `matching_count` field
+  - [x] 1.2 Add unit test `test_matching_count_returns_sample_count` verifying count increments after `update_matching()` calls
 
-- [ ] Task 2: Replace ProfileView stub with statistics layout (AC: 1,6,7)
-  - [ ] 2.1 In `web/src/components/profile_view.rs`, extract contexts: `PerceptualProfile`, `TrendAnalyzer`, `is_profile_loaded` signal
-  - [ ] 2.2 Show loading state while `is_profile_loaded` is false
-  - [ ] 2.3 Add page heading "Profile" with back navigation link to `/`
-  - [ ] 2.4 Add cold-start message "Start training to build your profile." when `overall_mean()` returns `None` and `matching_mean()` returns `None`
-  - [ ] 2.5 Use semantic HTML: `<section>` with `<h2>` headings for each statistics group, `<dl>`/`<dt>`/`<dd>` for stat key-value pairs
+- [x] Task 2: Replace ProfileView stub with statistics layout (AC: 1,6,7)
+  - [x] 2.1 In `web/src/components/profile_view.rs`, extract contexts: `PerceptualProfile`, `TrendAnalyzer`, `is_profile_loaded` signal
+  - [x] 2.2 Show loading state while `is_profile_loaded` is false
+  - [x] 2.3 Add page heading "Profile" with back navigation link to `/`
+  - [x] 2.4 Add cold-start message "Start training to build your profile." when `overall_mean()` returns `None` and `matching_mean()` returns `None`
+  - [x] 2.5 Use semantic HTML: `<section>` with `<h2>` headings for each statistics group, `<dl>`/`<dt>`/`<dd>` for stat key-value pairs
 
-- [ ] Task 3: Comparison training statistics section (AC: 2,3,6)
-  - [ ] 3.1 Add `<section>` with heading "Comparison Training"
-  - [ ] 3.2 Display mean detection threshold: `profile.overall_mean()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
-  - [ ] 3.3 Display standard deviation: `profile.overall_std_dev()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
-  - [ ] 3.4 Display trend indicator: `trend_analyzer.trend()` as text "Improving" / "Stable" / "Declining", hidden if `None` (< 20 records)
+- [x] Task 3: Comparison training statistics section (AC: 2,3,6)
+  - [x] 3.1 Add `<section>` with heading "Comparison Training"
+  - [x] 3.2 Display mean detection threshold: `profile.overall_mean()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
+  - [x] 3.3 Display standard deviation: `profile.overall_std_dev()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
+  - [x] 3.4 Display trend indicator: `trend_analyzer.trend()` as text "Improving" / "Stable" / "Declining", hidden if `None` (< 20 records)
 
-- [ ] Task 4: Pitch matching statistics section (AC: 4,5)
-  - [ ] 4.1 Add `<section>` with heading "Pitch Matching"
-  - [ ] 4.2 Display mean absolute error: `profile.matching_mean()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
-  - [ ] 4.3 Display standard deviation: `profile.matching_std_dev()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
-  - [ ] 4.4 Display sample count: `profile.matching_count()`, or "—" if 0
-  - [ ] 4.5 Hide entire section OR show all dashes when no pitch matching data exists (`matching_mean()` is `None`)
+- [x] Task 4: Pitch matching statistics section (AC: 4,5)
+  - [x] 4.1 Add `<section>` with heading "Pitch Matching"
+  - [x] 4.2 Display mean absolute error: `profile.matching_mean()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
+  - [x] 4.3 Display standard deviation: `profile.matching_std_dev()` formatted to 1 decimal place with " cents" suffix, or "—" if `None`
+  - [x] 4.4 Display sample count: `profile.matching_count()`, or "—" if 0
+  - [x] 4.5 Hide entire section OR show all dashes when no pitch matching data exists (`matching_mean()` is `None`)
 
-- [ ] Task 5: Tailwind styling and dark mode (AC: 1,7)
-  - [ ] 5.1 Follow existing Tailwind patterns from SettingsView: `dark:` variants on all colors, 44px min touch targets on links, focus rings on interactive elements
-  - [ ] 5.2 Use consistent spacing: `py-12` for page padding, `gap-6`/`gap-8` between sections
-  - [ ] 5.3 Style stat values with emphasis (e.g., `text-2xl font-bold`) and labels with muted text (`text-sm text-gray-500 dark:text-gray-400`)
-  - [ ] 5.4 Style trend indicator with contextual color: green for Improving, gray for Stable, red/amber for Declining
+- [x] Task 5: Tailwind styling and dark mode (AC: 1,7)
+  - [x] 5.1 Follow existing Tailwind patterns from SettingsView: `dark:` variants on all colors, 44px min touch targets on links, focus rings on interactive elements
+  - [x] 5.2 Use consistent spacing: `py-12` for page padding, `gap-6`/`gap-8` between sections
+  - [x] 5.3 Style stat values with emphasis (e.g., `text-2xl font-bold`) and labels with muted text (`text-sm text-gray-500 dark:text-gray-400`)
+  - [x] 5.4 Style trend indicator with contextual color: green for Improving, gray for Stable, red/amber for Declining
 
-- [ ] Task 6: Verify and validate (AC: all)
-  - [ ] 6.1 `cargo clippy -p domain` — zero warnings
-  - [ ] 6.2 `cargo clippy -p web` — zero warnings
-  - [ ] 6.3 `cargo test -p domain` — all tests pass
-  - [ ] 6.4 `trunk build` — successful WASM compilation
-  - [ ] 6.5 Manual browser smoke test: profile with data shows stats, empty profile shows dashes + cold-start message, trend hidden with < 20 records
+- [x] Task 6: Verify and validate (AC: all)
+  - [x] 6.1 `cargo clippy -p domain` — zero warnings
+  - [x] 6.2 `cargo clippy -p web` — zero warnings
+  - [x] 6.3 `cargo test -p domain` — all tests pass
+  - [x] 6.4 `trunk build` — successful WASM compilation
+  - [x] 6.5 Manual browser smoke test: profile with data shows stats, empty profile shows dashes + cold-start message, trend hidden with < 20 records
 
 ## Dev Notes
 
@@ -258,10 +258,36 @@ Files to modify:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- Leptos 0.8.x `Show` component requires `Send + Sync` for children closures; `Rc<RefCell<T>>` doesn't satisfy this. Solved by using direct `{move || { ... }}` closure with `.into_any()` for branch unification, and cloning `SendWrapper` (not unwrapping to `Rc`) to preserve `Send`.
+- `Signal::derive` also requires `Send + Sync` — cannot be used with `Rc<RefCell<T>>`. Precomputing values into owned types before the `view!` macro is the correct pattern.
+
 ### Completion Notes List
 
+- Added `pub fn matching_count(&self) -> u32` getter to `PerceptualProfile` exposing the private `matching_count` field
+- Added `test_matching_count_returns_sample_count` unit test verifying count increments across multiple `update_matching()` calls
+- Replaced `ProfileView` stub with full statistics display: comparison training (mean, std dev, trend) and pitch matching (mean, std dev, count)
+- Implemented cold-start state with "Start training to build your profile." message and em dashes for all stats
+- Loading state shown while `is_profile_loaded` signal is false
+- Trend indicator hidden when `TrendAnalyzer::trend()` returns `None` (< 20 records)
+- Pitch matching section shows dashes when no data exists
+- Semantic HTML: `<section>` with `aria-labelledby`, `<dl>`/`<dt>`/`<dd>` for statistics
+- Trend `aria-label` provides screen reader context (e.g., "Trend: Improving")
+- Tailwind dark mode variants on all colors, 44px touch targets on back link, focus rings
+- Trend indicator uses contextual colors: green/gray/amber for Improving/Stable/Declining
+- Helper function `format_cents()` reduces repetition for Option<f64> → String formatting
+- All values extracted from `RefCell` borrows before `view!` macro to avoid borrow conflicts
+
+### Change Log
+
+- 2026-03-04: Implemented story 3.1 — Profile View with Summary Statistics
+
 ### File List
+
+- `domain/src/profile.rs` — Added `matching_count()` getter method + unit test
+- `web/src/components/profile_view.rs` — Replaced stub with full statistics display
+- `docs/implementation-artifacts/sprint-status.yaml` — Updated status to review
+- `docs/implementation-artifacts/3-1-profile-view-with-summary-statistics.md` — Updated tasks, status, dev agent record
