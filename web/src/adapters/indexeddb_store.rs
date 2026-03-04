@@ -4,11 +4,12 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{IdbDatabase, IdbOpenDbRequest, IdbRequest, IdbTransactionMode};
 
 use domain::ports::StorageError;
-use domain::records::ComparisonRecord;
+use domain::records::{ComparisonRecord, PitchMatchingRecord};
 
 const DB_NAME: &str = "peach";
-const DB_VERSION: u32 = 1;
+const DB_VERSION: u32 = 2;
 const COMPARISON_STORE: &str = "comparison_records";
+const PITCH_MATCHING_STORE: &str = "pitch_matching_records";
 const TIMESTAMP_INDEX: &str = "timestamp";
 
 pub struct IndexedDbStore {
@@ -51,6 +52,17 @@ impl IndexedDbStore {
                     .create_index_with_str(TIMESTAMP_INDEX, TIMESTAMP_INDEX)
                     .unwrap();
             }
+
+            if !db.object_store_names().contains(PITCH_MATCHING_STORE) {
+                let params = web_sys::IdbObjectStoreParameters::new();
+                params.set_auto_increment(true);
+                let store = db
+                    .create_object_store_with_optional_parameters(PITCH_MATCHING_STORE, &params)
+                    .unwrap();
+                store
+                    .create_index_with_str(TIMESTAMP_INDEX, TIMESTAMP_INDEX)
+                    .unwrap();
+            }
         });
         open_request.set_onupgradeneeded(Some(on_upgrade.as_ref().unchecked_ref()));
         on_upgrade.forget();
@@ -74,6 +86,33 @@ impl IndexedDbStore {
 
         let store = transaction
             .object_store(COMPARISON_STORE)
+            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
+
+        let js_value = serde_wasm_bindgen::to_value(record)
+            .map_err(|e| StorageError::WriteFailed(format!("Serialization: {e}")))?;
+
+        let request = store
+            .add(&js_value)
+            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
+
+        idb_request_to_future(request)
+            .await
+            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
+
+        Ok(())
+    }
+
+    pub async fn save_pitch_matching(
+        &self,
+        record: &PitchMatchingRecord,
+    ) -> Result<(), StorageError> {
+        let transaction = self
+            .db
+            .transaction_with_str_and_mode(PITCH_MATCHING_STORE, IdbTransactionMode::Readwrite)
+            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
+
+        let store = transaction
+            .object_store(PITCH_MATCHING_STORE)
             .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
 
         let js_value = serde_wasm_bindgen::to_value(record)
@@ -126,22 +165,29 @@ impl IndexedDbStore {
     }
 
     pub async fn delete_all(&self) -> Result<(), StorageError> {
+        let store_names = [COMPARISON_STORE, PITCH_MATCHING_STORE];
         let transaction = self
             .db
-            .transaction_with_str_and_mode(COMPARISON_STORE, IdbTransactionMode::Readwrite)
+            .transaction_with_str_sequence_and_mode(
+                &serde_wasm_bindgen::to_value(&store_names)
+                    .map_err(|e| StorageError::DeleteFailed(format!("{e}")))?,
+                IdbTransactionMode::Readwrite,
+            )
             .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
 
-        let store = transaction
-            .object_store(COMPARISON_STORE)
-            .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
+        for name in store_names {
+            let store = transaction
+                .object_store(name)
+                .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
 
-        let request = store
-            .clear()
-            .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
+            let request = store
+                .clear()
+                .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
 
-        idb_request_to_future(request)
-            .await
-            .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
+            idb_request_to_future(request)
+                .await
+                .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
+        }
 
         Ok(())
     }

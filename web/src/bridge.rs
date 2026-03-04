@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use domain::ports::ComparisonObserver;
-use domain::records::ComparisonRecord;
-use domain::training::CompletedComparison;
+use domain::ports::{ComparisonObserver, PitchMatchingObserver};
+use domain::records::{ComparisonRecord, PitchMatchingRecord};
+use domain::training::{CompletedComparison, CompletedPitchMatching};
 use domain::{PerceptualProfile, ThresholdTimeline, TrendAnalyzer};
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
@@ -104,5 +104,49 @@ impl ComparisonObserver for TimelineObserver {
             completed.is_correct(),
             comparison.reference_note().raw_value(),
         );
+    }
+}
+
+// Note: PitchMatchingProfileObserver is not needed because PitchMatchingSession
+// updates the profile directly in commit_pitch() — unlike ComparisonSession which
+// delegates to the observer.
+
+pub struct PitchMatchingDataStoreObserver {
+    store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
+    error_signal: RwSignal<Option<String>>,
+}
+
+impl PitchMatchingDataStoreObserver {
+    pub fn new(
+        store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
+        error_signal: RwSignal<Option<String>>,
+    ) -> Self {
+        Self {
+            store_signal,
+            error_signal,
+        }
+    }
+}
+
+impl PitchMatchingObserver for PitchMatchingDataStoreObserver {
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
+        let store = match self.store_signal.get_untracked() {
+            Some(store) => store,
+            None => {
+                log::warn!("IndexedDB not yet available, pitch matching record not persisted");
+                return;
+            }
+        };
+        let record = PitchMatchingRecord::from_completed(completed);
+        let error_signal = self.error_signal;
+
+        spawn_local(async move {
+            if let Err(e) = store.save_pitch_matching(&record).await {
+                log::error!("Storage write failed: {e}");
+                error_signal.set(Some(
+                    "Training data may not have been saved. Training continues.".to_string(),
+                ));
+            }
+        });
     }
 }

@@ -1,6 +1,6 @@
 # Story 4.3: Pitch Matching Training UI
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -28,38 +28,38 @@ so that I can develop my pitch matching ability through deliberate practice.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add PitchMatchingObserver implementations to bridge.rs (AC: #7)
-  - [ ] 1.1 Add `PitchMatchingProfileObserver` implementing `PitchMatchingObserver` — calls `profile.update_matching()`
-  - [ ] 1.2 Add `PitchMatchingDataStoreObserver` implementing `PitchMatchingObserver` — saves `PitchMatchingRecord` to IndexedDB via `spawn_local`
-- [ ] Task 2: Implement PitchMatchingView component in pitch_matching_view.rs (AC: #1, #2, #3, #6, #7)
-  - [ ] 2.1 Set up context retrieval (profile, audio_ctx, db_store) — same pattern as ComparisonView
-  - [ ] 2.2 Eagerly create AudioContext in synchronous render path (Safari gesture requirement)
-  - [ ] 2.3 Create OscillatorNotePlayer and observers vector
-  - [ ] 2.4 Create PitchMatchingSession with observers
-  - [ ] 2.5 Create UI signals: slider_enabled, show_feedback, feedback_text, feedback_color, feedback_arrow, sr_announcement, storage_error, reset_trigger
-  - [ ] 2.6 Implement sync_session_to_signals function
-  - [ ] 2.7 Wire VerticalPitchSlider on_change → session.adjust_pitch() → handle.adjust_frequency()
-  - [ ] 2.8 Wire VerticalPitchSlider on_commit → session.commit_pitch()
-- [ ] Task 3: Implement async training loop (AC: #1, #2, #3, #4)
-  - [ ] 3.1 Start session with intervals from settings
-  - [ ] 3.2 PlayingReference phase: play reference note for duration, slider disabled
-  - [ ] 3.3 AwaitingSliderTouch → PlayingTunable: play indefinite tunable note, slider enabled
-  - [ ] 3.4 Handle slider interaction: on_change calls adjust_pitch, gets frequency, calls handle.adjust_frequency()
-  - [ ] 3.5 Handle commit: stop tunable note, show feedback for 400ms
-  - [ ] 3.6 Loop back to next reference note
-- [ ] Task 4: Implement feedback display (AC: #4, #8)
-  - [ ] 4.1 Compute directional arrow: up arrow for positive error (sharp), down arrow for negative (flat), dot for dead center (|error| < 1 cent)
-  - [ ] 4.2 Format signed cent offset text: "+4 cents", "-22 cents", "Dead center"
-  - [ ] 4.3 Compute color class: green (<10 cents), yellow (10-30 cents), red (>30 cents)
-  - [ ] 4.4 Screen reader announcement via aria-live region
-- [ ] Task 5: Implement interruption handling (AC: #5, #6)
-  - [ ] 5.1 Register document-level keydown handler: Escape → stop and navigate home
-  - [ ] 5.2 Register visibilitychange handler: tab hidden → stop and navigate home
-  - [ ] 5.3 Register AudioContext statechange handler: suspended/closed → stop and navigate home
-  - [ ] 5.4 Navigation link handlers for Settings/Profile: stop session, then navigate
-  - [ ] 5.5 on_cleanup: cancel loop, stop session, stop audio, remove event listeners
-- [ ] Task 6: Update start page button (AC: #1)
-  - [ ] 6.1 Change "Pitch Matching" from `<A>` link to `<button>` with `on:click` navigate (matches Comparison pattern for gesture-based AudioContext creation)
+- [x] Task 1: Add PitchMatchingObserver implementations to bridge.rs (AC: #7)
+  - [x] 1.1 Add `PitchMatchingProfileObserver` implementing `PitchMatchingObserver` — calls `profile.update_matching()` [NOTE: Not wired — PitchMatchingSession already updates profile directly in commit_pitch(); observer removed to avoid double-counting]
+  - [x] 1.2 Add `PitchMatchingDataStoreObserver` implementing `PitchMatchingObserver` — saves `PitchMatchingRecord` to IndexedDB via `spawn_local`
+- [x] Task 2: Implement PitchMatchingView component in pitch_matching_view.rs (AC: #1, #2, #3, #6, #7)
+  - [x] 2.1 Set up context retrieval (profile, audio_ctx, db_store) — same pattern as ComparisonView
+  - [x] 2.2 Eagerly create AudioContext in synchronous render path (Safari gesture requirement)
+  - [x] 2.3 Create OscillatorNotePlayer and observers vector
+  - [x] 2.4 Create PitchMatchingSession with observers
+  - [x] 2.5 Create UI signals: slider_enabled, show_feedback, feedback_text, feedback_color, feedback_arrow, sr_announcement, storage_error, reset_trigger
+  - [x] 2.6 Implement sync_session_to_signals function
+  - [x] 2.7 Wire VerticalPitchSlider on_change → session.adjust_pitch() → handle.adjust_frequency()
+  - [x] 2.8 Wire VerticalPitchSlider on_commit → session.commit_pitch()
+- [x] Task 3: Implement async training loop (AC: #1, #2, #3, #4)
+  - [x] 3.1 Start session with intervals from settings
+  - [x] 3.2 PlayingReference phase: play reference note for duration, slider disabled
+  - [x] 3.3 AwaitingSliderTouch → PlayingTunable: play indefinite tunable note, slider enabled
+  - [x] 3.4 Handle slider interaction: on_change calls adjust_pitch, gets frequency, calls handle.adjust_frequency()
+  - [x] 3.5 Handle commit: stop tunable note, show feedback for 400ms
+  - [x] 3.6 Loop back to next reference note
+- [x] Task 4: Implement feedback display (AC: #4, #8)
+  - [x] 4.1 Compute directional arrow: up arrow for positive error (sharp), down arrow for negative (flat), dot for dead center (|error| < 1 cent)
+  - [x] 4.2 Format signed cent offset text: "+4 cents", "-22 cents", "Dead center"
+  - [x] 4.3 Compute color class: green (<10 cents), yellow (10-30 cents), red (>30 cents)
+  - [x] 4.4 Screen reader announcement via aria-live region
+- [x] Task 5: Implement interruption handling (AC: #5, #6)
+  - [x] 5.1 Register document-level keydown handler: Escape → stop and navigate home
+  - [x] 5.2 Register visibilitychange handler: tab hidden → stop and navigate home
+  - [x] 5.3 Register AudioContext statechange handler: suspended/closed → stop and navigate home
+  - [x] 5.4 Navigation link handlers for Settings/Profile: stop session, then navigate
+  - [x] 5.5 on_cleanup: cancel loop, stop session, stop audio, remove event listeners
+- [x] Task 6: Update start page button (AC: #1)
+  - [x] 6.1 Change "Pitch Matching" from `<A>` link to `<button>` with `on:click` navigate (matches Comparison pattern for gesture-based AudioContext creation)
 
 ## Dev Notes
 
@@ -286,8 +286,37 @@ Conventions: implementation commit first, then code review fixes as separate com
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- Callback<f64> requires Send+Sync — resolved by wrapping closures with SendWrapper (safe in single-threaded WASM)
+- PitchMatchingProfileObserver removed: PitchMatchingSession already calls profile.update_matching() directly in commit_pitch(), unlike ComparisonSession which delegates to observers. Adding the observer would double-count.
+- IndexedDB version bumped from 1 to 2 to add pitch_matching_records object store (story 4.4 was going to handle persistence, but Task 1.2 explicitly requires saving PitchMatchingRecords)
+- delete_all() updated to clear both comparison_records and pitch_matching_records stores in a single transaction
+- Document-level Enter/Space keydown handler: backup for when slider doesn't have focus. The VerticalPitchSlider's own keydown already fires on_commit when focused.
 
 ### Completion Notes List
 
+- Replaced placeholder PitchMatchingView with full implementation following ComparisonView structural pattern
+- Added PitchMatchingDataStoreObserver to bridge.rs implementing PitchMatchingObserver trait
+- Implemented async training loop: PlayingReference → AwaitingSliderTouch → PlayingTunable → ShowingFeedback → loop
+- Slider integration: on_change fires session.adjust_pitch() → handle.adjust_frequency() for real-time pitch; on_commit fires session.commit_pitch() + handle.stop()
+- Feedback display: directional arrow (↑/↓/·), signed cent offset text, color coding (green/yellow/red), aria-live screen reader announcements
+- Interruption handling: Escape key, visibilitychange, AudioContext state change, Settings/Profile nav links, on_cleanup
+- Start page: changed Pitch Matching from `<A>` link to `<button on:click>` with navigate() — matches Comparison pattern for Safari AudioContext gesture requirement
+- IndexedDB: added pitch_matching_records object store (DB v2) and save_pitch_matching() method
+- All 293 domain tests pass, trunk build succeeds, cargo clippy zero warnings
+- Removed pub re-export of VerticalPitchSlider from mod.rs (only used internally by PitchMatchingView)
+
+### Change Log
+
+- 2026-03-04: Implemented story 4.3 — Pitch Matching Training UI with full training loop, slider integration, feedback display, interruption handling, and start page button fix
+
 ### File List
+
+- `web/src/components/pitch_matching_view.rs` — Replaced placeholder with full PitchMatchingView implementation (new)
+- `web/src/bridge.rs` — Added PitchMatchingDataStoreObserver (modified)
+- `web/src/components/start_page.rs` — Changed Pitch Matching from A link to button with navigate (modified)
+- `web/src/adapters/indexeddb_store.rs` — Added pitch_matching_records store (DB v2), save_pitch_matching(), updated delete_all() (modified)
+- `web/src/components/mod.rs` — Removed unused pub re-export of VerticalPitchSlider (modified)
