@@ -1,6 +1,6 @@
 # Story 4.4: Pitch Matching Persistence
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -208,7 +208,7 @@ Claude Opus 4.6
 ### Completion Notes List
 
 - Task 1: Added `fetch_all_pitch_matchings()` to `IndexedDbStore`, mirroring `fetch_all_comparisons()` with `PITCH_MATCHING_STORE` and `PitchMatchingRecord` types
-- Task 2: Added pitch matching hydration block in `app.rs` after comparison hydration, before `db_store.set()` and `is_profile_loaded.set(true)` — uses same skip-on-invalid pattern with `MIDINote::try_new()`, calls `prof.update_matching(note, record.user_cent_error.abs())`
+- Task 2: Added pitch matching hydration block in `app.rs` after comparison hydration, before `db_store.set()` and `is_profile_loaded.set(true)` — uses same skip-on-invalid pattern with `MIDINote::try_new()`, calls `prof.update_matching(note, record.user_cent_error)`
 - Task 3: All automated checks pass (293 domain tests, trunk build, clippy zero warnings). Manual browser test revealed two bugs from story 4.3 — both fixed.
 - AC#4 (storage write error notification) was already implemented in story 4.3 — no changes needed
 - AC#5 satisfied: `is_profile_loaded.set(true)` executes after both comparison and pitch matching hydration complete
@@ -225,3 +225,17 @@ Claude Opus 4.6
 
 - 2026-03-04: Implemented pitch matching persistence read path and hydration (Tasks 1-3)
 - 2026-03-04: Fixed two pitch matching bugs from story 4.3 — tunable note timing and cent error calculation
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Michael (via adversarial code review workflow) | **Date:** 2026-03-04
+
+**Findings (2 MEDIUM, 3 LOW):**
+
+- [x] [AI-Review][MEDIUM] Redundant `.abs()` in hydration `app.rs:106` — `update_matching()` handles abs internally; removed to match live path in `commit_pitch()` → **FIXED**
+- [x] [AI-Review][MEDIUM] Comparison hydration log ambiguous `app.rs:84` — changed to `"Profile comparison hydrated from..."` for clarity alongside pitch matching log → **FIXED**
+- [ ] [AI-Review][LOW] Two-borrow pattern in `pitch_matching_view.rs:206-207` — pre-checks state then mutably borrows; safe in WASM but could be cleaner with `adjust_pitch()` returning transition info
+- [ ] [AI-Review][LOW] Silent partial hydration failure — if `fetch_all_pitch_matchings()` fails, only `log::error!` emitted, no user notification; consistent with comparison hydration pattern
+- [ ] [AI-Review][LOW] Dev notes guidance misleading about `.abs()` requirement — `update_matching()` handles abs internally, dev notes should not prescribe `.abs()` at call site
+
+**Verdict:** All 5 ACs implemented. All tasks genuinely complete. 2 MEDIUM issues fixed. 3 LOW issues noted (no action required). Code quality is solid — clean mirroring of existing patterns, correct bug fixes with updated tests.

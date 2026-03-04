@@ -81,7 +81,7 @@ pub fn App() -> impl IntoView {
                         if skipped > 0 {
                             log::warn!("Skipped {skipped} records with invalid MIDI note values during hydration");
                         }
-                        log::info!("Profile hydrated from {} records", records.len() - skipped as usize);
+                        log::info!("Profile comparison hydrated from {} records", records.len() - skipped as usize);
                     }
                     Err(e) => {
                         log::error!("Failed to fetch records for hydration: {e}");
@@ -103,7 +103,7 @@ pub fn App() -> impl IntoView {
                                 }
                             };
 
-                            prof.update_matching(note, record.user_cent_error.abs());
+                            prof.update_matching(note, record.user_cent_error);
                         }
 
                         if skipped > 0 {

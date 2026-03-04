@@ -69,11 +69,11 @@ development_status:
   epic-3-retrospective: optional
 
   # Epic 4: Pitch Matching Training
-  epic-4: in-progress
+  epic-4: done
   4-1-pitch-matching-session-state-machine: done
   4-2-vertical-pitch-slider: done
   4-3-pitch-matching-training-ui: done
-  4-4-pitch-matching-persistence: review
+  4-4-pitch-matching-persistence: done
   epic-4-retrospective: optional
 
   # Epic 5: Interval Training & Sound Quality
