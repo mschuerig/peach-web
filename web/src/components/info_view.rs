@@ -1,15 +1,74 @@
 use leptos::prelude::*;
-use leptos_router::components::A;
+
+use super::page_nav::PageNav;
 
 #[component]
 pub fn InfoView() -> impl IntoView {
     view! {
         <div class="py-12">
-            <h1 class="text-2xl font-bold dark:text-white">"Info"</h1>
-            <A href="/"
-                attr:class="mt-4 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300">
-                "Back to Start"
-            </A>
+            <PageNav current="info" />
+
+            <h1 class="text-2xl font-bold dark:text-white">"Peach"</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">"Version 0.1.0"</p>
+
+            <div class="mt-8 space-y-8">
+                <section>
+                    <h2 class="text-lg font-semibold dark:text-white">"Developer"</h2>
+                    <address class="mt-2 not-italic space-y-1 text-gray-700 dark:text-gray-300">
+                        <p>"Michael Schürig"</p>
+                        <p>
+                            <a
+                                href="mailto:michael@schuerig.de"
+                                class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                            >
+                                "michael@schuerig.de"
+                            </a>
+                        </p>
+                    </address>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold dark:text-white">"Project"</h2>
+                    <dl class="mt-2 space-y-2 text-gray-700 dark:text-gray-300">
+                        <div class="flex gap-2">
+                            <dt>"GitHub:"</dt>
+                            <dd>
+                                <a
+                                    href="https://github.com/mschuerig/peach-web"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                >
+                                    "mschuerig/peach-web"
+                                </a>
+                            </dd>
+                        </div>
+                        <div class="flex gap-2">
+                            <dt>"License:"</dt>
+                            <dd>"MIT"</dd>
+                        </div>
+                        <div>
+                            <dd>"\u{00A9} 2026 Michael Schürig"</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-semibold dark:text-white">"Acknowledgments"</h2>
+                    <p class="mt-2 text-gray-700 dark:text-gray-300">
+                        "\"GeneralUser GS\" SoundFont by S. Christian Collins — "
+                        <a
+                            href="http://www.schristiancollins.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                        >
+                            "schristiancollins.com"
+                        </a>
+                    </p>
+                </section>
+            </div>
+
         </div>
     }
 }

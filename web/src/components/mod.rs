@@ -1,5 +1,6 @@
 mod comparison_view;
 mod info_view;
+mod page_nav;
 mod pitch_matching_view;
 mod pitch_slider;
 mod profile_preview;

@@ -1,6 +1,6 @@
 # Story 6.1: Info View & Complete Navigation
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,16 +24,16 @@ so that I know what I'm using and can access every part of the app.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create shared navigation component (AC: #2, #3)
-  - [ ] 1.1 Create `web/src/components/page_nav.rs` — a reusable `PageNav` component that renders links to Start Page, Settings, and Profile at the top of utility views
-  - [ ] 1.2 Use `<A>` from `leptos_router` with the existing indigo link styling pattern
-  - [ ] 1.3 Accept an optional `current` prop to omit or visually distinguish the active page link
-  - [ ] 1.4 Register in `web/src/components/mod.rs`
+- [x] Task 1: Create shared navigation component (AC: #2, #3)
+  - [x] 1.1 Create `web/src/components/page_nav.rs` — a reusable `PageNav` component that renders links to Start Page, Settings, and Profile at the top of utility views
+  - [x] 1.2 Use `<A>` from `leptos_router` with the existing indigo link styling pattern
+  - [x] 1.3 Accept an optional `current` prop to omit or visually distinguish the active page link
+  - [x] 1.4 Register in `web/src/components/mod.rs`
 
-- [ ] Task 2: Implement InfoView content (AC: #1, #2)
-  - [ ] 2.1 Replace the skeleton in `web/src/components/info_view.rs` with full content
-  - [ ] 2.2 Add `PageNav` at the top of the view
-  - [ ] 2.3 Add content sections matching iOS InfoScreen:
+- [x] Task 2: Implement InfoView content (AC: #1, #2)
+  - [x] 2.1 Replace the skeleton in `web/src/components/info_view.rs` with full content
+  - [x] 2.2 Add `PageNav` at the top of the view
+  - [x] 2.3 Add content sections matching iOS InfoScreen:
     - App title: "Peach" (large heading)
     - Version: "0.1.0" (read from a constant or hardcoded for now)
     - Developer: "Michael Schürig"
@@ -42,23 +42,23 @@ so that I know what I'm using and can access every part of the app.
     - License: "MIT"
     - Copyright: "© 2026 Michael Schürig"
     - Acknowledgment: "GeneralUser GS" SoundFont by S. Christian Collins with link to `http://www.schristiancollins.com`
-  - [ ] 2.4 Keep existing "Back to Start" link at bottom (pattern consistent with Settings/Profile)
-  - [ ] 2.5 Use semantic HTML: `<section>`, `<address>` or `<dl>` for info groups, `<a>` for external links
+  - [x] 2.4 Keep existing "Back to Start" link at bottom (pattern consistent with Settings/Profile)
+  - [x] 2.5 Use semantic HTML: `<section>`, `<address>` or `<dl>` for info groups, `<a>` for external links
 
-- [ ] Task 3: Add PageNav to Settings view (AC: #3)
-  - [ ] 3.1 Import and add `PageNav` at the top of `web/src/components/settings_view.rs`
-  - [ ] 3.2 Pass `current="settings"` to mark active page
-  - [ ] 3.3 Keep the existing "Back to Start" link at bottom
+- [x] Task 3: Add PageNav to Settings view (AC: #3)
+  - [x] 3.1 Import and add `PageNav` at the top of `web/src/components/settings_view.rs`
+  - [x] 3.2 Pass `current="settings"` to mark active page
+  - [x] 3.3 Keep the existing "Back to Start" link at bottom
 
-- [ ] Task 4: Add PageNav to Profile view (AC: #3)
-  - [ ] 4.1 Import and add `PageNav` at the top of `web/src/components/profile_view.rs`
-  - [ ] 4.2 Pass `current="profile"` to mark active page
-  - [ ] 4.3 Keep the existing "Back to Start" link at bottom
+- [x] Task 4: Add PageNav to Profile view (AC: #3)
+  - [x] 4.1 Import and add `PageNav` at the top of `web/src/components/profile_view.rs`
+  - [x] 4.2 Pass `current="profile"` to mark active page
+  - [x] 4.3 Keep the existing "Back to Start" link at bottom
 
-- [ ] Task 5: Verify navigation completeness (AC: #4, #5)
-  - [ ] 5.1 Verify all routes are accessible: `/`, `/training/comparison`, `/training/pitch-matching`, `/profile`, `/settings`, `/info`
-  - [ ] 5.2 Verify hub-and-spoke model: all views return to start page
-  - [ ] 5.3 Test keyboard navigation (Tab through links, Enter to activate)
+- [x] Task 5: Verify navigation completeness (AC: #4, #5)
+  - [x] 5.1 Verify all routes are accessible: `/`, `/training/comparison`, `/training/pitch-matching`, `/profile`, `/settings`, `/info`
+  - [x] 5.2 Verify hub-and-spoke model: all views return to start page
+  - [x] 5.3 Test keyboard navigation (Tab through links, Enter to activate)
 
 ## Dev Notes
 
@@ -159,8 +159,35 @@ Use `VStack` equivalent spacing: `space-y-8` or `gap-8` between sections. Muted/
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — clean implementation with no issues.
 
 ### Completion Notes List
 
+- Created `PageNav` component with `current` prop that omits the active page's link; uses gray link styling matching start page utility nav
+- Replaced InfoView skeleton with full content: app name, version, developer info (with mailto link), GitHub link, license, copyright, and SoundFont acknowledgment
+- Used semantic HTML: `<section>` groups, `<address>` for developer contact, `<dl>` for project details, external `<a>` tags with `target="_blank" rel="noopener noreferrer"`
+- Added PageNav to Settings view (`current="settings"`) and Profile view (`current="profile"`)
+- All existing "Back to Start" links preserved at bottom of each view
+- InfoView "Back to Start" updated from `mt-4` to `mt-8` for consistency with Settings/Profile
+- All routes verified accessible; hub-and-spoke model maintained
+- Keyboard navigation works via standard `<a>`/`<A>` elements (Tab + Enter)
+- `cargo clippy`, `cargo test -p domain`, and `trunk build` all pass cleanly
+
 ### File List
+
+| File | Action |
+|---|---|
+| `web/src/components/page_nav.rs` | Created |
+| `web/src/components/mod.rs` | Modified (added `mod page_nav`) |
+| `web/src/components/info_view.rs` | Modified (full content + PageNav) |
+| `web/src/components/settings_view.rs` | Modified (added PageNav) |
+| `web/src/components/profile_view.rs` | Modified (added PageNav) |
+| `docs/implementation-artifacts/sprint-status.yaml` | Modified (status → in-progress → review) |
+
+### Change Log
+
+- 2026-03-04: Implemented story 6.1 — created PageNav shared component, full InfoView content, added PageNav to Settings and Profile views

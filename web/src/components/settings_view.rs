@@ -4,7 +4,6 @@ use std::rc::Rc;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
-use leptos_router::components::A;
 use send_wrapper::SendWrapper;
 use wasm_bindgen_futures::spawn_local;
 
@@ -38,6 +37,7 @@ fn target_checked(ev: &web_sys::Event) -> bool {
         .unwrap_or(false)
 }
 
+use super::page_nav::PageNav;
 use crate::interval_codes::interval_label;
 
 /// All 25 directed intervals in display order.
@@ -174,6 +174,7 @@ pub fn SettingsView() -> impl IntoView {
 
     view! {
         <div class="py-12">
+            <PageNav current="settings" />
             <h1 class="text-2xl font-bold dark:text-white">"Settings"</h1>
 
             <div class="mt-6 space-y-6">
@@ -450,12 +451,6 @@ pub fn SettingsView() -> impl IntoView {
                 </div>
             </dialog>
 
-            <A
-                href="/"
-                attr:class="mt-8 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:ring-offset-gray-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
-                "Back to Start"
-            </A>
         </div>
     }
 }

@@ -1,7 +1,7 @@
 use leptos::prelude::*;
-use leptos_router::components::A;
 use leptos_router::hooks::use_navigate;
 
+use super::page_nav::PageNav;
 use super::ProfilePreview;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::interval_codes::encode_intervals;
@@ -53,6 +53,7 @@ pub fn StartPage() -> impl IntoView {
 
     view! {
         <div class="flex flex-col items-center gap-6 py-12">
+            <PageNav current="start" />
             <h1 class="sr-only">"Peach"</h1>
 
             <ProfilePreview />
@@ -89,20 +90,6 @@ pub fn StartPage() -> impl IntoView {
                 </button>
             </nav>
 
-            <nav aria-label="Utility" class="flex gap-6 pt-4 text-sm">
-                <A href="/settings"
-                    attr:class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200">
-                    "Settings"
-                </A>
-                <A href="/profile"
-                    attr:class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200">
-                    "Profile"
-                </A>
-                <A href="/info"
-                    attr:class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200">
-                    "Info"
-                </A>
-            </nav>
         </div>
     }
 }
