@@ -5,7 +5,7 @@ self.addEventListener('install', (event) => {
   // Pre-cache only the HTML shell (stable paths)
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then(cache => cache.addAll(['/', '/index.html']))
+      .then(cache => cache.addAll(['./index.html']))
       .then(() => self.skipWaiting())
   );
 });
@@ -30,7 +30,7 @@ self.addEventListener('fetch', (event) => {
   // the Leptos client-side router, not by actual files on the server.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match('/index.html').then(cached => cached || fetch(event.request))
+      caches.match('./index.html').then(cached => cached || fetch(event.request))
     );
     return;
   }
@@ -43,7 +43,7 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         return fetch(event.request).then(response => {
           // Don't cache non-ok responses or opaque responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+          if (!response || response.status !== 200 || response.type === 'opaque') {
             return response;
           }
           const clone = response.clone();

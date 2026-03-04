@@ -1,6 +1,6 @@
 # Story 6.4: Service Worker & Offline Support
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -285,6 +285,19 @@ Recent commits show:
 - All recent stories: implement → clippy clean → mark done
 - No service worker or offline-related work in any previous commits
 
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-03-04
+**Review Outcome:** Approve (after fixes)
+
+### Action Items
+
+- [x] [HIGH] Use relative paths (`./`) instead of absolute (`/`) in SW and registration for subpath deployment support (`sw.js:8,33`, `index.html:17`)
+- [x] [LOW] Change `response.type !== 'basic'` to `response.type === 'opaque'` to allow caching CORS responses (`sw.js:46`)
+- [x] [LOW] Remove redundant `/` from `cache.addAll()` — only `./index.html` needed (`sw.js:8`)
+
+**Summary:** 3 issues found (1 High, 2 Low), all fixed. Implementation is clean and correct — 57 lines of straightforward Service Worker code following the spec exactly. All ACs satisfied and manually verified offline.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -296,12 +309,12 @@ Claude Opus 4.6
 ### Completion Notes List
 
 - Created `sw.js` (55 lines) with install/activate/fetch event handlers
-- Install event pre-caches `/` and `/index.html`, calls `skipWaiting()`
+- Install event pre-caches `./index.html`, calls `skipWaiting()`
 - Activate event deletes old caches by version comparison, calls `clients.claim()`
 - Fetch handler: navigation requests return cached `index.html` (SPA routing); all other GET requests use cache-first with network fallback and runtime caching
 - Cache quota errors handled gracefully with `.catch(() => {})`
 - Added `<link data-trunk rel="copy-file" href="sw.js" />` to `index.html` for Trunk integration
-- Added `<script>` registration block with silent failure (`navigator.serviceWorker.register('/sw.js').catch(() => {})`)
+- Added `<script>` registration block with silent failure (`navigator.serviceWorker.register('./sw.js').catch(() => {})`)
 - Verified `trunk build` succeeds and `sw.js` appears in `dist/` at root
 - No Rust/WASM changes — zero domain or web crate modifications
 - All domain tests pass, clippy clean
@@ -310,6 +323,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-04: Implemented Service Worker & offline support (all 7 tasks)
+- 2026-03-04: Code review fixes — use relative paths for subpath deployment support, allow caching CORS responses
 
 ### File List
 
