@@ -1,19 +1,70 @@
 ---
 repo: "/Users/michael/Projekte/peach-web"
-total_commits: 44
-audited_commits: 44
+total_commits: 95
+audited_commits: 95
 detail: "full"
-generated: "2026-03-03T20:03:19.601026+00:00"
+generated: "2026-03-05T00:58:13.304933+00:00"
 ---
 
 # Claude Code Audit Log
 
 Repository: `/Users/michael/Projekte/peach-web`  
-Total commits: 44  
-Commits with Claude Code sessions: 44
+Total commits: 95  
+Commits with Claude Code sessions: 95
 
 ## Commits
 
+- [86935d7903](86935d7903.md) — 2026-03-04T23:42 — Code review fixes for story 6.4: use relative paths for subpath deployment (1 session, 152 messages)
+- [965ce1cd2a](965ce1cd2a.md) — 2026-03-04T23:26 — Implement story 6.4 Service Worker & Offline Support and mark as review (1 session, 108 messages)
+- [82a025a24d](82a025a24d.md) — 2026-03-04T23:14 — Add story 6.4 Service Worker & Offline Support and mark as ready-for-dev (1 session, 108 messages)
+- [6ea9addd4f](6ea9addd4f.md) — 2026-03-04T22:14 — Code review fixes for story 6.3: fix merge dedup bug and export reliability (1 session, 122 messages)
+- [4f04419677](4f04419677.md) — 2026-03-04T21:51 — Implement story 6.3 Data Export & Import and mark as ready-for-dev (1 session, 187 messages)
+- [60dd34b624](60dd34b624.md) — 2026-03-04T21:32 — Add story 6.3 Data Export & Import and mark as ready-for-dev (1 session, 128 messages)
+- [b5278e8f1e](b5278e8f1e.md) — 2026-03-04T21:07 — Code review fixes for story 6.2: fix sr_announcement bugs and focus rings (1 session, 171 messages)
+- [184b81a590](184b81a590.md) — 2026-03-04T20:56 — Implement story 6.2 Screen Reader Accessibility Polish and mark as ready-for-dev (2 sessions, 138 messages)
+- [47a2242775](47a2242775.md) — 2026-03-04T20:46 — Code review fixes for story 6.1: fix invalid HTML and scope Info nav link (2 sessions, 115 messages)
+- [af9ae41818](af9ae41818.md) — 2026-03-04T20:23 — Add story 6.2 Screen Reader Accessibility Polish and mark as ready-for-dev (2 sessions, 265 messages)
+- [b11a2cf553](b11a2cf553.md) — 2026-03-04T20:14 — Implement story 6.1 Info View & Complete Navigation and mark as ready-for-dev (1 session, 176 messages)
+- [616f795125](616f795125.md) — 2026-03-04T19:53 — Add story 6.1 Info View & Complete Navigation and mark as ready-for-dev (2 sessions, 103 messages)
+- [ba36c3a100](ba36c3a100.md) — 2026-03-04T19:32 — Implement story 5.2 SoundFont Audio and mark epic 5 as done (1 session, 549 messages)
+- [59634e05a8](59634e05a8.md) — 2026-03-04T17:12 — Rewrite story 5.2 to use AudioWorklet real-time synthesis (1 session, 103 messages)
+- [2e834dad19](2e834dad19.md) — 2026-03-04T16:27 — Add story 5.2 SoundFont Audio and mark as ready-for-dev (1 session, 75 messages)
+- [6438c72c01](6438c72c01.md) — 2026-03-04T15:36 — Apply code review fixes for story 5.1 and mark as done (1 session, 129 messages)
+- [e595890b89](e595890b89.md) — 2026-03-04T15:28 — Implement story 5.1 Interval Training Mode (2 sessions, 259 messages)
+- [0ff658f75b](0ff658f75b.md) — 2026-03-04T14:52 — Add story 5.1 Interval Training Mode and mark as ready-for-dev (1 session, 111 messages)
+- [6d29983832](6d29983832.md) — 2026-03-04T14:41 — Apply code review fixes for story 4.4 and mark epic 4 as done (2 sessions, 133 messages)
+- [895d216e9f](895d216e9f.md) — 2026-03-04T14:27 — Implement story 4.4 Pitch Matching Persistence and fix pitch matching bugs (1 session, 141 messages)
+- [9d2cb25997](9d2cb25997.md) — 2026-03-04T14:02 — Add story 4.4 Pitch Matching Persistence and mark as ready-for-dev (2 sessions, 122 messages)
+- [dd922d7a1d](dd922d7a1d.md) — 2026-03-04T13:50 — Apply code review fixes for story 4.3 and mark as done (2 sessions, 167 messages)
+- [f4f8901ad6](f4f8901ad6.md) — 2026-03-04T13:36 — Implement story 4.3 Pitch Matching Training UI (2 sessions, 253 messages)
+- [7c87ee9d0e](7c87ee9d0e.md) — 2026-03-04T13:19 — Add story 4.3 Pitch Matching Training UI and mark as ready-for-dev (2 sessions, 100 messages)
+- [6de43158bb](6de43158bb.md) — 2026-03-04T13:10 — Apply code review fixes for story 4.2 and mark as done (1 session, 120 messages)
+- [7c532fd85c](7c532fd85c.md) — 2026-03-04T12:55 — Implement story 4.2 Vertical Pitch Slider (1 session, 92 messages)
+- [7ac58691bb](7ac58691bb.md) — 2026-03-04T12:44 — Add story 4.2 Vertical Pitch Slider and mark as ready-for-dev (2 sessions, 145 messages)
+- [c0f028d9ba](c0f028d9ba.md) — 2026-03-04T12:34 — Apply code review fixes for story 4.1 and mark as done (2 sessions, 213 messages)
+- [a040bf5ecb](a040bf5ecb.md) — 2026-03-04T12:21 — Implement story 4.1 Pitch Matching Session State Machine (1 session, 167 messages)
+- [5cab0a88e7](5cab0a88e7.md) — 2026-03-04T10:32 — Rename note1/note2 to referenceNote/targetNote across codebase (2 sessions, 194 messages)
+- [4f1597e14b](4f1597e14b.md) — 2026-03-04T10:14 — Add quick tech spec to rename note1/note2 terminology to referenceNote/targetNote (2 sessions, 150 messages)
+- [cf70b5a507](cf70b5a507.md) — 2026-03-04T09:57 — Fix is_target_higher incorrectly ignoring interval for non-unison comparisons (1 session, 121 messages)
+- [648bbee4fa](648bbee4fa.md) — 2026-03-04T09:26 — Add story 4.1 Pitch Matching Session State Machine and mark as ready-for-dev (1 session, 118 messages)
+- [48e41170c1](48e41170c1.md) — 2026-03-04T02:26 — Implement story 3.3 Profile Preview on Start Page and mark epic 3 as done (1 session, 160 messages)
+- [0d0fa6a085](0d0fa6a085.md) — 2026-03-04T02:17 — Add story 3.3 Profile Preview on Start Page and mark as ready-for-dev (2 sessions, 127 messages)
+- [1e4850b0bb](1e4850b0bb.md) — 2026-03-04T02:10 — Apply code review fixes for story 3.2 and mark as done (1 session, 122 messages)
+- [3740a0593d](3740a0593d.md) — 2026-03-04T01:59 — Implement story 3.2 Perceptual Profile Visualization (2 sessions, 167 messages)
+- [7190ada03a](7190ada03a.md) — 2026-03-04T01:45 — Add story 3.2 Perceptual Profile Visualization and mark as ready-for-dev (2 sessions, 109 messages)
+- [2dd061a552](2dd061a552.md) — 2026-03-04T01:32 — Apply code review fixes for story 3.1 and mark as done (2 sessions, 159 messages)
+- [353bb05b1b](353bb05b1b.md) — 2026-03-04T01:24 — Implement story 3.1 Profile View with Summary Statistics (2 sessions, 187 messages)
+- [08b5646609](08b5646609.md) — 2026-03-04T01:08 — Add story 3.1 Profile View with Summary Statistics and mark as ready-for-dev (1 session, 83 messages)
+- [0ee6dfae01](0ee6dfae01.md) — 2026-03-04T00:58 — Apply code review fixes for story 2.3 and mark as done (1 session, 141 messages)
+- [7dfba4351d](7dfba4351d.md) — 2026-03-04T00:45 — Implement story 2.3 Reset Training Data (1 session, 116 messages)
+- [d1cae4475a](d1cae4475a.md) — 2026-03-04T00:38 — Add story 2.3 Reset Training Data and mark as ready-for-dev (2 sessions, 114 messages)
+- [bd80666729](bd80666729.md) — 2026-03-04T00:27 — Apply code review fixes for story 2.2 and mark as done (1 session, 105 messages)
+- [cad0e7e4cb](cad0e7e4cb.md) — 2026-03-04T00:10 — Implement story 2.2 Interval Selection (2 sessions, 122 messages)
+- [ec26b0944f](ec26b0944f.md) — 2026-03-04T00:00 — Add story 2.2 Interval Selection and mark as ready-for-dev (2 sessions, 103 messages)
+- [06b929a4a5](06b929a4a5.md) — 2026-03-03T23:41 — Apply code review fixes for story 2.1 and mark as done (1 session, 176 messages)
+- [54b6241e9c](54b6241e9c.md) — 2026-03-03T23:26 — Implement story 2.1 Settings View — Core Training Parameters (2 sessions, 122 messages)
+- [8e21ecf430](8e21ecf430.md) — 2026-03-03T22:59 — Add story 2.1 Settings View — Core Training Parameters and mark as ready-for-dev (2 sessions, 143 messages)
+- [46a9ce50d2](46a9ce50d2.md) — 2026-03-03T21:05 — Update docs/claude-audit. (1 session, 295 messages)
 - [853a8cfa75](853a8cfa75.md) — 2026-03-03T21:01 — Apply code review fixes for story 1.10 and mark Epic 1 as done (1 session, 295 messages)
 - [91357bd162](91357bd162.md) — 2026-03-03T20:32 — Implement story 1.10 Code Quality Review (2 sessions, 378 messages)
 - [0d852a3c83](0d852a3c83.md) — 2026-03-03T19:53 — Add story 1.10 Code Quality Review and mark as ready-for-dev (1 session, 78 messages)
