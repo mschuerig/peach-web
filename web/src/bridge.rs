@@ -4,7 +4,7 @@ use std::rc::Rc;
 use domain::ports::{PitchComparisonObserver, PitchMatchingObserver};
 use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
 use domain::training::{CompletedPitchComparison, CompletedPitchMatching};
-use domain::{PerceptualProfile, ThresholdTimeline, TrendAnalyzer};
+use domain::{PerceptualProfile, ProgressTimeline, ThresholdTimeline, TrendAnalyzer};
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
 use wasm_bindgen_futures::spawn_local;
@@ -148,5 +148,29 @@ impl PitchMatchingObserver for PitchMatchingDataStoreObserver {
                 ));
             }
         });
+    }
+}
+
+pub struct ProgressTimelineObserver(Rc<RefCell<ProgressTimeline>>);
+
+impl ProgressTimelineObserver {
+    pub fn new(timeline: Rc<RefCell<ProgressTimeline>>) -> Self {
+        Self(timeline)
+    }
+}
+
+impl PitchComparisonObserver for ProgressTimelineObserver {
+    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
+        let record = PitchComparisonRecord::from_completed(completed);
+        let now = js_sys::Date::now() / 1000.0;
+        self.0.borrow_mut().add_comparison(&record, now);
+    }
+}
+
+impl PitchMatchingObserver for ProgressTimelineObserver {
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
+        let record = PitchMatchingRecord::from_completed(completed);
+        let now = js_sys::Date::now() / 1000.0;
+        self.0.borrow_mut().add_matching(&record, now);
     }
 }

@@ -19,7 +19,7 @@ use crate::components::{
     PitchComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
 use domain::types::MIDINote;
-use domain::{PerceptualProfile, ThresholdTimeline, TrendAnalyzer};
+use domain::{PerceptualProfile, ProgressTimeline, ThresholdTimeline, TrendAnalyzer};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -30,6 +30,7 @@ pub fn App() -> impl IntoView {
     let audio_ctx_manager = SendWrapper::new(Rc::new(RefCell::new(AudioContextManager::new())));
     let trend_analyzer = SendWrapper::new(Rc::new(RefCell::new(TrendAnalyzer::new())));
     let timeline = SendWrapper::new(Rc::new(RefCell::new(ThresholdTimeline::new())));
+    let progress_timeline = SendWrapper::new(Rc::new(RefCell::new(ProgressTimeline::new())));
     let is_profile_loaded = RwSignal::new(false);
     let db_store = RwSignal::new_local(None::<Rc<IndexedDbStore>>);
     let worklet_bridge = RwSignal::new_local(None::<Rc<RefCell<WorkletBridge>>>);
@@ -39,6 +40,7 @@ pub fn App() -> impl IntoView {
     provide_context(audio_ctx_manager.clone());
     provide_context(trend_analyzer.clone());
     provide_context(timeline.clone());
+    provide_context(progress_timeline.clone());
     provide_context(is_profile_loaded);
     provide_context(db_store);
     provide_context(worklet_bridge);
@@ -48,13 +50,14 @@ pub fn App() -> impl IntoView {
     let profile_for_hydration = Rc::clone(&*profile);
     let trend_for_hydration = Rc::clone(&*trend_analyzer);
     let timeline_for_hydration = Rc::clone(&*timeline);
+    let ptl_for_hydration = Rc::clone(&*progress_timeline);
 
     spawn_local(async move {
         match IndexedDbStore::open().await {
             Ok(store) => {
                 let store = Rc::new(store);
 
-                match store.fetch_all_pitch_comparisons().await {
+                let comparison_records = match store.fetch_all_pitch_comparisons().await {
                     Ok(records) => {
                         let mut prof = profile_for_hydration.borrow_mut();
                         let mut trend = trend_for_hydration.borrow_mut();
@@ -90,14 +93,16 @@ pub fn App() -> impl IntoView {
                             log::warn!("Skipped {skipped} records with invalid MIDI note values during hydration");
                         }
                         log::info!("Profile comparison hydrated from {} records", records.len() - skipped as usize);
+                        records
                     }
                     Err(e) => {
                         log::error!("Failed to fetch records for hydration: {e}");
+                        Vec::new()
                     }
-                }
+                };
 
                 // Pitch matching hydration
-                match store.fetch_all_pitch_matchings().await {
+                let matching_records = match store.fetch_all_pitch_matchings().await {
                     Ok(records) => {
                         let mut prof = profile_for_hydration.borrow_mut();
                         let mut skipped = 0u32;
@@ -121,10 +126,23 @@ pub fn App() -> impl IntoView {
                             "Profile pitch matching hydrated from {} records",
                             records.len() - skipped as usize
                         );
+                        records
                     }
                     Err(e) => {
                         log::error!("Failed to fetch pitch matching records for hydration: {e}");
+                        Vec::new()
                     }
+                };
+
+                // ProgressTimeline hydration — rebuild from all records
+                {
+                    let now = js_sys::Date::now() / 1000.0;
+                    ptl_for_hydration.borrow_mut().rebuild(
+                        &comparison_records,
+                        &matching_records,
+                        now,
+                    );
+                    log::info!("ProgressTimeline hydrated");
                 }
 
                 db_store.set(Some(store));

@@ -1,5 +1,6 @@
 pub mod error;
 pub mod portability;
+pub mod progress_timeline;
 pub mod ports;
 pub mod profile;
 pub mod records;
@@ -28,6 +29,7 @@ pub use strategy::{kazez_narrow, kazez_widen, next_pitch_comparison, TrainingSet
 pub use timeline::{PeriodAggregate, ThresholdTimeline, TimelineDataPoint};
 pub use training::*;
 pub use training_mode::{TrainingMode, TrainingModeConfig, TrainingModeState};
+pub use progress_timeline::{BucketSize, ProgressTimeline, TimeBucket};
 pub use trend::{Trend, TrendAnalyzer};
 pub use tuning::TuningSystem;
 pub use types::*;
