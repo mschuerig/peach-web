@@ -224,6 +224,7 @@ async fn init_worklet_bridge(
     audio_ctx_manager: Rc<RefCell<AudioContextManager>>,
 ) -> Result<(WorkletBridge, Vec<SF2Preset>), String> {
     // Step 1: Get or create AudioContext
+    log::info!("[DIAG] init_worklet_bridge: requesting AudioContext (outside user gesture)");
     let ctx_rc = audio_ctx_manager
         .borrow_mut()
         .get_or_create()

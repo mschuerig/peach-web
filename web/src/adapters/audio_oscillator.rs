@@ -133,7 +133,7 @@ impl NotePlayer for OscillatorNotePlayer {
         amplitude_db: AmplitudeDB,
     ) -> Result<Self::Handle, AudioError> {
         let ctx_rc = self.get_context()?;
-        log::info!(
+        log::debug!(
             "[DIAG] OscillatorNotePlayer::play — ctx.state: {:?}, freq: {}",
             ctx_rc.borrow().state(),
             frequency.raw_value()
@@ -149,7 +149,7 @@ impl NotePlayer for OscillatorNotePlayer {
         amplitude_db: AmplitudeDB,
     ) -> Result<(), AudioError> {
         let ctx_rc = self.get_context()?;
-        log::info!(
+        log::debug!(
             "[DIAG] OscillatorNotePlayer::play_for_duration — ctx.state: {:?}, freq: {}, dur: {}s",
             ctx_rc.borrow().state(),
             frequency.raw_value(),
