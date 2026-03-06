@@ -3,9 +3,9 @@ mod info_view;
 mod page_nav;
 mod pitch_matching_view;
 mod pitch_slider;
-mod profile_preview;
+mod progress_card;
+mod progress_chart;
 mod profile_view;
-mod profile_visualization;
 mod settings_view;
 mod start_page;
 
