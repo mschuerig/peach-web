@@ -707,26 +707,28 @@ pub fn PitchComparisonView() -> impl IntoView {
                 }
             }}
 
-            // Training stats
-            <TrainingStats
-                latest_value=latest_cent_difference.into()
-                session_best=stats_session_best.into()
-                trend=stats_trend.into()
-            />
-
-            // Feedback indicator — between stats and buttons
-            <div class="flex items-center justify-center h-12" aria-hidden="true">
-                {move || {
-                    if show_feedback.get() {
-                        if is_last_correct.get() {
-                            view! { <span class="text-4xl text-green-600 dark:text-green-400">{"\u{1F44D}"}</span> }.into_any()
+            // Compact header: stats left, feedback icon right
+            <div class="flex items-start justify-between mb-2">
+                // Left: Training stats
+                <TrainingStats
+                    latest_value=latest_cent_difference.into()
+                    session_best=stats_session_best.into()
+                    trend=stats_trend.into()
+                />
+                // Right: checkmark/X feedback indicator
+                <div class="text-right" aria-hidden="true">
+                    {move || {
+                        if show_feedback.get() {
+                            if is_last_correct.get() {
+                                view! { <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white font-bold text-lg">{"\u{2713}"}</span> }.into_any()
+                            } else {
+                                view! { <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white font-bold text-lg">{"X"}</span> }.into_any()
+                            }
                         } else {
-                            view! { <span class="text-4xl text-red-600 dark:text-red-400">{"\u{1F44E}"}</span> }.into_any()
+                            view! { <div class="w-8 h-8"></div> }.into_any()
                         }
-                    } else {
-                        view! { <span></span> }.into_any()
-                    }
-                }}
+                    }}
+                </div>
             </div>
 
             // Screen reader live region
