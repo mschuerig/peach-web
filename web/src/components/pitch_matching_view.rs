@@ -10,14 +10,16 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::KeyboardEvent;
 
-use crate::adapters::audio_context::{AudioContextManager, ensure_running};
+use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
 use crate::app::{SoundFontLoadStatus, WorkletAssets, connect_worklet};
 use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
+use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
+use crate::components::nav_bar::{NavBar, NavIconButton};
 use crate::components::pitch_slider::VerticalPitchSlider;
 use crate::components::TrainingStats;
 use crate::help_sections::PITCH_MATCHING_HELP;
@@ -373,34 +375,6 @@ pub fn PitchMatchingView() -> impl IntoView {
             navigate("/", Default::default());
         }
     };
-    let on_nav_settings = {
-        let on_nav_away = on_nav_away.clone();
-        let navigate = navigate.clone();
-        move |ev: leptos::ev::MouseEvent| {
-            ev.prevent_default();
-            on_nav_away();
-            navigate("/settings", Default::default());
-        }
-    };
-    let on_nav_profile = {
-        let on_nav_away = on_nav_away.clone();
-        let navigate = navigate.clone();
-        move |ev: leptos::ev::MouseEvent| {
-            ev.prevent_default();
-            on_nav_away();
-            navigate("/profile", Default::default());
-        }
-    };
-    let on_nav_info = {
-        let on_nav_away = on_nav_away.clone();
-        let navigate = navigate.clone();
-        move |ev: leptos::ev::MouseEvent| {
-            ev.prevent_default();
-            on_nav_away();
-            navigate("/info", Default::default());
-        }
-    };
-
     // Help modal state
     let is_help_open = RwSignal::new(false);
     let on_help_open = {
@@ -570,6 +544,9 @@ pub fn PitchMatchingView() -> impl IntoView {
         });
     }
 
+    let audio_needs_gesture: RwSignal<bool> =
+        use_context().expect("audio_needs_gesture context");
+
     // Start the async training loop
     {
         let session = Rc::clone(&session);
@@ -579,20 +556,19 @@ pub fn PitchMatchingView() -> impl IntoView {
         let audio_ctx_for_loop = Rc::clone(&audio_ctx);
         let sync = sync_signals.clone();
         spawn_local(async move {
-            // Ensure AudioContext is running before any playback
-            let ctx_rc = match audio_ctx_for_loop.borrow_mut().get_or_create() {
+            // Ensure AudioContext is created and running (waits for gesture if needed)
+            let ctx_rc = match ensure_audio_ready(
+                &audio_ctx_for_loop,
+                audio_needs_gesture,
+                &cancelled,
+            ).await {
                 Ok(ctx) => ctx,
                 Err(e) => {
-                    log::error!("Failed to get AudioContext: {e}");
+                    log::error!("AudioContext failed: {e}");
                     audio_error.set(Some("Audio engine failed to start".into()));
                     return;
                 }
             };
-            if let Err(e) = ensure_running(&ctx_rc).await {
-                log::error!("AudioContext ensure_running failed: {e}");
-                audio_error.set(Some("Audio engine failed to start".into()));
-                return;
-            }
 
             // Wait for SF2 assets if user selected SoundFont
             if sound_source_clone.starts_with("sf2:") {
@@ -728,51 +704,27 @@ pub fn PitchMatchingView() -> impl IntoView {
         });
     }
 
+    let matching_title = if is_interval_mode { "Interval Pitch Matching" } else { "Pitch Matching Training" };
+
+    #[allow(clippy::redundant_closure)]
+    let on_back_cb = {
+        let handler = SendWrapper::new(on_nav_start);
+        Callback::new(move |ev| handler(ev))
+    };
+    #[allow(clippy::redundant_closure)]
+    let on_help_cb = {
+        let handler = SendWrapper::new(on_help_open);
+        Callback::new(move |ev| handler(ev))
+    };
+
     view! {
-        <div class="py-12">
-            <nav aria-label="Page navigation" class="flex gap-6 text-sm mb-6">
-                <a
-                    href="/"
-                    on:click=on_nav_start
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Start"
-                </a>
-                <a
-                    href="/settings"
-                    on:click=on_nav_settings
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Settings"
-                </a>
-                <a
-                    href="/profile"
-                    on:click=on_nav_profile
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Profile"
-                </a>
-                <a
-                    href="/info"
-                    on:click=on_nav_info
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Info"
-                </a>
-            </nav>
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold dark:text-white">
-                    {if is_interval_mode { "Interval Pitch Matching" } else { "Pitch Matching Training" }}
-                </h1>
-                <button
-                    on:click=on_help_open
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                    aria-label="Help"
-                >
-                    "?"
-                </button>
-            </div>
+        <div class="flex flex-col pt-4 pb-12" style="height: calc(100vh - 2rem);">
+            <NavBar title=matching_title back_href="/" on_back=on_back_cb>
+                <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb />
+            </NavBar>
             <HelpModal title="Pitch Matching Training" sections=PITCH_MATCHING_HELP is_open=is_help_open on_close=on_help_close />
+
+            <AudioGateOverlay />
 
             // SF2 loading indicator for direct navigation (bookmark)
             {move || {
@@ -781,7 +733,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                         <div
                             role="status"
                             aria-live="polite"
-                            class="mt-4 rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3 text-center text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-300"
+                            class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3 text-center text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-300"
                         >
                             <span class="inline-block animate-pulse">"Loading sounds\u{2026}"</span>
                         </div>
@@ -791,51 +743,53 @@ pub fn PitchMatchingView() -> impl IntoView {
                 }
             }}
 
-            // Interval label — only visible in interval mode
+            // Compact header: stats left, deviation right, interval center
+            <div class="flex items-start justify-between mb-2">
+                // Left: Latest + Best stats
+                <TrainingStats
+                    latest_value=latest_cent_error.into()
+                    session_best=stats_session_best.into()
+                    trend=stats_trend.into()
+                />
+                // Right: signed cent deviation feedback
+                <div class="text-right" aria-hidden="true">
+                    {move || {
+                        if show_feedback.get() {
+                            let arrow = feedback_arrow.get();
+                            let text = feedback_text.get();
+                            let color = feedback_color.get();
+                            view! {
+                                <div class=format!("flex items-center justify-end gap-1 {color}")>
+                                    <span class="text-2xl font-bold">{text}</span>
+                                    <span class="text-2xl">{arrow}</span>
+                                </div>
+                            }.into_any()
+                        } else {
+                            view! { <div class="h-8"></div> }.into_any()
+                        }
+                    }}
+                </div>
+            </div>
+
+            // Interval label — centered below stats
             {move || {
                 let label = interval_label_text.get();
                 if !label.is_empty() {
-                    view! { <p class="mt-2 text-lg text-indigo-600 dark:text-indigo-400 font-medium">{label}</p> }.into_any()
+                    view! {
+                        <p class="text-center text-lg text-indigo-600 dark:text-indigo-400 font-medium mb-2">{label}</p>
+                    }.into_any()
                 } else {
                     view! { <span></span> }.into_any()
                 }
             }}
-
-            // Training stats
-            <TrainingStats
-                latest_value=latest_cent_error.into()
-                session_best=stats_session_best.into()
-                trend=stats_trend.into()
-            />
-
-            // Feedback indicator
-            <div class="flex items-center justify-center h-16" aria-hidden="true">
-                {move || {
-                    if show_feedback.get() {
-                        let arrow = feedback_arrow.get();
-                        let text = feedback_text.get();
-                        let color = feedback_color.get();
-                        view! {
-                            <span class=format!("text-4xl {color}")>
-                                {arrow}
-                            </span>
-                            <span class=format!("ml-2 text-lg font-semibold {color}")>
-                                {text}
-                            </span>
-                        }.into_any()
-                    } else {
-                        view! { <span></span> }.into_any()
-                    }
-                }}
-            </div>
 
             // Screen reader live region
             <div aria-live="polite" aria-atomic="true" class="sr-only">
                 {move || sr_announcement.get()}
             </div>
 
-            // Pitch slider
-            <div class="flex justify-center mt-4">
+            // Pitch slider — fills all remaining vertical space
+            <div class="flex-1 flex justify-center items-stretch min-h-0">
                 <VerticalPitchSlider
                     enabled=slider_enabled.into()
                     on_change=slider_on_change

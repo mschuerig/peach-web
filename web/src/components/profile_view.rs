@@ -6,7 +6,7 @@ use send_wrapper::SendWrapper;
 
 use domain::{ProgressTimeline, TrainingMode, TrainingModeState};
 
-use super::page_nav::PageNav;
+use super::nav_bar::NavBar;
 use super::progress_card::ProgressCard;
 
 #[component]
@@ -18,9 +18,9 @@ pub fn ProfileView() -> impl IntoView {
     let ptl = progress_timeline.clone();
 
     view! {
-        <div class="py-12">
-            <PageNav current="profile" />
-            <h1 class="text-2xl font-bold dark:text-white">"Profile"</h1>
+        <div class="pt-4 pb-12">
+            <NavBar title="Profile" back_href="/">
+            </NavBar>
 
             {move || {
                 if !is_profile_loaded.get() {

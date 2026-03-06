@@ -1,7 +1,8 @@
+mod audio_gate_overlay;
 pub mod help_content;
+pub mod nav_bar;
 mod pitch_comparison_view;
 mod info_view;
-mod page_nav;
 mod pitch_matching_view;
 mod pitch_slider;
 mod progress_card;

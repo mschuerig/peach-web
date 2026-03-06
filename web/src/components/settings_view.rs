@@ -41,7 +41,7 @@ fn target_checked(ev: &web_sys::Event) -> bool {
 }
 
 use super::help_content::HelpModal;
-use super::page_nav::PageNav;
+use super::nav_bar::{NavBar, NavIconButton};
 use crate::help_sections::SETTINGS_HELP;
 use crate::interval_codes::interval_label;
 
@@ -190,18 +190,10 @@ pub fn SettingsView() -> impl IntoView {
     let is_help_open = RwSignal::new(false);
 
     view! {
-        <div class="py-12">
-            <PageNav current="settings" />
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold dark:text-white">"Settings"</h1>
-                <button
-                    on:click=move |_| is_help_open.set(true)
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                    aria-label="Help"
-                >
-                    "?"
-                </button>
-            </div>
+        <div class="pt-4 pb-12">
+            <NavBar title="Settings" back_href="/">
+                <NavIconButton label="Help".to_string() icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) />
+            </NavBar>
             <HelpModal title="Settings Help" sections=SETTINGS_HELP is_open=is_help_open />
 
             <div class="mt-6 space-y-6">

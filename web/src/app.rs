@@ -46,6 +46,7 @@ pub fn App() -> impl IntoView {
     let sf2_presets = RwSignal::new_local(Vec::<SF2Preset>::new());
     let worklet_assets = RwSignal::new_local(None::<Rc<WorkletAssets>>);
     let worklet_connecting = RwSignal::new(false);
+    let audio_needs_gesture = RwSignal::new(false);
 
     let sf2_load_status = RwSignal::new({
         let sound_source = LocalStorageSettings::get_string("peach.sound_source")
@@ -69,6 +70,7 @@ pub fn App() -> impl IntoView {
     provide_context(sf2_presets);
     provide_context(worklet_assets);
     provide_context(worklet_connecting);
+    provide_context(audio_needs_gesture);
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);
