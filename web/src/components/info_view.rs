@@ -1,6 +1,8 @@
 use leptos::prelude::*;
 
+use super::help_content::HelpContent;
 use super::page_nav::PageNav;
+use crate::help_sections::{INFO_ACKNOWLEDGMENTS, INFO_HELP};
 
 #[component]
 pub fn InfoView() -> impl IntoView {
@@ -12,10 +14,14 @@ pub fn InfoView() -> impl IntoView {
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">"Version 0.1.0"</p>
 
             <div class="mt-8 space-y-8">
+                <HelpContent sections=INFO_HELP />
+
+                <HelpContent sections=INFO_ACKNOWLEDGMENTS />
+
                 <section>
                     <h2 class="text-lg font-semibold dark:text-white">"Developer"</h2>
                     <address class="mt-2 not-italic space-y-1 text-gray-700 dark:text-gray-300">
-                        <p>"Michael Schürig"</p>
+                        <p>"Michael Sch\u{00FC}rig"</p>
                         <p>
                             <a
                                 href="mailto:michael@schuerig.de"
@@ -49,24 +55,9 @@ pub fn InfoView() -> impl IntoView {
                         </div>
                         <div class="flex gap-2">
                             <dt>"Copyright:"</dt>
-                            <dd>"\u{00A9} 2026 Michael Schürig"</dd>
+                            <dd>"\u{00A9} 2026 Michael Sch\u{00FC}rig"</dd>
                         </div>
                     </dl>
-                </section>
-
-                <section>
-                    <h2 class="text-lg font-semibold dark:text-white">"Acknowledgments"</h2>
-                    <p class="mt-2 text-gray-700 dark:text-gray-300">
-                        "\"GeneralUser GS\" SoundFont by S. Christian Collins — "
-                        <a
-                            href="https://www.schristiancollins.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="rounded text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
-                        >
-                            "schristiancollins.com"
-                        </a>
-                    </p>
                 </section>
             </div>
 

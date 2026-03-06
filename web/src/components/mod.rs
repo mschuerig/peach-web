@@ -1,3 +1,4 @@
+pub mod help_content;
 mod pitch_comparison_view;
 mod info_view;
 mod page_nav;

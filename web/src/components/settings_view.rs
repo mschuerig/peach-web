@@ -40,7 +40,9 @@ fn target_checked(ev: &web_sys::Event) -> bool {
         .unwrap_or(false)
 }
 
+use super::help_content::HelpModal;
 use super::page_nav::PageNav;
+use crate::help_sections::SETTINGS_HELP;
 use crate::interval_codes::interval_label;
 
 /// All 25 directed intervals in display order.
@@ -185,10 +187,22 @@ pub fn SettingsView() -> impl IntoView {
         });
     };
 
+    let is_help_open = RwSignal::new(false);
+
     view! {
         <div class="py-12">
             <PageNav current="settings" />
-            <h1 class="text-2xl font-bold dark:text-white">"Settings"</h1>
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold dark:text-white">"Settings"</h1>
+                <button
+                    on:click=move |_| is_help_open.set(true)
+                    class="min-h-11 min-w-11 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
+                    aria-label="Help"
+                >
+                    "?"
+                </button>
+            </div>
+            <HelpModal title="Settings Help" sections=SETTINGS_HELP is_open=is_help_open />
 
             <div class="mt-6 space-y-6">
                 // Note Range — Lower Bound (AC2)
