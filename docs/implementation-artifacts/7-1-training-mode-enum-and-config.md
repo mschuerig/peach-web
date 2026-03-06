@@ -1,6 +1,6 @@
 # Story 7.1: TrainingMode Enum and TrainingModeConfig
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -33,26 +33,26 @@ This is a foundational domain change that stories 7.2-7.6 depend on.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `domain/src/training_mode.rs` (AC: 1, 2, 3, 4, 8, 9)
-  - [ ] Define `TrainingMode` enum with four variants, derive `Clone, Copy, Debug, PartialEq, Eq, Hash`
-  - [ ] Define `TrainingModeConfig` struct with display_name, unit_label, optimal_baseline, ewma_halflife_secs, session_gap_secs
-  - [ ] Implement `TrainingMode::config(&self) -> &'static TrainingModeConfig` returning static configs
-  - [ ] Implement `TrainingMode::ALL: [TrainingMode; 4]` constant
-  - [ ] Define `TrainingModeState` enum with `NoData` and `Active` variants (AC: 7)
-- [ ] Task 2: Implement metric extraction methods (AC: 5, 6)
-  - [ ] `TrainingMode::extract_comparison_metric(&self, record: &ComparisonRecord) -> Option<f64>` — unison variants match interval==0, interval variants match interval!=0, returns abs(cent_offset)
-  - [ ] `TrainingMode::extract_matching_metric(&self, record: &PitchMatchingRecord) -> Option<f64>` — same interval logic, returns abs(user_cent_error)
-- [ ] Task 3: Wire into module system (AC: 10)
-  - [ ] Add `pub mod training_mode;` to `domain/src/lib.rs`
-  - [ ] Add re-exports: `TrainingMode`, `TrainingModeConfig`, `TrainingModeState`
-- [ ] Task 4: Write tests (AC: all)
-  - [ ] Test each variant's config returns correct values
-  - [ ] Test `TrainingMode::ALL` contains all four variants
-  - [ ] Test `extract_comparison_metric` returns Some for matching records, None for non-matching
-  - [ ] Test `extract_matching_metric` returns Some for matching records, None for non-matching
-  - [ ] Test boundary: interval==0 is unison, interval==1 is interval
-  - [ ] Test negative cent_offset returns positive magnitude
-  - [ ] Run `cargo test -p domain` and `cargo clippy -p domain`
+- [x] Task 1: Create `domain/src/training_mode.rs` (AC: 1, 2, 3, 4, 8, 9)
+  - [x] Define `TrainingMode` enum with four variants, derive `Clone, Copy, Debug, PartialEq, Eq, Hash`
+  - [x] Define `TrainingModeConfig` struct with display_name, unit_label, optimal_baseline, ewma_halflife_secs, session_gap_secs
+  - [x] Implement `TrainingMode::config(&self) -> &'static TrainingModeConfig` returning static configs
+  - [x] Implement `TrainingMode::ALL: [TrainingMode; 4]` constant
+  - [x] Define `TrainingModeState` enum with `NoData` and `Active` variants (AC: 7)
+- [x] Task 2: Implement metric extraction methods (AC: 5, 6)
+  - [x] `TrainingMode::extract_comparison_metric(&self, record: &ComparisonRecord) -> Option<f64>` — unison variants match interval==0, interval variants match interval!=0, returns abs(cent_offset)
+  - [x] `TrainingMode::extract_matching_metric(&self, record: &PitchMatchingRecord) -> Option<f64>` — same interval logic, returns abs(user_cent_error)
+- [x] Task 3: Wire into module system (AC: 10)
+  - [x] Add `pub mod training_mode;` to `domain/src/lib.rs`
+  - [x] Add re-exports: `TrainingMode`, `TrainingModeConfig`, `TrainingModeState`
+- [x] Task 4: Write tests (AC: all)
+  - [x] Test each variant's config returns correct values
+  - [x] Test `TrainingMode::ALL` contains all four variants
+  - [x] Test `extract_comparison_metric` returns Some for matching records, None for non-matching
+  - [x] Test `extract_matching_metric` returns Some for matching records, None for non-matching
+  - [x] Test boundary: interval==0 is unison, interval==1 is interval
+  - [x] Test negative cent_offset returns positive magnitude
+  - [x] Run `cargo test -p domain` and `cargo clippy -p domain`
 
 ## Dev Notes
 
@@ -78,3 +78,27 @@ This is a foundational domain change that stories 7.2-7.6 depend on.
 - **Domain crate only:** No browser dependencies. This is pure Rust.
 - **Record types unchanged:** `ComparisonRecord` and `PitchMatchingRecord` already have the `interval` field needed for mode classification. No changes to existing types.
 - **Naming fidelity:** Display names match the iOS app's localized strings exactly (minus localization — peach-web is English-only).
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Created `domain/src/training_mode.rs` with `TrainingMode` enum (4 variants), `TrainingModeConfig` struct, and `TrainingModeState` enum
+- Static config constants with `&'static` references for zero-cost access
+- Per-record metric extraction using `matches_interval()` helper for DRY interval classification
+- 14 inline unit tests covering all ACs: config values, ALL constant, metric extraction, boundary conditions, negative-to-positive magnitude conversion
+
+### Completion Notes
+
+All 4 tasks completed in a single pass. 305 domain tests pass (14 new), zero clippy warnings. Implementation follows all architecture constraints: domain-crate-only, f64 for cent values, no serde on TrainingMode (runtime classification only).
+
+## File List
+
+- `domain/src/training_mode.rs` — NEW: TrainingMode enum, TrainingModeConfig, TrainingModeState, metric extraction methods, tests
+- `domain/src/lib.rs` — MODIFIED: added `pub mod training_mode` and re-exports
+- `docs/implementation-artifacts/sprint-status.yaml` — MODIFIED: story status updated
+- `docs/implementation-artifacts/7-1-training-mode-enum-and-config.md` — MODIFIED: task checkboxes, status, dev agent record
+
+## Change Log
+
+- 2026-03-06: Implemented TrainingMode enum with four variants, per-mode config, metric extraction from comparison and matching records, and comprehensive test suite (14 tests). All ACs satisfied.
