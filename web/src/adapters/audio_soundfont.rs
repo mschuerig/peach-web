@@ -188,6 +188,10 @@ impl NotePlayer for SoundFontNotePlayer {
         let vel = velocity.raw_value();
 
         // Send NoteOn
+        log::debug!(
+            "[DIAG] SoundFontNotePlayer::play — key: {}, vel: {}, freq: {}",
+            key, vel, frequency.raw_value()
+        );
         self.bridge.borrow().send_note_on(key, vel)?;
 
         // Set initial pitch bend for fractional cent offset

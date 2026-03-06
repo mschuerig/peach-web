@@ -24,6 +24,10 @@ impl AudioContextManager {
     /// Must be called within a user gesture event handler the first time.
     pub fn get_or_create(&mut self) -> Result<Rc<RefCell<AudioContext>>, AudioError> {
         if let Some(ref ctx) = self.context {
+            log::debug!(
+                "[DIAG] AudioContext reused — state: {:?}",
+                ctx.borrow().state()
+            );
             return Ok(Rc::clone(ctx));
         }
 
