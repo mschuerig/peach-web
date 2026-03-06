@@ -17,12 +17,13 @@ use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
 use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
 use crate::components::pitch_slider::VerticalPitchSlider;
+use crate::components::training_stats::TrainingStats;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
     Interval, PitchMatchingSession, PitchMatchingSessionState, PerceptualProfile,
-    ProgressTimeline, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
+    ProgressTimeline, TrainingMode, Trend, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -93,6 +94,18 @@ pub fn PitchMatchingView() -> impl IntoView {
             .forget();
         }
     });
+
+    // Determine TrainingMode from intervals
+    let training_mode = if is_interval_mode {
+        TrainingMode::IntervalMatching
+    } else {
+        TrainingMode::UnisonMatching
+    };
+
+    // Training stats signals
+    let latest_cent_error: RwSignal<Option<f64>> = RwSignal::new(None);
+    let stats_session_best: RwSignal<Option<f64>> = RwSignal::new(None);
+    let stats_trend: RwSignal<Option<Trend>> = RwSignal::new(None);
 
     // Signals bridging domain state to UI
     let slider_enabled = RwSignal::new(false);
@@ -211,6 +224,7 @@ pub fn PitchMatchingView() -> impl IntoView {
     // Commit handler — used by slider on_commit and keyboard Enter/Space
     let on_commit = {
         let session = Rc::clone(&session);
+        let progress_timeline = Rc::clone(&progress_timeline);
         let tunable_handle = Rc::clone(&tunable_handle);
         let sync = sync_signals.clone();
         let cancelled = Rc::clone(&cancelled);
@@ -228,6 +242,22 @@ pub fn PitchMatchingView() -> impl IntoView {
                 .as_string()
                 .unwrap_or_default();
             session.borrow_mut().commit_pitch(value, timestamp);
+
+            // Update training stats signals
+            {
+                let s = session.borrow();
+                if let Some(completed) = s.last_completed() {
+                    let abs_error = completed.user_cent_error().abs();
+                    latest_cent_error.set(Some(abs_error));
+                    let new_best = match stats_session_best.get_untracked() {
+                        Some(best) if abs_error < best => abs_error,
+                        None => abs_error,
+                        Some(best) => best,
+                    };
+                    stats_session_best.set(Some(new_best));
+                }
+            }
+            stats_trend.set(progress_timeline.borrow().trend(training_mode));
 
             // Stop tunable note
             if let Some(ref mut h) = *tunable_handle.borrow_mut() {
@@ -592,6 +622,13 @@ pub fn PitchMatchingView() -> impl IntoView {
                     view! { <span></span> }.into_any()
                 }
             }}
+
+            // Training stats
+            <TrainingStats
+                latest_value=latest_cent_error.into()
+                session_best=stats_session_best.into()
+                trend=stats_trend.into()
+            />
 
             // Feedback indicator
             <div class="flex items-center justify-center h-16" aria-hidden="true">
