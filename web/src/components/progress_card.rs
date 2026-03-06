@@ -42,17 +42,14 @@ fn trend_text(trend: Option<Trend>) -> &'static str {
 pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline context");
-    let is_profile_loaded: RwSignal<bool> = use_context().expect("is_profile_loaded context");
 
     let ptl = progress_timeline.clone();
     let config = mode.config();
 
+    // Note: this component is only rendered by ProfileView after is_profile_loaded is true,
+    // so no additional loading guard is needed here.
     view! {
         {move || {
-            if !is_profile_loaded.get() {
-                return view! { <div /> }.into_any();
-            }
-
             let tl = ptl.borrow();
             if tl.state(mode) == TrainingModeState::NoData {
                 return view! { <div /> }.into_any();
