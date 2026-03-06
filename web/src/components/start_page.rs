@@ -1,9 +1,10 @@
 use leptos::prelude::*;
 
 use super::page_nav::PageNav;
+use super::progress_sparkline::ProgressSparkline;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::interval_codes::encode_intervals;
-use domain::Interval;
+use domain::{Interval, TrainingMode};
 
 fn interval_href(path: &str) -> String {
     let intervals = LocalStorageSettings::get_selected_intervals();
@@ -24,6 +25,7 @@ fn TrainingCard(
     icon: &'static str,
     href: String,
     aria_label: &'static str,
+    mode: TrainingMode,
 ) -> impl IntoView {
     view! {
         <a
@@ -32,7 +34,10 @@ fn TrainingCard(
             class="flex w-full items-center gap-3 rounded-xl bg-gray-100 px-4 py-3 min-h-11 text-lg font-medium text-gray-800 no-underline transition-opacity duration-150 ease-in-out active:opacity-70 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-offset-gray-900"
         >
             <span class="text-xl" aria-hidden="true">{icon}</span>
-            <span>{label}</span>
+            <div class="flex flex-col">
+                <span>{label}</span>
+                <ProgressSparkline mode=mode />
+            </div>
         </a>
     }
 }
@@ -57,12 +62,14 @@ pub fn StartPage() -> impl IntoView {
                             icon="\u{1F442}"
                             href="/training/comparison".to_string()
                             aria_label="Hear and Compare, Single Notes"
+                            mode=TrainingMode::UnisonPitchComparison
                         />
                         <TrainingCard
                             label="Tune & Match"
                             icon="\u{1F3AF}"
                             href="/training/pitch-matching".to_string()
                             aria_label="Tune and Match, Single Notes"
+                            mode=TrainingMode::UnisonMatching
                         />
                     </div>
                 </section>
@@ -76,12 +83,14 @@ pub fn StartPage() -> impl IntoView {
                             icon="\u{1F442}"
                             href=interval_comparison_href
                             aria_label="Hear and Compare, Intervals"
+                            mode=TrainingMode::IntervalPitchComparison
                         />
                         <TrainingCard
                             label="Tune & Match"
                             icon="\u{1F3AF}"
                             href=interval_pitch_matching_href
                             aria_label="Tune and Match, Intervals"
+                            mode=TrainingMode::IntervalMatching
                         />
                     </div>
                 </section>

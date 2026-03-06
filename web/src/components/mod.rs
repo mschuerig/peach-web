@@ -5,6 +5,7 @@ mod pitch_matching_view;
 mod pitch_slider;
 mod progress_card;
 mod progress_chart;
+mod progress_sparkline;
 mod profile_view;
 mod settings_view;
 mod start_page;
