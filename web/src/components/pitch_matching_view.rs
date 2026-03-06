@@ -401,8 +401,14 @@ pub fn PitchMatchingView() -> impl IntoView {
 
     let on_help_close = {
         let navigate = navigate.clone();
+        let current_route = {
+            let location = web_sys::window().unwrap().location();
+            let pathname = location.pathname().unwrap_or_default();
+            let search = location.search().unwrap_or_default();
+            format!("{pathname}{search}")
+        };
         Callback::new(move |()| {
-            navigate("/", Default::default());
+            navigate(&current_route, Default::default());
         })
     };
 

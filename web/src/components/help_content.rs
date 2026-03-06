@@ -44,14 +44,22 @@ fn process_markdown(text: &str) -> String {
 
 /// Renders a list of help sections with titles and processed body text.
 #[component]
-pub fn HelpContent(sections: &'static [HelpSection]) -> impl IntoView {
+pub fn HelpContent(
+    sections: &'static [HelpSection],
+    #[prop(optional)] use_h2: bool,
+) -> impl IntoView {
     view! {
         <div class="space-y-5">
             {sections.iter().map(|section| {
                 let body_html = process_markdown(section.body);
+                let heading = if use_h2 {
+                    view! { <h2 class="text-lg font-semibold dark:text-white">{section.title}</h2> }.into_any()
+                } else {
+                    view! { <h3 class="text-lg font-semibold dark:text-white">{section.title}</h3> }.into_any()
+                };
                 view! {
                     <div>
-                        <h3 class="text-lg font-semibold dark:text-white">{section.title}</h3>
+                        {heading}
                         <div
                             class="mt-2 text-gray-700 dark:text-gray-300"
                             inner_html=body_html
@@ -87,10 +95,9 @@ pub fn HelpModal(
     });
 
     let handle_close = move |_| {
+        // Only set the signal — the Effect will call dialog.close(),
+        // which fires the native close event, which calls on_close.
         is_open.set(false);
-        if let Some(cb) = on_close {
-            cb.run(());
-        }
     };
 
     // Handle native dialog close event (e.g. Escape key)

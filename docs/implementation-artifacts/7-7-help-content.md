@@ -1,6 +1,6 @@
 # Story 7.7: Help Content
 
-Status: review
+Status: done
 
 ## Story
 
@@ -184,3 +184,4 @@ All 8 tasks completed. All 10 acceptance criteria satisfied:
 ## Change Log
 
 - 2026-03-06: Implemented help content system — reusable HelpContent/HelpModal components, help text for all views, training pause/resume on help, inline help on Info view
+- 2026-03-06: Code review fixes: fix help close to re-navigate to training route instead of start page (AC8), fix HelpModal double on_close callback on Done click, fix heading level skip in info view (a11y), and mark done
