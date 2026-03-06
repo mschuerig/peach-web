@@ -14,9 +14,9 @@ pub fn InfoView() -> impl IntoView {
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">"Version 0.1.0"</p>
 
             <div class="mt-8 space-y-8">
-                <HelpContent sections=INFO_HELP />
+                <HelpContent sections=INFO_HELP use_h2=true />
 
-                <HelpContent sections=INFO_ACKNOWLEDGMENTS />
+                <HelpContent sections=INFO_ACKNOWLEDGMENTS use_h2=true />
 
                 <section>
                     <h2 class="text-lg font-semibold dark:text-white">"Developer"</h2>
