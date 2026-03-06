@@ -23,6 +23,44 @@ pub enum Interval {
 }
 
 impl Interval {
+    /// All 13 intervals in chromatic order (Prime through Octave).
+    pub fn all_chromatic() -> &'static [Interval] {
+        &[
+            Interval::Prime,
+            Interval::MinorSecond,
+            Interval::MajorSecond,
+            Interval::MinorThird,
+            Interval::MajorThird,
+            Interval::PerfectFourth,
+            Interval::Tritone,
+            Interval::PerfectFifth,
+            Interval::MinorSixth,
+            Interval::MajorSixth,
+            Interval::MinorSeventh,
+            Interval::MajorSeventh,
+            Interval::Octave,
+        ]
+    }
+
+    /// Short display label for this interval (e.g. "P1", "m2", "P5", "P8").
+    pub fn short_label(&self) -> &'static str {
+        match self {
+            Interval::Prime => "P1",
+            Interval::MinorSecond => "m2",
+            Interval::MajorSecond => "M2",
+            Interval::MinorThird => "m3",
+            Interval::MajorThird => "M3",
+            Interval::PerfectFourth => "P4",
+            Interval::Tritone => "d5",
+            Interval::PerfectFifth => "P5",
+            Interval::MinorSixth => "m6",
+            Interval::MajorSixth => "M6",
+            Interval::MinorSeventh => "m7",
+            Interval::MajorSeventh => "M7",
+            Interval::Octave => "P8",
+        }
+    }
+
     /// Number of semitones in this interval.
     pub fn semitones(&self) -> u8 {
         *self as u8
@@ -181,6 +219,40 @@ mod tests {
 
         let down = DirectedInterval::new(Interval::PerfectFifth, Direction::Down);
         assert_eq!(down.signed_semitones(), -7);
+    }
+
+    #[test]
+    fn test_short_label_all_intervals() {
+        let expected = [
+            (Interval::Prime, "P1"),
+            (Interval::MinorSecond, "m2"),
+            (Interval::MajorSecond, "M2"),
+            (Interval::MinorThird, "m3"),
+            (Interval::MajorThird, "M3"),
+            (Interval::PerfectFourth, "P4"),
+            (Interval::Tritone, "d5"),
+            (Interval::PerfectFifth, "P5"),
+            (Interval::MinorSixth, "m6"),
+            (Interval::MajorSixth, "M6"),
+            (Interval::MinorSeventh, "m7"),
+            (Interval::MajorSeventh, "M7"),
+            (Interval::Octave, "P8"),
+        ];
+        for (interval, label) in expected {
+            assert_eq!(interval.short_label(), label, "wrong label for {interval:?}");
+        }
+    }
+
+    #[test]
+    fn test_all_chromatic_order_and_count() {
+        let all = Interval::all_chromatic();
+        assert_eq!(all.len(), 13);
+        assert_eq!(all[0], Interval::Prime);
+        assert_eq!(all[12], Interval::Octave);
+        // Verify chromatic order matches discriminant values
+        for (i, interval) in all.iter().enumerate() {
+            assert_eq!(interval.semitones() as usize, i);
+        }
     }
 
     #[test]

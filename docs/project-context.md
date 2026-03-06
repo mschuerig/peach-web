@@ -213,6 +213,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - DO NOT call `.set()` on domain signals from components — only `UIObserver` writes domain signals
 - DO NOT add gamification, scores, streaks, or session summaries — "training, not testing" philosophy
 - DO NOT add onboarding, tutorials, or "welcome back" messages — the UX is intentionally sparse
+- DO NOT put business logic in view components — views are pure presentation. Constants, data transformations, persistence calls, encoding/decoding, and orchestration belong in domain types or adapter modules. Views only declare signals, wire event handlers, and render DOM.
 
 **Observer Contract:**
 

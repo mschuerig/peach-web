@@ -65,28 +65,16 @@ pub fn interval_label(interval: Interval, direction: Direction) -> String {
 }
 
 fn encode_one(di: &DirectedInterval) -> String {
-    let base = match di.interval {
-        // Prime is always encoded as "P1" regardless of direction —
-        // the UI only exposes Prime/Up, and decode always returns Prime/Up.
-        Interval::Prime => return "P1".to_string(),
-        Interval::MinorSecond => "m2",
-        Interval::MajorSecond => "M2",
-        Interval::MinorThird => "m3",
-        Interval::MajorThird => "M3",
-        Interval::PerfectFourth => "P4",
-        Interval::Tritone => "d5",
-        Interval::PerfectFifth => "P5",
-        Interval::MinorSixth => "m6",
-        Interval::MajorSixth => "M6",
-        Interval::MinorSeventh => "m7",
-        Interval::MajorSeventh => "M7",
-        Interval::Octave => "P8",
-    };
+    // Prime is always encoded as "P1" regardless of direction —
+    // the UI only exposes Prime/Up, and decode always returns Prime/Up.
+    if di.interval == Interval::Prime {
+        return "P1".to_string();
+    }
     let dir = match di.direction {
         Direction::Up => "u",
         Direction::Down => "d",
     };
-    format!("{base}{dir}")
+    format!("{}{dir}", di.interval.short_label())
 }
 
 fn decode_one(code: &str) -> Option<DirectedInterval> {
@@ -105,21 +93,10 @@ fn decode_one(code: &str) -> Option<DirectedInterval> {
         _ => return None,
     };
 
-    let interval = match base {
-        "m2" => Interval::MinorSecond,
-        "M2" => Interval::MajorSecond,
-        "m3" => Interval::MinorThird,
-        "M3" => Interval::MajorThird,
-        "P4" => Interval::PerfectFourth,
-        "d5" => Interval::Tritone,
-        "P5" => Interval::PerfectFifth,
-        "m6" => Interval::MinorSixth,
-        "M6" => Interval::MajorSixth,
-        "m7" => Interval::MinorSeventh,
-        "M7" => Interval::MajorSeventh,
-        "P8" => Interval::Octave,
-        _ => return None,
-    };
+    let interval = Interval::all_chromatic()
+        .iter()
+        .find(|i| i.short_label() == base)
+        .copied()?;
 
     Some(DirectedInterval::new(interval, direction))
 }
