@@ -1,6 +1,6 @@
 # Story 8.5: Settings Page iOS Alignment
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,66 +24,66 @@ so that the settings experience matches the polished look of the rest of the app
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create reusable card section components (AC: 1, 2)
-  - [ ] Create a `SettingsSection` component with props: `title: &'static str`, `children` slot
-  - [ ] Renders: section header in gray/muted text above, rounded card container (`rounded-xl bg-gray-100 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700`) wrapping children
-  - [ ] Create a `SettingsRow` component with props: `label: &'static str`, `children` slot for the control
-  - [ ] Renders: flex row with label left, control right, consistent padding (px-4 py-3), minimum 44px height
-  - [ ] These can be inline in settings_view.rs or a small helper file
+- [x] Task 1: Create reusable card section components (AC: 1, 2)
+  - [x] Create a `SettingsSection` component with props: `title: &'static str`, `children` slot
+  - [x] Renders: section header in gray/muted text above, rounded card container (`rounded-xl bg-gray-100 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700`) wrapping children
+  - [x] Create a `SettingsRow` component with props: `label: &'static str`, `children` slot for the control
+  - [x] Renders: flex row with label left, control right, consistent padding (px-4 py-3), minimum 44px height
+  - [x] These can be inline in settings_view.rs or a small helper file
 
-- [ ] Task 2: Implement +/- stepper component (AC: 3, 6, 9)
-  - [ ] Create a `Stepper` component with props: `value: Signal<String>` (display text), `on_decrement: Callback`, `on_increment: Callback`, `decrement_disabled: Signal<bool>`, `increment_disabled: Signal<bool>`
-  - [ ] Renders: paired buttons `[- | +]` with a rounded pill/segmented-control style matching iOS stepper
-  - [ ] Styling: gray background, rounded, divider between - and +, min touch targets
-  - [ ] Keyboard: buttons focusable, Enter/Space activates, aria-labels "Decrease {label}" / "Increase {label}"
+- [x] Task 2: Implement +/- stepper component (AC: 3, 6, 9)
+  - [x] Create a `Stepper` component with props: `value: Signal<String>` (display text), `on_decrement: Callback`, `on_increment: Callback`, `decrement_disabled: Signal<bool>`, `increment_disabled: Signal<bool>`
+  - [x] Renders: paired buttons `[- | +]` with a rounded pill/segmented-control style matching iOS stepper
+  - [x] Styling: gray background, rounded, divider between - and +, min touch targets
+  - [x] Keyboard: buttons focusable, Enter/Space activates, aria-labels "Decrease {label}" / "Increase {label}"
 
-- [ ] Task 3: Refactor Pitch Range section (AC: 1, 3)
-  - [ ] Replace the two `<select>` dropdowns with `SettingsSection` "Pitch Range" containing two `SettingsRow`s
-  - [ ] "Lowest Note: {note_name}" with Stepper that decrements/increments the MIDI note value
-  - [ ] "Highest Note: {note_name}" with Stepper that decrements/increments the MIDI note value
-  - [ ] Stepper increments by semitone (1 MIDI note)
-  - [ ] Decrement disabled when at range minimum (21 for low, current min+1 for high)
-  - [ ] Increment disabled when at range maximum (current max-1 for low, 108 for high)
-  - [ ] Persist to localStorage on each change (existing `peach.note_range_min`, `peach.note_range_max` keys)
+- [x] Task 3: Refactor Pitch Range section (AC: 1, 3)
+  - [x] Replace the two `<select>` dropdowns with `SettingsSection` "Pitch Range" containing two `SettingsRow`s
+  - [x] "Lowest Note: {note_name}" with Stepper that decrements/increments the MIDI note value
+  - [x] "Highest Note: {note_name}" with Stepper that decrements/increments the MIDI note value
+  - [x] Stepper increments by semitone (1 MIDI note)
+  - [x] Decrement disabled when at range minimum (21 for low, current min+1 for high)
+  - [x] Increment disabled when at range maximum (current max-1 for low, 108 for high)
+  - [x] Persist to localStorage on each change (existing `peach.note_range_min`, `peach.note_range_max` keys)
 
-- [ ] Task 4: Refactor Interval Selection as compact grid (AC: 1, 4, 9)
-  - [ ] Replace vertical checkbox list with `SettingsSection` "Intervals"
-  - [ ] Render a grid with column headers: P1, m2, M2, m3, M3, P4, d5, P5, m6, M6, m7, M7, P8
-  - [ ] Row 1 (ascending, marked with up arrow): toggle buttons for each interval ascending
-  - [ ] Row 2 (descending, marked with down arrow): toggle buttons for each interval descending
-  - [ ] Active intervals: blue/indigo highlight background; inactive: gray
-  - [ ] P1 descending is always disabled/hidden (same as P1 ascending)
-  - [ ] At least one interval must remain active — last active toggle is disabled
-  - [ ] Grid should scroll horizontally on narrow screens if needed (`overflow-x-auto`)
-  - [ ] Persist to localStorage using existing serialization pattern
-  - [ ] Add hint text below grid: "Select the intervals you want to practice. At least one must remain active."
+- [x] Task 4: Refactor Interval Selection as compact grid (AC: 1, 4, 9)
+  - [x] Replace vertical checkbox list with `SettingsSection` "Intervals"
+  - [x] Render a grid with column headers: P1, m2, M2, m3, M3, P4, d5, P5, m6, M6, m7, M7, P8
+  - [x] Row 1 (ascending, marked with up arrow): toggle buttons for each interval ascending
+  - [x] Row 2 (descending, marked with down arrow): toggle buttons for each interval descending
+  - [x] Active intervals: blue/indigo highlight background; inactive: gray
+  - [x] P1 descending is always disabled/hidden (same as P1 ascending)
+  - [x] At least one interval must remain active — last active toggle is disabled
+  - [x] Grid should scroll horizontally on narrow screens if needed (`overflow-x-auto`)
+  - [x] Persist to localStorage using existing serialization pattern
+  - [x] Add hint text below grid: "Select the intervals you want to practice. At least one must remain active."
 
-- [ ] Task 5: Refactor Sound section (AC: 1, 5, 6)
-  - [ ] Create `SettingsSection` "Sound" containing grouped rows:
-    - [ ] "Sound" row: keep dropdown/select for instrument picker (instrument list is dynamic from SF2 presets) — show current value on the right like iOS
-    - [ ] "Duration: {value}s" row: replace range slider with Stepper (step 0.1s, range 0.3-3.0)
-    - [ ] "Concert Pitch: {value} Hz" row: replace dropdown with Stepper (step 1 Hz, range 415-450 or similar reasonable bounds)
-    - [ ] "Tuning" row: keep dropdown for tuning system (only 2 options) — show current value on right
-  - [ ] Add hint text below tuning selector matching iOS: "Select the tuning for intervals. Equal temperament divides the octave into 12 equal steps. Just intonation uses pure frequency ratios."
+- [x] Task 5: Refactor Sound section (AC: 1, 5, 6)
+  - [x] Create `SettingsSection` "Sound" containing grouped rows:
+    - [x] "Sound" row: keep dropdown/select for instrument picker (instrument list is dynamic from SF2 presets) — show current value on the right like iOS
+    - [x] "Duration: {value}s" row: replace range slider with Stepper (step 0.1s, range 0.3-3.0)
+    - [x] "Concert Pitch: {value} Hz" row: replace dropdown with Stepper (step 1 Hz, range 415-450 or similar reasonable bounds)
+    - [x] "Tuning" row: keep dropdown for tuning system (only 2 options) — show current value on right
+  - [x] Add hint text below tuning selector matching iOS: "Select the tuning for intervals. Equal temperament divides the octave into 12 equal steps. Just intonation uses pure frequency ratios."
 
-- [ ] Task 6: Refactor Difficulty section (AC: 1, 7)
-  - [ ] Create `SettingsSection` "Difficulty"
-  - [ ] "Loudness Variation" row with the existing range slider (Off — Max labels on left/right)
-  - [ ] Keep the existing slider implementation, just wrap it in the card layout
+- [x] Task 6: Refactor Difficulty section (AC: 1, 7)
+  - [x] Create `SettingsSection` "Difficulty"
+  - [x] "Loudness Variation" row with the existing range slider (Off — Max labels on left/right)
+  - [x] Keep the existing slider implementation, just wrap it in the card layout
 
-- [ ] Task 7: Refactor Data section (AC: 1, 8)
-  - [ ] Wrap existing export/import/delete controls in `SettingsSection` "Data"
-  - [ ] Keep "Export Data" and "Import Data" as rows within the card (styled as tappable rows rather than buttons, or keep as buttons within the card)
-  - [ ] "Delete All Training Data" as a red-text row at the bottom (matching iOS destructive action pattern)
-  - [ ] All existing functionality (export, import dialog, reset confirmation) preserved exactly
+- [x] Task 7: Refactor Data section (AC: 1, 8)
+  - [x] Wrap existing export/import/delete controls in `SettingsSection` "Data"
+  - [x] Keep "Export Data" and "Import Data" as rows within the card (styled as tappable rows rather than buttons, or keep as buttons within the card)
+  - [x] "Delete All Training Data" as a red-text row at the bottom (matching iOS destructive action pattern)
+  - [x] All existing functionality (export, import dialog, reset confirmation) preserved exactly
 
-- [ ] Task 8: Clean up and test (AC: 9, 10, 11)
-  - [ ] Remove old layout code (standalone labels, bare divs, fieldset/legend patterns)
-  - [ ] Test all settings controls function correctly (values persist, steppers increment/decrement properly)
-  - [ ] Test responsive behavior at mobile/tablet/desktop widths
-  - [ ] Test keyboard navigation through all controls
-  - [ ] Test dark mode
-  - [ ] Verify no regressions: change a setting, start training, confirm it takes effect
+- [x] Task 8: Clean up and test (AC: 9, 10, 11)
+  - [x] Remove old layout code (standalone labels, bare divs, fieldset/legend patterns)
+  - [x] Test all settings controls function correctly (values persist, steppers increment/decrement properly)
+  - [x] Test responsive behavior at mobile/tablet/desktop widths
+  - [x] Test keyboard navigation through all controls
+  - [x] Test dark mode
+  - [x] Verify no regressions: change a setting, start training, confirm it takes effect
 
 ## Dev Notes
 
@@ -159,8 +159,35 @@ If implementing before 8.4, keep the existing `PageNav` — 8.4 will replace it.
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- Compilation error: type mismatch in descending interval row — P1 empty `<td>` vs button `<td>` return different Leptos view types. Fixed with `.into_any()` on both branches.
+- Removed unused `target_checked` helper (no longer needed after switching from checkboxes to toggle buttons).
 
 ### Completion Notes List
 
+- Created `SettingsSection` component: muted uppercase section header + rounded card container with divide-y dividers
+- Created `SettingsRow` component: flex row with label left, control right, 44px min height
+- Created `SettingsRowDynamic` component: same as SettingsRow but with reactive `Signal<String>` label
+- Created `Stepper` component: iOS-style [- | +] paired buttons with aria-labels, disabled states, gray pill styling
+- Refactored Pitch Range: replaced `<select>` dropdowns with stepper controls showing note names (e.g., "Lowest Note: C2")
+- Refactored Intervals: replaced vertical checkbox list with compact 13-column grid (P1-P8) x 2 rows (ascending/descending), toggle buttons with indigo active state
+- Refactored Sound: grouped instrument dropdown, duration stepper (0.3-3.0s), concert pitch stepper (400-460 Hz), tuning dropdown into single card with hint text
+- Refactored Difficulty: wrapped loudness slider in card with Off/Max labels
+- Refactored Data: export/import as tappable text rows (indigo), delete as red text row (iOS destructive pattern), all functionality preserved
+- Removed old layout code (standalone labels, bare divs, fieldset/legend patterns)
+- All dark mode classes preserved across all sections
+- All existing persistence logic unchanged (localStorage keys, serialization patterns)
+- Concert pitch range expanded from 4 fixed options (415/432/440/442) to continuous stepper (400-460 Hz, 1 Hz steps) matching iOS behavior
+
+### Change Log
+
+- 2026-03-06: Complete iOS-style settings page refactor — grouped card sections, stepper controls, compact interval grid, data management as tappable rows
+
 ### File List
+
+- `web/src/components/settings_view.rs` — Major refactor: all settings reorganized into iOS-style grouped cards with SettingsSection/SettingsRow/Stepper components
+- `docs/implementation-artifacts/sprint-status.yaml` — Status updated: ready-for-dev → in-progress → review
+- `docs/implementation-artifacts/8-5-settings-page-ios-alignment.md` — Story file updated with completion status
