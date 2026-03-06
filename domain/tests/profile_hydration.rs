@@ -8,7 +8,7 @@ fn test_profile_hydration_from_comparison_sequence() {
     // Simulate a sequence of comparisons for note 60 (C4)
     let offsets = [50.0, 40.0, 45.0, 35.0, 55.0];
     for &offset in &offsets {
-        profile.update(MIDINote::new(60), offset, true);
+        profile.update(MIDINote::new(60), Cents::new(offset), true);
     }
 
     let stats = profile.note_stats(MIDINote::new(60));
@@ -33,12 +33,12 @@ fn test_profile_hydration_order_independence() {
 
     let mut profile_forward = PerceptualProfile::new();
     for &offset in &offsets {
-        profile_forward.update(MIDINote::new(60), offset, true);
+        profile_forward.update(MIDINote::new(60), Cents::new(offset), true);
     }
 
     let mut profile_reverse = PerceptualProfile::new();
     for &offset in offsets.iter().rev() {
-        profile_reverse.update(MIDINote::new(60), offset, true);
+        profile_reverse.update(MIDINote::new(60), Cents::new(offset), true);
     }
 
     let fwd = profile_forward.note_stats(MIDINote::new(60));
@@ -57,15 +57,15 @@ fn test_profile_hydration_multi_note() {
     let mut profile = PerceptualProfile::new();
 
     // Note 60: mean = 30
-    profile.update(MIDINote::new(60), 20.0, true);
-    profile.update(MIDINote::new(60), 40.0, false);
+    profile.update(MIDINote::new(60), Cents::new(20.0), true);
+    profile.update(MIDINote::new(60), Cents::new(40.0), false);
 
     // Note 72: mean = 60
-    profile.update(MIDINote::new(72), 50.0, true);
-    profile.update(MIDINote::new(72), 70.0, false);
+    profile.update(MIDINote::new(72), Cents::new(50.0), true);
+    profile.update(MIDINote::new(72), Cents::new(70.0), false);
 
     // Note 48: mean = 45
-    profile.update(MIDINote::new(48), 45.0, true);
+    profile.update(MIDINote::new(48), Cents::new(45.0), true);
 
     // Overall mean: (30 + 60 + 45) / 3 = 45.0
     assert!((profile.overall_mean().unwrap() - 45.0).abs() < 1e-10);
@@ -83,9 +83,9 @@ fn test_profile_hydration_weak_spots() {
     let mut profile = PerceptualProfile::new();
 
     // Train some notes with varying difficulty
-    profile.update(MIDINote::new(60), 10.0, true); // Easy (low mean)
-    profile.update(MIDINote::new(65), 80.0, false); // Hard (high mean)
-    profile.update(MIDINote::new(72), 50.0, true); // Medium
+    profile.update(MIDINote::new(60), Cents::new(10.0), true); // Easy (low mean)
+    profile.update(MIDINote::new(65), Cents::new(80.0), false); // Hard (high mean)
+    profile.update(MIDINote::new(72), Cents::new(50.0), true); // Medium
 
     let weak = profile.weak_spots(5);
     assert_eq!(weak.len(), 5);
@@ -103,7 +103,7 @@ fn test_profile_hydration_matching_accumulators() {
     // Simulate pitch matching results
     let errors = [3.0, -5.0, 7.0, -2.0, 4.0];
     for &error in &errors {
-        profile.update_matching(MIDINote::new(60), error);
+        profile.update_matching(MIDINote::new(60), Cents::new(error));
     }
 
     // Abs values: 3, 5, 7, 2, 4
@@ -124,15 +124,15 @@ fn test_profile_reset_and_rehydrate() {
     let mut profile = PerceptualProfile::new();
 
     // First hydration
-    profile.update(MIDINote::new(60), 50.0, true);
-    profile.update(MIDINote::new(60), 30.0, false);
+    profile.update(MIDINote::new(60), Cents::new(50.0), true);
+    profile.update(MIDINote::new(60), Cents::new(30.0), false);
 
     let mean_before = profile.note_stats(MIDINote::new(60)).mean();
 
     // Reset and re-hydrate with same data
     profile.reset();
-    profile.update(MIDINote::new(60), 50.0, true);
-    profile.update(MIDINote::new(60), 30.0, false);
+    profile.update(MIDINote::new(60), Cents::new(50.0), true);
+    profile.update(MIDINote::new(60), Cents::new(30.0), false);
 
     let mean_after = profile.note_stats(MIDINote::new(60)).mean();
     assert!((mean_before - mean_after).abs() < 1e-10);
@@ -146,7 +146,7 @@ fn test_profile_hydration_large_dataset() {
     // 1000 records for a single note
     for i in 0..1000 {
         let offset = 50.0 + (i % 20) as f64; // 50..69 repeating
-        profile.update(MIDINote::new(60), offset, i % 2 == 0);
+        profile.update(MIDINote::new(60), Cents::new(offset), i % 2 == 0);
     }
 
     let stats = profile.note_stats(MIDINote::new(60));

@@ -7,6 +7,9 @@ pub struct Cents {
 }
 
 impl Cents {
+    pub const PER_OCTAVE: f64 = 1200.0;
+    pub const PER_SEMITONE_ET: f64 = 100.0;
+
     pub fn new(raw_value: f64) -> Self {
         Self { raw_value }
     }

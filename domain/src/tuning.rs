@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::types::{DetunedMIDINote, Frequency, Interval, MIDINote};
+use crate::types::{Cents, DetunedMIDINote, Frequency, Interval, MIDINote};
 
 /// Reference MIDI note for tuning calculations (A4).
 const REFERENCE_MIDI: i16 = 69;
@@ -40,7 +40,7 @@ impl TuningSystem {
     /// Formula: `ref_pitch * 2^(total_cents / 1200)`
     pub fn frequency(&self, note: DetunedMIDINote, reference_pitch: Frequency) -> Frequency {
         let total_cents = self.total_cent_offset(note);
-        let hz = reference_pitch.raw_value() * 2.0_f64.powf(total_cents / 1200.0);
+        let hz = reference_pitch.raw_value() * 2.0_f64.powf(total_cents / Cents::PER_OCTAVE);
         Frequency::new(hz)
     }
 
@@ -52,7 +52,7 @@ impl TuningSystem {
     /// Cent offset for a given interval in this tuning system.
     pub fn cent_offset(&self, interval: Interval) -> f64 {
         match self {
-            TuningSystem::EqualTemperament => interval.semitones() as f64 * 100.0,
+            TuningSystem::EqualTemperament => interval.semitones() as f64 * Cents::PER_SEMITONE_ET,
             TuningSystem::JustIntonation => just_intonation_cents(interval),
         }
     }
@@ -64,7 +64,7 @@ impl TuningSystem {
         let octaves = diff.div_euclid(12) as f64;
         let remainder = diff.rem_euclid(12) as usize;
         let interval = INTERVALS_BY_SEMITONE[remainder];
-        octaves * 1200.0 + self.cent_offset(interval) + note.offset.raw_value
+        octaves * Cents::PER_OCTAVE + self.cent_offset(interval) + note.offset.raw_value
     }
 }
 

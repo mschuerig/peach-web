@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::tuning::TuningSystem;
-use crate::types::{DetunedMIDINote, MIDINote};
+use crate::types::{Cents, DetunedMIDINote, MIDINote};
 
 /// A comparison challenge: a reference note and a detuned target note.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ impl PitchComparison {
     pub fn is_target_higher(&self) -> bool {
         let semitone_cents =
             (self.target_note.note.raw_value() as f64 - self.reference_note.raw_value() as f64)
-                * 100.0;
+                * Cents::PER_SEMITONE_ET;
         semitone_cents + self.target_note.offset.raw_value > 0.0
     }
 

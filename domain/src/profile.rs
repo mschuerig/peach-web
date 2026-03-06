@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::ops::RangeInclusive;
 
-use crate::types::MIDINote;
+use crate::types::{Cents, MIDINote};
 
 /// Custom serde for [PerceptualNote; 128] — serialize as Vec since serde
 /// doesn't support arrays > 32 elements natively.
@@ -45,12 +45,15 @@ impl Default for PerceptualNote {
             std_dev: 0.0,
             m2: 0.0,
             sample_count: 0,
-            current_difficulty: 100.0,
+            current_difficulty: Self::COLD_START_DIFFICULTY,
         }
     }
 }
 
 impl PerceptualNote {
+    /// Default difficulty for untrained notes (cents).
+    pub const COLD_START_DIFFICULTY: f64 = 100.0;
+
     pub fn mean(&self) -> f64 {
         self.mean
     }
@@ -95,13 +98,14 @@ impl PerceptualProfile {
     /// Update a note's statistics using Welford's online algorithm.
     /// `cent_offset` is the absolute magnitude of the cent difference presented.
     /// `_is_correct` is reserved for per-note accuracy tracking in future epics.
-    pub fn update(&mut self, note: MIDINote, cent_offset: f64, _is_correct: bool) {
-        assert!(!cent_offset.is_nan(), "cent_offset must not be NaN");
+    pub fn update(&mut self, note: MIDINote, cent_offset: Cents, _is_correct: bool) {
+        let raw = cent_offset.raw_value;
+        assert!(!raw.is_nan(), "cent_offset must not be NaN");
         let stats = &mut self.notes[note.raw_value() as usize];
         stats.sample_count += 1;
-        let delta = cent_offset - stats.mean;
+        let delta = raw - stats.mean;
         stats.mean += delta / stats.sample_count as f64;
-        let delta2 = cent_offset - stats.mean;
+        let delta2 = raw - stats.mean;
         stats.m2 += delta * delta2;
         let variance = if stats.sample_count < 2 {
             0.0
@@ -171,7 +175,7 @@ impl PerceptualProfile {
     }
 
     /// Average mean across trained notes within a MIDI note range.
-    pub fn average_threshold(&self, range: RangeInclusive<u8>) -> Option<f64> {
+    pub fn average_threshold(&self, range: RangeInclusive<u8>) -> Option<Cents> {
         let trained: Vec<f64> = self
             .notes
             .iter()
@@ -183,15 +187,15 @@ impl PerceptualProfile {
         if trained.is_empty() {
             None
         } else {
-            Some(trained.iter().sum::<f64>() / trained.len() as f64)
+            Some(Cents::new(trained.iter().sum::<f64>() / trained.len() as f64))
         }
     }
 
     /// Update aggregate pitch matching statistics using Welford's on abs(cent_error).
     /// `_note` is reserved for per-note pitch matching accuracy in Epic 4+.
-    pub fn update_matching(&mut self, _note: MIDINote, cent_error: f64) {
-        assert!(!cent_error.is_nan(), "cent_error must not be NaN");
-        let abs_error = cent_error.abs();
+    pub fn update_matching(&mut self, _note: MIDINote, cent_error: Cents) {
+        assert!(!cent_error.raw_value.is_nan(), "cent_error must not be NaN");
+        let abs_error = cent_error.magnitude();
         self.matching_count += 1;
         let delta = abs_error - self.matching_mean_abs;
         self.matching_mean_abs += delta / self.matching_count as f64;
@@ -255,7 +259,7 @@ mod tests {
     #[test]
     fn test_single_update_mean_count_stddev() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 50.0, true);
+        profile.update(MIDINote::new(60), Cents::new(50.0), true);
 
         let stats = profile.note_stats(MIDINote::new(60));
         assert_eq!(stats.mean(), 50.0);
@@ -269,8 +273,8 @@ mod tests {
     #[test]
     fn test_welford_two_samples() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 40.0, true);
-        profile.update(MIDINote::new(60), 60.0, false);
+        profile.update(MIDINote::new(60), Cents::new(40.0), true);
+        profile.update(MIDINote::new(60), Cents::new(60.0), false);
 
         let stats = profile.note_stats(MIDINote::new(60));
         assert_eq!(stats.sample_count(), 2);
@@ -284,7 +288,7 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         let values = [10.0, 20.0, 30.0];
         for &v in &values {
-            profile.update(MIDINote::new(42), v, true);
+            profile.update(MIDINote::new(42), Cents::new(v), true);
         }
 
         let stats = profile.note_stats(MIDINote::new(42));
@@ -300,7 +304,7 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         let values = [2.0, 4.0, 4.0, 4.0, 5.0];
         for &v in &values {
-            profile.update(MIDINote::new(69), v, true);
+            profile.update(MIDINote::new(69), Cents::new(v), true);
         }
 
         let stats = profile.note_stats(MIDINote::new(69));
@@ -321,9 +325,9 @@ mod tests {
     fn test_weak_spots_untrained_first() {
         let mut profile = PerceptualProfile::new();
         // Train notes 0, 1, 2 with varying means
-        profile.update(MIDINote::new(0), 10.0, true);
-        profile.update(MIDINote::new(1), 50.0, true);
-        profile.update(MIDINote::new(2), 30.0, true);
+        profile.update(MIDINote::new(0), Cents::new(10.0), true);
+        profile.update(MIDINote::new(1), Cents::new(50.0), true);
+        profile.update(MIDINote::new(2), Cents::new(30.0), true);
 
         let weak = profile.weak_spots(5);
         assert_eq!(weak.len(), 5);
@@ -337,7 +341,7 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         // Train all 128 notes with different means
         for i in 0..128u8 {
-            profile.update(MIDINote::new(i), i as f64, true);
+            profile.update(MIDINote::new(i), Cents::new(i as f64), true);
         }
 
         let weak = profile.weak_spots(3);
@@ -366,8 +370,8 @@ mod tests {
     #[test]
     fn test_overall_mean_with_trained_notes() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 40.0, true);
-        profile.update(MIDINote::new(72), 60.0, true);
+        profile.update(MIDINote::new(60), Cents::new(40.0), true);
+        profile.update(MIDINote::new(72), Cents::new(60.0), true);
 
         // overall_mean = average of per-note means = (40 + 60) / 2 = 50
         assert!((profile.overall_mean().unwrap() - 50.0).abs() < 1e-10);
@@ -376,15 +380,15 @@ mod tests {
     #[test]
     fn test_overall_std_dev_none_with_fewer_than_two() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 40.0, true);
+        profile.update(MIDINote::new(60), Cents::new(40.0), true);
         assert_eq!(profile.overall_std_dev(), None);
     }
 
     #[test]
     fn test_overall_std_dev_with_trained_notes() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 40.0, true);
-        profile.update(MIDINote::new(72), 60.0, true);
+        profile.update(MIDINote::new(60), Cents::new(40.0), true);
+        profile.update(MIDINote::new(72), Cents::new(60.0), true);
 
         // Means: [40, 60], overall mean = 50
         // Sample std dev = sqrt(((40-50)^2 + (60-50)^2) / 1) = sqrt(200) ≈ 14.142
@@ -395,19 +399,19 @@ mod tests {
     #[test]
     fn test_average_threshold_range() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 40.0, true);
-        profile.update(MIDINote::new(65), 60.0, true);
-        profile.update(MIDINote::new(72), 80.0, true);
+        profile.update(MIDINote::new(60), Cents::new(40.0), true);
+        profile.update(MIDINote::new(65), Cents::new(60.0), true);
+        profile.update(MIDINote::new(72), Cents::new(80.0), true);
 
         // Range 60..=65 includes notes 60 (mean=40) and 65 (mean=60)
         let avg = profile.average_threshold(60..=65).unwrap();
-        assert!((avg - 50.0).abs() < 1e-10);
+        assert!((avg.raw_value - 50.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_average_threshold_no_trained_in_range() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 40.0, true);
+        profile.update(MIDINote::new(60), Cents::new(40.0), true);
         assert_eq!(profile.average_threshold(70..=80), None);
     }
 
@@ -423,7 +427,7 @@ mod tests {
     #[test]
     fn test_matching_single_sample() {
         let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), -5.0);
+        profile.update_matching(MIDINote::new(60), Cents::new(-5.0));
 
         assert!((profile.matching_mean().unwrap() - 5.0).abs() < 1e-10);
         assert_eq!(profile.matching_std_dev(), None); // Need 2+ samples
@@ -432,9 +436,9 @@ mod tests {
     #[test]
     fn test_matching_multiple_samples() {
         let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), 3.0);
-        profile.update_matching(MIDINote::new(60), -5.0);
-        profile.update_matching(MIDINote::new(60), 7.0);
+        profile.update_matching(MIDINote::new(60), Cents::new(3.0));
+        profile.update_matching(MIDINote::new(60), Cents::new(-5.0));
+        profile.update_matching(MIDINote::new(60), Cents::new(7.0));
 
         // Abs values: 3, 5, 7. Mean = 5.0
         assert!((profile.matching_mean().unwrap() - 5.0).abs() < 1e-10);
@@ -448,8 +452,8 @@ mod tests {
     #[test]
     fn test_reset_clears_all_notes() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 50.0, true);
-        profile.update(MIDINote::new(72), 30.0, false);
+        profile.update(MIDINote::new(60), Cents::new(50.0), true);
+        profile.update(MIDINote::new(72), Cents::new(30.0), false);
 
         profile.reset();
 
@@ -461,8 +465,8 @@ mod tests {
     #[test]
     fn test_reset_matching_clears_accumulators() {
         let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), 5.0);
-        profile.update_matching(MIDINote::new(60), 10.0);
+        profile.update_matching(MIDINote::new(60), Cents::new(5.0));
+        profile.update_matching(MIDINote::new(60), Cents::new(10.0));
 
         profile.reset_matching();
 
@@ -479,7 +483,7 @@ mod tests {
         assert_eq!(stats.mean(), 0.0);
         assert_eq!(stats.std_dev(), 0.0);
         assert_eq!(stats.sample_count(), 0);
-        assert_eq!(stats.current_difficulty(), 100.0);
+        assert_eq!(stats.current_difficulty(), PerceptualNote::COLD_START_DIFFICULTY);
         assert!(!stats.is_trained());
     }
 
@@ -502,8 +506,8 @@ mod tests {
     #[test]
     fn test_perceptual_profile_serde_roundtrip() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), 50.0, true);
-        profile.update_matching(MIDINote::new(60), 3.0);
+        profile.update(MIDINote::new(60), Cents::new(50.0), true);
+        profile.update_matching(MIDINote::new(60), Cents::new(3.0));
 
         let json = serde_json::to_string(&profile).unwrap();
         let parsed: PerceptualProfile = serde_json::from_str(&json).unwrap();
@@ -517,13 +521,13 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         assert_eq!(profile.matching_count(), 0);
 
-        profile.update_matching(MIDINote::new(60), 3.0);
+        profile.update_matching(MIDINote::new(60), Cents::new(3.0));
         assert_eq!(profile.matching_count(), 1);
 
-        profile.update_matching(MIDINote::new(72), -5.0);
+        profile.update_matching(MIDINote::new(72), Cents::new(-5.0));
         assert_eq!(profile.matching_count(), 2);
 
-        profile.update_matching(MIDINote::new(60), 7.0);
+        profile.update_matching(MIDINote::new(60), Cents::new(7.0));
         assert_eq!(profile.matching_count(), 3);
     }
 
@@ -540,13 +544,13 @@ mod tests {
     #[should_panic(expected = "cent_offset must not be NaN")]
     fn test_update_panics_on_nan() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), f64::NAN, true);
+        profile.update(MIDINote::new(60), Cents::new(f64::NAN), true);
     }
 
     #[test]
     #[should_panic(expected = "cent_error must not be NaN")]
     fn test_update_matching_panics_on_nan() {
         let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), f64::NAN);
+        profile.update_matching(MIDINote::new(60), Cents::new(f64::NAN));
     }
 }
