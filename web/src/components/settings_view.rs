@@ -5,13 +5,11 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
 use send_wrapper::SendWrapper;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::audio_soundfont::SF2Preset;
-use crate::adapters::data_portability;
-use crate::adapters::data_portability_service::{ImportExportStatus, ResetStatus};
+use crate::adapters::csv_export_import;
+use crate::adapters::csv_export_import::{ImportExportStatus, ResetStatus};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::app::SoundFontLoadStatus;
@@ -532,7 +530,7 @@ pub fn SettingsView() -> impl IntoView {
                     let ie_status = RwSignal::new(ImportExportStatus::Idle);
                     let sr_announcement = RwSignal::new(String::new());
                     let import_dialog_ref = NodeRef::<leptos::html::Dialog>::new();
-                    let import_data_signal: RwSignal<Option<data_portability::ParsedImportData>> = RwSignal::new(None);
+                    let import_data_signal: RwSignal<Option<csv_export_import::ParsedImportData>> = RwSignal::new(None);
                     let file_input_ref = NodeRef::<leptos::html::Input>::new();
 
                     let handle_export = {
@@ -540,7 +538,7 @@ pub fn SettingsView() -> impl IntoView {
                             ie_status.set(ImportExportStatus::Exporting);
                             spawn_local(async move {
                                 let result = if let Some(store) = db_store.get_untracked() {
-                                    data_portability::export_all_data(&store).await
+                                    csv_export_import::export_all_data(&store).await
                                 } else {
                                     Err("Database not available".to_string())
                                 };
@@ -591,29 +589,18 @@ pub fn SettingsView() -> impl IntoView {
                             return;
                         }
 
-                        let reader = match web_sys::FileReader::new() {
-                            Ok(r) => r,
-                            Err(e) => {
-                                let msg = format!("Failed to create FileReader: {e:?}");
-                                sr_announcement.set(msg.clone());
-                                ie_status.set(ImportExportStatus::Error(msg));
-                                return;
-                            }
-                        };
-
-                        let reader_clone = reader.clone();
-                        let onload = Closure::once(move |_event: web_sys::Event| {
-                            let content = match reader_clone.result() {
-                                Ok(val) => val.as_string().unwrap_or_default(),
-                                Err(e) => {
-                                    let msg = format!("Failed to read file: {e:?}");
+                        input.set_value("");
+                        spawn_local(async move {
+                            let content = match csv_export_import::read_file_as_text(file).await {
+                                Ok(c) => c,
+                                Err(msg) => {
                                     sr_announcement.set(msg.clone());
                                     ie_status.set(ImportExportStatus::Error(msg));
                                     return;
                                 }
                             };
 
-                            match data_portability::parse_import_file(&content) {
+                            match csv_export_import::parse_import_file(&content) {
                                 Ok(parsed) => {
                                     for warning in &parsed.warnings {
                                         web_sys::console::warn_1(&warning.into());
@@ -634,11 +621,6 @@ pub fn SettingsView() -> impl IntoView {
                                 }
                             }
                         });
-
-                        reader.set_onload(Some(onload.as_ref().unchecked_ref()));
-                        onload.forget();
-                        let _ = reader.read_as_text(&file);
-                        input.set_value("");
                     };
 
                     let handle_import_replace = move |_| {
@@ -650,7 +632,7 @@ pub fn SettingsView() -> impl IntoView {
                         spawn_local(async move {
                             if let Some(data) = data.as_ref() {
                                 let result = if let Some(store) = db_store.get_untracked() {
-                                    data_portability::import_replace(&store, data).await
+                                    csv_export_import::import_replace(&store, data).await
                                 } else {
                                     Err("Database not available".to_string())
                                 };
@@ -660,7 +642,7 @@ pub fn SettingsView() -> impl IntoView {
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::ImportSuccess(msg));
                                         TimeoutFuture::new(1500).await;
-                                        data_portability::reload_page();
+                                        csv_export_import::reload_page();
                                     }
                                     Err(e) => {
                                         let msg = format!("Import failed: {e}");
@@ -683,7 +665,7 @@ pub fn SettingsView() -> impl IntoView {
                         spawn_local(async move {
                             if let Some(data) = data.as_ref() {
                                 let result = if let Some(store) = db_store.get_untracked() {
-                                    data_portability::import_merge(&store, data).await
+                                    csv_export_import::import_merge(&store, data).await
                                 } else {
                                     Err("Database not available".to_string())
                                 };
@@ -695,7 +677,7 @@ pub fn SettingsView() -> impl IntoView {
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::ImportSuccess(msg));
                                         TimeoutFuture::new(1500).await;
-                                        data_portability::reload_page();
+                                        csv_export_import::reload_page();
                                     }
                                     Err(e) => {
                                         let msg = format!("Import failed: {e}");

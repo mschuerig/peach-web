@@ -13,6 +13,17 @@ use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::MessagePort;
 
 use crate::adapters::audio_context::AudioContextManager;
+
+// Newtype wrappers for RwSignal<bool> contexts — Leptos uses types for context
+// lookup, so multiple RwSignal<bool> values would shadow each other.
+#[derive(Clone, Copy)]
+pub struct IsProfileLoaded(pub RwSignal<bool>);
+
+#[derive(Clone, Copy)]
+pub struct WorkletConnecting(pub RwSignal<bool>);
+
+#[derive(Clone, Copy)]
+pub struct AudioNeedsGesture(pub RwSignal<bool>);
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
@@ -56,13 +67,13 @@ pub fn App() -> impl IntoView {
     provide_context(trend_analyzer.clone());
     provide_context(timeline.clone());
     provide_context(progress_timeline.clone());
-    provide_context(is_profile_loaded);
+    provide_context(IsProfileLoaded(is_profile_loaded));
     provide_context(db_store);
     provide_context(worklet_bridge);
     provide_context(sf2_presets);
     provide_context(worklet_assets);
-    provide_context(worklet_connecting);
-    provide_context(audio_needs_gesture);
+    provide_context(WorkletConnecting(worklet_connecting));
+    provide_context(AudioNeedsGesture(audio_needs_gesture));
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);

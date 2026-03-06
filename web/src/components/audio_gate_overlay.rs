@@ -13,8 +13,8 @@ use crate::adapters::audio_context::{AudioContextManager, provide_audio_gesture}
 /// browser gesture via `provide_audio_gesture` and hides the overlay.
 #[component]
 pub fn AudioGateOverlay() -> impl IntoView {
-    let audio_needs_gesture =
-        use_context::<RwSignal<bool>>().expect("audio_needs_gesture context");
+    let crate::app::AudioNeedsGesture(audio_needs_gesture) =
+        use_context().expect("audio_needs_gesture context");
     let audio_ctx: SendWrapper<Rc<RefCell<AudioContextManager>>> =
         use_context().expect("AudioContextManager context");
 

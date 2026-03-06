@@ -1,14 +1,33 @@
 use std::collections::HashSet;
 
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
 
-use domain::portability::{
-    from_interval_code, midi_note_name, to_interval_code, truncate_timestamp_to_second,
-};
 use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
+use domain::{Interval, MIDINote};
 
 use super::indexeddb_store::IndexedDbStore;
+
+/// Status state machine for the reset confirmation flow.
+#[derive(Clone, Copy, PartialEq)]
+pub enum ResetStatus {
+    Idle,
+    Resetting,
+    Success,
+    Error,
+}
+
+/// Status state machine for the import/export flow.
+#[derive(Clone, PartialEq)]
+pub enum ImportExportStatus {
+    Idle,
+    Exporting,
+    ExportSuccess,
+    Importing,
+    ImportSuccess(String),
+    Error(String),
+}
 
 const CSV_HEADER: &str = "trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,initialCentOffset,userCentError";
 
@@ -75,9 +94,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
     for record in &all_records {
         match record {
             Record::Comparison(r) => {
-                let interval_code = to_interval_code(r.interval).unwrap_or("P1");
-                let ref_name = midi_note_name(r.reference_note);
-                let target_name = midi_note_name(r.target_note);
+                let interval_code = Interval::from_semitones(r.interval).ok().map(|i| i.csv_code()).unwrap_or("P1");
+                let ref_name = MIDINote::new(r.reference_note).name();
+                let target_name = MIDINote::new(r.target_note).name();
                 let ts = truncate_timestamp_to_second(&r.timestamp);
                 csv.push_str(&format!(
                     "comparison,{},{},{},{},{},{},{},{},{},,\n",
@@ -93,9 +112,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                 ));
             }
             Record::PitchMatching(r) => {
-                let interval_code = to_interval_code(r.interval).unwrap_or("P1");
-                let ref_name = midi_note_name(r.reference_note);
-                let target_name = midi_note_name(r.target_note);
+                let interval_code = Interval::from_semitones(r.interval).ok().map(|i| i.csv_code()).unwrap_or("P1");
+                let ref_name = MIDINote::new(r.reference_note).name();
+                let target_name = MIDINote::new(r.target_note).name();
                 let ts = truncate_timestamp_to_second(&r.timestamp);
                 csv.push_str(&format!(
                     "pitchMatching,{},{},{},{},{},{},{},,,{},{}\n",
@@ -221,7 +240,8 @@ fn parse_comparison_row(fields: &[&str], row_num: usize) -> Result<PitchComparis
     let target_note: u8 = fields[4]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid targetNote, skipped"))?;
-    let interval = from_interval_code(fields[6])
+    let interval = Interval::from_csv_code(fields[6])
+        .map(|i| i.semitones())
         .ok_or_else(|| format!("Row {row_num}: invalid interval code '{}', skipped", fields[6]))?;
     let tuning_system = fields[7].to_string();
     let cent_offset: f64 = fields[8]
@@ -257,7 +277,8 @@ fn parse_pitch_matching_row(
     let target_note: u8 = fields[4]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid targetNote, skipped"))?;
-    let interval = from_interval_code(fields[6])
+    let interval = Interval::from_csv_code(fields[6])
+        .map(|i| i.semitones())
         .ok_or_else(|| format!("Row {row_num}: invalid interval code '{}', skipped", fields[6]))?;
     let tuning_system = fields[7].to_string();
     let initial_cent_offset: f64 = fields[10]
@@ -367,6 +388,51 @@ pub async fn import_merge(
     }
 
     Ok(result)
+}
+
+/// Read a `web_sys::File` as text using the FileReader API.
+///
+/// Wraps the callback-based FileReader into a Future.
+pub async fn read_file_as_text(file: web_sys::File) -> Result<String, String> {
+    let reader = web_sys::FileReader::new().map_err(|e| format!("Failed to create FileReader: {e:?}"))?;
+
+    let (sender, receiver) = futures_channel::oneshot::channel::<Result<String, String>>();
+    let mut sender = Some(sender);
+
+    let reader_clone = reader.clone();
+    let onload = Closure::once(move |_event: web_sys::Event| {
+        let result = reader_clone
+            .result()
+            .map(|val| val.as_string().unwrap_or_default())
+            .map_err(|e| format!("Failed to read file: {e:?}"));
+        if let Some(s) = sender.take() {
+            let _ = s.send(result);
+        }
+    });
+
+    reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+    onload.forget();
+    reader
+        .read_as_text(&file)
+        .map_err(|e| format!("Failed to start reading file: {e:?}"))?;
+
+    receiver
+        .await
+        .map_err(|_| "FileReader channel closed".to_string())?
+}
+
+/// Truncate an ISO 8601 timestamp to second precision.
+///
+/// Strips fractional seconds: `"2026-03-04T14:30:00.456Z"` -> `"2026-03-04T14:30:00Z"`.
+fn truncate_timestamp_to_second(ts: &str) -> String {
+    if let Some(dot_pos) = ts.rfind('.')
+        && let Some(tz_pos) = ts[dot_pos..].find(['Z', '+', '-'])
+    {
+        let mut result = ts[..dot_pos].to_string();
+        result.push_str(&ts[dot_pos + tz_pos..]);
+        return result;
+    }
+    ts.to_string()
 }
 
 /// Reload the page to rebuild the PerceptualProfile from stored records.

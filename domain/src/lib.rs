@@ -1,5 +1,4 @@
 pub mod error;
-pub mod portability;
 pub mod progress_timeline;
 pub mod ports;
 pub mod profile;
