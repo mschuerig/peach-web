@@ -6,8 +6,6 @@ use send_wrapper::SendWrapper;
 
 use domain::{ProgressTimeline, TrainingMode, TrainingModeState, Trend};
 
-use super::training_stats::format_cents;
-
 fn trend_stroke_color(trend: Option<Trend>) -> &'static str {
     match trend {
         Some(Trend::Improving) => "#16a34a", // green-600
@@ -25,6 +23,9 @@ fn trend_label(trend: Option<Trend>) -> &'static str {
     }
 }
 
+/// Vertical inset so the stroke is not clipped at the SVG edges.
+const Y_PAD: f64 = 1.0;
+
 fn compute_points(values: &[f64]) -> String {
     if values.is_empty() {
         return String::new();
@@ -36,6 +37,7 @@ fn compute_points(values: &[f64]) -> String {
     let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
     let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let range = max - min;
+    let y_range = 24.0 - 2.0 * Y_PAD;
 
     let count = values.len();
     values
@@ -46,7 +48,7 @@ fn compute_points(values: &[f64]) -> String {
             let y = if range < 0.1 {
                 12.0
             } else {
-                24.0 * (1.0 - (v - min) / range)
+                Y_PAD + y_range * (1.0 - (v - min) / range)
             };
             format!("{x:.1},{y:.1}")
         })
@@ -59,13 +61,11 @@ pub fn ProgressSparkline(mode: TrainingMode) -> impl IntoView {
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline context");
 
-    let ptl = progress_timeline.clone();
-
     view! {
         {move || {
-            let tl = ptl.borrow();
+            let tl = progress_timeline.borrow();
             if tl.state(mode) == TrainingModeState::NoData {
-                return view! { <div /> }.into_any();
+                return view! { <span /> }.into_any();
             }
 
             let buckets = tl.buckets(mode);
@@ -77,7 +77,7 @@ pub fn ProgressSparkline(mode: TrainingMode) -> impl IntoView {
             let points = compute_points(&values);
             let stroke_color = trend_stroke_color(trend);
 
-            let ewma_str = ewma.map(|v| format!("{} cents", format_cents(v))).unwrap_or_default();
+            let ewma_str = ewma.map(|v| format!("{:.1} cents", v)).unwrap_or_default();
             let trend_str = trend_label(trend);
             let mode_name = mode.config().display_name;
 
@@ -134,21 +134,30 @@ mod tests {
 
     #[test]
     fn test_compute_points_two_values() {
-        // min=0, max=24, range=24
-        // Point 0: x=0, y=24*(1 - (0-0)/24) = 24
-        // Point 1: x=60, y=24*(1 - (24-0)/24) = 0
+        // min=0, max=24, range=24, y_range=22
+        // Point 0: x=0, y=1 + 22*(1 - 0/24) = 23
+        // Point 1: x=60, y=1 + 22*(1 - 24/24) = 1
         let points = compute_points(&[0.0, 24.0]);
-        assert_eq!(points, "0.0,24.0 60.0,0.0");
+        assert_eq!(points, "0.0,23.0 60.0,1.0");
     }
 
     #[test]
     fn test_compute_points_three_values() {
-        // min=10, max=30, range=20
-        // Point 0: x=0, y=24*(1-(10-10)/20)=24
-        // Point 1: x=30, y=24*(1-(20-10)/20)=12
-        // Point 2: x=60, y=24*(1-(30-10)/20)=0
+        // min=10, max=30, range=20, y_range=22
+        // Point 0: x=0, y=1 + 22*(1-0/20) = 23
+        // Point 1: x=30, y=1 + 22*(1-0.5) = 12
+        // Point 2: x=60, y=1 + 22*(1-1) = 1
         let points = compute_points(&[10.0, 20.0, 30.0]);
-        assert_eq!(points, "0.0,24.0 30.0,12.0 60.0,0.0");
+        assert_eq!(points, "0.0,23.0 30.0,12.0 60.0,1.0");
+    }
+
+    #[test]
+    fn test_compute_points_negative_values() {
+        // min=-5, max=0, range=5, y_range=22
+        // Point 0: x=0, y=1 + 22*(1 - (-5-(-5))/5) = 23
+        // Point 1: x=60, y=1 + 22*(1 - (0-(-5))/5) = 1
+        let points = compute_points(&[-5.0, 0.0]);
+        assert_eq!(points, "0.0,23.0 60.0,1.0");
     }
 
     #[test]

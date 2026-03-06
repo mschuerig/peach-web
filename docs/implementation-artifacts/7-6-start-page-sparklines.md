@@ -1,6 +1,6 @@
 # Story 7.6: Start Page Sparklines
 
-Status: review
+Status: done
 
 ## Story
 
@@ -114,3 +114,4 @@ All 5 tasks completed. The ProgressSparkline component renders a 60x24 SVG polyl
 ## Change Log
 
 - 2026-03-06: Implemented start page sparklines (story 7.6) — new ProgressSparkline component with SVG polyline rendering, trend coloring, EWMA display, and accessibility labels. Integrated into all four training cards on the start page.
+- 2026-03-06: Code review fixes for story 7.6: fix SVG stroke clipping with Y_PAD inset, replace empty div with span for NoData, remove unnecessary Rc clone, simplify EWMA formatting, remove unused import, add negative-value test.
