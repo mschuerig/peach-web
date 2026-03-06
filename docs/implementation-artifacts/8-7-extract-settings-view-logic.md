@@ -1,6 +1,6 @@
 # Story 8.7: Extract Business Logic from Settings View
 
-Status: review
+Status: done
 
 ## Story
 
@@ -38,11 +38,11 @@ so that the codebase follows clean architecture with views as pure presentation.
   - [x] 3.2 Update call sites in `settings_view.rs` to use `LocalStorageSettings::set_selected_intervals()`
   - [x] 3.3 Delete `persist_intervals()` from `settings_view.rs`
 
-- [x] Task 4: Extract export/import orchestration from settings_view (AC: #5, #7)
-  - [x] 4.1 Create `web/src/adapters/data_portability_service.rs` (or extend existing `data_portability.rs`) to house the orchestration logic: file reading via FileReader, JSON parsing, merge/replace decision flow, status tracking
+- [~] Task 4: Extract export/import orchestration from settings_view (AC: #5, #7) — PARTIAL, deferred to story 8.8
+  - [ ] 4.1 Create `web/src/adapters/data_portability_service.rs` (or extend existing `data_portability.rs`) to house the orchestration logic: file reading via FileReader, JSON parsing, merge/replace decision flow, status tracking — NOT DONE: file only contains enum definitions, no orchestration extracted
   - [x] 4.2 Move `ImportExportStatus` enum to the new/extended module
   - [x] 4.3 Move `ResetStatus` enum alongside `ImportExportStatus` (both are state machines for adapter-level operations, not view state)
-  - [x] 4.4 The view retains only: signal declarations, button click handlers that call service functions, and reactive rendering of status signals
+  - [ ] 4.4 The view retains only: signal declarations, button click handlers that call service functions, and reactive rendering of status signals — NOT DONE: ~180 lines of orchestration remain in view
   - [x] 4.5 Register the new module in `web/src/adapters/mod.rs` if a new file was created
 
 - [x] Task 5: Remove `INTERVALS` constant and `interval_short_label()` from view (AC: #1, #2)
@@ -161,6 +161,7 @@ None -- clean implementation with no debugging needed.
 ### Change Log
 
 - 2026-03-06: Implemented story 8.7 -- extracted business logic from settings_view.rs into domain and adapter layers
+- 2026-03-06: Code review: Tasks 1-3, 5-7 verified correct. Task 4 (orchestration extraction) only partially done -- enums moved but ~180 lines of async orchestration remain in view. AC#5 deferred to story 8.8. AC#3 uses "d5" instead of "TT" for Tritone (correct per AC#9, story text was contradictory).
 
 ### File List
 
