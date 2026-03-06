@@ -94,7 +94,7 @@ development_status:
   epic-7: in-progress
   7-0a-rename-comparison-to-pitch-comparison: done
   7-0b-extract-constants-and-domain-types: done
-  7-1-training-mode-enum-and-config: review
+  7-1-training-mode-enum-and-config: done
   7-2-progress-timeline-ewma-adaptive-bucketing: ready-for-dev
   7-3-start-screen-redesign: ready-for-dev
   7-4-profile-screen-progress-charts: ready-for-dev

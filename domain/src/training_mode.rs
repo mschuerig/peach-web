@@ -10,7 +10,7 @@ pub enum TrainingMode {
 }
 
 /// Per-mode configuration constants.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TrainingModeConfig {
     pub display_name: &'static str,
     pub unit_label: &'static str,
@@ -81,26 +81,38 @@ impl TrainingMode {
     }
 
     /// Extracts the metric (absolute cent offset) from a comparison record
-    /// if the record's interval matches this mode.
+    /// if this is a comparison mode and the record's interval matches.
     ///
+    /// Returns `None` for matching modes (use `extract_matching_metric` instead).
     /// Unison modes match interval == 0; interval modes match interval != 0.
     pub fn extract_comparison_metric(&self, record: &PitchComparisonRecord) -> Option<f64> {
-        if self.matches_interval(record.interval) {
-            Some(record.cent_offset.abs())
-        } else {
-            None
+        match self {
+            TrainingMode::UnisonPitchComparison | TrainingMode::IntervalPitchComparison => {
+                if self.matches_interval(record.interval) {
+                    Some(record.cent_offset.abs())
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 
     /// Extracts the metric (absolute user cent error) from a pitch matching record
-    /// if the record's interval matches this mode.
+    /// if this is a matching mode and the record's interval matches.
     ///
+    /// Returns `None` for comparison modes (use `extract_comparison_metric` instead).
     /// Unison modes match interval == 0; interval modes match interval != 0.
     pub fn extract_matching_metric(&self, record: &PitchMatchingRecord) -> Option<f64> {
-        if self.matches_interval(record.interval) {
-            Some(record.user_cent_error.abs())
-        } else {
-            None
+        match self {
+            TrainingMode::UnisonMatching | TrainingMode::IntervalMatching => {
+                if self.matches_interval(record.interval) {
+                    Some(record.user_cent_error.abs())
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 
@@ -286,14 +298,24 @@ mod tests {
     }
 
     #[test]
-    fn test_comparison_modes_ignore_matching_records_by_type() {
-        // UnisonPitchComparison only works with extract_comparison_metric
-        // UnisonMatching only works with extract_matching_metric
-        // This is enforced by the type system — different method signatures
+    fn test_matching_modes_return_none_for_comparison_records() {
         let comp = comparison_record(0, 10.0);
-        assert!(TrainingMode::UnisonPitchComparison.extract_comparison_metric(&comp).is_some());
+        assert!(TrainingMode::UnisonMatching.extract_comparison_metric(&comp).is_none());
+        assert!(TrainingMode::IntervalMatching.extract_comparison_metric(&comp).is_none());
 
+        let comp_interval = comparison_record(4, 10.0);
+        assert!(TrainingMode::UnisonMatching.extract_comparison_metric(&comp_interval).is_none());
+        assert!(TrainingMode::IntervalMatching.extract_comparison_metric(&comp_interval).is_none());
+    }
+
+    #[test]
+    fn test_comparison_modes_return_none_for_matching_records() {
         let matching = matching_record(0, 5.0);
-        assert!(TrainingMode::UnisonMatching.extract_matching_metric(&matching).is_some());
+        assert!(TrainingMode::UnisonPitchComparison.extract_matching_metric(&matching).is_none());
+        assert!(TrainingMode::IntervalPitchComparison.extract_matching_metric(&matching).is_none());
+
+        let matching_interval = matching_record(7, 5.0);
+        assert!(TrainingMode::UnisonPitchComparison.extract_matching_metric(&matching_interval).is_none());
+        assert!(TrainingMode::IntervalPitchComparison.extract_matching_metric(&matching_interval).is_none());
     }
 }
