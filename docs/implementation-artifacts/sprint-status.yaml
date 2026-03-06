@@ -114,3 +114,4 @@ development_status:
   8-7-extract-settings-view-logic: done
   8-8-clean-up-export-import-architecture: review
   8-9-keyboard-interaction-fixes: done
+  8-10-settings-sound-source-preview: ready-for-dev
