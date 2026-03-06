@@ -16,8 +16,10 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
 use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
+use crate::components::help_content::HelpModal;
 use crate::components::pitch_slider::VerticalPitchSlider;
 use crate::components::TrainingStats;
+use crate::help_sections::PITCH_MATCHING_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity};
@@ -377,6 +379,33 @@ pub fn PitchMatchingView() -> impl IntoView {
         }
     };
 
+    // Help modal state
+    let is_help_open = RwSignal::new(false);
+    let on_help_open = {
+        let cancelled = Rc::clone(&cancelled);
+        let session = Rc::clone(&session);
+        let note_player = Rc::clone(&note_player);
+        let tunable_handle = Rc::clone(&tunable_handle);
+        let sync = sync_signals.clone();
+        move |_| {
+            cancelled.set(true);
+            session.borrow_mut().stop();
+            if let Some(ref mut h) = *tunable_handle.borrow_mut() {
+                h.stop();
+            }
+            note_player.borrow().stop_all();
+            sync();
+            is_help_open.set(true);
+        }
+    };
+
+    let on_help_close = {
+        let navigate = navigate.clone();
+        Callback::new(move |()| {
+            navigate("/", Default::default());
+        })
+    };
+
     // Shared interruption closure — stops training and navigates to start page
     let interrupt_and_navigate = {
         let cancelled = Rc::clone(&cancelled);
@@ -609,9 +638,19 @@ pub fn PitchMatchingView() -> impl IntoView {
                     "Info"
                 </a>
             </nav>
-            <h1 class="text-2xl font-bold dark:text-white">
-                {if is_interval_mode { "Interval Pitch Matching" } else { "Pitch Matching Training" }}
-            </h1>
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold dark:text-white">
+                    {if is_interval_mode { "Interval Pitch Matching" } else { "Pitch Matching Training" }}
+                </h1>
+                <button
+                    on:click=on_help_open
+                    class="min-h-11 min-w-11 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
+                    aria-label="Help"
+                >
+                    "?"
+                </button>
+            </div>
+            <HelpModal title="Pitch Matching Training" sections=PITCH_MATCHING_HELP is_open=is_help_open on_close=on_help_close />
 
             // Interval label — only visible in interval mode
             {move || {

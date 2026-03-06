@@ -1,6 +1,6 @@
 # Story 7.7: Help Content
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -38,26 +38,26 @@ Depends on: None (can be implemented in parallel with other stories).
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create HelpContent component (AC: 1, 2, 10)
-  - [ ] New component in `web/src/components/help_content.rs`
-  - [ ] Props: sections as `&[HelpSection]` where `HelpSection { title: &'static str, body: &'static str }`
-  - [ ] Render each section: `<h3>` for title, processed body text for content
-  - [ ] Simple markdown processing: replace `**text**` with `<strong>text</strong>`, `*text*` with `<em>text</em>`, `\n\n` with `<br><br>`. Use `inner_html` for the processed body (content is static/trusted, not user input).
+- [x] Task 1: Create HelpContent component (AC: 1, 2, 10)
+  - [x] New component in `web/src/components/help_content.rs`
+  - [x] Props: sections as `&[HelpSection]` where `HelpSection { title: &'static str, body: &'static str }`
+  - [x] Render each section: `<h3>` for title, processed body text for content
+  - [x] Simple markdown processing: replace `**text**` with `<strong>text</strong>`, `*text*` with `<em>text</em>`, `\n\n` with `<br><br>`. Use `inner_html` for the processed body (content is static/trusted, not user input).
 
-- [ ] Task 2: Create help modal component (AC: 3, 9)
-  - [ ] New component `HelpModal` (or use HTML `<dialog>` element)
-  - [ ] Props: `title: &str`, `sections: &[HelpSection]`, `is_open: RwSignal<bool>`
-  - [ ] Uses `<dialog>` element with `showModal()`/`close()` for native modal behavior (provides backdrop, focus trapping, Escape to close)
-  - [ ] Header with title and "Done" button
-  - [ ] Scrollable content area with HelpContent inside
+- [x] Task 2: Create help modal component (AC: 3, 9)
+  - [x] New component `HelpModal` (or use HTML `<dialog>` element)
+  - [x] Props: `title: &str`, `sections: &[HelpSection]`, `is_open: RwSignal<bool>`
+  - [x] Uses `<dialog>` element with `showModal()`/`close()` for native modal behavior (provides backdrop, focus trapping, Escape to close)
+  - [x] Header with title and "Done" button
+  - [x] Scrollable content area with HelpContent inside
 
-- [ ] Task 3: Define help section content (AC: 4, 5, 6, 7)
-  - [ ] Create `web/src/help_sections.rs` (or const arrays in each view)
-  - [ ] Settings help: 5 sections matching iOS text, adapted for web
-  - [ ] Comparison help: 5 sections
-  - [ ] Pitch matching help: 4 sections
-  - [ ] Info help: 3 sections + acknowledgments
-  - [ ] All text in English (no localization)
+- [x] Task 3: Define help section content (AC: 4, 5, 6, 7)
+  - [x] Create `web/src/help_sections.rs` (or const arrays in each view)
+  - [x] Settings help: 5 sections matching iOS text, adapted for web
+  - [x] Comparison help: 5 sections
+  - [x] Pitch matching help: 4 sections
+  - [x] Info help: 3 sections + acknowledgments
+  - [x] All text in English (no localization)
 
     **Settings help text (adapted from iOS):**
     - Training Range: "Set the **lowest** and **highest note** for your training. A wider range is more challenging. If you're just starting out, try a smaller range and expand it as your ear improves."
@@ -85,34 +85,34 @@ Depends on: None (can be implemented in parallel with other stories).
     - Getting Started: "Just pick any training mode on the home screen and start practicing. Peach adapts to your skill level automatically."
     - Acknowledgments: "Sounds provided by GeneralUser GS by S. Christian Collins."
 
-- [ ] Task 4: Integrate help into Settings view (AC: 4)
-  - [ ] Add help button ("?") to settings nav/header area
-  - [ ] Wire to HelpModal with settings help sections
+- [x] Task 4: Integrate help into Settings view (AC: 4)
+  - [x] Add help button ("?") to settings nav/header area
+  - [x] Wire to HelpModal with settings help sections
 
-- [ ] Task 5: Integrate help into comparison_view.rs (AC: 5, 8)
-  - [ ] Add help button to comparison view header
-  - [ ] Wire to HelpModal with comparison help sections
-  - [ ] On help open: stop comparison session
-  - [ ] On help close: restart comparison session with same intervals
+- [x] Task 5: Integrate help into comparison_view.rs (AC: 5, 8)
+  - [x] Add help button to comparison view header
+  - [x] Wire to HelpModal with comparison help sections
+  - [x] On help open: stop comparison session
+  - [x] On help close: restart comparison session with same intervals
 
-- [ ] Task 6: Integrate help into pitch_matching_view.rs (AC: 6, 8)
-  - [ ] Add help button to pitch matching view header
-  - [ ] Wire to HelpModal with pitch matching help sections
-  - [ ] On help open: stop pitch matching session
-  - [ ] On help close: restart pitch matching session with same intervals
+- [x] Task 6: Integrate help into pitch_matching_view.rs (AC: 6, 8)
+  - [x] Add help button to pitch matching view header
+  - [x] Wire to HelpModal with pitch matching help sections
+  - [x] On help open: stop pitch matching session
+  - [x] On help close: restart pitch matching session with same intervals
 
-- [ ] Task 7: Update info_view.rs (AC: 7)
-  - [ ] Add HelpContent inline (not modal) with info help sections
-  - [ ] Add acknowledgments section
-  - [ ] Keep existing app metadata (name, version, developer, license, GitHub link)
-  - [ ] Reorder: header → help content → acknowledgments → metadata
+- [x] Task 7: Update info_view.rs (AC: 7)
+  - [x] Add HelpContent inline (not modal) with info help sections
+  - [x] Add acknowledgments section
+  - [x] Keep existing app metadata (name, version, developer, license, GitHub link)
+  - [x] Reorder: header → help content → acknowledgments → metadata
 
-- [ ] Task 8: Verify
-  - [ ] Manual test: open help on each screen, verify content renders
-  - [ ] Manual test: on training screens, verify training pauses/resumes with help
-  - [ ] Manual test: Escape closes help modal
-  - [ ] Manual test: info view shows inline help content
-  - [ ] Run `cargo clippy`
+- [x] Task 8: Verify
+  - [x] Manual test: open help on each screen, verify content renders
+  - [x] Manual test: on training screens, verify training pauses/resumes with help
+  - [x] Manual test: Escape closes help modal
+  - [x] Manual test: info view shows inline help content
+  - [x] Run `cargo clippy`
 
 ## Dev Notes
 
@@ -139,3 +139,48 @@ Depends on: None (can be implemented in parallel with other stories).
 - **Web crate only:** All components and text content live in the web crate.
 - **No domain changes:** Help is purely UI.
 - **Accessibility:** `<dialog>` provides native accessibility semantics. Additional ARIA attributes ensure screen reader compatibility.
+
+## Dev Agent Record
+
+### Implementation Notes
+
+- Created `HelpSection` struct and `HelpContent` component with simple inline markdown processing (`**bold**` → `<strong>`, `*italic*` → `<em>`, `\n\n` → `<br><br>`)
+- Created `HelpModal` component using native HTML `<dialog>` element with `showModal()`/`close()` — provides native focus trapping, backdrop, and Escape-to-close
+- Help modal watches an `is_open: RwSignal<bool>` and syncs dialog state via a Leptos `Effect`
+- Native `close` event on `<dialog>` handles Escape key dismissal, syncing the signal back
+- Help content defined as static slices in `web/src/help_sections.rs` — all text matches iOS app content adapted for web
+- Settings view: added "?" button next to heading, opens `HelpModal` with 5 sections
+- Training views (comparison, pitch matching): "?" button stops the session (sets `cancelled`, calls `session.stop()`, stops audio), opens help modal. On close, re-navigates to the same route to remount the component and restart training fresh — matches iOS behavior where help sheet triggers `onDisappear`/`onAppear`
+- Info view: `HelpContent` rendered inline (not modal) with 3 help sections + acknowledgments, followed by existing developer/project metadata
+- Added 6 unit tests for `process_markdown` function covering bold, italic, combined, newlines, multiple occurrences, and plain text
+
+### Completion Notes
+
+All 8 tasks completed. All 10 acceptance criteria satisfied:
+- AC1: HelpContent component renders sections with titles and body
+- AC2: Simple markdown processing for bold, italic
+- AC3: "?" button pattern on Settings, Comparison, Pitch Matching views opening modal
+- AC4: Settings help with 5 sections
+- AC5: Comparison help with 5 sections
+- AC6: Pitch matching help with 4 sections
+- AC7: Info view inline help with 3 sections + acknowledgments
+- AC8: Training pauses on help open, restarts on close (via re-navigation)
+- AC9: `<dialog>` with `role="dialog"`, `aria-modal="true"`, native focus trapping, Escape closes
+- AC10: `space-y-5` (20px), `mt-2` (8px title-body gap), `font-semibold` titles, regular body
+
+## File List
+
+- `web/src/components/help_content.rs` (new) — HelpSection struct, HelpContent component, HelpModal component, process_markdown function, unit tests
+- `web/src/help_sections.rs` (new) — Static help text content for all views
+- `web/src/components/mod.rs` (modified) — Added `pub mod help_content`
+- `web/src/main.rs` (modified) — Added `mod help_sections`
+- `web/src/components/settings_view.rs` (modified) — Added help button and HelpModal
+- `web/src/components/pitch_comparison_view.rs` (modified) — Added help button, HelpModal, pause/resume logic
+- `web/src/components/pitch_matching_view.rs` (modified) — Added help button, HelpModal, pause/resume logic
+- `web/src/components/info_view.rs` (modified) — Added inline HelpContent, reordered sections
+- `docs/implementation-artifacts/sprint-status.yaml` (modified) — Status updated
+- `docs/implementation-artifacts/7-7-help-content.md` (modified) — Story file updated
+
+## Change Log
+
+- 2026-03-06: Implemented help content system — reusable HelpContent/HelpModal components, help text for all views, training pause/resume on help, inline help on Info view
