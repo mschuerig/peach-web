@@ -7,7 +7,6 @@ use crate::trend::Trend;
 const SECS_PER_DAY: f64 = 86_400.0;
 const SECS_PER_WEEK: f64 = 604_800.0;
 const SECS_PER_MONTH: f64 = 2_592_000.0;
-const SESSION_GAP_SECS: f64 = 1_800.0;
 
 /// Granularity of a time bucket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -32,34 +31,34 @@ pub struct TimeBucket {
 /// Internal per-mode tracking state.
 #[derive(Clone, Debug)]
 struct ModeState {
+    mode: TrainingMode,
     buckets: Vec<TimeBucket>,
     ewma: Option<f64>,
     record_count: usize,
     computed_trend: Option<Trend>,
-    all_metrics: Vec<(f64, f64)>, // (timestamp, metric)
     running_mean: f64,
     running_m2: f64,
 }
 
 impl ModeState {
-    fn new() -> Self {
+    fn new(mode: TrainingMode) -> Self {
         Self {
+            mode,
             buckets: Vec::new(),
             ewma: None,
             record_count: 0,
             computed_trend: None,
-            all_metrics: Vec::new(),
             running_mean: 0.0,
             running_m2: 0.0,
         }
     }
 
     fn reset(&mut self) {
-        *self = Self::new();
+        let mode = self.mode;
+        *self = Self::new(mode);
     }
 
     fn add_point(&mut self, timestamp: f64, metric: f64, now: f64) {
-        self.all_metrics.push((timestamp, metric));
         self.record_count += 1;
 
         // Update running mean/m2 via Welford's
@@ -69,26 +68,31 @@ impl ModeState {
         let delta2 = metric - self.running_mean;
         self.running_m2 += delta * delta2;
 
+        let session_gap = self.mode.config().session_gap_secs;
+
         // Update session bucket: extend last bucket if within gap, else new bucket
         let age = now - timestamp;
         if age < SECS_PER_DAY {
             // Session bucketing
             if let Some(last) = self.buckets.last_mut() {
                 if last.bucket_size == BucketSize::Session
-                    && (timestamp - last.period_end).abs() < SESSION_GAP_SECS
+                    && (timestamp - last.period_end).abs() < session_gap
                 {
                     // Extend existing session bucket using Welford's
-                    let new_count = last.record_count + 1;
+                    let old_count = last.record_count;
+                    let new_count = old_count + 1;
                     let delta = metric - last.mean;
                     let new_mean = last.mean + delta / new_count as f64;
                     let delta2 = metric - new_mean;
-                    // We track stddev via the full recalc approach for simplicity
                     last.mean = new_mean;
                     last.record_count = new_count;
                     last.period_end = timestamp;
-                    // Recompute stddev from scratch for the bucket (simple for small buckets)
-                    // For incremental add, we accept approximate stddev
-                    let old_m2 = last.stddev * last.stddev * (new_count - 1) as f64;
+                    // Recover old m2 from stddev: m2 = stddev² × (old_count - 1)
+                    let old_m2 = if old_count > 1 {
+                        last.stddev * last.stddev * (old_count - 1) as f64
+                    } else {
+                        0.0
+                    };
                     let new_m2 = old_m2 + delta * delta2;
                     last.stddev = if new_count > 1 {
                         (new_m2 / (new_count - 1) as f64).sqrt()
@@ -185,7 +189,7 @@ impl ModeState {
     }
 
     fn halflife_secs(&self) -> f64 {
-        SECS_PER_WEEK // 7-day half-life
+        self.mode.config().ewma_halflife_secs
     }
 }
 
@@ -199,7 +203,7 @@ impl ProgressTimeline {
     pub fn new() -> Self {
         let mut modes = HashMap::new();
         for mode in TrainingMode::ALL {
-            modes.insert(mode, ModeState::new());
+            modes.insert(mode, ModeState::new(mode));
         }
         Self { modes }
     }
@@ -249,15 +253,14 @@ impl ProgressTimeline {
         // Build each mode
         for (mode, pts) in mode_points {
             let state = self.modes.get_mut(&mode).unwrap();
-            // Assign to adaptive buckets
-            let buckets = build_adaptive_buckets(&pts, now);
+            let session_gap = mode.config().session_gap_secs;
+            let buckets = build_adaptive_buckets(&pts, now, session_gap);
             state.buckets = buckets;
             state.record_count = pts.len();
 
             // Compute running mean/m2 (Welford's across ALL metrics)
-            for &(_ts, metric) in &pts {
-                state.all_metrics.push((_ts, metric));
-                let n = state.all_metrics.len() as f64;
+            for (i, &(_ts, metric)) in pts.iter().enumerate() {
+                let n = (i + 1) as f64;
                 let delta = metric - state.running_mean;
                 state.running_mean += delta / n;
                 let delta2 = metric - state.running_mean;
@@ -348,7 +351,7 @@ fn bucket_assignment(timestamp: f64, now: f64) -> (BucketSize, f64) {
 }
 
 /// Build adaptive time buckets from sorted (timestamp, metric) pairs.
-fn build_adaptive_buckets(points: &[(f64, f64)], now: f64) -> Vec<TimeBucket> {
+fn build_adaptive_buckets(points: &[(f64, f64)], now: f64, session_gap_secs: f64) -> Vec<TimeBucket> {
     if points.is_empty() {
         return Vec::new();
     }
@@ -371,7 +374,7 @@ fn build_adaptive_buckets(points: &[(f64, f64)], now: f64) -> Vec<TimeBucket> {
                 && *cur_size == BucketSize::Session
             {
                 let last_ts = cur_points.last().map(|&(t, _)| t).unwrap_or(ts);
-                if ts - last_ts < SESSION_GAP_SECS {
+                if ts - last_ts < session_gap_secs {
                     if let Some((_, _, ref mut pts)) = current_group {
                         pts.push((ts, metric));
                     }
@@ -614,6 +617,48 @@ mod tests {
         assert_eq!(buckets[0].record_count, 2);
     }
 
+    #[test]
+    fn test_week_bucketing_for_8_to_29_day_old_records() {
+        let mut tl = ProgressTimeline::new();
+        let now = now_epoch();
+        // Records from 10 days ago (> 7 days, < 30 days -> Week bucket)
+        let ten_days_ago = now - 10.0 * SECS_PER_DAY;
+        let ts1 = epoch_to_iso8601(ten_days_ago);
+        let ts2 = epoch_to_iso8601(ten_days_ago + 3600.0);
+
+        let records = vec![
+            make_comparison(0, 20.0, &ts1),
+            make_comparison(0, 10.0, &ts2),
+        ];
+        tl.rebuild(&records, &[], now);
+
+        let buckets = tl.buckets(TrainingMode::UnisonPitchComparison);
+        assert_eq!(buckets.len(), 1);
+        assert_eq!(buckets[0].bucket_size, BucketSize::Week);
+        assert_eq!(buckets[0].record_count, 2);
+    }
+
+    #[test]
+    fn test_month_bucketing_for_31_plus_day_old_records() {
+        let mut tl = ProgressTimeline::new();
+        let now = now_epoch();
+        // Records from 35 days ago (> 30 days -> Month bucket)
+        let thirty_five_days_ago = now - 35.0 * SECS_PER_DAY;
+        let ts1 = epoch_to_iso8601(thirty_five_days_ago);
+        let ts2 = epoch_to_iso8601(thirty_five_days_ago + 3600.0);
+
+        let records = vec![
+            make_comparison(0, 20.0, &ts1),
+            make_comparison(0, 10.0, &ts2),
+        ];
+        tl.rebuild(&records, &[], now);
+
+        let buckets = tl.buckets(TrainingMode::UnisonPitchComparison);
+        assert_eq!(buckets.len(), 1);
+        assert_eq!(buckets[0].bucket_size, BucketSize::Month);
+        assert_eq!(buckets[0].record_count, 2);
+    }
+
     // --- AC5: EWMA computation ---
 
     #[test]
@@ -751,6 +796,40 @@ mod tests {
 
         assert_eq!(tl.state(TrainingMode::UnisonMatching), TrainingModeState::Active);
         assert_eq!(tl.state(TrainingMode::IntervalMatching), TrainingModeState::NoData);
+    }
+
+    #[test]
+    fn test_incremental_session_stddev_matches_rebuild() {
+        // Verify that incremental add_comparison produces the same bucket stddev as rebuild
+        let now = now_epoch();
+        let ts1 = "2026-03-06T11:00:00Z";
+        let ts2 = "2026-03-06T11:05:00Z";
+        let ts3 = "2026-03-06T11:10:00Z";
+
+        // Rebuild path
+        let mut tl_rebuild = ProgressTimeline::new();
+        let records = vec![
+            make_comparison(0, 10.0, ts1),
+            make_comparison(0, 20.0, ts2),
+            make_comparison(0, 30.0, ts3),
+        ];
+        tl_rebuild.rebuild(&records, &[], now);
+
+        // Incremental path
+        let mut tl_incr = ProgressTimeline::new();
+        tl_incr.add_comparison(&make_comparison(0, 10.0, ts1), now);
+        tl_incr.add_comparison(&make_comparison(0, 20.0, ts2), now);
+        tl_incr.add_comparison(&make_comparison(0, 30.0, ts3), now);
+
+        let rebuild_buckets = tl_rebuild.buckets(TrainingMode::UnisonPitchComparison);
+        let incr_buckets = tl_incr.buckets(TrainingMode::UnisonPitchComparison);
+
+        assert_eq!(rebuild_buckets.len(), incr_buckets.len());
+        for (rb, ib) in rebuild_buckets.iter().zip(incr_buckets.iter()) {
+            assert!((rb.mean - ib.mean).abs() < 1e-10, "mean mismatch");
+            assert!((rb.stddev - ib.stddev).abs() < 1e-10,
+                "stddev mismatch: rebuild={}, incremental={}", rb.stddev, ib.stddev);
+        }
     }
 
     // --- AC11: Reset ---

@@ -1,6 +1,6 @@
 # Story 7.2: ProgressTimeline with EWMA and Adaptive Bucketing
 
-Status: review
+Status: done
 
 ## Story
 
@@ -160,3 +160,4 @@ All 10 tasks completed. 20 new unit tests in `progress_timeline.rs`. Full test s
 ## Change Log
 
 - 2026-03-06: Implemented ProgressTimeline with EWMA smoothing and adaptive time bucketing (story 7.2). Added ProgressTimelineObserver bridge for both comparison and pitch matching modes. Integrated hydration at app startup. Old ThresholdTimeline/TrendAnalyzer retained for existing views.
+- 2026-03-06: Code review fixes: (H1) fixed off-by-one in incremental session bucket stddev m2 recovery, (M1) wired per-mode TrainingModeConfig for halflife/session_gap instead of hardcoded constants, (M1/L2) added TrainingMode to ModeState, (L1) removed unused all_metrics Vec, (M3) added week and month bucket tests, added incremental stddev consistency test. Mark done.
