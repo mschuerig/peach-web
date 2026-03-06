@@ -15,14 +15,14 @@ use crate::adapters::audio_soundfont::WorkletBridge;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
-use crate::bridge::PitchMatchingDataStoreObserver;
+use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
 use crate::components::pitch_slider::VerticalPitchSlider;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
     Interval, PitchMatchingSession, PitchMatchingSessionState, PerceptualProfile,
-    FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
+    ProgressTimeline, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -37,6 +37,8 @@ pub fn PitchMatchingView() -> impl IntoView {
         use_context().expect("AudioContextManager not provided");
     let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
         use_context().expect("db_store not provided");
+    let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
+        use_context().expect("ProgressTimeline not provided");
     let worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, LocalStorage> =
         use_context().expect("worklet_bridge not provided");
 
@@ -71,6 +73,7 @@ pub fn PitchMatchingView() -> impl IntoView {
     // Build observers — PitchMatchingSession already updates profile directly,
     // so only the data store observer is needed here.
     let observers: Vec<Box<dyn PitchMatchingObserver>> = vec![
+        Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
         Box::new(PitchMatchingDataStoreObserver::new(db_store, storage_error)),
     ];
 

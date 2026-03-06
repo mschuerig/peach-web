@@ -15,13 +15,13 @@ use crate::adapters::audio_soundfont::WorkletBridge;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
-use crate::bridge::{DataStoreObserver, ProfileObserver, TimelineObserver, TrendObserver};
+use crate::bridge::{DataStoreObserver, ProfileObserver, ProgressTimelineObserver, TimelineObserver, TrendObserver};
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{PitchComparisonObserver, NotePlayer};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
-    PitchComparisonSession, PitchComparisonSessionState, Interval, PerceptualProfile, ThresholdTimeline,
-    TrendAnalyzer, FEEDBACK_DURATION_SECS,
+    PitchComparisonSession, PitchComparisonSessionState, Interval, PerceptualProfile,
+    ProgressTimeline, ThresholdTimeline, TrendAnalyzer, FEEDBACK_DURATION_SECS,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -38,6 +38,8 @@ pub fn PitchComparisonView() -> impl IntoView {
         use_context().expect("TrendAnalyzer not provided");
     let timeline: SendWrapper<Rc<RefCell<ThresholdTimeline>>> =
         use_context().expect("ThresholdTimeline not provided");
+    let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
+        use_context().expect("ProgressTimeline not provided");
     let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
         use_context().expect("db_store not provided");
     let worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, LocalStorage> =
@@ -78,6 +80,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         Box::new(ProfileObserver::new(Rc::clone(&profile))),
         Box::new(TrendObserver::new(Rc::clone(&trend_analyzer))),
         Box::new(TimelineObserver::new(Rc::clone(&timeline))),
+        Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
         Box::new(DataStoreObserver::new(db_store, storage_error)),
     ];
 
