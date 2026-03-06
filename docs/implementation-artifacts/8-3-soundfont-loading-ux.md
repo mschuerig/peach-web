@@ -1,6 +1,6 @@
 # Story 8.3: SoundFont Loading UX
 
-Status: review
+Status: done
 
 ## Story
 
@@ -44,6 +44,11 @@ so that I always hear the sound I selected instead of an unexpected oscillator f
   - [x] When status transitions to `Failed`, display a non-blocking notification on the Start Page: "Selected sound could not be loaded. Using default sound."
   - [x] Auto-dismiss after 5 seconds (reuse the existing `storage_error` / `audio_error` notification pattern from stories 8.2 / 6.3)
   - [x] Log the actual error at `warn` level for debugging
+
+- [x] Task 5b: Gate training views on SF2 readiness for direct navigation (AC: 1, 7)
+  - [x] In both training views, add SF2 wait loop in spawn_local before connecting worklet and starting session
+  - [x] Show loading indicator in training view while waiting for SF2
+  - [x] On SF2 failure, show auto-dismissing notification and fall back to oscillator
 
 - [x] Task 5: Ensure SF2 fetch does not block rendering (AC: 6)
   - [x] Verify that `fetch_worklet_assets()` in `app.rs` runs via `spawn_local()` (non-blocking async)
@@ -179,8 +184,11 @@ Claude Opus 4.6
 - `web/src/components/start_page.rs` (modified) — Added disabled prop to `TrainingCard`, loading indicator (prominent styled container), failure notification, SF2 status consumption
 - `web/src/components/pitch_comparison_view.rs` (modified) — Added SF2 wait loop before session start, loading indicator in view, failure notification with oscillator fallback
 - `web/src/components/pitch_matching_view.rs` (modified) — Added SF2 wait loop before session start, loading indicator in view, failure notification with oscillator fallback
+- `docs/implementation-artifacts/sprint-status.yaml` (modified) — Updated story status
+- `docs/planning-artifacts/epics.md` (modified) — Updated epic 8 status
 
 ## Change Log
 
 - 2026-03-06: Implemented SoundFont loading UX gate (Tasks 1-5). Training buttons on Start Page are now disabled with loading indicator while SF2 assets fetch. Failure shows auto-dismissing notification and enables buttons for oscillator fallback.
 - 2026-03-06: Extended SF2 loading gate to training views. Users navigating directly to training pages (e.g. via bookmark) now see a loading indicator and wait for SF2 before training starts. Made loading indicator more prominent (indigo container instead of faint gray text). Task 6 (manual browser testing) remains for user.
+- 2026-03-06: Code review fixes — (1) guarded fetch_worklet_assets to skip when sound_source is oscillator, (2) fixed TrainingCard disabled bypass via href removal + tabindex, (3) added worklet_connecting guard to prevent parallel connect_worklet race, (4) added missing sprint-status.yaml and epics.md to File List, (5) added Task 5b for undocumented training view changes.

@@ -35,9 +35,10 @@ fn TrainingCard(
 
     view! {
         <a
-            href=href
+            href=move || if disabled.get() { None } else { Some(href.clone()) }
             aria-label=aria_label
             aria-disabled=move || if disabled.get() { "true" } else { "false" }
+            tabindex=move || if disabled.get() { "-1" } else { "0" }
             class=move || {
                 let mut c = base_class.to_string();
                 if disabled.get() {

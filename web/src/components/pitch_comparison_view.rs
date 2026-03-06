@@ -54,6 +54,8 @@ pub fn PitchComparisonView() -> impl IntoView {
         use_context().expect("worklet_assets not provided");
     let sf2_load_status: RwSignal<SoundFontLoadStatus> =
         use_context().expect("SoundFontLoadStatus not provided");
+    let worklet_connecting: RwSignal<bool> =
+        use_context().expect("worklet_connecting not provided");
 
     // Eagerly create AudioContext in synchronous render path.
     // This ensures creation happens within the user gesture call stack (click on Start Page),
@@ -516,10 +518,13 @@ pub fn PitchComparisonView() -> impl IntoView {
                 }
             }
 
-            // Phase 2: connect worklet if assets are available but bridge isn't
+            // Phase 2: connect worklet if assets are available but bridge isn't.
+            // Guard with worklet_connecting flag to prevent parallel connect_worklet calls.
             if worklet_bridge.get_untracked().is_none()
+                && !worklet_connecting.get_untracked()
                 && let Some(assets) = worklet_assets.get_untracked()
             {
+                worklet_connecting.set(true);
                 match connect_worklet(&ctx_rc, &assets).await {
                     Ok((bridge, presets)) => {
                         let bridge_rc = Rc::new(RefCell::new(bridge));
@@ -537,6 +542,14 @@ pub fn PitchComparisonView() -> impl IntoView {
                         );
                     }
                 }
+                worklet_connecting.set(false);
+            } else if worklet_bridge.get_untracked().is_some() {
+                // Another view already connected — recreate note player with existing bridge
+                *note_player.borrow_mut() = create_note_player(
+                    &sound_source_clone,
+                    Rc::clone(&audio_ctx_for_loop),
+                    worklet_bridge.get_untracked(),
+                );
             }
 
             session.borrow_mut().start(intervals_from_query, &settings);
