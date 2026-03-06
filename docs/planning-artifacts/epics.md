@@ -1433,3 +1433,15 @@ Port improvements from the sibling iOS app (peach) that have accumulated since t
 **As a** musician,
 **I want** contextual help text available in the app,
 **So that** I can understand how each training mode works and what the statistics mean.
+
+---
+
+## Epic 8: Fixes & Improvements
+
+Open-ended epic for bug fixes, reliability improvements, and incremental enhancements discovered during use. Stories are added as issues are identified.
+
+### Story 8.1: Audio Playback Reliability Research
+
+**As a** developer,
+**I want** to research why audio playback is intermittently failing and propose a mitigation strategy,
+**So that** we can reliably play audio across browsers and sessions without silent failures.
