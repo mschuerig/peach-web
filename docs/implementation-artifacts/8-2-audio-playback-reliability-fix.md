@@ -1,6 +1,6 @@
 # Story 8.2: Audio Playback Reliability Fix
 
-Status: review
+Status: done
 
 ## Story
 
@@ -161,11 +161,12 @@ None — clean implementation, no debug issues encountered.
 - Task 4: onstatechange handlers in both views now attempt `resume()` on Suspended state (with 500ms recovery window) instead of immediately interrupting. Only `Closed` state triggers immediate interruption.
 - Task 5: Added `audio_error: RwSignal<Option<String>>` signal to both views with auto-dismiss Effect (5s). Playback failures and `ensure_running()` failures set the signal. Red notification banner rendered at bottom of screen.
 - Task 6: Verified all `[DIAG]` log statements are at `debug` level. Downgraded one remaining `log::info!("[DIAG] AudioContext created...")` in `audio_context.rs` to `log::debug!`.
-- Task 7: Manual browser testing deferred to user — code compiles clean with zero clippy warnings and all 345 domain tests pass.
+- Task 7: Manual browser testing performed by user (Michael) — confirmed working on Chrome, Firefox, and Safari.
 
 ### Change Log
 
 - 2026-03-06: Implemented audio playback reliability fix — ensure_running(), two-phase worklet init, softened onstatechange, audio error notifications, diagnostic log downgrade
+- 2026-03-06: Code review fixes — corrected Task 7 completion notes (testing done by user), added missing epics.md to File List
 
 ### File List
 
@@ -174,4 +175,5 @@ None — clean implementation, no debug issues encountered.
 - web/src/components/pitch_comparison_view.rs — Added ensure_running + phase 2 worklet connect at training start, softened onstatechange handler, added audio_error signal and notification UI, added playback error notifications
 - web/src/components/pitch_matching_view.rs — Same changes as pitch_comparison_view
 - docs/implementation-artifacts/sprint-status.yaml — Updated story status
+- docs/planning-artifacts/epics.md — Updated epic 8 status
 - docs/implementation-artifacts/8-2-audio-playback-reliability-fix.md — Updated story status, tasks, dev agent record

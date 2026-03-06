@@ -45,6 +45,7 @@ pub fn App() -> impl IntoView {
     let worklet_bridge = RwSignal::new_local(None::<Rc<RefCell<WorkletBridge>>>);
     let sf2_presets = RwSignal::new_local(Vec::<SF2Preset>::new());
     let worklet_assets = RwSignal::new_local(None::<Rc<WorkletAssets>>);
+    let worklet_connecting = RwSignal::new(false);
 
     let sf2_load_status = RwSignal::new({
         let sound_source = LocalStorageSettings::get_string("peach.sound_source")
@@ -67,6 +68,7 @@ pub fn App() -> impl IntoView {
     provide_context(worklet_bridge);
     provide_context(sf2_presets);
     provide_context(worklet_assets);
+    provide_context(worklet_connecting);
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);
@@ -178,7 +180,8 @@ pub fn App() -> impl IntoView {
     });
 
     // Phase 1: Fetch and compile worklet assets (no AudioContext needed)
-    {
+    // Only fetch when the user has selected a SoundFont — skip for oscillator users
+    if sf2_load_status.get_untracked() != SoundFontLoadStatus::NotNeeded {
         spawn_local(async move {
             match fetch_worklet_assets().await {
                 Ok(assets) => {
