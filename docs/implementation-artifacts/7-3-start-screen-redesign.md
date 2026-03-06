@@ -1,6 +1,6 @@
 # Story 7.3: Start Screen Redesign
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -62,41 +62,41 @@ Depends on: Story 7.1 (TrainingMode — needed for card structure, even though s
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Restructure start_page.rs layout (AC: 1, 2, 7)
-  - [ ] Replace the four flat buttons with two sections
-  - [ ] Each section: header text + two card components
-  - [ ] Use CSS flexbox/grid: vertical stack on narrow, side-by-side on wide (media query or container query)
+- [x] Task 1: Restructure start_page.rs layout (AC: 1, 2, 7)
+  - [x] Replace the four flat buttons with two sections
+  - [x] Each section: header text + two card components
+  - [x] Use CSS flexbox/grid: vertical stack on narrow, side-by-side on wide (media query or container query)
 
-- [ ] Task 2: Create training card component (AC: 3, 4, 6)
-  - [ ] Card component accepting: label (&str), icon (ear/target), href (route string)
-  - [ ] Card HTML: anchor tag wrapping a div with icon + label text
-  - [ ] Styling: rounded-xl, bg-surface/muted, px-4 py-3, min-h-[44px], full-width
-  - [ ] Press feedback: CSS `:active` opacity transition (opacity 0.7 on press, ease-in-out 150ms)
-  - [ ] Icon options: use Unicode characters (e.g. "👂" for ear, "🎯" for target) or Tailwind/SVG icons
+- [x] Task 2: Create training card component (AC: 3, 4, 6)
+  - [x] Card component accepting: label (&str), icon (ear/target), href (route string)
+  - [x] Card HTML: anchor tag wrapping a div with icon + label text
+  - [x] Styling: rounded-xl, bg-surface/muted, px-4 py-3, min-h-[44px], full-width
+  - [x] Press feedback: CSS `:active` opacity transition (opacity 0.7 on press, ease-in-out 150ms)
+  - [x] Icon options: use Unicode characters (e.g. "👂" for ear, "🎯" for target) or Tailwind/SVG icons
 
-- [ ] Task 3: Update navigation links (AC: 5, 8)
-  - [ ] Wire card hrefs: Single Notes → unison routes, Intervals → interval routes with encoded params
-  - [ ] Reuse existing `navigate_with_intervals()` helper for interval encoding
-  - [ ] Update nav bar: consider header layout with Info (left), Profile + Settings (right)
+- [x] Task 3: Update navigation links (AC: 5, 8)
+  - [x] Wire card hrefs: Single Notes → unison routes, Intervals → interval routes with encoded params
+  - [x] Reuse existing `navigate_with_intervals()` helper for interval encoding
+  - [x] Update nav bar: consider header layout with Info (left), Profile + Settings (right)
 
-- [ ] Task 4: Remove ProfilePreview from start page (AC: 9)
-  - [ ] Remove `ProfilePreview` component usage from start_page.rs
-  - [ ] Keep the `profile_preview.rs` file for now (story 7.4 will determine if it's still needed)
+- [x] Task 4: Remove ProfilePreview from start page (AC: 9)
+  - [x] Remove `ProfilePreview` component usage from start_page.rs
+  - [x] Keep the `profile_preview.rs` file for now (story 7.4 will determine if it's still needed)
 
-- [ ] Task 5: Accessibility (AC: 10)
-  - [ ] Section headers as `<h2>` elements
-  - [ ] Card links with `aria-label` combining mode and section (e.g. "Hear and Compare, Single Notes")
-  - [ ] Ensure tab order follows visual order (Single Notes cards first, then Intervals)
+- [x] Task 5: Accessibility (AC: 10)
+  - [x] Section headers as `<h2>` elements
+  - [x] Card links with `aria-label` combining mode and section (e.g. "Hear and Compare, Single Notes")
+  - [x] Ensure tab order follows visual order (Single Notes cards first, then Intervals)
 
-- [ ] Task 6: Visual polish
-  - [ ] Section spacing: ~28px between sections, ~10px between cards within a section
-  - [ ] Header text: secondary color, smaller font (text-sm or similar)
-  - [ ] Page padding and centering consistent with other views
+- [x] Task 6: Visual polish
+  - [x] Section spacing: ~28px between sections, ~10px between cards within a section
+  - [x] Header text: secondary color, smaller font (text-sm or similar)
+  - [x] Page padding and centering consistent with other views
 
-- [ ] Task 7: Verify (AC: 11)
-  - [ ] All four training routes still work correctly
-  - [ ] Interval query params still encoded and decoded correctly
-  - [ ] `trunk serve` and manual browser testing
+- [x] Task 7: Verify (AC: 11)
+  - [x] All four training routes still work correctly
+  - [x] Interval query params still encoded and decoded correctly
+  - [x] `trunk serve` and manual browser testing
 
 ## Dev Notes
 
@@ -121,3 +121,43 @@ Depends on: Story 7.1 (TrainingMode — needed for card structure, even though s
 
 - **Web crate only:** This story changes only `web/src/components/start_page.rs` and CSS. No domain changes.
 - **Routes unchanged:** Same paths, same query param encoding.
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Rewrote `start_page.rs` to replace four flat buttons with two `<section>` groups ("Single Notes" and "Intervals"), each containing two `TrainingCard` components
+- Created `TrainingCard` Leptos component: `<a>` element with icon, label, rounded-xl styling, CSS `:active` opacity press feedback
+- Cards use semantic `<a href>` instead of buttons with `on:click` + `use_navigate`, simplifying navigation
+- Renamed `navigate_with_intervals()` to `interval_href()` — now returns a URL string instead of imperatively navigating
+- Used Unicode emoji for icons: ear (U+1F442) for "Hear & Compare", target (U+1F3AF) for "Tune & Match"
+- Responsive layout via `md:flex-row` — stacks vertically on narrow, side-by-side on wide viewports
+- Section headers as `<h2>` with secondary text styling (`text-sm text-gray-500 dark:text-gray-400`)
+- Card spacing: `gap-2.5` (10px) within sections, `gap-7` (28px) between sections
+- Removed `ProfilePreview` import and usage from start page; removed unused `pub use` re-export from `mod.rs`
+- Kept `profile_preview.rs` file and module declaration for story 7.4
+- Existing `PageNav` component retained (nav bar layout unchanged — Info, Profile, Settings links still present)
+
+### Completion Notes
+
+All acceptance criteria satisfied:
+- AC1: Two sections with secondary-styled headers
+- AC2: Each section has "Hear & Compare" and "Tune & Match" cards
+- AC3: Unicode emoji icons on each card
+- AC4: Rounded-xl cards with muted background, min-h-11, padding
+- AC5: Correct navigation — Single Notes → unison routes, Intervals → encoded interval params
+- AC6: CSS `:active` opacity 0.7 with 150ms ease-in-out transition
+- AC7: `md:flex-row` responsive layout
+- AC8: PageNav retained with existing links
+- AC9: ProfilePreview removed from start page
+- AC10: `aria-label` on each card, `<h2>` section headers, correct tab order
+- AC11: All routes unchanged, interval encoding preserved
+
+## File List
+
+- `web/src/components/start_page.rs` — rewritten (layout, TrainingCard component, interval_href helper)
+- `web/src/components/mod.rs` — removed unused `pub use profile_preview::ProfilePreview` re-export
+
+## Change Log
+
+- 2026-03-06: Redesigned start screen with grouped sections and card-style training buttons (story 7.3)

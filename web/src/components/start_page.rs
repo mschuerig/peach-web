@@ -1,13 +1,11 @@
 use leptos::prelude::*;
-use leptos_router::hooks::use_navigate;
 
 use super::page_nav::PageNav;
-use super::ProfilePreview;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::interval_codes::encode_intervals;
 use domain::Interval;
 
-fn navigate_with_intervals(navigate: &impl Fn(&str, leptos_router::NavigateOptions), path: &str) {
+fn interval_href(path: &str) -> String {
     let intervals = LocalStorageSettings::get_selected_intervals();
     let has_non_prime = intervals
         .iter()
@@ -17,79 +15,77 @@ fn navigate_with_intervals(navigate: &impl Fn(&str, leptos_router::NavigateOptio
     } else {
         "P1".to_string()
     };
-    navigate(
-        &format!("{path}?intervals={code}"),
-        Default::default(),
-    );
+    format!("{path}?intervals={code}")
+}
+
+#[component]
+fn TrainingCard(
+    label: &'static str,
+    icon: &'static str,
+    href: String,
+    aria_label: &'static str,
+) -> impl IntoView {
+    view! {
+        <a
+            href=href
+            aria-label=aria_label
+            class="flex w-full items-center gap-3 rounded-xl bg-gray-100 px-4 py-3 min-h-11 text-lg font-medium text-gray-800 no-underline transition-opacity duration-150 ease-in-out active:opacity-70 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-offset-gray-900"
+        >
+            <span class="text-xl" aria-hidden="true">{icon}</span>
+            <span>{label}</span>
+        </a>
+    }
 }
 
 #[component]
 pub fn StartPage() -> impl IntoView {
-    let navigate = use_navigate();
-    let on_pitch_comparison = {
-        let navigate = navigate.clone();
-        move |_| {
-            navigate("/training/comparison", Default::default());
-        }
-    };
-    let on_pitch_matching = {
-        let navigate = navigate.clone();
-        move |_| {
-            navigate("/training/pitch-matching", Default::default());
-        }
-    };
-    let on_interval_pitch_comparison = {
-        let navigate = navigate.clone();
-        move |_| {
-            navigate_with_intervals(&navigate, "/training/comparison");
-        }
-    };
-    let on_interval_pitch_matching = {
-        let navigate = navigate.clone();
-        move |_| {
-            navigate_with_intervals(&navigate, "/training/pitch-matching");
-        }
-    };
+    let interval_comparison_href = interval_href("/training/comparison");
+    let interval_pitch_matching_href = interval_href("/training/pitch-matching");
 
     view! {
         <div class="flex flex-col items-center gap-6 py-12">
             <PageNav current="start" />
             <h1 class="sr-only">"Peach"</h1>
 
-            <ProfilePreview />
+            <div class="flex w-full flex-col gap-7 md:flex-row md:gap-8">
+                // Single Notes section
+                <section class="flex-1">
+                    <h2 class="mb-2.5 text-sm font-medium text-gray-500 dark:text-gray-400">"Single Notes"</h2>
+                    <div class="flex flex-col gap-2.5">
+                        <TrainingCard
+                            label="Hear & Compare"
+                            icon="\u{1F442}"
+                            href="/training/comparison".to_string()
+                            aria_label="Hear and Compare, Single Notes"
+                        />
+                        <TrainingCard
+                            label="Tune & Match"
+                            icon="\u{1F3AF}"
+                            href="/training/pitch-matching".to_string()
+                            aria_label="Tune and Match, Single Notes"
+                        />
+                    </div>
+                </section>
 
-            <nav aria-label="Training modes" class="flex w-full flex-col items-center gap-6">
-                <button
-                    on:click=on_pitch_comparison
-                    class="block w-full min-h-11 rounded-lg bg-indigo-600 px-6 py-4 text-center text-lg font-semibold text-white shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-                >
-                    "Comparison"
-                </button>
-
-                <button
-                    on:click=on_pitch_matching
-                    class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                    "Pitch Matching"
-                </button>
-
-                <hr class="w-full border-gray-300 dark:border-gray-600" />
-
-                <button
-                    on:click=on_interval_pitch_comparison
-                    class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                    "Interval Comparison"
-                </button>
-
-                <button
-                    on:click=on_interval_pitch_matching
-                    class="block w-full min-h-11 rounded-lg bg-gray-200 px-6 py-3 text-center text-lg font-medium text-gray-800 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                    "Interval Pitch Matching"
-                </button>
-            </nav>
-
+                // Intervals section
+                <section class="flex-1">
+                    <h2 class="mb-2.5 text-sm font-medium text-gray-500 dark:text-gray-400">"Intervals"</h2>
+                    <div class="flex flex-col gap-2.5">
+                        <TrainingCard
+                            label="Hear & Compare"
+                            icon="\u{1F442}"
+                            href=interval_comparison_href
+                            aria_label="Hear and Compare, Intervals"
+                        />
+                        <TrainingCard
+                            label="Tune & Match"
+                            icon="\u{1F3AF}"
+                            href=interval_pitch_matching_href
+                            aria_label="Tune and Match, Intervals"
+                        />
+                    </div>
+                </section>
+            </div>
         </div>
     }
 }
