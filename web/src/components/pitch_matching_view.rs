@@ -245,6 +245,10 @@ pub fn PitchMatchingView() -> impl IntoView {
 
     // Cancellation flag shared between loop and event handlers
     let cancelled = Rc::new(Cell::new(false));
+    // Permanent exit flag — distinguishes real cancellation from help-pause
+    let terminated = Rc::new(Cell::new(false));
+    // Help modal pause — when true, training loop waits instead of exiting
+    let help_paused: RwSignal<bool> = RwSignal::new(false);
 
     // Commit handler — used by slider on_commit and keyboard Enter/Space
     let on_commit = {
@@ -350,11 +354,13 @@ pub fn PitchMatchingView() -> impl IntoView {
     // Navigation away handler — stops training before nav
     let on_nav_away = {
         let cancelled = Rc::clone(&cancelled);
+        let terminated = Rc::clone(&terminated);
         let session = Rc::clone(&session);
         let note_player = Rc::clone(&note_player);
         let tunable_handle = Rc::clone(&tunable_handle);
         let sync = sync_signals.clone();
         move || {
+            terminated.set(true);
             cancelled.set(true);
             session.borrow_mut().stop();
             if let Some(ref mut h) = *tunable_handle.borrow_mut() {
@@ -378,27 +384,22 @@ pub fn PitchMatchingView() -> impl IntoView {
     let is_help_open = RwSignal::new(false);
     let on_help_open = {
         let cancelled = Rc::clone(&cancelled);
-        let session = Rc::clone(&session);
         let note_player = Rc::clone(&note_player);
         let tunable_handle = Rc::clone(&tunable_handle);
-        let sync = sync_signals.clone();
         move |_| {
+            help_paused.set(true);
             cancelled.set(true);
-            session.borrow_mut().stop();
             if let Some(ref mut h) = *tunable_handle.borrow_mut() {
                 h.stop();
             }
             note_player.borrow().stop_all();
-            sync();
             is_help_open.set(true);
         }
     };
 
     let on_help_close = Callback::new(move |()| {
-        // Just close the dialog — stay on the training page.
-        // Training was already stopped when help opened;
-        // user navigates back to start to restart.
         is_help_open.set(false);
+        help_paused.set(false);
     });
 
     // Shared interruption closure — stops training and navigates to start page
@@ -488,6 +489,7 @@ pub fn PitchMatchingView() -> impl IntoView {
     {
         let cleanup_state = SendWrapper::new((
             Rc::clone(&cancelled),
+            Rc::clone(&terminated),
             Rc::clone(&session),
             Rc::clone(&note_player),
             Rc::clone(&tunable_handle),
@@ -495,9 +497,11 @@ pub fn PitchMatchingView() -> impl IntoView {
             visibility_fn,
         ));
         on_cleanup(move || {
-            let (cancelled, session, note_player, tunable_handle, audio_ctx, visibility_fn) =
+            let (cancelled, terminated, session, note_player, tunable_handle, audio_ctx, visibility_fn) =
                 &*cleanup_state;
+            terminated.set(true);
             cancelled.set(true);
+            help_paused.set(false);
             session.borrow_mut().stop();
             if let Some(ref mut h) = *tunable_handle.borrow_mut() {
                 h.stop();
@@ -522,6 +526,7 @@ pub fn PitchMatchingView() -> impl IntoView {
         let note_player = Rc::clone(&note_player);
         let tunable_handle = Rc::clone(&tunable_handle);
         let cancelled = Rc::clone(&cancelled);
+        let terminated = Rc::clone(&terminated);
         let audio_ctx_for_loop = Rc::clone(&audio_ctx);
         let sync = sync_signals.clone();
         spawn_local(async move {
@@ -585,81 +590,101 @@ pub fn PitchMatchingView() -> impl IntoView {
                 );
             }
 
-            session.borrow_mut().start(intervals_from_query, &settings);
-            sync();
-            sr_announcement.set("Training started".into());
-
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;
 
-            'training: loop {
-                if cancelled.get() {
-                    break;
-                }
+            // Outer loop enables training restart after help modal close.
+            // Inner 'training loop breaks on cancelled; outer loop checks whether
+            // to restart (help_paused) or exit permanently (terminated).
+            'session: loop {
+                if terminated.get() { break; }
 
-                let data = match session.borrow().current_playback_data() {
-                    Some(data) => data,
-                    None => break,
-                };
-
-                let duration_ms = (data.duration.raw_value() * 1000.0) as u32;
-
-                // === PlayingReference phase (slider disabled) ===
-                note_player.borrow().stop_all();
-                if let Err(e) = note_player.borrow().play_for_duration(
-                    data.reference_frequency,
-                    data.duration,
-                    MIDIVelocity::new(PITCH_MATCHING_VELOCITY),
-                    AmplitudeDB::new(0.0),
-                ) {
-                    log::error!("Reference note playback failed: {e}");
-                    audio_error.set(Some("Audio playback failed".into()));
-                }
-
-                // Wait for reference note duration
-                let mut elapsed = 0u32;
-                while elapsed < duration_ms {
-                    if cancelled.get() {
-                        break 'training;
-                    }
-                    TimeoutFuture::new(POLL_INTERVAL_MS).await;
-                    elapsed += POLL_INTERVAL_MS;
-                }
-                if cancelled.get() {
-                    break;
-                }
-
-                // Transition: PlayingReference → AwaitingSliderTouch
-                session.borrow_mut().on_reference_finished();
+                session.borrow_mut().stop();
+                session.borrow_mut().start(intervals_from_query.clone(), &settings);
+                cancelled.set(false);
                 sync();
+                sr_announcement.set("Training started".into());
 
-                // === AwaitingSliderTouch phase ===
-                // Tunable note will start when user touches the slider (see slider_on_change)
-
-                // Enable slider and reset to center for new challenge
-                reset_trigger.set(reset_trigger.get_untracked() + 1);
-
-                // Wait for commit (slider release or Enter/Space)
-                while session.borrow().state() != PitchMatchingSessionState::ShowingFeedback {
+                'training: loop {
                     if cancelled.get() {
-                        break 'training;
+                        break;
                     }
-                    if session.borrow().state() == PitchMatchingSessionState::Idle {
-                        break 'training;
+
+                    let data = match session.borrow().current_playback_data() {
+                        Some(data) => data,
+                        None => break,
+                    };
+
+                    let duration_ms = (data.duration.raw_value() * 1000.0) as u32;
+
+                    // === PlayingReference phase (slider disabled) ===
+                    note_player.borrow().stop_all();
+                    if let Err(e) = note_player.borrow().play_for_duration(
+                        data.reference_frequency,
+                        data.duration,
+                        MIDIVelocity::new(PITCH_MATCHING_VELOCITY),
+                        AmplitudeDB::new(0.0),
+                    ) {
+                        log::error!("Reference note playback failed: {e}");
+                        audio_error.set(Some("Audio playback failed".into()));
                     }
-                    TimeoutFuture::new(POLL_INTERVAL_MS).await;
-                }
 
-                // === ShowingFeedback phase ===
-                sync();
-                TimeoutFuture::new(feedback_ms).await;
-                if cancelled.get() {
-                    break;
-                }
+                    // Wait for reference note duration
+                    let mut elapsed = 0u32;
+                    while elapsed < duration_ms {
+                        if cancelled.get() {
+                            break 'training;
+                        }
+                        TimeoutFuture::new(POLL_INTERVAL_MS).await;
+                        elapsed += POLL_INTERVAL_MS;
+                    }
+                    if cancelled.get() {
+                        break;
+                    }
 
-                // End feedback, generate next challenge
-                if session.borrow().state() == PitchMatchingSessionState::ShowingFeedback {
-                    session.borrow_mut().on_feedback_finished();
+                    // Transition: PlayingReference → AwaitingSliderTouch
+                    session.borrow_mut().on_reference_finished();
                     sync();
+
+                    // === AwaitingSliderTouch phase ===
+                    // Tunable note will start when user touches the slider (see slider_on_change)
+
+                    // Enable slider and reset to center for new challenge
+                    reset_trigger.set(reset_trigger.get_untracked() + 1);
+
+                    // Wait for commit (slider release or Enter/Space)
+                    while session.borrow().state() != PitchMatchingSessionState::ShowingFeedback {
+                        if cancelled.get() {
+                            break 'training;
+                        }
+                        if session.borrow().state() == PitchMatchingSessionState::Idle {
+                            break 'training;
+                        }
+                        TimeoutFuture::new(POLL_INTERVAL_MS).await;
+                    }
+
+                    // === ShowingFeedback phase ===
+                    sync();
+                    TimeoutFuture::new(feedback_ms).await;
+                    if cancelled.get() {
+                        break;
+                    }
+
+                    // End feedback, generate next challenge
+                    if session.borrow().state() == PitchMatchingSessionState::ShowingFeedback {
+                        session.borrow_mut().on_feedback_finished();
+                        sync();
+                    }
+                }
+
+                // After 'training loop exits, decide: restart or exit
+                if !help_paused.get_untracked() {
+                    break 'session; // Real cancellation (nav, visibility, etc.)
+                }
+
+                // Help modal is open — wait for it to close, then restart
+                while help_paused.get_untracked() {
+                    if terminated.get() { break 'session; }
+                    TimeoutFuture::new(POLL_INTERVAL_MS).await;
                 }
             }
 
