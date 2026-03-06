@@ -15,7 +15,6 @@ use web_sys::MessagePort;
 use crate::adapters::audio_context::AudioContextManager;
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
-use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::components::{
     PitchComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
@@ -24,7 +23,6 @@ use domain::{PerceptualProfile, ProgressTimeline, ThresholdTimeline, TrendAnalyz
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SoundFontLoadStatus {
-    NotNeeded,
     Fetching,
     Ready,
     Failed(String),
@@ -48,15 +46,9 @@ pub fn App() -> impl IntoView {
     let worklet_connecting = RwSignal::new(false);
     let audio_needs_gesture = RwSignal::new(false);
 
-    let sf2_load_status = RwSignal::new({
-        let sound_source = LocalStorageSettings::get_string("peach.sound_source")
-            .unwrap_or_else(|| "oscillator:sine".to_string());
-        if sound_source.starts_with("sf2:") {
-            SoundFontLoadStatus::Fetching
-        } else {
-            SoundFontLoadStatus::NotNeeded
-        }
-    });
+    // Always fetch SF2 so presets are available in settings.
+    // Initial status is Fetching — views that need SF2 show loading indicator.
+    let sf2_load_status = RwSignal::new(SoundFontLoadStatus::Fetching);
 
     provide_context(sf2_load_status);
     provide_context(profile.clone());
@@ -182,22 +174,24 @@ pub fn App() -> impl IntoView {
     });
 
     // Phase 1: Fetch and compile worklet assets (no AudioContext needed)
-    // Only fetch when the user has selected a SoundFont — skip for oscillator users
-    if sf2_load_status.get_untracked() != SoundFontLoadStatus::NotNeeded {
-        spawn_local(async move {
-            match fetch_worklet_assets().await {
-                Ok(assets) => {
-                    log::info!("Worklet assets fetched (WASM + SF2)");
-                    worklet_assets.set(Some(Rc::new(assets)));
-                    sf2_load_status.set(SoundFontLoadStatus::Ready);
-                }
-                Err(e) => {
-                    log::warn!("Failed to fetch worklet assets (oscillator fallback): {e}");
-                    sf2_load_status.set(SoundFontLoadStatus::Failed(e));
-                }
+    // Always fetch so SF2 presets are available in settings even for oscillator users.
+    // Training buttons are only gated (disabled) when the user has SF2 selected.
+    spawn_local(async move {
+        match fetch_worklet_assets().await {
+            Ok(assets) => {
+                log::info!("Worklet assets fetched (WASM + SF2)");
+                let presets = parse_sf2_preset_headers(&assets.sf2_buffer);
+                log::info!("Parsed {} SF2 preset headers", presets.len());
+                sf2_presets.set(presets);
+                worklet_assets.set(Some(Rc::new(assets)));
+                sf2_load_status.set(SoundFontLoadStatus::Ready);
             }
-        });
-    }
+            Err(e) => {
+                log::warn!("Failed to fetch worklet assets (oscillator fallback): {e}");
+                sf2_load_status.set(SoundFontLoadStatus::Failed(e));
+            }
+        }
+    });
 
     view! {
         <Router>
@@ -403,6 +397,104 @@ async fn wait_for_worklet_message(
     drop(callback);
 
     result
+}
+
+/// Parse SF2 preset headers directly from raw SF2 bytes (RIFF/sfbk format).
+///
+/// Navigates the RIFF chunk structure to find the "pdta" LIST → "phdr" sub-chunk,
+/// then reads preset headers (38 bytes each: 20-byte name, u16 preset, u16 bank, …).
+/// The last entry is always "EOP" (sentinel) and is excluded.
+fn parse_sf2_preset_headers(buffer: &JsValue) -> Vec<SF2Preset> {
+    let array = js_sys::Uint8Array::new(buffer);
+    let bytes = array.to_vec();
+
+    if bytes.len() < 12 {
+        return Vec::new();
+    }
+
+    // Verify RIFF/sfbk header
+    if &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"sfbk" {
+        log::warn!("SF2 parse: not a valid RIFF/sfbk file");
+        return Vec::new();
+    }
+
+    // Find pdta LIST chunk, then phdr sub-chunk within it
+    let mut pos = 12;
+    while pos + 8 <= bytes.len() {
+        let chunk_id = &bytes[pos..pos + 4];
+        let chunk_size = u32::from_le_bytes([
+            bytes[pos + 4],
+            bytes[pos + 5],
+            bytes[pos + 6],
+            bytes[pos + 7],
+        ]) as usize;
+
+        if chunk_id == b"LIST" && pos + 12 <= bytes.len() {
+            let list_type = &bytes[pos + 8..pos + 12];
+            if list_type == b"pdta" {
+                // Search inside pdta for phdr
+                let pdta_start = pos + 12;
+                let pdta_end = (pos + 8 + chunk_size).min(bytes.len());
+                let mut inner = pdta_start;
+                while inner + 8 <= pdta_end {
+                    let sub_id = &bytes[inner..inner + 4];
+                    let sub_size = u32::from_le_bytes([
+                        bytes[inner + 4],
+                        bytes[inner + 5],
+                        bytes[inner + 6],
+                        bytes[inner + 7],
+                    ]) as usize;
+
+                    if sub_id == b"phdr" {
+                        return parse_phdr_entries(&bytes[inner + 8..], sub_size);
+                    }
+
+                    // Advance to next sub-chunk (pad to even boundary)
+                    inner += 8 + sub_size + (sub_size % 2);
+                }
+                break;
+            }
+        }
+
+        // Advance to next chunk (pad to even boundary)
+        pos += 8 + chunk_size + (chunk_size % 2);
+    }
+
+    Vec::new()
+}
+
+/// Parse individual preset header records from the phdr chunk data.
+fn parse_phdr_entries(data: &[u8], size: usize) -> Vec<SF2Preset> {
+    const PHDR_SIZE: usize = 38;
+    let count = size / PHDR_SIZE;
+    if count <= 1 {
+        return Vec::new(); // Only the EOP sentinel
+    }
+
+    let mut presets = Vec::with_capacity(count - 1);
+    for i in 0..count - 1 {
+        // Last entry is EOP sentinel — skip it
+        let offset = i * PHDR_SIZE;
+        if offset + PHDR_SIZE > data.len() {
+            break;
+        }
+
+        let name_bytes = &data[offset..offset + 20];
+        let name = String::from_utf8_lossy(
+            &name_bytes[..name_bytes.iter().position(|&b| b == 0).unwrap_or(20)],
+        )
+        .to_string();
+
+        let program = u16::from_le_bytes([data[offset + 20], data[offset + 21]]);
+        let bank = u16::from_le_bytes([data[offset + 22], data[offset + 23]]);
+
+        presets.push(SF2Preset {
+            name,
+            bank,
+            program,
+        });
+    }
+    presets
 }
 
 /// Parse SF2 preset list from the `soundFontLoaded` message data.

@@ -1,6 +1,6 @@
 # Story 8.5: Settings Page iOS Alignment
 
-Status: review
+Status: done
 
 ## Story
 
@@ -182,8 +182,23 @@ Claude Opus 4.6
 - All existing persistence logic unchanged (localStorage keys, serialization patterns)
 - Concert pitch range expanded from 4 fixed options (415/432/440/442) to continuous stepper (400-460 Hz, 1 Hz steps) matching iOS behavior
 
+### Senior Developer Review (AI)
+
+**Reviewer:** Michael (via adversarial code review) | **Date:** 2026-03-06 | **Outcome:** Approved with fixes applied
+
+**Issues found:** 0 Critical, 3 Medium, 2 Low — all fixed inline.
+
+| # | Severity | Issue | Fix |
+|---|---|---|---|
+| 1 | MEDIUM | Hint text rendered inside card (iOS puts it below) | Moved intervals and tuning hints outside `SettingsSection` cards |
+| 2 | MEDIUM | No chevron indicator on dropdown selects (`appearance-none` removed native arrow) | Added `›` (U+203A) chevron span after Sound and Tuning selects |
+| 3 | MEDIUM | Duplicated ~150-char button class strings in interval grid (4 copies) | Extracted to `TOGGLE_ACTIVE` / `TOGGLE_INACTIVE` constants |
+| 4 | LOW | `as i32` truncation for concert pitch display | Changed to `.round() as i32` |
+| 5 | LOW | Pre-existing: Sine Oscillator option vanishes when SF2 loads | Not fixed (pre-existing, out of scope) |
+
 ### Change Log
 
+- 2026-03-06: Code review fixes — hint text below cards, dropdown chevrons, extracted toggle constants, safe pitch rounding
 - 2026-03-06: Complete iOS-style settings page refactor — grouped card sections, stepper controls, compact interval grid, data management as tappable rows
 
 ### File List
