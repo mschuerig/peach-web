@@ -1519,3 +1519,42 @@ Open-ended epic for bug fixes, reliability improvements, and incremental enhance
 6. Feedback timing and duration remain unchanged
 7. Dark mode preserved, no regressions
 8. Screen reader announcement behavior unchanged
+
+### Story 8.7: Extract Business Logic from Settings View
+
+**As a** developer,
+**I want** business logic extracted from settings_view.rs into proper domain and adapter layers,
+**So that** the codebase follows clean architecture with views as pure presentation.
+
+**Acceptance Criteria:**
+1. `settings_view.rs` contains only presentation logic -- no business logic, no constants that duplicate domain knowledge, no data transformation
+2. The `INTERVALS` constant is removed; code derives the list from `Interval::all_chromatic()`
+3. Short labels live on the `Interval` type as `short_label()` in the domain crate
+4. `encode_one()` and `decode_one()` in `interval_codes.rs` reuse `Interval::short_label()`
+5. `persist_intervals()` is moved to `LocalStorageSettings`
+6. `ResetStatus` and `ImportExportStatus` enums are moved out of the view
+7. `project-context.md` includes a rule that views must not contain business logic
+8. All existing functionality works identically after refactoring
+9. `cargo test -p domain` passes, `cargo clippy` clean on both crates
+
+**Note:** AC#5 from original story (export/import orchestration extraction) deferred to story 8.8 along with broader architectural cleanup.
+
+### Story 8.8: Clean Up Export/Import Architecture
+
+**As a** developer,
+**I want** the export/import code properly structured with domain logic on domain types, adapter code named honestly, and view orchestration extracted,
+**So that** naming matches intent, there are no duplicate mappings, and the view is pure presentation.
+
+**Acceptance Criteria:**
+1. `domain/src/portability.rs` is deleted -- all its logic lives on domain types or in the web adapter
+2. `Interval` gains `csv_code()` (returns "A4" for tritone, iOS CSV compat) and `from_csv_code()` methods; `from_semitones()` is made public
+3. `midi_note_name()` free function removed -- callers use `MIDINote::new(n).name()` (identical logic, already exists)
+4. Duplicate `NOTE_NAMES` constant in portability.rs removed (already exists in midi.rs)
+5. `truncate_timestamp_to_second()` moved to the web adapter (only consumer)
+6. Web adapter renamed from `data_portability.rs` to `csv_export_import.rs`
+7. `data_portability_service.rs` deleted -- `ResetStatus` and `ImportExportStatus` enums absorbed into the renamed adapter module
+8. FileReader-to-future conversion extracted from `settings_view.rs` into the adapter
+9. View retains only signal declarations, thin event handlers, and DOM rendering
+10. `interval_label()` long-name mapping in `interval_codes.rs` moved to `Interval::display_name()` in the domain crate
+11. All existing functionality works identically -- zero behavioral changes
+12. `cargo test -p domain` passes, `cargo clippy` clean on both crates
