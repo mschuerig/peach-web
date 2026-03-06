@@ -133,6 +133,11 @@ impl NotePlayer for OscillatorNotePlayer {
         amplitude_db: AmplitudeDB,
     ) -> Result<Self::Handle, AudioError> {
         let ctx_rc = self.get_context()?;
+        log::info!(
+            "[DIAG] OscillatorNotePlayer::play — ctx.state: {:?}, freq: {}",
+            ctx_rc.borrow().state(),
+            frequency.raw_value()
+        );
         self.create_and_start(&ctx_rc, frequency, velocity, amplitude_db)
     }
 
@@ -144,6 +149,12 @@ impl NotePlayer for OscillatorNotePlayer {
         amplitude_db: AmplitudeDB,
     ) -> Result<(), AudioError> {
         let ctx_rc = self.get_context()?;
+        log::info!(
+            "[DIAG] OscillatorNotePlayer::play_for_duration — ctx.state: {:?}, freq: {}, dur: {}s",
+            ctx_rc.borrow().state(),
+            frequency.raw_value(),
+            duration.raw_value()
+        );
         let handle = self.create_and_start(&ctx_rc, frequency, velocity, amplitude_db)?;
 
         // Schedule automatic stop using Web Audio's high-precision clock.
