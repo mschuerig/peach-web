@@ -108,7 +108,7 @@ impl PitchComparisonObserver for TimelineObserver {
 }
 
 // Note: PitchMatchingProfileObserver is not needed because PitchMatchingSession
-// updates the profile directly in commit_pitch() — unlike ComparisonSession which
+// updates the profile directly in commit_pitch() — unlike PitchComparisonSession which
 // delegates to the observer.
 
 pub struct PitchMatchingDataStoreObserver {
