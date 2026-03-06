@@ -313,7 +313,7 @@ impl PitchComparisonSession {
                 TuningSystem::JustIntonation => "JI",
             };
             log::info!(
-                "Comparison: ref={} {:.2}Hz @0.0dB, target {:.2}Hz @{:.1}dB, offset={:.1}, interval={}, tuning={}, higher={}",
+                "PitchComparison: ref={} {:.2}Hz @0.0dB, target {:.2}Hz @{:.1}dB, offset={:.1}, interval={}, tuning={}, higher={}",
                 comparison.reference_note().raw_value(),
                 reference_frequency.raw_value(),
                 target_frequency.raw_value(),

@@ -79,7 +79,7 @@ impl Default for TrainingSettings {
 /// 2. Clamp to [min_cent_difference, max_cent_difference]
 /// 3. Random sign (equally likely positive/negative)
 /// 4. Select reference note within range, accounting for interval transposition
-/// 5. Return Comparison
+/// 5. Return PitchComparison
 pub fn next_pitch_comparison(
     profile: &PerceptualProfile,
     settings: &TrainingSettings,

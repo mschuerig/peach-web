@@ -73,7 +73,7 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     // Build observers list — DataStoreObserver holds the signal and checks
     // store availability on each call, so it works even if IndexedDB
-    // opens after ComparisonView mounts.
+    // opens after PitchComparisonView mounts.
     let observers: Vec<Box<dyn PitchComparisonObserver>> = vec![
         Box::new(ProfileObserver::new(Rc::clone(&profile))),
         Box::new(TrendObserver::new(Rc::clone(&trend_analyzer))),

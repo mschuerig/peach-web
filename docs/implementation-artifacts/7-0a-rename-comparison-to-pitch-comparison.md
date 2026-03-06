@@ -1,6 +1,6 @@
 # Story 7.0a: Rename Comparison to PitchComparison
 
-Status: review
+Status: done
 
 ## Story
 
@@ -155,7 +155,7 @@ This rename must happen first in Epic 7 because all subsequent stories reference
   - [x] `cargo test -p domain` — 306 tests pass
   - [x] `cargo clippy` — clean
   - [x] `trunk build` — succeeds
-  - [ ] Manual smoke test: comparison training still works via start page
+  - [x] Manual smoke test: comparison training still works via start page
 
 ## Dev Notes
 
@@ -217,3 +217,4 @@ Preserved backward-compatible identifiers per ACs: route `/training/comparison`,
 ## Change Log
 
 - 2026-03-06: Implemented story 7.0a — renamed all Comparison* types to PitchComparison* for iOS naming parity
+- 2026-03-06: Code review fixes — updated 4 stale comments still referencing old names (ComparisonView, ComparisonSession, Comparison)
