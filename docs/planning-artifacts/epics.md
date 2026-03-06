@@ -1445,3 +1445,18 @@ Open-ended epic for bug fixes, reliability improvements, and incremental enhance
 **As a** developer,
 **I want** to research why audio playback is intermittently failing and propose a mitigation strategy,
 **So that** we can reliably play audio across browsers and sessions without silent failures.
+
+### Story 8.2: Audio Playback Reliability Fix
+
+**As a** user,
+**I want** audio to play reliably every time I start a training session,
+**So that** I never experience silent training where the UI progresses but no sound is heard.
+
+**Acceptance Criteria:**
+1. AudioContext is guaranteed to be in `Running` state before any note playback begins
+2. `AudioContext.resume()` is called at training start if context is `Suspended`
+3. Worklet init no longer creates AudioContext — deferred to training view (user gesture)
+4. `onstatechange` handler attempts `resume()` before interrupting on `Suspended`
+5. User sees a brief notification when note playback fails
+6. Diagnostic `[DIAG]` logs downgraded to `debug` level
+7. No regressions in pitch comparison or pitch matching modes
