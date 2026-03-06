@@ -1,6 +1,6 @@
 # Story 7.4: Profile Screen with Progress Charts
 
-Status: review
+Status: done
 
 ## Story
 
@@ -159,3 +159,4 @@ All 7 tasks completed. Implementation is purely UI (web crate only), no domain c
 ## Change Log
 
 - 2026-03-06: Implemented profile screen with per-mode progress charts (story 7.4). Replaced piano keyboard visualization with SVG area charts showing EWMA trends, stddev bands, and optimal baselines per training mode.
+- 2026-03-06: Code review fixes — added `vector-effect="non-scaling-stroke"` to SVG strokes (H1: prevent distortion with `preserveAspectRatio="none"`), skip chart rendering for single-bucket data (M1), removed redundant `is_profile_loaded` guard from ProgressCard (M3). M2 (no version counter signal for live ProgressTimeline updates) noted as acceptable given hub-and-spoke routing remounts components.

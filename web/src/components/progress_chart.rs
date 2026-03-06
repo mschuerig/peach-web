@@ -46,7 +46,7 @@ pub fn ProgressChart(
     optimal_baseline: f64,
     unit_label: &'static str,
 ) -> impl IntoView {
-    if buckets.is_empty() {
+    if buckets.len() <= 1 {
         return view! { <div /> }.into_any();
     }
 
@@ -155,6 +155,7 @@ pub fn ProgressChart(
                 stroke="rgb(59, 130, 246)"
                 stroke-width="2"
                 stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
             />
             // Baseline (dashed green)
             <line
@@ -165,6 +166,7 @@ pub fn ProgressChart(
                 stroke="rgb(34, 197, 94)"
                 stroke-width="1"
                 stroke-dasharray="4 3"
+                vector-effect="non-scaling-stroke"
             />
             // Y-axis unit label (rotated)
             <text
