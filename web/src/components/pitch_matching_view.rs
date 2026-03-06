@@ -470,6 +470,10 @@ pub fn PitchMatchingView() -> impl IntoView {
                 && let Some(ctx) = target.dyn_ref::<web_sys::BaseAudioContext>()
             {
                 let state = ctx.state();
+                log::info!(
+                    "[DIAG] PitchMatchingView onstatechange fired — new state: {:?}",
+                    state
+                );
                 if state == web_sys::AudioContextState::Suspended
                     || state == web_sys::AudioContextState::Closed
                 {

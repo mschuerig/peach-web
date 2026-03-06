@@ -383,6 +383,10 @@ pub fn PitchComparisonView() -> impl IntoView {
                 && let Some(ctx) = target.dyn_ref::<web_sys::BaseAudioContext>()
             {
                 let state = ctx.state();
+                log::info!(
+                    "[DIAG] PitchComparisonView onstatechange fired — new state: {:?}",
+                    state
+                );
                 if state == web_sys::AudioContextState::Suspended
                     || state == web_sys::AudioContextState::Closed
                 {

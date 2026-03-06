@@ -31,6 +31,12 @@ impl AudioContextManager {
             AudioError::EngineStartFailed(format!("{:?}", e))
         })?;
 
+        log::info!(
+            "[DIAG] AudioContext created — state: {:?}, sampleRate: {}",
+            ctx.state(),
+            ctx.sample_rate()
+        );
+
         let shared = Rc::new(RefCell::new(ctx));
         self.context = Some(Rc::clone(&shared));
         Ok(shared)
