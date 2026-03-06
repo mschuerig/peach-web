@@ -720,9 +720,9 @@ pub fn PitchComparisonView() -> impl IntoView {
                     {move || {
                         if show_feedback.get() {
                             if is_last_correct.get() {
-                                view! { <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white font-bold text-lg">{"\u{2713}"}</span> }.into_any()
+                                view! { <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500 dark:bg-green-600 text-white font-bold text-lg">{"\u{2714}"}</span> }.into_any()
                             } else {
-                                view! { <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white font-bold text-lg">{"X"}</span> }.into_any()
+                                view! { <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500 dark:bg-red-600 text-white font-bold text-lg">{"\u{2718}"}</span> }.into_any()
                             }
                         } else {
                             view! { <div class="w-8 h-8"></div> }.into_any()
