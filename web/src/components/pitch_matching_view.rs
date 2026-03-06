@@ -718,7 +718,7 @@ pub fn PitchMatchingView() -> impl IntoView {
     };
 
     view! {
-        <div class="flex flex-col pt-4 pb-12" style="height: calc(100vh - 2rem);">
+        <div class="flex flex-col pt-4 pb-12 h-screen">
             <NavBar title=matching_title back_href="/" on_back=on_back_cb>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb />
             </NavBar>

@@ -61,14 +61,11 @@ pub fn NavBar(
         match (back_href, on_back) {
             (Some(href), Some(on_back)) => {
                 view! {
-                    <a
-                        href=href
+                    <A href=href attr:class=back_class attr:aria-label="Back"
                         on:click=move |ev| on_back.run(ev)
-                        class=back_class
-                        aria-label="Back"
                     >
                         <span aria-hidden="true">{"\u{2039}"}</span>
-                    </a>
+                    </A>
                 }
                 .into_any()
             }
@@ -93,7 +90,7 @@ pub fn NavBar(
             // Center: title
             <h1 class="flex-1 text-center text-lg font-bold truncate dark:text-white">{title}</h1>
             // Right: action icons
-            <div class="flex items-center gap-1 shrink-0">
+            <div class="flex items-center gap-1 shrink-0 min-w-11 justify-end">
                 {children.map(|c| c())}
             </div>
         </nav>

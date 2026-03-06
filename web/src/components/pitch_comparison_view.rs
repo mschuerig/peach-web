@@ -735,34 +735,32 @@ pub fn PitchComparisonView() -> impl IntoView {
             </div>
 
             // Higher / Lower buttons — large blue rounded-rectangle cards
-            <div class="flex flex-col gap-4 mt-4 md:flex-row">
-                <button
-                    on:click=on_answer_higher
-                    disabled=move || !buttons_enabled.get()
-                    class=move || if buttons_enabled.get() {
-                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-blue-500 px-6 py-8 text-white text-xl font-semibold shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-offset-gray-900"
-                    } else {
-                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-gray-300 px-6 py-8 text-gray-500 text-xl font-semibold cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                    }
-                    aria-label="Higher"
-                >
-                    <span class="flex items-center justify-center w-14 h-14 rounded-full bg-white/30 text-white text-2xl" aria-hidden="true">{"\u{2191}"}</span>
-                    "Higher"
-                </button>
-                <button
-                    on:click=on_answer_lower
-                    disabled=move || !buttons_enabled.get()
-                    class=move || if buttons_enabled.get() {
-                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-blue-500 px-6 py-8 text-white text-xl font-semibold shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-offset-gray-900"
-                    } else {
-                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-gray-300 px-6 py-8 text-gray-500 text-xl font-semibold cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                    }
-                    aria-label="Lower"
-                >
-                    <span class="flex items-center justify-center w-14 h-14 rounded-full bg-white/30 text-white text-2xl" aria-hidden="true">{"\u{2193}"}</span>
-                    "Lower"
-                </button>
-            </div>
+            {
+                let btn_enabled = "flex flex-1 flex-col items-center justify-center gap-4 w-full rounded-2xl bg-blue-500 px-6 py-12 text-white text-2xl font-semibold shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-offset-gray-900";
+                let btn_disabled = "flex flex-1 flex-col items-center justify-center gap-4 w-full rounded-2xl bg-gray-300 px-6 py-12 text-gray-500 text-2xl font-semibold cursor-not-allowed dark:bg-gray-700 dark:text-gray-500";
+                view! {
+                    <div class="flex flex-col gap-4 mt-4 landscape:flex-row">
+                        <button
+                            on:click=on_answer_higher
+                            disabled=move || !buttons_enabled.get()
+                            class=move || if buttons_enabled.get() { btn_enabled } else { btn_disabled }
+                            aria-label="Higher"
+                        >
+                            <span class="flex items-center justify-center w-16 h-16 rounded-full bg-white/30 text-white text-3xl" aria-hidden="true">{"\u{2191}"}</span>
+                            "Higher"
+                        </button>
+                        <button
+                            on:click=on_answer_lower
+                            disabled=move || !buttons_enabled.get()
+                            class=move || if buttons_enabled.get() { btn_enabled } else { btn_disabled }
+                            aria-label="Lower"
+                        >
+                            <span class="flex items-center justify-center w-16 h-16 rounded-full bg-white/30 text-white text-3xl" aria-hidden="true">{"\u{2193}"}</span>
+                            "Lower"
+                        </button>
+                    </div>
+                }
+            }
 
             // Audio error notification — non-blocking, auto-dismissing
             {move || {
