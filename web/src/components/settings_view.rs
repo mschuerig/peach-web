@@ -11,6 +11,7 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::audio_soundfont::SF2Preset;
 use crate::adapters::data_portability;
+use crate::adapters::data_portability_service::{ImportExportStatus, ResetStatus};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::app::SoundFontLoadStatus;
@@ -119,71 +120,8 @@ fn Stepper(
     }
 }
 
-/// Short column header labels for the interval grid.
-fn interval_short_label(interval: Interval) -> &'static str {
-    match interval {
-        Interval::Prime => "P1",
-        Interval::MinorSecond => "m2",
-        Interval::MajorSecond => "M2",
-        Interval::MinorThird => "m3",
-        Interval::MajorThird => "M3",
-        Interval::PerfectFourth => "P4",
-        Interval::Tritone => "d5",
-        Interval::PerfectFifth => "P5",
-        Interval::MinorSixth => "m6",
-        Interval::MajorSixth => "M6",
-        Interval::MinorSeventh => "m7",
-        Interval::MajorSeventh => "M7",
-        Interval::Octave => "P8",
-    }
-}
-
 const TOGGLE_ACTIVE: &str = "w-7 h-7 rounded text-[10px] font-semibold bg-indigo-600 text-white dark:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400";
 const TOGGLE_INACTIVE: &str = "w-7 h-7 rounded text-[10px] font-semibold bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-indigo-400";
-
-const INTERVALS: [Interval; 13] = [
-    Interval::Prime,
-    Interval::MinorSecond,
-    Interval::MajorSecond,
-    Interval::MinorThird,
-    Interval::MajorThird,
-    Interval::PerfectFourth,
-    Interval::Tritone,
-    Interval::PerfectFifth,
-    Interval::MinorSixth,
-    Interval::MajorSixth,
-    Interval::MinorSeventh,
-    Interval::MajorSeventh,
-    Interval::Octave,
-];
-
-#[derive(Clone, Copy, PartialEq)]
-enum ResetStatus {
-    Idle,
-    Resetting,
-    Success,
-    Error,
-}
-
-#[derive(Clone, PartialEq)]
-enum ImportExportStatus {
-    Idle,
-    Exporting,
-    ExportSuccess,
-    Importing,
-    ImportSuccess(String),
-    Error(String),
-}
-
-fn persist_intervals(selected_intervals: RwSignal<std::collections::HashSet<DirectedInterval>>) {
-    let mut intervals: Vec<DirectedInterval> =
-        selected_intervals.get().into_iter().collect();
-    intervals.sort_by_key(|d| (d.interval, d.direction));
-    match serde_json::to_string(&intervals) {
-        Ok(json) => LocalStorageSettings::set("peach.intervals", &json),
-        Err(e) => log::error!("Failed to serialize intervals: {e}"),
-    }
-}
 
 #[component]
 pub fn SettingsView() -> impl IntoView {
@@ -364,10 +302,10 @@ pub fn SettingsView() -> impl IntoView {
                             <thead>
                                 <tr>
                                     <th class="w-8"></th>
-                                    {INTERVALS.iter().map(|&interval| {
+                                    {Interval::all_chromatic().iter().map(|&interval| {
                                         view! {
                                             <th class="px-0.5 py-1 font-medium text-gray-500 dark:text-gray-400">
-                                                {interval_short_label(interval)}
+                                                {interval.short_label()}
                                             </th>
                                         }
                                     }).collect::<Vec<_>>()}
@@ -377,7 +315,7 @@ pub fn SettingsView() -> impl IntoView {
                                 // Ascending row
                                 <tr>
                                     <td class="text-gray-400 dark:text-gray-500 pr-1">{"\u{2191}"}</td>
-                                    {INTERVALS.iter().map(|&interval| {
+                                    {Interval::all_chromatic().iter().map(|&interval| {
                                         let di = DirectedInterval::new(interval, Direction::Up);
                                         view! {
                                             <td class="px-0.5 py-1">
@@ -392,19 +330,19 @@ pub fn SettingsView() -> impl IntoView {
                                                                 set.insert(di);
                                                             }
                                                         });
-                                                        persist_intervals(selected_intervals);
+                                                        LocalStorageSettings::set_selected_intervals(&selected_intervals.get());
                                                     }
                                                     disabled=move || {
                                                         let set = selected_intervals.get();
                                                         set.len() == 1 && set.contains(&di)
                                                     }
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
-                                                    aria-label=format!("{} ascending", interval_short_label(interval))
+                                                    aria-label=format!("{} ascending", interval.short_label())
                                                     class=move || {
                                                         if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
                                                 >
-                                                    {interval_short_label(interval)}
+                                                    {interval.short_label()}
                                                 </button>
                                             </td>
                                         }
@@ -413,7 +351,7 @@ pub fn SettingsView() -> impl IntoView {
                                 // Descending row
                                 <tr>
                                     <td class="text-gray-400 dark:text-gray-500 pr-1">{"\u{2193}"}</td>
-                                    {INTERVALS.iter().map(|&interval| {
+                                    {Interval::all_chromatic().iter().map(|&interval| {
                                         if interval == Interval::Prime {
                                             // P1 descending is hidden (same as ascending)
                                             return view! { <td class="px-0.5 py-1"></td> }.into_any();
@@ -432,19 +370,19 @@ pub fn SettingsView() -> impl IntoView {
                                                                 set.insert(di);
                                                             }
                                                         });
-                                                        persist_intervals(selected_intervals);
+                                                        LocalStorageSettings::set_selected_intervals(&selected_intervals.get());
                                                     }
                                                     disabled=move || {
                                                         let set = selected_intervals.get();
                                                         set.len() == 1 && set.contains(&di)
                                                     }
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
-                                                    aria-label=format!("{} descending", interval_short_label(interval))
+                                                    aria-label=format!("{} descending", interval.short_label())
                                                     class=move || {
                                                         if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
                                                 >
-                                                    {interval_short_label(interval)}
+                                                    {interval.short_label()}
                                                 </button>
                                             </td>
                                         }.into_any()

@@ -40,6 +40,16 @@ impl LocalStorageSettings {
         }
     }
 
+    /// Persist selected intervals to localStorage.
+    pub fn set_selected_intervals(intervals: &HashSet<DirectedInterval>) {
+        let mut sorted: Vec<DirectedInterval> = intervals.iter().copied().collect();
+        sorted.sort_by_key(|d| (d.interval, d.direction));
+        match serde_json::to_string(&sorted) {
+            Ok(json) => Self::set("peach.intervals", &json),
+            Err(e) => log::error!("Failed to serialize intervals: {e}"),
+        }
+    }
+
     /// Read selected intervals from localStorage. Returns default {Prime/Up} if absent or invalid.
     pub fn get_selected_intervals() -> HashSet<DirectedInterval> {
         Self::get_string("peach.intervals")
