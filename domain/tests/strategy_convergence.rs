@@ -33,7 +33,7 @@ fn test_kazez_convergence_all_correct() {
         // Update profile with the comparison result
         profile.update(
             comp.reference_note(),
-            magnitude,
+            Cents::new(magnitude),
             completed.is_correct(),
         );
 

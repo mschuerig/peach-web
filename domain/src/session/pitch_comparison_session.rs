@@ -6,7 +6,8 @@ use rand::prelude::IndexedRandom;
 
 use crate::ports::{PitchComparisonObserver, Resettable, UserSettings};
 use crate::profile::PerceptualProfile;
-use crate::strategy::{next_pitch_comparison, TrainingSettings};
+use crate::profile::PerceptualNote;
+use crate::strategy::{next_pitch_comparison, TrainingSettings, MIN_CENT_DIFFERENCE};
 use crate::training::{CompletedPitchComparison, PitchComparison};
 use crate::tuning::TuningSystem;
 use crate::types::{
@@ -15,6 +16,9 @@ use crate::types::{
 
 /// Feedback display duration in seconds.
 pub const FEEDBACK_DURATION_SECS: f64 = 0.4;
+
+/// Scaling factor for amplitude variation (dB range per unit of vary_loudness).
+pub const AMPLITUDE_VARY_SCALING: f64 = 5.0;
 
 /// State of the comparison session state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -271,8 +275,8 @@ impl PitchComparisonSession {
         let training_settings = TrainingSettings::new(
             self.session_note_range,
             self.session_reference_pitch,
-            Cents::new(0.1),
-            Cents::new(100.0),
+            Cents::new(MIN_CENT_DIFFERENCE),
+            Cents::new(PerceptualNote::COLD_START_DIFFICULTY),
         );
 
         let comparison = next_pitch_comparison(
@@ -349,7 +353,7 @@ fn calculate_target_amplitude(vary_loudness: f64) -> AmplitudeDB {
     if vary_loudness <= 0.0 {
         return AmplitudeDB::new(0.0);
     }
-    let range = vary_loudness * 5.0;
+    let range = vary_loudness * AMPLITUDE_VARY_SCALING;
     let offset = rand::random::<f64>() * 2.0 * range - range;
     AmplitudeDB::new(offset as f32)
 }
@@ -918,7 +922,7 @@ mod tests {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         profile
             .borrow_mut()
-            .update(MIDINote::new(60), 50.0, true);
+            .update(MIDINote::new(60), Cents::new(50.0), true);
         assert!(profile.borrow().overall_mean().is_some());
 
         let mut session = PitchComparisonSession::new(Rc::clone(&profile), vec![], vec![]);

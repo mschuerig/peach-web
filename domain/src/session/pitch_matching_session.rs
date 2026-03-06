@@ -5,6 +5,7 @@ use std::rc::Rc;
 use rand::prelude::IndexedRandom;
 
 use crate::ports::{PitchMatchingObserver, Resettable, UserSettings};
+use crate::types::Cents;
 use crate::profile::PerceptualProfile;
 use crate::training::{CompletedPitchMatching, PitchMatchingChallenge};
 use crate::tuning::TuningSystem;
@@ -12,6 +13,12 @@ use crate::types::{DirectedInterval, Direction, Frequency, MIDINote, NoteRange, 
 
 /// MIDI velocity for pitch matching playback (fixed at 63).
 pub const PITCH_MATCHING_VELOCITY: u8 = 63;
+
+/// Range in cents for the pitch slider adjustment (±PITCH_SLIDER_CENTS_RANGE from center).
+pub const PITCH_SLIDER_CENTS_RANGE: f64 = 20.0;
+
+/// Range in cents for the initial random offset of a pitch matching challenge.
+pub const INITIAL_OFFSET_RANGE: f64 = 40.0;
 
 /// State of the pitch matching session state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -188,7 +195,7 @@ impl PitchMatchingSession {
 
         let value = value.clamp(-1.0, 1.0);
         let challenge = self.current_challenge.expect("challenge must exist in PlayingTunable");
-        let user_cent_error = challenge.initial_cent_offset() + value * 20.0;
+        let user_cent_error = challenge.initial_cent_offset() + value * PITCH_SLIDER_CENTS_RANGE;
 
         let completed = CompletedPitchMatching::new(
             challenge.reference_note(),
@@ -205,7 +212,7 @@ impl PitchMatchingSession {
         // Update profile
         self.profile.borrow_mut().update_matching(
             completed.target_note(),
-            completed.user_cent_error(),
+            Cents::new(completed.user_cent_error()),
         );
 
         self.show_feedback = true;
@@ -265,7 +272,7 @@ impl PitchMatchingSession {
         // Initial tunable frequency includes the random cent offset
         let initial_offset = challenge.initial_cent_offset();
         let tunable_frequency = Frequency::new(
-            target_frequency.raw_value() * 2.0_f64.powf(initial_offset / 1200.0),
+            target_frequency.raw_value() * 2.0_f64.powf(initial_offset / Cents::PER_OCTAVE),
         );
 
         self.target_frequency = Some(target_frequency);
@@ -303,7 +310,7 @@ impl PitchMatchingSession {
         let target_note = reference_note
             .transposed(interval)
             .expect("range-adjusted reference ensures valid transposition");
-        let initial_cent_offset = rand::random::<f64>() * 40.0 - 20.0; // [-20.0, +20.0]
+        let initial_cent_offset = rand::random::<f64>() * INITIAL_OFFSET_RANGE - PITCH_SLIDER_CENTS_RANGE; // [-PITCH_SLIDER_CENTS_RANGE, +PITCH_SLIDER_CENTS_RANGE]
 
         PitchMatchingChallenge::new(reference_note, target_note, initial_cent_offset)
     }
@@ -324,8 +331,8 @@ impl PitchMatchingSession {
             .current_challenge
             .expect("challenge must exist when adjusting pitch")
             .initial_cent_offset();
-        let cent_offset = initial_offset + value * 20.0;
-        Frequency::new(target_freq.raw_value() * 2.0_f64.powf(cent_offset / 1200.0))
+        let cent_offset = initial_offset + value * PITCH_SLIDER_CENTS_RANGE;
+        Frequency::new(target_freq.raw_value() * 2.0_f64.powf(cent_offset / Cents::PER_OCTAVE))
     }
 
     fn notify_observers(&mut self, completed: &CompletedPitchMatching) {
@@ -633,7 +640,7 @@ mod tests {
         // (slider center = no adjustment from initial detuning)
         let freq = session.adjust_pitch(0.0).unwrap();
         let target_freq = session.target_frequency.unwrap();
-        let expected = target_freq.raw_value() * 2.0_f64.powf(initial_offset / 1200.0);
+        let expected = target_freq.raw_value() * 2.0_f64.powf(initial_offset / Cents::PER_OCTAVE);
         assert!(
             (freq.raw_value() - expected).abs() < 1e-10,
             "At value=0.0, adjusted freq ({}) should equal detuned freq ({})",
@@ -911,7 +918,7 @@ mod tests {
     #[test]
     fn test_reset_training_data_stops_session_resets_matching_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        profile.borrow_mut().update_matching(MIDINote::new(60), 5.0);
+        profile.borrow_mut().update_matching(MIDINote::new(60), Cents::new(5.0));
         assert!(profile.borrow().matching_mean().is_some());
 
         let (resettable, count) = MockResettable::new();

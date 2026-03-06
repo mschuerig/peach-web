@@ -72,7 +72,7 @@ pub fn App() -> impl IntoView {
 
                             prof.update(
                                 note,
-                                record.cent_offset.abs(),
+                                domain::Cents::new(record.cent_offset.abs()),
                                 record.is_correct,
                             );
 
@@ -111,7 +111,7 @@ pub fn App() -> impl IntoView {
                                 }
                             };
 
-                            prof.update_matching(note, record.user_cent_error);
+                            prof.update_matching(note, domain::Cents::new(record.user_cent_error));
                         }
 
                         if skipped > 0 {

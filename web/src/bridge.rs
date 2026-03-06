@@ -22,7 +22,7 @@ impl ProfileObserver {
 impl PitchComparisonObserver for ProfileObserver {
     fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
         let mut profile = self.0.borrow_mut();
-        let cent_offset = completed.pitch_comparison().target_note().offset.raw_value.abs();
+        let cent_offset = domain::Cents::new(completed.pitch_comparison().target_note().offset.raw_value.abs());
         profile.update(
             completed.pitch_comparison().reference_note(),
             cent_offset,

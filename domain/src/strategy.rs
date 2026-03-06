@@ -1,23 +1,34 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::profile::PerceptualProfile;
+use crate::profile::{PerceptualNote, PerceptualProfile};
 use crate::training::pitch_comparison::PitchComparison;
 use crate::training::CompletedPitchComparison;
 use crate::types::{Cents, DetunedMIDINote, DirectedInterval, Direction, Frequency, MIDINote, NoteRange};
 
+/// Kazez narrow factor: difficulty reduction per correct answer.
+pub const KAZEZ_NARROW_FACTOR: f64 = 0.05;
+
+/// Kazez widen factor: difficulty increase per incorrect answer.
+pub const KAZEZ_WIDEN_FACTOR: f64 = 0.09;
+
+/// Minimum cent difference for training challenges.
+pub const MIN_CENT_DIFFERENCE: f64 = 0.1;
+
 /// Kazez narrow: reduce difficulty after correct answer.
-/// Formula: p * (1.0 - 0.05 * sqrt(p))
-pub fn kazez_narrow(p: f64) -> f64 {
-    assert!(p >= 0.0, "kazez_narrow: p must be non-negative, got {p}");
-    p * (1.0 - 0.05 * p.sqrt())
+/// Formula: p * (1.0 - KAZEZ_NARROW_FACTOR * sqrt(p))
+pub fn kazez_narrow(p: Cents) -> Cents {
+    let v = p.raw_value;
+    assert!(v >= 0.0, "kazez_narrow: p must be non-negative, got {v}");
+    Cents::new(v * (1.0 - KAZEZ_NARROW_FACTOR * v.sqrt()))
 }
 
 /// Kazez widen: increase difficulty after incorrect answer.
-/// Formula: p * (1.0 + 0.09 * sqrt(p))
-pub fn kazez_widen(p: f64) -> f64 {
-    assert!(p >= 0.0, "kazez_widen: p must be non-negative, got {p}");
-    p * (1.0 + 0.09 * p.sqrt())
+/// Formula: p * (1.0 + KAZEZ_WIDEN_FACTOR * sqrt(p))
+pub fn kazez_widen(p: Cents) -> Cents {
+    let v = p.raw_value;
+    assert!(v >= 0.0, "kazez_widen: p must be non-negative, got {v}");
+    Cents::new(v * (1.0 + KAZEZ_WIDEN_FACTOR * v.sqrt()))
 }
 
 /// Training configuration parameters.
@@ -66,8 +77,8 @@ impl Default for TrainingSettings {
         Self {
             note_range: NoteRange::new(MIDINote::new(36), MIDINote::new(84)),
             reference_pitch: Frequency::CONCERT_440,
-            min_cent_difference: Cents::new(0.1),
-            max_cent_difference: Cents::new(100.0),
+            min_cent_difference: Cents::new(MIN_CENT_DIFFERENCE),
+            max_cent_difference: Cents::new(PerceptualNote::COLD_START_DIFFICULTY),
         }
     }
 }
@@ -91,11 +102,11 @@ pub fn next_pitch_comparison(
     // Step 1: Determine magnitude
     let raw_magnitude = match last_pitch_comparison {
         Some(completed) => {
-            let prev_magnitude = completed.pitch_comparison().target_note().offset.magnitude();
+            let prev_magnitude = Cents::new(completed.pitch_comparison().target_note().offset.magnitude());
             if completed.is_correct() {
-                kazez_narrow(prev_magnitude)
+                kazez_narrow(prev_magnitude).raw_value
             } else {
-                kazez_widen(prev_magnitude)
+                kazez_widen(prev_magnitude).raw_value
             }
         }
         None => {
@@ -152,46 +163,46 @@ mod tests {
 
     #[test]
     fn test_kazez_narrow_at_50() {
-        let result = kazez_narrow(50.0);
+        let result = kazez_narrow(Cents::new(50.0));
         // 50 * (1.0 - 0.05 * sqrt(50)) ≈ 50 * (1.0 - 0.3536) ≈ 50 * 0.6464 ≈ 32.32
         let expected = 50.0 * (1.0 - 0.05 * 50.0_f64.sqrt());
-        assert!((result - expected).abs() < 1e-10);
-        assert!((result - 32.322).abs() < 0.01);
+        assert!((result.raw_value - expected).abs() < 1e-10);
+        assert!((result.raw_value - 32.322).abs() < 0.01);
     }
 
     #[test]
     fn test_kazez_narrow_at_zero() {
-        assert_eq!(kazez_narrow(0.0), 0.0);
+        assert_eq!(kazez_narrow(Cents::new(0.0)).raw_value, 0.0);
     }
 
     #[test]
     fn test_kazez_narrow_at_one() {
-        let result = kazez_narrow(1.0);
+        let result = kazez_narrow(Cents::new(1.0));
         // 1 * (1 - 0.05 * 1) = 0.95
-        assert!((result - 0.95).abs() < 1e-10);
+        assert!((result.raw_value - 0.95).abs() < 1e-10);
     }
 
     // --- AC8: Kazez widen ---
 
     #[test]
     fn test_kazez_widen_at_50() {
-        let result = kazez_widen(50.0);
+        let result = kazez_widen(Cents::new(50.0));
         // 50 * (1.0 + 0.09 * sqrt(50)) ≈ 50 * (1.0 + 0.6364) ≈ 50 * 1.6364 ≈ 81.82
         let expected = 50.0 * (1.0 + 0.09 * 50.0_f64.sqrt());
-        assert!((result - expected).abs() < 1e-10);
-        assert!((result - 81.82).abs() < 0.01);
+        assert!((result.raw_value - expected).abs() < 1e-10);
+        assert!((result.raw_value - 81.82).abs() < 0.01);
     }
 
     #[test]
     fn test_kazez_widen_at_zero() {
-        assert_eq!(kazez_widen(0.0), 0.0);
+        assert_eq!(kazez_widen(Cents::new(0.0)).raw_value, 0.0);
     }
 
     #[test]
     fn test_kazez_widen_at_one() {
-        let result = kazez_widen(1.0);
+        let result = kazez_widen(Cents::new(1.0));
         // 1 * (1 + 0.09 * 1) = 1.09
-        assert!((result - 1.09).abs() < 1e-10);
+        assert!((result.raw_value - 1.09).abs() < 1e-10);
     }
 
     // --- AC9: Cold start ---
@@ -217,8 +228,8 @@ mod tests {
     fn test_warm_start_uses_overall_mean() {
         let mut profile = PerceptualProfile::new();
         // Train two notes to establish an overall_mean
-        profile.update(MIDINote::new(60), 40.0, true);
-        profile.update(MIDINote::new(72), 60.0, true);
+        profile.update(MIDINote::new(60), Cents::new(40.0), true);
+        profile.update(MIDINote::new(72), Cents::new(60.0), true);
         // overall_mean = 50.0
 
         let settings = TrainingSettings::default();
@@ -236,7 +247,7 @@ mod tests {
     fn test_warm_start_clamped_to_range() {
         let mut profile = PerceptualProfile::new();
         // Train with very low mean that would be below min_cent_difference
-        profile.update(MIDINote::new(60), 0.01, true);
+        profile.update(MIDINote::new(60), Cents::new(0.01), true);
         // overall_mean = 0.01
 
         let settings = TrainingSettings::default(); // min = 0.1
@@ -327,7 +338,7 @@ mod tests {
         let comp2 = next_pitch_comparison(&profile, &settings, Some(&completed), interval);
         let mag2 = comp2.target_note().offset.magnitude();
         // After correct: kazez_narrow(100) = 100*(1 - 0.05*10) ≈ 50
-        let expected = kazez_narrow(100.0);
+        let expected = kazez_narrow(Cents::new(100.0)).raw_value;
         assert!(
             (mag2 - expected).abs() < 1e-10,
             "After correct answer, magnitude should be {expected}, got {mag2}"
@@ -411,24 +422,24 @@ mod tests {
     #[test]
     #[should_panic(expected = "must be non-negative")]
     fn test_kazez_narrow_panics_on_negative() {
-        kazez_narrow(-1.0);
+        kazez_narrow(Cents::new(-1.0));
     }
 
     #[test]
     #[should_panic(expected = "must be non-negative")]
     fn test_kazez_widen_panics_on_negative() {
-        kazez_widen(-1.0);
+        kazez_widen(Cents::new(-1.0));
     }
 
     #[test]
     #[should_panic(expected = "must be non-negative")]
     fn test_kazez_narrow_panics_on_nan() {
-        kazez_narrow(f64::NAN);
+        kazez_narrow(Cents::new(f64::NAN));
     }
 
     #[test]
     #[should_panic(expected = "must be non-negative")]
     fn test_kazez_widen_panics_on_nan() {
-        kazez_widen(f64::NAN);
+        kazez_widen(Cents::new(f64::NAN));
     }
 }
