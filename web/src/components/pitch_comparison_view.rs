@@ -16,12 +16,13 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
 use crate::bridge::{DataStoreObserver, ProfileObserver, ProgressTimelineObserver, TimelineObserver, TrendObserver};
+use crate::components::training_stats::TrainingStats;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{PitchComparisonObserver, NotePlayer};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
     PitchComparisonSession, PitchComparisonSessionState, Interval, PerceptualProfile,
-    ProgressTimeline, ThresholdTimeline, TrendAnalyzer, FEEDBACK_DURATION_SECS,
+    ProgressTimeline, ThresholdTimeline, TrainingMode, Trend, TrendAnalyzer, FEEDBACK_DURATION_SECS,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -101,6 +102,18 @@ pub fn PitchComparisonView() -> impl IntoView {
         }
     });
 
+    // Determine TrainingMode from intervals
+    let training_mode = if is_interval_mode {
+        TrainingMode::IntervalPitchComparison
+    } else {
+        TrainingMode::UnisonPitchComparison
+    };
+
+    // Training stats signals
+    let latest_cent_offset: RwSignal<Option<f64>> = RwSignal::new(None);
+    let stats_session_best: RwSignal<Option<f64>> = RwSignal::new(None);
+    let stats_trend: RwSignal<Option<Trend>> = RwSignal::new(None);
+
     // Signals bridging domain state to UI
     let show_feedback = RwSignal::new(false);
     let is_last_correct = RwSignal::new(false);
@@ -169,6 +182,7 @@ pub fn PitchComparisonView() -> impl IntoView {
     // No feedback timer here — the main loop controls feedback timing.
     let on_answer = {
         let session = Rc::clone(&session);
+        let progress_timeline = Rc::clone(&progress_timeline);
         let sync = sync_signals.clone();
         let cancelled = Rc::clone(&cancelled);
         Rc::new(move |is_higher: bool| {
@@ -191,6 +205,15 @@ pub fn PitchComparisonView() -> impl IntoView {
                 .as_string()
                 .unwrap_or_default();
             session.borrow_mut().handle_answer(is_higher, timestamp);
+
+            // Update training stats signals
+            {
+                let s = session.borrow();
+                latest_cent_offset.set(s.last_cent_difference());
+                stats_session_best.set(s.session_best_cent_difference());
+            }
+            stats_trend.set(progress_timeline.borrow().trend(training_mode));
+
             sync();
         })
     };
@@ -542,6 +565,13 @@ pub fn PitchComparisonView() -> impl IntoView {
                     view! { <span></span> }.into_any()
                 }
             }}
+
+            // Training stats
+            <TrainingStats
+                latest_value=latest_cent_offset.into()
+                session_best=stats_session_best.into()
+                trend=stats_trend.into()
+            />
 
             // Feedback indicator
             <div class="flex items-center justify-center h-16" aria-hidden="true">

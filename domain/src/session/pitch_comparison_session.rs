@@ -113,6 +113,12 @@ impl PitchComparisonSession {
         self.session_best_cent_difference
     }
 
+    pub fn last_cent_difference(&self) -> Option<f64> {
+        self.last_completed
+            .as_ref()
+            .map(|c| c.pitch_comparison().target_note().offset.magnitude())
+    }
+
     pub fn current_interval(&self) -> Option<DirectedInterval> {
         self.current_comparison.as_ref().and_then(|c| {
             DirectedInterval::between(c.reference_note(), c.target_note().note).ok()
@@ -905,6 +911,46 @@ mod tests {
         // Session best should exist
         assert!(session.session_best_cent_difference().is_some());
         assert!(session.session_best_cent_difference().unwrap() > 0.0);
+    }
+
+    // --- Last cent difference ---
+
+    #[test]
+    fn test_last_cent_difference_none_initially() {
+        let session = create_session();
+        assert_eq!(session.last_cent_difference(), None);
+    }
+
+    #[test]
+    fn test_last_cent_difference_populated_after_answer() {
+        let mut session = create_session();
+        session.start(default_intervals(), &DefaultTestSettings);
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
+
+        let data = session.current_playback_data().unwrap();
+        let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
+        session.handle_answer(is_higher, "2026-03-03T14:00:00Z".to_string());
+
+        let diff = session.last_cent_difference();
+        assert!(diff.is_some());
+        assert!(diff.unwrap() > 0.0);
+    }
+
+    #[test]
+    fn test_last_cent_difference_cleared_on_stop() {
+        let mut session = create_session();
+        session.start(default_intervals(), &DefaultTestSettings);
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
+
+        let data = session.current_playback_data().unwrap();
+        let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
+        session.handle_answer(is_higher, "2026-03-03T14:00:00Z".to_string());
+        assert!(session.last_cent_difference().is_some());
+
+        session.stop();
+        assert_eq!(session.last_cent_difference(), None);
     }
 
     // --- Reset training data ---

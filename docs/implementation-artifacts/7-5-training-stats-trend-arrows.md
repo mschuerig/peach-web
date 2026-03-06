@@ -1,6 +1,6 @@
 # Story 7.5: Training Stats with Trend Arrows
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -46,45 +46,45 @@ Depends on: Story 7.2 (ProgressTimeline for trend data).
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create TrainingStats component (AC: 1, 2, 3, 4, 9, 10)
-  - [ ] New component in `web/src/components/training_stats.rs` or inline
-  - [ ] Props: `latest_value: Option<f64>`, `session_best: Option<f64>`, `trend: Option<Trend>`
-  - [ ] Render "Latest: X.X cents" with opacity toggle
-  - [ ] Render trend arrow with color (CSS classes: text-green-600, text-gray-500, text-orange-500)
-  - [ ] Render "Best: X.X cents" in smaller text with opacity toggle
-  - [ ] Container with `aria-live="polite"`
+- [x] Task 1: Create TrainingStats component (AC: 1, 2, 3, 4, 9, 10)
+  - [x] New component in `web/src/components/training_stats.rs` or inline
+  - [x] Props: `latest_value: Option<f64>`, `session_best: Option<f64>`, `trend: Option<Trend>`
+  - [x] Render "Latest: X.X cents" with opacity toggle
+  - [x] Render trend arrow with color (CSS classes: text-green-600, text-gray-500, text-orange-500)
+  - [x] Render "Best: X.X cents" in smaller text with opacity toggle
+  - [x] Container with `aria-live="polite"`
 
-- [ ] Task 2: Add session tracking signals to comparison_view.rs (AC: 5, 7, 8)
-  - [ ] Add `latest_cent_offset: RwSignal<Option<f64>>` — updated on each completed comparison
-  - [ ] Add `session_best: RwSignal<Option<f64>>` — tracks minimum absolute offset this session
-  - [ ] Determine TrainingMode from intervals prop (prime only → UnisonPitchComparison, else IntervalPitchComparison)
-  - [ ] Read trend from ProgressTimeline context: `timeline.borrow().trend(mode)`
-  - [ ] Update signals in the comparison observer callback or after each answer
-  - [ ] Reset both signals on session start
+- [x] Task 2: Add session tracking signals to comparison_view.rs (AC: 5, 7, 8)
+  - [x] Add `latest_cent_offset: RwSignal<Option<f64>>` — updated on each completed comparison
+  - [x] Add `session_best: RwSignal<Option<f64>>` — tracks minimum absolute offset this session
+  - [x] Determine TrainingMode from intervals prop (prime only → UnisonPitchComparison, else IntervalPitchComparison)
+  - [x] Read trend from ProgressTimeline context: `timeline.borrow().trend(mode)`
+  - [x] Update signals in the comparison observer callback or after each answer
+  - [x] Reset both signals on session start
 
-- [ ] Task 3: Add session tracking signals to pitch_matching_view.rs (AC: 6, 7, 8)
-  - [ ] Add `latest_cent_error: RwSignal<Option<f64>>` — updated on each commit
-  - [ ] Add `session_best: RwSignal<Option<f64>>` — tracks minimum absolute error this session
-  - [ ] Determine TrainingMode from intervals prop (prime only → UnisonMatching, else IntervalMatching)
-  - [ ] Read trend from ProgressTimeline context
-  - [ ] Update signals after each pitch commit
-  - [ ] Reset both signals on session start
+- [x] Task 3: Add session tracking signals to pitch_matching_view.rs (AC: 6, 7, 8)
+  - [x] Add `latest_cent_error: RwSignal<Option<f64>>` — updated on each commit
+  - [x] Add `session_best: RwSignal<Option<f64>>` — tracks minimum absolute error this session
+  - [x] Determine TrainingMode from intervals prop (prime only → UnisonMatching, else IntervalMatching)
+  - [x] Read trend from ProgressTimeline context
+  - [x] Update signals after each pitch commit
+  - [x] Reset both signals on session start
 
-- [ ] Task 4: Integrate TrainingStats into views (AC: 5, 6)
-  - [ ] Add `<TrainingStats>` component at the top of comparison_view.rs, before answer buttons
-  - [ ] Add `<TrainingStats>` component at the top of pitch_matching_view.rs, before slider
-  - [ ] Pass latest, best, and trend as props
+- [x] Task 4: Integrate TrainingStats into views (AC: 5, 6)
+  - [x] Add `<TrainingStats>` component at the top of comparison_view.rs, before answer buttons
+  - [x] Add `<TrainingStats>` component at the top of pitch_matching_view.rs, before slider
+  - [x] Pass latest, best, and trend as props
 
-- [ ] Task 5: Formatting helper (AC: 2, 3)
-  - [ ] `format_cents(value: f64) -> String` — one decimal place, e.g. "12.3"
-  - [ ] Reusable across TrainingStats and ProgressChart (story 7.4)
+- [x] Task 5: Formatting helper (AC: 2, 3)
+  - [x] `format_cents(value: f64) -> String` — one decimal place, e.g. "12.3"
+  - [x] Reusable across TrainingStats and ProgressChart (story 7.4)
 
-- [ ] Task 6: Verify
-  - [ ] Manual testing: start comparison training, verify stats appear after first answer
-  - [ ] Manual testing: start pitch matching, verify stats appear after first commit
-  - [ ] Verify trend arrow appears after sufficient training history
-  - [ ] Verify session best resets when returning to start page and starting again
-  - [ ] Run `cargo clippy`
+- [x] Task 6: Verify
+  - [x] Manual testing: start comparison training, verify stats appear after first answer
+  - [x] Manual testing: start pitch matching, verify stats appear after first commit
+  - [x] Verify trend arrow appears after sufficient training history
+  - [x] Verify session best resets when returning to start page and starting again
+  - [x] Run `cargo clippy`
 
 ## Dev Notes
 
@@ -111,3 +111,37 @@ Depends on: Story 7.2 (ProgressTimeline for trend data).
 - **Web crate only:** TrainingStats component and signal wiring are in the web crate.
 - **Domain types:** `Trend` enum imported from domain. `TrainingMode` from story 7.1.
 - **Observer pattern preserved:** The existing observer callbacks in comparison_view and pitch_matching_view are where we update the session signals.
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Created `TrainingStats` Leptos component with `latest_value`, `session_best`, and `trend` Signal props
+- Added `format_cents()` helper for consistent one-decimal formatting
+- Added `last_cent_difference()` getter to `PitchComparisonSession` (mirrors iOS `lastCompletedCentDifference`)
+- Integrated stats signals into both training views, updated in answer/commit handlers
+- TrainingMode detection from interval query params in both views
+- Trend read from ProgressTimeline context after each answer/commit
+
+### Completion Notes
+
+- All 6 tasks completed, all ACs satisfied
+- 3 new domain tests for `last_cent_difference()` (none, populated, cleared on stop)
+- 1 unit test for `format_cents()` helper
+- Full clippy pass clean (domain + web crates)
+- Session best for comparison uses domain's `session_best_cent_difference()` (already tracked, correct answers only)
+- Session best for matching tracked via RwSignal in view (all attempts, min absolute error)
+- Stats hidden (opacity-0) until first result, trend arrow hidden until sufficient history
+- `aria-live="polite"` on stats container, trend arrows have accessible labels
+
+## File List
+
+- `domain/src/session/pitch_comparison_session.rs` — added `last_cent_difference()` getter + 3 tests
+- `web/src/components/training_stats.rs` — new TrainingStats component + format_cents helper + test
+- `web/src/components/mod.rs` — added training_stats module declaration
+- `web/src/components/pitch_comparison_view.rs` — added stats signals, TrainingMode detection, TrainingStats integration
+- `web/src/components/pitch_matching_view.rs` — added stats signals, TrainingMode detection, TrainingStats integration
+
+## Change Log
+
+- 2026-03-06: Implemented story 7.5 — TrainingStats component with trend arrows on both training screens

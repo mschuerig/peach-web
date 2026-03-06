@@ -8,6 +8,7 @@ mod progress_chart;
 mod profile_view;
 mod settings_view;
 mod start_page;
+mod training_stats;
 
 pub use pitch_comparison_view::PitchComparisonView;
 pub use info_view::InfoView;
