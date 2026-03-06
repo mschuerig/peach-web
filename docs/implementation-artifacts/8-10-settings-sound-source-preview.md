@@ -1,6 +1,6 @@
 # Story 8.10: Settings Sound Source Preview
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -217,9 +217,16 @@ Claude Opus 4.6
 
 - 2026-03-07: Implemented sound source preview feature (Tasks 1-6)
 - 2026-03-07: Fixed SF2 preview on cold start — connect worklet on-demand when bridge not yet available
+- 2026-03-07: Code review fixes — cancel check before play after async init, busy-wait timeout, player resource cleanup
+- 2026-03-07: Extracted `SoundPreview` adapter and `ensure_worklet_connected` shared helper; deduplicated worklet connection logic across all 3 views
 
 ### File List
 
-- `web/src/components/settings_view.rs` (modified) — added preview button, play/stop logic, sound source change effect, cleanup handler
-- `docs/implementation-artifacts/sprint-status.yaml` (modified) — status updated to review
+- `web/src/components/settings_view.rs` (modified) — preview button UI, delegates to SoundPreview adapter
+- `web/src/adapters/sound_preview.rs` (new) — SoundPreview adapter encapsulating play/stop/timer logic
+- `web/src/adapters/mod.rs` (modified) — registered sound_preview module
+- `web/src/app.rs` (modified) — added ensure_worklet_connected shared helper
+- `web/src/components/pitch_comparison_view.rs` (modified) — uses ensure_worklet_connected
+- `web/src/components/pitch_matching_view.rs` (modified) — uses ensure_worklet_connected
+- `docs/implementation-artifacts/sprint-status.yaml` (modified) — status updated to done
 - `docs/implementation-artifacts/8-10-settings-sound-source-preview.md` (modified) — task checkboxes, dev agent record

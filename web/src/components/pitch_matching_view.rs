@@ -14,7 +14,7 @@ use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
-use crate::app::{SoundFontLoadStatus, WorkletAssets, connect_worklet};
+use crate::app::{SoundFontLoadStatus, WorkletAssets, ensure_worklet_connected};
 use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
@@ -557,38 +557,14 @@ pub fn PitchMatchingView() -> impl IntoView {
             }
 
             // Phase 2: connect worklet if assets are available but bridge isn't.
-            // Guard with worklet_connecting flag to prevent parallel connect_worklet calls.
-            if worklet_bridge.get_untracked().is_none()
-                && !worklet_connecting.get_untracked()
-                && let Some(assets) = worklet_assets.get_untracked()
-            {
-                worklet_connecting.set(true);
-                match connect_worklet(&ctx_rc, &assets).await {
-                    Ok((bridge, presets)) => {
-                        let bridge_rc = Rc::new(RefCell::new(bridge));
-                        worklet_bridge.set(Some(bridge_rc.clone()));
-                        sf2_presets.set(presets);
-                        *note_player.borrow_mut() = create_note_player(
-                            &sound_source_clone,
-                            Rc::clone(&audio_ctx_for_loop),
-                            Some(bridge_rc),
-                        );
-                    }
-                    Err(e) => {
-                        log::warn!(
-                            "SoundFont worklet connect failed (oscillator fallback): {e}"
-                        );
-                    }
-                }
-                worklet_connecting.set(false);
-            } else if worklet_bridge.get_untracked().is_some() {
-                // Another view already connected — recreate note player with existing bridge
-                *note_player.borrow_mut() = create_note_player(
-                    &sound_source_clone,
-                    Rc::clone(&audio_ctx_for_loop),
-                    worklet_bridge.get_untracked(),
-                );
-            }
+            ensure_worklet_connected(
+                &ctx_rc, worklet_bridge, worklet_assets, worklet_connecting, sf2_presets,
+            ).await;
+            *note_player.borrow_mut() = create_note_player(
+                &sound_source_clone,
+                Rc::clone(&audio_ctx_for_loop),
+                worklet_bridge.get_untracked(),
+            );
 
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;
 
