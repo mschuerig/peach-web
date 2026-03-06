@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use domain::AudioError;
+use wasm_bindgen_futures::JsFuture;
 use web_sys::AudioContext;
 
 /// Manages the singleton AudioContext lifecycle.
@@ -35,7 +36,7 @@ impl AudioContextManager {
             AudioError::EngineStartFailed(format!("{:?}", e))
         })?;
 
-        log::info!(
+        log::debug!(
             "[DIAG] AudioContext created — state: {:?}, sampleRate: {}",
             ctx.state(),
             ctx.sample_rate()
@@ -58,5 +59,44 @@ impl AudioContextManager {
         if let Some(ctx) = &self.context {
             ctx.borrow().set_onstatechange(None);
         }
+    }
+}
+
+/// Ensures the AudioContext is in the `Running` state.
+///
+/// If suspended (common when created outside a user gesture), calls `resume()`
+/// and awaits the promise. Returns `Err` if the context cannot be resumed.
+///
+/// Free function because `&self` on AudioContextManager cannot be held across await.
+pub async fn ensure_running(
+    ctx_rc: &Rc<RefCell<AudioContext>>,
+) -> Result<(), AudioError> {
+    use web_sys::AudioContextState;
+
+    let state = ctx_rc.borrow().state();
+    match state {
+        AudioContextState::Running => Ok(()),
+        AudioContextState::Suspended => {
+            let promise = ctx_rc
+                .borrow()
+                .resume()
+                .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
+            JsFuture::from(promise)
+                .await
+                .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
+            let new_state = ctx_rc.borrow().state();
+            if new_state == AudioContextState::Running {
+                Ok(())
+            } else {
+                Err(AudioError::EngineStartFailed(format!(
+                    "AudioContext resume failed, state: {:?}",
+                    new_state
+                )))
+            }
+        }
+        _ => Err(AudioError::EngineStartFailed(format!(
+            "AudioContext in unexpected state: {:?}",
+            state
+        ))),
     }
 }

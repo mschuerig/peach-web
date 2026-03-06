@@ -7,14 +7,15 @@ use leptos_router::hooks::use_navigate;
 use send_wrapper::SendWrapper;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::spawn_local;
+use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::KeyboardEvent;
 
-use crate::adapters::audio_context::AudioContextManager;
-use crate::adapters::audio_soundfont::WorkletBridge;
+use crate::adapters::audio_context::{AudioContextManager, ensure_running};
+use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
+use crate::app::{WorkletAssets, connect_worklet};
 use crate::bridge::{DataStoreObserver, ProfileObserver, ProgressTimelineObserver, TimelineObserver, TrendObserver};
 use crate::components::help_content::HelpModal;
 use crate::components::TrainingStats;
@@ -47,6 +48,10 @@ pub fn PitchComparisonView() -> impl IntoView {
         use_context().expect("db_store not provided");
     let worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, LocalStorage> =
         use_context().expect("worklet_bridge not provided");
+    let sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage> =
+        use_context().expect("sf2_presets not provided");
+    let worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, LocalStorage> =
+        use_context().expect("worklet_assets not provided");
 
     // Eagerly create AudioContext in synchronous render path.
     // This ensures creation happens within the user gesture call stack (click on Start Page),
@@ -69,12 +74,14 @@ pub fn PitchComparisonView() -> impl IntoView {
     let settings = LocalStorageSettings;
     let sound_source = LocalStorageSettings::get_string("peach.sound_source")
         .unwrap_or_else(|| "oscillator:sine".to_string());
+    let sound_source_clone = sound_source.clone();
     let note_player = Rc::new(RefCell::new(create_note_player(
         &sound_source,
         Rc::clone(&audio_ctx),
         worklet_bridge.get_untracked(),
     )));
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
+    let audio_error: RwSignal<Option<String>> = RwSignal::new(None);
 
     // Build observers list — DataStoreObserver holds the signal and checks
     // store availability on each call, so it works even if IndexedDB
@@ -97,6 +104,17 @@ pub fn PitchComparisonView() -> impl IntoView {
     Effect::new(move || {
         if storage_error.get().is_some() {
             let signal = storage_error;
+            gloo_timers::callback::Timeout::new(5000, move || {
+                signal.set(None);
+            })
+            .forget();
+        }
+    });
+
+    // Auto-dismiss audio error after 5 seconds
+    Effect::new(move || {
+        if audio_error.get().is_some() {
+            let signal = audio_error;
             gloo_timers::callback::Timeout::new(5000, move || {
                 signal.set(None);
             })
@@ -375,22 +393,49 @@ pub fn PitchComparisonView() -> impl IntoView {
         .unwrap();
     let _visibility_closure = StoredValue::new_local(visibility_handler);
 
-    // AudioContext state change handler — interrupts on context suspension
+    // AudioContext state change handler — attempts resume on Suspended, interrupts on Closed
     let audiocontext_handler = Closure::<dyn FnMut(web_sys::Event)>::new({
         let interrupt = Rc::clone(&interrupt_and_navigate);
         move |event: web_sys::Event| {
             if let Some(target) = event.target()
-                && let Some(ctx) = target.dyn_ref::<web_sys::BaseAudioContext>()
+                && let Some(base_ctx) = target.dyn_ref::<web_sys::BaseAudioContext>()
             {
-                let state = ctx.state();
-                log::info!(
+                let state = base_ctx.state();
+                log::debug!(
                     "[DIAG] PitchComparisonView onstatechange fired — new state: {:?}",
                     state
                 );
-                if state == web_sys::AudioContextState::Suspended
-                    || state == web_sys::AudioContextState::Closed
-                {
-                    (*interrupt)();
+                match state {
+                    web_sys::AudioContextState::Closed => {
+                        (*interrupt)();
+                    }
+                    web_sys::AudioContextState::Suspended => {
+                        if let Some(audio_ctx) = target.dyn_ref::<web_sys::AudioContext>() {
+                            match audio_ctx.resume() {
+                                Ok(promise) => {
+                                    let interrupt = Rc::clone(&interrupt);
+                                    let target = target.clone();
+                                    spawn_local(async move {
+                                        let _ = JsFuture::from(promise).await;
+                                        TimeoutFuture::new(500).await;
+                                        if let Some(ctx) =
+                                            target.dyn_ref::<web_sys::BaseAudioContext>()
+                                            && ctx.state()
+                                                != web_sys::AudioContextState::Running
+                                        {
+                                            (*interrupt)();
+                                        }
+                                    });
+                                }
+                                Err(_) => {
+                                    (*interrupt)();
+                                }
+                            }
+                        } else {
+                            (*interrupt)();
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
@@ -439,8 +484,47 @@ pub fn PitchComparisonView() -> impl IntoView {
         let session = Rc::clone(&session);
         let note_player = Rc::clone(&note_player);
         let cancelled = Rc::clone(&cancelled);
+        let audio_ctx_for_loop = Rc::clone(&audio_ctx);
         let sync = sync_signals.clone();
         spawn_local(async move {
+            // Ensure AudioContext is running before any playback
+            let ctx_rc = match audio_ctx_for_loop.borrow_mut().get_or_create() {
+                Ok(ctx) => ctx,
+                Err(e) => {
+                    log::error!("Failed to get AudioContext: {e}");
+                    audio_error.set(Some("Audio engine failed to start".into()));
+                    return;
+                }
+            };
+            if let Err(e) = ensure_running(&ctx_rc).await {
+                log::error!("AudioContext ensure_running failed: {e}");
+                audio_error.set(Some("Audio engine failed to start".into()));
+                return;
+            }
+
+            // Phase 2: connect worklet if assets are available but bridge isn't
+            if worklet_bridge.get_untracked().is_none()
+                && let Some(assets) = worklet_assets.get_untracked()
+            {
+                match connect_worklet(&ctx_rc, &assets).await {
+                    Ok((bridge, presets)) => {
+                        let bridge_rc = Rc::new(RefCell::new(bridge));
+                        worklet_bridge.set(Some(bridge_rc.clone()));
+                        sf2_presets.set(presets);
+                        *note_player.borrow_mut() = create_note_player(
+                            &sound_source_clone,
+                            Rc::clone(&audio_ctx_for_loop),
+                            Some(bridge_rc),
+                        );
+                    }
+                    Err(e) => {
+                        log::warn!(
+                            "SoundFont worklet connect failed (oscillator fallback): {e}"
+                        );
+                    }
+                }
+            }
+
             session.borrow_mut().start(intervals_from_query, &settings);
             sync();
             sr_announcement.set("Training started".into());
@@ -468,6 +552,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                     AmplitudeDB::new(0.0),
                 ) {
                     log::error!("Reference note playback failed: {e}");
+                    audio_error.set(Some("Audio playback failed".into()));
                 }
                 // Wait for reference note duration with responsive cancellation
                 let mut elapsed = 0u32;
@@ -494,6 +579,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                     data.target_amplitude_db,
                 ) {
                     log::error!("Target note playback failed: {e}");
+                    audio_error.set(Some("Audio playback failed".into()));
                 }
                 // Wait for target note duration OR early answer
                 elapsed = 0;
@@ -665,6 +751,22 @@ pub fn PitchComparisonView() -> impl IntoView {
                     "Lower"
                 </button>
             </div>
+
+            // Audio error notification — non-blocking, auto-dismissing
+            {move || {
+                if let Some(msg) = audio_error.get() {
+                    view! {
+                        <div
+                            class="fixed bottom-12 left-1/2 -translate-x-1/2 bg-red-100 border border-red-400 text-red-800 px-4 py-2 rounded-lg shadow-md text-sm dark:bg-red-900 dark:border-red-700 dark:text-red-200"
+                            role="alert"
+                        >
+                            {msg}
+                        </div>
+                    }.into_any()
+                } else {
+                    view! { <span></span> }.into_any()
+                }
+            }}
 
             // Storage error notification — non-blocking, auto-dismissing
             {move || {

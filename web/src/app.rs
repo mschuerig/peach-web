@@ -35,6 +35,7 @@ pub fn App() -> impl IntoView {
     let db_store = RwSignal::new_local(None::<Rc<IndexedDbStore>>);
     let worklet_bridge = RwSignal::new_local(None::<Rc<RefCell<WorkletBridge>>>);
     let sf2_presets = RwSignal::new_local(Vec::<SF2Preset>::new());
+    let worklet_assets = RwSignal::new_local(None::<Rc<WorkletAssets>>);
 
     provide_context(profile.clone());
     provide_context(audio_ctx_manager.clone());
@@ -45,6 +46,7 @@ pub fn App() -> impl IntoView {
     provide_context(db_store);
     provide_context(worklet_bridge);
     provide_context(sf2_presets);
+    provide_context(worklet_assets);
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);
@@ -155,21 +157,16 @@ pub fn App() -> impl IntoView {
         is_profile_loaded.set(true);
     });
 
-    // Async SoundFont + AudioWorklet initialization (runs in parallel with hydration)
+    // Phase 1: Fetch and compile worklet assets (no AudioContext needed)
     {
-        let audio_ctx_manager = Rc::clone(&*audio_ctx_manager);
         spawn_local(async move {
-            match init_worklet_bridge(audio_ctx_manager).await {
-                Ok((bridge, presets)) => {
-                    log::info!(
-                        "SoundFont worklet initialized with {} presets",
-                        presets.len()
-                    );
-                    worklet_bridge.set(Some(Rc::new(RefCell::new(bridge))));
-                    sf2_presets.set(presets);
+            match fetch_worklet_assets().await {
+                Ok(assets) => {
+                    log::info!("Worklet assets fetched (WASM + SF2)");
+                    worklet_assets.set(Some(Rc::new(assets)));
                 }
                 Err(e) => {
-                    log::warn!("SoundFont worklet init failed (oscillator fallback): {e}");
+                    log::warn!("Failed to fetch worklet assets (oscillator fallback): {e}");
                 }
             }
         });
@@ -212,36 +209,17 @@ pub fn App() -> impl IntoView {
     }
 }
 
-/// Initialize the AudioWorklet bridge for SoundFont synthesis.
+/// Pre-fetched worklet assets (WASM module + SF2 data) stored for Phase 2 connection.
+pub struct WorkletAssets {
+    pub wasm_module: JsValue,
+    pub sf2_buffer: JsValue,
+}
+
+/// Phase 1: Fetch and compile worklet assets without creating an AudioContext.
 ///
-/// Sequence:
-/// 1. Create AudioContext (may start suspended — resumes on user gesture)
-/// 2. Fetch and compile the synth WASM module
-/// 3. Register the AudioWorklet processor JS
-/// 4. Create AudioWorkletNode, wait for 'ready'
-/// 5. Fetch the SF2 file, send to worklet, wait for 'soundFontLoaded'
-async fn init_worklet_bridge(
-    audio_ctx_manager: Rc<RefCell<AudioContextManager>>,
-) -> Result<(WorkletBridge, Vec<SF2Preset>), String> {
-    // Step 1: Get or create AudioContext
-    log::info!("[DIAG] init_worklet_bridge: requesting AudioContext (outside user gesture)");
-    let ctx_rc = audio_ctx_manager
-        .borrow_mut()
-        .get_or_create()
-        .map_err(|e| format!("AudioContext creation failed: {e}"))?;
-
-    // Extract the audio_worklet promise and destination synchronously, then drop borrow
-    let add_module_promise = {
-        let ctx = ctx_rc.borrow();
-        let audio_worklet = ctx
-            .audio_worklet()
-            .map_err(|e| format!("audioWorklet unavailable: {e:?}"))?;
-        audio_worklet
-            .add_module("/soundfont/synth-processor.js")
-            .map_err(|e| format!("addModule failed: {e:?}"))?
-    };
-
-    // Step 2: Fetch the synth WASM module (concurrent with addModule)
+/// This runs at app mount and does not require a user gesture.
+async fn fetch_worklet_assets() -> Result<WorkletAssets, String> {
+    // Fetch and compile the synth WASM module
     let wasm_response = JsFuture::from(
         web_sys::window()
             .ok_or("no window")?
@@ -259,47 +237,11 @@ async fn init_worklet_bridge(
     )
     .await
     .map_err(|e| format!("arrayBuffer promise failed: {e:?}"))?;
-
-    // Compile the WASM module
     let wasm_module = JsFuture::from(js_sys::WebAssembly::compile(&wasm_buffer))
         .await
         .map_err(|e| format!("WASM compile failed: {e:?}"))?;
 
-    // Step 3: Ensure addModule has completed
-    JsFuture::from(add_module_promise)
-        .await
-        .map_err(|e| format!("addModule promise failed: {e:?}"))?;
-
-    // Step 4: Create AudioWorkletNode with WASM module in processorOptions
-    // Borrow ctx briefly for node creation, then drop
-    let (node, port) = {
-        let ctx = ctx_rc.borrow();
-        let options = web_sys::AudioWorkletNodeOptions::new();
-        let processor_options = js_sys::Object::new();
-        js_sys::Reflect::set(&processor_options, &"wasmModule".into(), &wasm_module)
-            .map_err(|e| format!("set processorOptions failed: {e:?}"))?;
-        options.set_processor_options(Some(&processor_options));
-        // Request stereo output
-        let output_channels = js_sys::Array::new();
-        output_channels.push(&JsValue::from(2));
-        options.set_output_channel_count(&output_channels);
-
-        let node =
-            web_sys::AudioWorkletNode::new_with_options(&ctx, "synth-processor", &options)
-                .map_err(|e| format!("AudioWorkletNode creation failed: {e:?}"))?;
-
-        // Connect to destination
-        node.connect_with_audio_node(&ctx.destination())
-            .map_err(|e| format!("connect to destination failed: {e:?}"))?;
-
-        let port = node.port().map_err(|e| format!("no port: {e:?}"))?;
-        (node, port)
-    };
-
-    // Wait for 'ready' message from worklet
-    let _ = wait_for_worklet_message(&port, "ready").await?;
-
-    // Step 5: Fetch SF2 file and send to worklet
+    // Fetch SF2 file
     let sf2_response = JsFuture::from(
         web_sys::window()
             .ok_or("no window")?
@@ -318,11 +260,62 @@ async fn init_worklet_bridge(
     .await
     .map_err(|e| format!("SF2 arrayBuffer promise failed: {e:?}"))?;
 
+    Ok(WorkletAssets {
+        wasm_module,
+        sf2_buffer,
+    })
+}
+
+/// Phase 2: Connect worklet using a running AudioContext and pre-fetched assets.
+///
+/// Called from training views after `ensure_running()` succeeds.
+pub async fn connect_worklet(
+    ctx_rc: &Rc<RefCell<web_sys::AudioContext>>,
+    assets: &WorkletAssets,
+) -> Result<(WorkletBridge, Vec<SF2Preset>), String> {
+    // Register processor JS via addModule
+    let add_module_promise = {
+        let ctx = ctx_rc.borrow();
+        let audio_worklet = ctx
+            .audio_worklet()
+            .map_err(|e| format!("audioWorklet unavailable: {e:?}"))?;
+        audio_worklet
+            .add_module("/soundfont/synth-processor.js")
+            .map_err(|e| format!("addModule failed: {e:?}"))?
+    };
+    JsFuture::from(add_module_promise)
+        .await
+        .map_err(|e| format!("addModule promise failed: {e:?}"))?;
+
+    // Create AudioWorkletNode with WASM module in processorOptions
+    let (node, port) = {
+        let ctx = ctx_rc.borrow();
+        let options = web_sys::AudioWorkletNodeOptions::new();
+        let processor_options = js_sys::Object::new();
+        js_sys::Reflect::set(&processor_options, &"wasmModule".into(), &assets.wasm_module)
+            .map_err(|e| format!("set processorOptions failed: {e:?}"))?;
+        options.set_processor_options(Some(&processor_options));
+        let output_channels = js_sys::Array::new();
+        output_channels.push(&JsValue::from(2));
+        options.set_output_channel_count(&output_channels);
+
+        let node =
+            web_sys::AudioWorkletNode::new_with_options(&ctx, "synth-processor", &options)
+                .map_err(|e| format!("AudioWorkletNode creation failed: {e:?}"))?;
+        node.connect_with_audio_node(&ctx.destination())
+            .map_err(|e| format!("connect to destination failed: {e:?}"))?;
+        let port = node.port().map_err(|e| format!("no port: {e:?}"))?;
+        (node, port)
+    };
+
+    // Wait for 'ready' message from worklet
+    let _ = wait_for_worklet_message(&port, "ready").await?;
+
     // Send SF2 data to worklet
     let load_msg = js_sys::Object::new();
     js_sys::Reflect::set(&load_msg, &"type".into(), &"loadSoundFont".into())
         .map_err(|e| format!("{e:?}"))?;
-    js_sys::Reflect::set(&load_msg, &"data".into(), &sf2_buffer)
+    js_sys::Reflect::set(&load_msg, &"data".into(), &assets.sf2_buffer)
         .map_err(|e| format!("{e:?}"))?;
     port.post_message(&load_msg)
         .map_err(|e| format!("postMessage loadSoundFont failed: {e:?}"))?;

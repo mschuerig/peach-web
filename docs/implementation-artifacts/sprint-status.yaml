@@ -106,4 +106,4 @@ development_status:
   # Epic 8: Fixes & Improvements
   epic-8: in-progress
   8-1-audio-playback-reliability-research: done
-  8-2-audio-playback-reliability-fix: ready-for-dev
+  8-2-audio-playback-reliability-fix: review
