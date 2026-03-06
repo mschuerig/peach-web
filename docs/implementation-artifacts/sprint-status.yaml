@@ -107,3 +107,4 @@ development_status:
   epic-8: in-progress
   8-1-audio-playback-reliability-research: done
   8-2-audio-playback-reliability-fix: review
+  8-3-soundfont-loading-ux: ready-for-dev
