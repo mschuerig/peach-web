@@ -17,3 +17,4 @@ pub use pitch_matching_view::PitchMatchingView;
 pub use profile_view::ProfileView;
 pub use settings_view::SettingsView;
 pub use start_page::StartPage;
+pub use training_stats::TrainingStats;

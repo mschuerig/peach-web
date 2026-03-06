@@ -17,7 +17,7 @@ use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
 use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
 use crate::components::pitch_slider::VerticalPitchSlider;
-use crate::components::training_stats::TrainingStats;
+use crate::components::TrainingStats;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity};
