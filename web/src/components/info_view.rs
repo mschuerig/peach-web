@@ -1,17 +1,16 @@
 use leptos::prelude::*;
 
 use super::help_content::HelpContent;
-use super::page_nav::PageNav;
+use super::nav_bar::NavBar;
 use crate::help_sections::{INFO_ACKNOWLEDGMENTS, INFO_HELP};
 
 #[component]
 pub fn InfoView() -> impl IntoView {
     view! {
-        <div class="py-12">
-            <PageNav current="info" />
-
-            <h1 class="text-2xl font-bold dark:text-white">"Peach"</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">"Version 0.1.0"</p>
+        <div class="pt-4 pb-12">
+            <NavBar title="Peach" back_href="/">
+            </NavBar>
+            <p class="text-sm text-gray-500 dark:text-gray-400 text-center -mt-2 mb-4">"Version 0.1.0"</p>
 
             <div class="mt-8 space-y-8">
                 <HelpContent sections=INFO_HELP use_h2=true />

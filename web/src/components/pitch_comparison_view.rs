@@ -10,18 +10,20 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::KeyboardEvent;
 
-use crate::adapters::audio_context::{AudioContextManager, ensure_running};
+use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
 use crate::app::{SoundFontLoadStatus, WorkletAssets, connect_worklet};
 use crate::bridge::{DataStoreObserver, ProfileObserver, ProgressTimelineObserver, TimelineObserver, TrendObserver};
+use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
+use crate::components::nav_bar::{NavBar, NavIconButton};
 use crate::components::TrainingStats;
 use crate::help_sections::COMPARISON_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
-use domain::ports::{PitchComparisonObserver, NotePlayer};
+use domain::ports::{PitchComparisonObserver, NotePlayer, UserSettings};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
     PitchComparisonSession, PitchComparisonSessionState, Interval, PerceptualProfile,
@@ -278,34 +280,6 @@ pub fn PitchComparisonView() -> impl IntoView {
             navigate("/", Default::default());
         }
     };
-    let on_nav_settings = {
-        let on_nav_away = on_nav_away.clone();
-        let navigate = navigate.clone();
-        move |ev: leptos::ev::MouseEvent| {
-            ev.prevent_default();
-            on_nav_away();
-            navigate("/settings", Default::default());
-        }
-    };
-    let on_nav_profile = {
-        let on_nav_away = on_nav_away.clone();
-        let navigate = navigate.clone();
-        move |ev: leptos::ev::MouseEvent| {
-            ev.prevent_default();
-            on_nav_away();
-            navigate("/profile", Default::default());
-        }
-    };
-    let on_nav_info = {
-        let on_nav_away = on_nav_away.clone();
-        let navigate = navigate.clone();
-        move |ev: leptos::ev::MouseEvent| {
-            ev.prevent_default();
-            on_nav_away();
-            navigate("/info", Default::default());
-        }
-    };
-
     // Help modal state
     let is_help_open = RwSignal::new(false);
     let on_help_open = {
@@ -480,6 +454,9 @@ pub fn PitchComparisonView() -> impl IntoView {
         });
     }
 
+    let audio_needs_gesture: RwSignal<bool> =
+        use_context().expect("audio_needs_gesture context");
+
     // Start the async training loop
     // SAFETY (RefCell borrows): WASM is single-threaded. Event handlers (on_answer,
     // interruption) can only execute at `.await` yield points. All RefCell borrows
@@ -491,20 +468,19 @@ pub fn PitchComparisonView() -> impl IntoView {
         let audio_ctx_for_loop = Rc::clone(&audio_ctx);
         let sync = sync_signals.clone();
         spawn_local(async move {
-            // Ensure AudioContext is running before any playback
-            let ctx_rc = match audio_ctx_for_loop.borrow_mut().get_or_create() {
+            // Ensure AudioContext is created and running (waits for gesture if needed)
+            let ctx_rc = match ensure_audio_ready(
+                &audio_ctx_for_loop,
+                audio_needs_gesture,
+                &cancelled,
+            ).await {
                 Ok(ctx) => ctx,
                 Err(e) => {
-                    log::error!("Failed to get AudioContext: {e}");
+                    log::error!("AudioContext failed: {e}");
                     audio_error.set(Some("Audio engine failed to start".into()));
                     return;
                 }
             };
-            if let Err(e) = ensure_running(&ctx_rc).await {
-                log::error!("AudioContext ensure_running failed: {e}");
-                audio_error.set(Some("Audio engine failed to start".into()));
-                return;
-            }
 
             // Wait for SF2 assets if user selected SoundFont
             if sound_source_clone.starts_with("sf2:") {
@@ -668,51 +644,36 @@ pub fn PitchComparisonView() -> impl IntoView {
         });
     }
 
+    let comparison_title = if is_interval_mode { "Interval Comparison" } else { "Comparison Training" };
+    let tuning_label = if is_interval_mode {
+        let ts = LocalStorageSettings.tuning_system();
+        match ts {
+            domain::TuningSystem::EqualTemperament => "Equal Temperament",
+            domain::TuningSystem::JustIntonation => "Just Intonation",
+        }
+    } else {
+        ""
+    };
+
+    #[allow(clippy::redundant_closure)]
+    let on_back_cb = {
+        let handler = SendWrapper::new(on_nav_start);
+        Callback::new(move |ev| handler(ev))
+    };
+    #[allow(clippy::redundant_closure)]
+    let on_help_cb = {
+        let handler = SendWrapper::new(on_help_open);
+        Callback::new(move |ev| handler(ev))
+    };
+
     view! {
-        <div class="py-12">
-            <nav aria-label="Page navigation" class="flex gap-6 text-sm mb-6">
-                <a
-                    href="/"
-                    on:click=on_nav_start
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Start"
-                </a>
-                <a
-                    href="/settings"
-                    on:click=on_nav_settings
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Settings"
-                </a>
-                <a
-                    href="/profile"
-                    on:click=on_nav_profile
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Profile"
-                </a>
-                <a
-                    href="/info"
-                    on:click=on_nav_info
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    "Info"
-                </a>
-            </nav>
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold dark:text-white">
-                    {if is_interval_mode { "Interval Comparison" } else { "Comparison Training" }}
-                </h1>
-                <button
-                    on:click=on_help_open
-                    class="min-h-11 min-w-11 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200"
-                    aria-label="Help"
-                >
-                    "?"
-                </button>
-            </div>
+        <div class="pt-4 pb-12">
+            <NavBar title=comparison_title back_href="/" on_back=on_back_cb>
+                <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb />
+            </NavBar>
             <HelpModal title="Comparison Training" sections=COMPARISON_HELP is_open=is_help_open on_close=on_help_close />
+
+            <AudioGateOverlay />
 
             // SF2 loading indicator for direct navigation (bookmark)
             {move || {
@@ -731,11 +692,16 @@ pub fn PitchComparisonView() -> impl IntoView {
                 }
             }}
 
-            // Interval label — only visible in interval mode
+            // Interval info display — centered between nav and buttons
             {move || {
                 let label = interval_label_text.get();
                 if !label.is_empty() {
-                    view! { <p class="mt-2 text-lg text-indigo-600 dark:text-indigo-400 font-medium">{label}</p> }.into_any()
+                    view! {
+                        <div class="text-center mt-4 mb-2">
+                            <p class="text-lg text-indigo-600 dark:text-indigo-400 font-medium">{label}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{tuning_label}</p>
+                        </div>
+                    }.into_any()
                 } else {
                     view! { <span></span> }.into_any()
                 }
@@ -748,8 +714,8 @@ pub fn PitchComparisonView() -> impl IntoView {
                 trend=stats_trend.into()
             />
 
-            // Feedback indicator
-            <div class="flex items-center justify-center h-16" aria-hidden="true">
+            // Feedback indicator — between stats and buttons
+            <div class="flex items-center justify-center h-12" aria-hidden="true">
                 {move || {
                     if show_feedback.get() {
                         if is_last_correct.get() {
@@ -768,30 +734,32 @@ pub fn PitchComparisonView() -> impl IntoView {
                 {move || sr_announcement.get()}
             </div>
 
-            // Higher / Lower buttons
-            <div class="flex gap-4 justify-center mt-8">
+            // Higher / Lower buttons — large blue rounded-rectangle cards
+            <div class="flex flex-col gap-4 mt-4 md:flex-row">
                 <button
                     on:click=on_answer_higher
                     disabled=move || !buttons_enabled.get()
                     class=move || if buttons_enabled.get() {
-                        "min-h-11 min-w-[120px] rounded-lg bg-indigo-600 px-6 py-4 text-lg font-semibold text-white shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-blue-500 px-6 py-8 text-white text-xl font-semibold shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-offset-gray-900"
                     } else {
-                        "min-h-11 min-w-[120px] rounded-lg bg-gray-300 px-6 py-4 text-lg font-semibold text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-gray-300 px-6 py-8 text-gray-500 text-xl font-semibold cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
                     }
                     aria-label="Higher"
                 >
+                    <span class="flex items-center justify-center w-14 h-14 rounded-full bg-white/30 text-white text-2xl" aria-hidden="true">{"\u{2191}"}</span>
                     "Higher"
                 </button>
                 <button
                     on:click=on_answer_lower
                     disabled=move || !buttons_enabled.get()
                     class=move || if buttons_enabled.get() {
-                        "min-h-11 min-w-[120px] rounded-lg bg-indigo-600 px-6 py-4 text-lg font-semibold text-white shadow-md hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-blue-500 px-6 py-8 text-white text-xl font-semibold shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-offset-gray-900"
                     } else {
-                        "min-h-11 min-w-[120px] rounded-lg bg-gray-300 px-6 py-4 text-lg font-semibold text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+                        "flex flex-col items-center justify-center gap-3 w-full rounded-2xl bg-gray-300 px-6 py-8 text-gray-500 text-xl font-semibold cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
                     }
                     aria-label="Lower"
                 >
+                    <span class="flex items-center justify-center w-14 h-14 rounded-full bg-white/30 text-white text-2xl" aria-hidden="true">{"\u{2193}"}</span>
                     "Lower"
                 </button>
             </div>

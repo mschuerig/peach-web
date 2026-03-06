@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use super::page_nav::PageNav;
+use super::nav_bar::{NavBar, NavIconButton};
 use super::progress_sparkline::ProgressSparkline;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::app::SoundFontLoadStatus;
@@ -93,9 +93,16 @@ pub fn StartPage() -> impl IntoView {
     });
 
     view! {
-        <div class="flex flex-col items-center gap-6 py-12">
-            <PageNav current="start" />
-            <h1 class="sr-only">"Peach"</h1>
+        <div class="flex flex-col items-center gap-6 pt-4 pb-12">
+            <NavBar
+                title="Peach"
+                left_content=ViewFn::from(move || view! {
+                    <NavIconButton label="Info".to_string() icon="\u{24D8}".to_string() href="/info".to_string() />
+                })
+            >
+                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href="/profile".to_string() />
+                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href="/settings".to_string() />
+            </NavBar>
 
             // Loading indicator
             {move || {
