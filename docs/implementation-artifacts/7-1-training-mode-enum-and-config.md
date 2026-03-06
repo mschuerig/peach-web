@@ -1,6 +1,6 @@
 # Story 7.1: TrainingMode Enum and TrainingModeConfig
 
-Status: review
+Status: done
 
 ## Story
 
@@ -102,3 +102,4 @@ All 4 tasks completed in a single pass. 305 domain tests pass (14 new), zero cli
 ## Change Log
 
 - 2026-03-06: Implemented TrainingMode enum with four variants, per-mode config, metric extraction from comparison and matching records, and comprehensive test suite (14 tests). All ACs satisfied.
+- 2026-03-06: Code review fixes: added category guards to extract_comparison_metric/extract_matching_metric (matching modes no longer process comparison records and vice versa), added Copy derive to TrainingModeConfig, replaced misleading test with 2 cross-mode guard tests (15 tests total). Marked done.
