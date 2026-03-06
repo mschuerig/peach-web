@@ -13,6 +13,7 @@ use crate::adapters::audio_soundfont::SF2Preset;
 use crate::adapters::data_portability;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
+use crate::app::SoundFontLoadStatus;
 use domain::ports::UserSettings;
 use domain::types::MIDINote;
 use domain::{
@@ -137,6 +138,9 @@ fn interval_short_label(interval: Interval) -> &'static str {
     }
 }
 
+const TOGGLE_ACTIVE: &str = "w-7 h-7 rounded text-[10px] font-semibold bg-indigo-600 text-white dark:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400";
+const TOGGLE_INACTIVE: &str = "w-7 h-7 rounded text-[10px] font-semibold bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-indigo-400";
+
 const INTERVALS: [Interval; 13] = [
     Interval::Prime,
     Interval::MinorSecond,
@@ -204,6 +208,8 @@ pub fn SettingsView() -> impl IntoView {
     );
     let sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage> =
         use_context().expect("sf2_presets not provided");
+    let sf2_load_status: RwSignal<SoundFontLoadStatus> =
+        use_context().expect("sf2_load_status not provided");
     let selected_intervals = RwSignal::new(LocalStorageSettings::get_selected_intervals());
 
     // Reset training data
@@ -289,7 +295,7 @@ pub fn SettingsView() -> impl IntoView {
 
     // Derived signals for sound settings display
     let duration_label = Signal::derive(move || format!("Duration: {:.1}s", note_duration.get()));
-    let pitch_label = Signal::derive(move || format!("Concert Pitch: {} Hz", reference_pitch.get() as i32));
+    let pitch_label = Signal::derive(move || format!("Concert Pitch: {} Hz", reference_pitch.get().round() as i32));
 
     view! {
         <div class="pt-4 pb-12">
@@ -395,12 +401,7 @@ pub fn SettingsView() -> impl IntoView {
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
                                                     aria-label=format!("{} ascending", interval_short_label(interval))
                                                     class=move || {
-                                                        let active = selected_intervals.get().contains(&di);
-                                                        if active {
-                                                            "w-7 h-7 rounded text-[10px] font-semibold bg-indigo-600 text-white dark:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                                        } else {
-                                                            "w-7 h-7 rounded text-[10px] font-semibold bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                                        }
+                                                        if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
                                                 >
                                                     {interval_short_label(interval)}
@@ -440,12 +441,7 @@ pub fn SettingsView() -> impl IntoView {
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
                                                     aria-label=format!("{} descending", interval_short_label(interval))
                                                     class=move || {
-                                                        let active = selected_intervals.get().contains(&di);
-                                                        if active {
-                                                            "w-7 h-7 rounded text-[10px] font-semibold bg-indigo-600 text-white dark:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                                        } else {
-                                                            "w-7 h-7 rounded text-[10px] font-semibold bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                                        }
+                                                        if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
                                                 >
                                                     {interval_short_label(interval)}
@@ -457,38 +453,49 @@ pub fn SettingsView() -> impl IntoView {
                             </tbody>
                         </table>
                     </div>
-                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        "Select the intervals you want to practice. At least one must remain active."
-                    </p>
                 </div>
             </SettingsSection>
+            <p class="px-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                "Select the intervals you want to practice. At least one must remain active."
+            </p>
 
             // Sound section (AC: 1, 5, 6)
             <SettingsSection title="Sound">
                 <SettingsRow label="Sound">
-                    <select
-                        class="text-sm text-right bg-transparent text-gray-500 dark:text-gray-400 border-none focus:outline-none focus:ring-0 cursor-pointer appearance-none pr-0"
-                        prop:value=move || sound_source.get()
-                        on:change=move |ev| {
-                            let val = target_value(&ev);
-                            LocalStorageSettings::set("peach.sound_source", &val);
-                            sound_source.set(val);
+                    {move || {
+                        let status = sf2_load_status.get();
+                        match status {
+                            SoundFontLoadStatus::Fetching => view! {
+                                <span class="text-sm text-gray-400 dark:text-gray-500 italic">"Loading sounds\u{2026}"</span>
+                            }.into_any(),
+                            _ => view! {
+                                <select
+                                    class="text-sm text-right bg-transparent text-gray-500 dark:text-gray-400 border-none focus:outline-none focus:ring-0 cursor-pointer appearance-none pr-0"
+                                    prop:value=move || sound_source.get()
+                                    on:change=move |ev| {
+                                        let val = target_value(&ev);
+                                        LocalStorageSettings::set("peach.sound_source", &val);
+                                        sound_source.set(val);
+                                    }
+                                >
+                                    {move || {
+                                        let mut options = vec![
+                                            view! { <option value={"oscillator:sine".to_string()}>{"Sine Oscillator".to_string()}</option> }
+                                        ];
+                                        let mut presets = sf2_presets.get();
+                                        presets.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                                        options.extend(presets.into_iter().map(|p| {
+                                            let value = format!("sf2:{}:{}", p.bank, p.program);
+                                            let label = p.name.clone();
+                                            view! { <option value={value}>{label}</option> }
+                                        }));
+                                        options
+                                    }}
+                                </select>
+                                <span class="ml-1 text-gray-400 dark:text-gray-500 text-sm">{"\u{203A}"}</span>
+                            }.into_any(),
                         }
-                    >
-                        {move || {
-                            let mut presets = sf2_presets.get();
-                            if presets.is_empty() {
-                                vec![view! { <option value={"oscillator:sine".to_string()}>{"Sine Oscillator".to_string()}</option> }]
-                            } else {
-                                presets.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-                                presets.into_iter().map(|p| {
-                                    let value = format!("sf2:{}:{}", p.bank, p.program);
-                                    let label = p.name.clone();
-                                    view! { <option value={value}>{label}</option> }
-                                }).collect::<Vec<_>>()
-                            }
-                        }}
-                    </select>
+                    }}
                 </SettingsRow>
                 <SettingsRowDynamic label=duration_label>
                     <Stepper
@@ -545,13 +552,12 @@ pub fn SettingsView() -> impl IntoView {
                         <option value="equalTemperament">"Equal Temperament"</option>
                         <option value="justIntonation">"Just Intonation"</option>
                     </select>
+                    <span class="ml-1 text-gray-400 dark:text-gray-500 text-sm">{"\u{203A}"}</span>
                 </SettingsRow>
-                <div class="px-4 py-2">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        "Select the tuning for intervals. Equal temperament divides the octave into 12 equal steps. Just intonation uses pure frequency ratios."
-                    </p>
-                </div>
             </SettingsSection>
+            <p class="px-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                "Select the tuning for intervals. Equal temperament divides the octave into 12 equal steps. Just intonation uses pure frequency ratios."
+            </p>
 
             // Difficulty section (AC: 1, 7)
             <SettingsSection title="Difficulty">

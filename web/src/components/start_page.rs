@@ -74,7 +74,7 @@ pub fn StartPage() -> impl IntoView {
     let can_start_training = Memo::new(move |_| {
         matches!(
             sf2_status.get(),
-            SoundFontLoadStatus::NotNeeded | SoundFontLoadStatus::Ready | SoundFontLoadStatus::Failed(_)
+            SoundFontLoadStatus::Ready | SoundFontLoadStatus::Failed(_)
         )
     });
 
