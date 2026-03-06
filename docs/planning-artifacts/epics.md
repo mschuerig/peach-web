@@ -1475,3 +1475,31 @@ Open-ended epic for bug fixes, reliability improvements, and incremental enhance
 5. When the user's `sound_source` is `"oscillator:sine"` (or any non-SF2 value), training buttons are enabled immediately
 6. On Firefox (and all browsers), the app shell and Start Page render immediately — the SF2 fetch does not block page rendering
 7. All existing training functionality continues to work — no regressions
+
+### Story 8.4: iOS UI Alignment
+
+**As a** user,
+**I want** the web app's layout and navigation to look and feel closer to the native iOS version,
+**So that** the experience is consistent across platforms and feels polished on both mobile and desktop.
+
+**Acceptance Criteria:**
+1. Navigation bar on all pages follows the iOS pattern: back arrow left, centered title, icon buttons right
+2. Pitch Comparison buttons are large blue rounded cards with circle arrow icons, stacked vertically on portrait / side-by-side on landscape
+3. Pitch Comparison view shows interval name and tuning label centered between nav and buttons
+4. Pitch Matching view header shows stats left, signed cent deviation right, slider fills remaining height
+5. All changes maintain keyboard accessibility and screen reader support
+6. Dark mode preserved, no regressions
+
+### Story 8.5: Settings Page iOS Alignment
+
+**As a** user,
+**I want** the settings page to use grouped card sections with iOS-style controls,
+**So that** the settings experience matches the polished look of the rest of the app.
+
+**Acceptance Criteria:**
+1. Settings are organized in visually grouped card sections (Pitch Range, Intervals, Sound, Difficulty, Data) with section headers
+2. Pitch range (min/max note) uses +/- stepper buttons instead of dropdown selects
+3. Interval selection uses a compact grid layout with ascending/descending rows matching iOS
+4. Sound settings (instrument, duration, concert pitch, tuning system) are grouped in a single card
+5. All changes maintain keyboard accessibility and screen reader support
+6. Dark mode preserved, no regressions
