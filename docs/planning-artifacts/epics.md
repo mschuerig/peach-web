@@ -1373,3 +1373,63 @@ App works fully offline after initial load via Service Worker. Complete screen r
 **Given** the Service Worker is active
 **When** I use the app normally
 **Then** there is no perceptible difference in behavior compared to online usage
+
+## Epic 7: iOS Parity — Profile & UI Refresh
+
+Port improvements from the sibling iOS app (peach) that have accumulated since the web version reached feature completeness. The iOS app introduced four distinct training modes tracked independently, EWMA-based progress visualization with adaptive time bucketing, redesigned start screen with sparklines, and help content. This epic brings peach-web to parity with those changes.
+
+**Source reference:** iOS repo `mschuerig/peach`, commits from `a1d7320b` onward.
+
+### Story 7.0a: Rename Comparison to PitchComparison
+
+**As a** developer,
+**I want** all `Comparison*` types renamed to `PitchComparison*`,
+**So that** naming is symmetric with the `PitchMatching*` family and matches the iOS sibling app.
+
+### Story 7.0b: Extract Constants and Thread Domain Types
+
+**As a** developer,
+**I want** magic numbers replaced with named constants and raw `f64` parameters replaced with domain types where appropriate,
+**So that** the code is self-documenting and type-safe.
+
+### Story 7.1: TrainingMode Enum and TrainingModeConfig
+
+**As a** developer,
+**I want** a `TrainingMode` enum with four variants and per-mode configuration,
+**So that** profile visualization and progress tracking can distinguish between unison comparison, interval comparison, unison matching, and interval matching.
+
+### Story 7.2: ProgressTimeline with EWMA and Adaptive Bucketing
+
+**As a** musician,
+**I want** my training progress tracked with exponentially weighted moving averages and adaptive time bucketing,
+**So that** recent training sessions have more weight and the timeline adapts its granularity to data density.
+
+### Story 7.3: Start Screen Redesign
+
+**As a** musician,
+**I want** the start screen organized into "Single Notes" and "Intervals" sections with descriptive labels ("Hear & Compare", "Tune & Match"),
+**So that** training modes are clearly named and visually grouped.
+
+### Story 7.4: Profile Screen with Progress Charts
+
+**As a** musician,
+**I want** to see per-mode progress charts showing EWMA trends with stddev bands,
+**So that** I can understand how my pitch discrimination is evolving in each training mode.
+
+### Story 7.5: Training Stats with Trend Arrows
+
+**As a** musician,
+**I want** to see my latest result and session best with a trend indicator on the training screens,
+**So that** I get immediate feedback on my current performance trajectory.
+
+### Story 7.6: Start Page Sparklines
+
+**As a** musician,
+**I want** to see miniature sparklines on each training card on the start page,
+**So that** I can quickly see my progress at a glance before starting a session.
+
+### Story 7.7: Help Content
+
+**As a** musician,
+**I want** contextual help text available in the app,
+**So that** I can understand how each training mode works and what the statistics mean.
