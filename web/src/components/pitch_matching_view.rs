@@ -15,7 +15,7 @@ use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
-use crate::app::{WorkletAssets, connect_worklet};
+use crate::app::{SoundFontLoadStatus, WorkletAssets, connect_worklet};
 use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
 use crate::components::help_content::HelpModal;
 use crate::components::pitch_slider::VerticalPitchSlider;
@@ -49,6 +49,8 @@ pub fn PitchMatchingView() -> impl IntoView {
         use_context().expect("sf2_presets not provided");
     let worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, LocalStorage> =
         use_context().expect("worklet_assets not provided");
+    let sf2_load_status: RwSignal<SoundFontLoadStatus> =
+        use_context().expect("SoundFontLoadStatus not provided");
 
     // Eagerly create AudioContext in synchronous render path.
     // This ensures creation happens within the user gesture call stack (click on Start Page),
@@ -590,6 +592,18 @@ pub fn PitchMatchingView() -> impl IntoView {
                 return;
             }
 
+            // Wait for SF2 assets if user selected SoundFont
+            if sound_source_clone.starts_with("sf2:") {
+                while matches!(sf2_load_status.get_untracked(), SoundFontLoadStatus::Fetching) {
+                    if cancelled.get() { return; }
+                    TimeoutFuture::new(100).await;
+                }
+                if let SoundFontLoadStatus::Failed(ref msg) = sf2_load_status.get_untracked() {
+                    log::warn!("SF2 load failed, falling back to oscillator: {msg}");
+                    audio_error.set(Some("Selected sound could not be loaded. Using default sound.".into()));
+                }
+            }
+
             // Phase 2: connect worklet if assets are available but bridge isn't
             if worklet_bridge.get_untracked().is_none()
                 && let Some(assets) = worklet_assets.get_untracked()
@@ -746,6 +760,23 @@ pub fn PitchMatchingView() -> impl IntoView {
                 </button>
             </div>
             <HelpModal title="Pitch Matching Training" sections=PITCH_MATCHING_HELP is_open=is_help_open on_close=on_help_close />
+
+            // SF2 loading indicator for direct navigation (bookmark)
+            {move || {
+                if matches!(sf2_load_status.get(), SoundFontLoadStatus::Fetching) {
+                    view! {
+                        <div
+                            role="status"
+                            aria-live="polite"
+                            class="mt-4 rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3 text-center text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-300"
+                        >
+                            <span class="inline-block animate-pulse">"Loading sounds\u{2026}"</span>
+                        </div>
+                    }.into_any()
+                } else {
+                    view! { <span></span> }.into_any()
+                }
+            }}
 
             // Interval label — only visible in interval mode
             {move || {

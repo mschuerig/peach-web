@@ -15,11 +15,20 @@ use web_sys::MessagePort;
 use crate::adapters::audio_context::AudioContextManager;
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
+use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::components::{
     PitchComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
 use domain::types::MIDINote;
 use domain::{PerceptualProfile, ProgressTimeline, ThresholdTimeline, TrendAnalyzer};
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum SoundFontLoadStatus {
+    NotNeeded,
+    Fetching,
+    Ready,
+    Failed(String),
+}
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -37,6 +46,17 @@ pub fn App() -> impl IntoView {
     let sf2_presets = RwSignal::new_local(Vec::<SF2Preset>::new());
     let worklet_assets = RwSignal::new_local(None::<Rc<WorkletAssets>>);
 
+    let sf2_load_status = RwSignal::new({
+        let sound_source = LocalStorageSettings::get_string("peach.sound_source")
+            .unwrap_or_else(|| "oscillator:sine".to_string());
+        if sound_source.starts_with("sf2:") {
+            SoundFontLoadStatus::Fetching
+        } else {
+            SoundFontLoadStatus::NotNeeded
+        }
+    });
+
+    provide_context(sf2_load_status);
     provide_context(profile.clone());
     provide_context(audio_ctx_manager.clone());
     provide_context(trend_analyzer.clone());
@@ -164,9 +184,11 @@ pub fn App() -> impl IntoView {
                 Ok(assets) => {
                     log::info!("Worklet assets fetched (WASM + SF2)");
                     worklet_assets.set(Some(Rc::new(assets)));
+                    sf2_load_status.set(SoundFontLoadStatus::Ready);
                 }
                 Err(e) => {
                     log::warn!("Failed to fetch worklet assets (oscillator fallback): {e}");
+                    sf2_load_status.set(SoundFontLoadStatus::Failed(e));
                 }
             }
         });
