@@ -1,6 +1,6 @@
 # Story 8.6: Pitch Comparison Feedback Icons
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -21,19 +21,19 @@ so that the feedback is clean, consistent with the help text, and positioned lik
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Move feedback indicator from center row to header top-right (AC: #3, #5)
-  - [ ] 1.1 Remove the standalone `<div class="flex items-center justify-center h-12">` feedback block between stats and buttons in `pitch_comparison_view.rs` (~line 717-730)
-  - [ ] 1.2 Add feedback indicator to the right side of the existing compact header row (similar to pitch matching view's `<div class="text-right">` pattern at ~line 746-772 of `pitch_matching_view.rs`)
-- [ ] Task 2: Replace thumbs emoji with checkmark/X in colored circles (AC: #1, #2)
-  - [ ] 2.1 Replace `\u{1F44D}` (thumbs up) with a checkmark character (e.g. `\u{2713}` or `\u{2714}`) rendered as white text inside a green circle (`bg-green-500 rounded-full w-8 h-8 flex items-center justify-center text-white font-bold`)
-  - [ ] 2.2 Replace `\u{1F44E}` (thumbs down) with an X character (e.g. `\u{2717}` or plain "X") rendered as white text inside a red circle (`bg-red-500 rounded-full w-8 h-8 flex items-center justify-center text-white font-bold`)
-  - [ ] 2.3 Verify dark mode appearance — circle colors should look good in both modes
-- [ ] Task 3: Verify help text accuracy (AC: #4)
-  - [ ] 3.1 Confirm `help_sections.rs` line 36-37 already says "checkmark (correct) or X (incorrect)" — no change needed
-- [ ] Task 4: Verify no regressions (AC: #6, #7, #8)
-  - [ ] 4.1 Confirm `show_feedback` and `is_last_correct` signals still drive the indicator correctly
-  - [ ] 4.2 Confirm `sr_announcement` still fires for screen readers
-  - [ ] 4.3 Test both light and dark modes
+- [x] Task 1: Move feedback indicator from center row to header top-right (AC: #3, #5)
+  - [x] 1.1 Remove the standalone `<div class="flex items-center justify-center h-12">` feedback block between stats and buttons in `pitch_comparison_view.rs` (~line 717-730)
+  - [x] 1.2 Add feedback indicator to the right side of the existing compact header row (similar to pitch matching view's `<div class="text-right">` pattern at ~line 746-772 of `pitch_matching_view.rs`)
+- [x] Task 2: Replace thumbs emoji with checkmark/X in colored circles (AC: #1, #2)
+  - [x] 2.1 Replace `\u{1F44D}` (thumbs up) with a checkmark character (e.g. `\u{2713}` or `\u{2714}`) rendered as white text inside a green circle (`bg-green-500 rounded-full w-8 h-8 flex items-center justify-center text-white font-bold`)
+  - [x] 2.2 Replace `\u{1F44E}` (thumbs down) with an X character (e.g. `\u{2717}` or plain "X") rendered as white text inside a red circle (`bg-red-500 rounded-full w-8 h-8 flex items-center justify-center text-white font-bold`)
+  - [x] 2.3 Verify dark mode appearance — circle colors should look good in both modes
+- [x] Task 3: Verify help text accuracy (AC: #4)
+  - [x] 3.1 Confirm `help_sections.rs` line 36-37 already says "checkmark (correct) or X (incorrect)" — no change needed
+- [x] Task 4: Verify no regressions (AC: #6, #7, #8)
+  - [x] 4.1 Confirm `show_feedback` and `is_last_correct` signals still drive the indicator correctly
+  - [x] 4.2 Confirm `sr_announcement` still fires for screen readers
+  - [x] 4.3 Test both light and dark modes
 
 ## Dev Notes
 
@@ -114,8 +114,28 @@ view! { <div class="w-8 h-8"></div> }.into_any()
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — clean implementation, no issues encountered.
 
 ### Completion Notes List
 
+- Replaced standalone centered feedback div (thumbs-up/down emoji) with a compact header layout: stats left, feedback icon right
+- Correct answer: white checkmark (✓ U+2713) in green circle (`bg-green-500 rounded-full`)
+- Incorrect answer: white "X" in red circle (`bg-red-500 rounded-full`)
+- Layout mirrors pitch matching view's `flex items-start justify-between` pattern
+- Added invisible placeholder `<div class="w-8 h-8">` when feedback not showing to prevent layout shift
+- Help text in `help_sections.rs` already says "checkmark (correct) or X (incorrect)" — no change needed
+- All 345 domain tests pass, zero clippy warnings on web crate
+- `show_feedback`, `is_last_correct`, `sr_announcement` signals unchanged
+- `aria-hidden="true"` preserved on visual indicator, screen reader live region unchanged
+
+### Change Log
+
+- 2026-03-06: Implemented story 8.6 — replaced thumbs emoji with checkmark/X colored circles, moved feedback from center to header top-right
+
 ### File List
+
+- `web/src/components/pitch_comparison_view.rs` (modified)
