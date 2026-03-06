@@ -1,6 +1,6 @@
 # Story 8.4: iOS UI Alignment
 
-Status: review
+Status: done
 
 ## Story
 
@@ -250,3 +250,4 @@ This story includes a fix outside its original scope: AudioContext user-gesture 
 
 - 2026-03-06: Implemented iOS UI alignment — replaced text-link PageNav with iOS-style NavBar across all views, redesigned Pitch Comparison buttons as blue cards with circle arrow icons, redesigned Pitch Matching header with compact stats layout and full-height slider
 - 2026-03-06: Fixed AudioContext user-gesture handling for direct navigation — centralized ensure_audio_ready/provide_audio_gesture in audio_context.rs, added shared AudioGateOverlay component, added audio_needs_gesture signal to app context
+- 2026-03-06: Code review fixes — NavBar back button uses `<A>` instead of raw `<a>` for client-side routing compliance, added min-w-11 to right slot for symmetric title centering, extracted duplicated button class strings in comparison view, fixed incorrect viewport height calc in pitch matching view (was `calc(100vh - 2rem)`, now `h-screen`)
