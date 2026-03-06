@@ -91,7 +91,7 @@ development_status:
   epic-6-retrospective: optional
 
   # Epic 7: iOS Parity — Profile & UI Refresh
-  epic-7: in-progress
+  epic-7: done
   7-0a-rename-comparison-to-pitch-comparison: done
   7-0b-extract-constants-and-domain-types: done
   7-1-training-mode-enum-and-config: done
