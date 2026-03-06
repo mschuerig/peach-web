@@ -1,6 +1,6 @@
 # Story 8.6: Pitch Comparison Feedback Icons
 
-Status: review
+Status: done
 
 ## Story
 
@@ -135,7 +135,9 @@ None — clean implementation, no issues encountered.
 ### Change Log
 
 - 2026-03-06: Implemented story 8.6 — replaced thumbs emoji with checkmark/X colored circles, moved feedback from center to header top-right
+- 2026-03-06: Code review fixes — added dark:bg-green-600/dark:bg-red-600 for dark mode, used consistent Unicode glyphs (✔/✘), added sprint-status.yaml to File List
 
 ### File List
 
 - `web/src/components/pitch_comparison_view.rs` (modified)
+- `docs/implementation-artifacts/sprint-status.yaml` (modified)
