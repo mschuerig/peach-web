@@ -7,6 +7,7 @@ pub mod session;
 pub mod strategy;
 pub mod timeline;
 pub mod training;
+pub mod training_mode;
 pub mod trend;
 pub mod tuning;
 pub mod types;
@@ -26,6 +27,7 @@ pub use session::{
 pub use strategy::{kazez_narrow, kazez_widen, next_pitch_comparison, TrainingSettings};
 pub use timeline::{PeriodAggregate, ThresholdTimeline, TimelineDataPoint};
 pub use training::*;
+pub use training_mode::{TrainingMode, TrainingModeConfig, TrainingModeState};
 pub use trend::{Trend, TrendAnalyzer};
 pub use tuning::TuningSystem;
 pub use types::*;
