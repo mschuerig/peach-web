@@ -4,10 +4,10 @@ use std::rc::Rc;
 
 use rand::prelude::IndexedRandom;
 
-use crate::ports::{ComparisonObserver, Resettable, UserSettings};
+use crate::ports::{PitchComparisonObserver, Resettable, UserSettings};
 use crate::profile::PerceptualProfile;
-use crate::strategy::{next_comparison, TrainingSettings};
-use crate::training::{CompletedComparison, Comparison};
+use crate::strategy::{next_pitch_comparison, TrainingSettings};
+use crate::training::{CompletedPitchComparison, PitchComparison};
 use crate::tuning::TuningSystem;
 use crate::types::{
     AmplitudeDB, Cents, DetunedMIDINote, DirectedInterval, Frequency, MIDINote, NoteRange, NoteDuration,
@@ -18,7 +18,7 @@ pub const FEEDBACK_DURATION_SECS: f64 = 0.4;
 
 /// State of the comparison session state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ComparisonSessionState {
+pub enum PitchComparisonSessionState {
     Idle,
     PlayingReferenceNote,
     PlayingTargetNote,
@@ -28,7 +28,7 @@ pub enum ComparisonSessionState {
 
 /// Data needed by the web layer to play the current comparison's notes.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ComparisonPlaybackData {
+pub struct PitchComparisonPlaybackData {
     pub reference_frequency: Frequency,
     pub target_frequency: Frequency,
     pub duration: NoteDuration,
@@ -40,10 +40,10 @@ pub struct ComparisonPlaybackData {
 /// Manages the training loop state, comparison generation, answer processing,
 /// and observer notification. No browser dependencies — the web crate drives
 /// the async loop and audio playback.
-pub struct ComparisonSession {
-    state: ComparisonSessionState,
+pub struct PitchComparisonSession {
+    state: PitchComparisonSessionState,
     profile: Rc<RefCell<PerceptualProfile>>,
-    observers: Vec<Box<dyn ComparisonObserver>>,
+    observers: Vec<Box<dyn PitchComparisonObserver>>,
     resettables: Vec<Box<dyn Resettable>>,
 
     // Session-level state (snapshot from settings at start)
@@ -55,9 +55,9 @@ pub struct ComparisonSession {
     session_note_range: NoteRange,
 
     // Current comparison state
-    current_comparison: Option<Comparison>,
-    current_playback_data: Option<ComparisonPlaybackData>,
-    last_completed: Option<CompletedComparison>,
+    current_comparison: Option<PitchComparison>,
+    current_playback_data: Option<PitchComparisonPlaybackData>,
+    last_completed: Option<CompletedPitchComparison>,
 
     // Observable feedback state
     show_feedback: bool,
@@ -65,14 +65,14 @@ pub struct ComparisonSession {
     session_best_cent_difference: Option<f64>,
 }
 
-impl ComparisonSession {
+impl PitchComparisonSession {
     pub fn new(
         profile: Rc<RefCell<PerceptualProfile>>,
-        observers: Vec<Box<dyn ComparisonObserver>>,
+        observers: Vec<Box<dyn PitchComparisonObserver>>,
         resettables: Vec<Box<dyn Resettable>>,
     ) -> Self {
         Self {
-            state: ComparisonSessionState::Idle,
+            state: PitchComparisonSessionState::Idle,
             profile,
             observers,
             resettables,
@@ -93,7 +93,7 @@ impl ComparisonSession {
 
     // --- Observable state accessors ---
 
-    pub fn state(&self) -> ComparisonSessionState {
+    pub fn state(&self) -> PitchComparisonSessionState {
         self.state
     }
 
@@ -115,7 +115,7 @@ impl ComparisonSession {
         })
     }
 
-    pub fn current_playback_data(&self) -> Option<ComparisonPlaybackData> {
+    pub fn current_playback_data(&self) -> Option<PitchComparisonPlaybackData> {
         self.current_playback_data
     }
 
@@ -128,7 +128,7 @@ impl ComparisonSession {
     pub fn start(&mut self, intervals: HashSet<DirectedInterval>, settings: &dyn UserSettings) {
         assert_eq!(
             self.state,
-            ComparisonSessionState::Idle,
+            PitchComparisonSessionState::Idle,
             "start() requires Idle state"
         );
         assert!(!intervals.is_empty(), "start() requires at least one interval");
@@ -148,38 +148,38 @@ impl ComparisonSession {
         self.session_best_cent_difference = None;
 
         // Generate first comparison
-        self.generate_next_comparison();
-        self.state = ComparisonSessionState::PlayingReferenceNote;
+        self.generate_next_pitch_comparison();
+        self.state = PitchComparisonSessionState::PlayingReferenceNote;
     }
 
     /// Called when reference note playback finishes. Transitions to PlayingTargetNote.
     pub fn on_reference_note_finished(&mut self) {
         assert_eq!(
             self.state,
-            ComparisonSessionState::PlayingReferenceNote,
+            PitchComparisonSessionState::PlayingReferenceNote,
             "on_reference_note_finished() requires PlayingReferenceNote state"
         );
-        self.state = ComparisonSessionState::PlayingTargetNote;
+        self.state = PitchComparisonSessionState::PlayingTargetNote;
     }
 
     /// Called when target note playback finishes. Transitions to AwaitingAnswer.
     pub fn on_target_note_finished(&mut self) {
         assert_eq!(
             self.state,
-            ComparisonSessionState::PlayingTargetNote,
+            PitchComparisonSessionState::PlayingTargetNote,
             "on_target_note_finished() requires PlayingTargetNote state"
         );
-        self.state = ComparisonSessionState::AwaitingAnswer;
+        self.state = PitchComparisonSessionState::AwaitingAnswer;
     }
 
     /// Handle the user's answer (higher/lower).
     ///
     /// Valid from PlayingTargetNote (early answer) or AwaitingAnswer.
-    /// Creates CompletedComparison, notifies observers, transitions to ShowingFeedback.
+    /// Creates CompletedPitchComparison, notifies observers, transitions to ShowingFeedback.
     pub fn handle_answer(&mut self, is_higher: bool, timestamp: String) {
         assert!(
-            self.state == ComparisonSessionState::PlayingTargetNote
-                || self.state == ComparisonSessionState::AwaitingAnswer,
+            self.state == PitchComparisonSessionState::PlayingTargetNote
+                || self.state == PitchComparisonSessionState::AwaitingAnswer,
             "handle_answer() requires PlayingTargetNote or AwaitingAnswer state"
         );
 
@@ -187,7 +187,7 @@ impl ComparisonSession {
             .current_comparison
             .expect("handle_answer() called without a current comparison");
 
-        let completed = CompletedComparison::new(
+        let completed = CompletedPitchComparison::new(
             comparison,
             is_higher,
             self.session_tuning_system,
@@ -222,7 +222,7 @@ impl ComparisonSession {
         self.notify_observers(&completed);
 
         self.last_completed = Some(completed);
-        self.state = ComparisonSessionState::ShowingFeedback;
+        self.state = PitchComparisonSessionState::ShowingFeedback;
     }
 
     /// Called when the feedback display period finishes.
@@ -230,20 +230,20 @@ impl ComparisonSession {
     pub fn on_feedback_finished(&mut self) {
         assert_eq!(
             self.state,
-            ComparisonSessionState::ShowingFeedback,
+            PitchComparisonSessionState::ShowingFeedback,
             "on_feedback_finished() requires ShowingFeedback state"
         );
         self.show_feedback = false;
-        self.generate_next_comparison();
-        self.state = ComparisonSessionState::PlayingReferenceNote;
+        self.generate_next_pitch_comparison();
+        self.state = PitchComparisonSessionState::PlayingReferenceNote;
     }
 
     /// Stop the session and return to Idle.
     pub fn stop(&mut self) {
-        if self.state == ComparisonSessionState::Idle {
+        if self.state == PitchComparisonSessionState::Idle {
             return;
         }
-        self.state = ComparisonSessionState::Idle;
+        self.state = PitchComparisonSessionState::Idle;
         self.current_comparison = None;
         self.current_playback_data = None;
         self.last_completed = None;
@@ -265,7 +265,7 @@ impl ComparisonSession {
 
     // --- Private helpers ---
 
-    fn generate_next_comparison(&mut self) {
+    fn generate_next_pitch_comparison(&mut self) {
         let interval = self.random_interval();
         let profile = self.profile.borrow();
         let training_settings = TrainingSettings::new(
@@ -275,7 +275,7 @@ impl ComparisonSession {
             Cents::new(100.0),
         );
 
-        let comparison = next_comparison(
+        let comparison = next_pitch_comparison(
             &profile,
             &training_settings,
             self.last_completed.as_ref(),
@@ -294,7 +294,7 @@ impl ComparisonSession {
         let target_amplitude_db = calculate_target_amplitude(self.session_vary_loudness);
 
         self.current_comparison = Some(comparison);
-        self.current_playback_data = Some(ComparisonPlaybackData {
+        self.current_playback_data = Some(PitchComparisonPlaybackData {
             reference_frequency,
             target_frequency,
             duration: self.session_note_duration,
@@ -332,10 +332,10 @@ impl ComparisonSession {
         **intervals_vec.choose(&mut rng).expect("session_intervals must not be empty")
     }
 
-    fn notify_observers(&mut self, completed: &CompletedComparison) {
+    fn notify_observers(&mut self, completed: &CompletedPitchComparison) {
         for observer in &mut self.observers {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                observer.comparison_completed(completed);
+                observer.pitch_comparison_completed(completed);
             }));
             if let Err(e) = result {
                 eprintln!("Observer panicked: {:?}", e);
@@ -363,11 +363,11 @@ mod tests {
     // --- Mock types ---
 
     struct MockObserver {
-        calls: Rc<RefCell<Vec<CompletedComparison>>>,
+        calls: Rc<RefCell<Vec<CompletedPitchComparison>>>,
     }
 
     impl MockObserver {
-        fn new() -> (Self, Rc<RefCell<Vec<CompletedComparison>>>) {
+        fn new() -> (Self, Rc<RefCell<Vec<CompletedPitchComparison>>>) {
             let calls = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
@@ -378,16 +378,16 @@ mod tests {
         }
     }
 
-    impl ComparisonObserver for MockObserver {
-        fn comparison_completed(&mut self, completed: &CompletedComparison) {
+    impl PitchComparisonObserver for MockObserver {
+        fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
             self.calls.borrow_mut().push(completed.clone());
         }
     }
 
     struct PanickingObserver;
 
-    impl ComparisonObserver for PanickingObserver {
-        fn comparison_completed(&mut self, _completed: &CompletedComparison) {
+    impl PitchComparisonObserver for PanickingObserver {
+        fn pitch_comparison_completed(&mut self, _completed: &CompletedPitchComparison) {
             panic!("PanickingObserver intentionally panicked");
         }
     }
@@ -462,17 +462,17 @@ mod tests {
         set
     }
 
-    fn create_session() -> ComparisonSession {
+    fn create_session() -> PitchComparisonSession {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        ComparisonSession::new(profile, vec![], vec![])
+        PitchComparisonSession::new(profile, vec![], vec![])
     }
 
     fn create_session_with_observer()
-    -> (ComparisonSession, Rc<RefCell<Vec<CompletedComparison>>>) {
+    -> (PitchComparisonSession, Rc<RefCell<Vec<CompletedPitchComparison>>>) {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (observer, calls) = MockObserver::new();
         let session =
-            ComparisonSession::new(profile, vec![Box::new(observer)], vec![]);
+            PitchComparisonSession::new(profile, vec![Box::new(observer)], vec![]);
         (session, calls)
     }
 
@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn test_idle_state_defaults() {
         let session = create_session();
-        assert_eq!(session.state(), ComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
         assert!(!session.show_feedback());
         assert!(!session.is_last_answer_correct());
         assert_eq!(session.session_best_cent_difference(), None);
@@ -495,7 +495,7 @@ mod tests {
     fn test_start_transitions_to_playing_reference_note() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
     }
 
     #[test]
@@ -541,7 +541,7 @@ mod tests {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingTargetNote);
+        assert_eq!(session.state(), PitchComparisonSessionState::PlayingTargetNote);
     }
 
     // --- AC5: TargetNote to AwaitingAnswer ---
@@ -552,7 +552,7 @@ mod tests {
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
         session.on_target_note_finished();
-        assert_eq!(session.state(), ComparisonSessionState::AwaitingAnswer);
+        assert_eq!(session.state(), PitchComparisonSessionState::AwaitingAnswer);
     }
 
     // --- AC6: Handle answer ---
@@ -564,7 +564,7 @@ mod tests {
         session.on_reference_note_finished();
         session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-        assert_eq!(session.state(), ComparisonSessionState::ShowingFeedback);
+        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
         assert!(session.show_feedback());
     }
 
@@ -577,20 +577,20 @@ mod tests {
         session.on_reference_note_finished();
         // Answer while still playing target note (early answer)
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-        assert_eq!(session.state(), ComparisonSessionState::ShowingFeedback);
+        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
     }
 
     // --- AC7: Feedback state ---
 
     #[test]
-    fn test_on_feedback_finished_generates_next_comparison() {
+    fn test_on_feedback_finished_generates_next_pitch_comparison() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
         session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         session.on_feedback_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
         assert!(!session.show_feedback());
         assert!(session.current_playback_data().is_some());
     }
@@ -602,28 +602,28 @@ mod tests {
         let mut session = create_session();
 
         // Idle
-        assert_eq!(session.state(), ComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
 
         // Start → PlayingReferenceNote
         session.start(default_intervals(), &DefaultTestSettings);
-        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
 
         // on_reference_note_finished → PlayingTargetNote
         session.on_reference_note_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingTargetNote);
+        assert_eq!(session.state(), PitchComparisonSessionState::PlayingTargetNote);
 
         // on_target_note_finished → AwaitingAnswer
         session.on_target_note_finished();
-        assert_eq!(session.state(), ComparisonSessionState::AwaitingAnswer);
+        assert_eq!(session.state(), PitchComparisonSessionState::AwaitingAnswer);
 
         // handle_answer → ShowingFeedback
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-        assert_eq!(session.state(), ComparisonSessionState::ShowingFeedback);
+        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
         assert!(session.show_feedback());
 
         // on_feedback_finished → PlayingReferenceNote (next cycle)
         session.on_feedback_finished();
-        assert_eq!(session.state(), ComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
         assert!(!session.show_feedback());
     }
 
@@ -677,7 +677,7 @@ mod tests {
         session.handle_answer(false, "2026-03-03T14:01:00Z".to_string());
     }
 
-    // --- CompletedComparison correctness ---
+    // --- CompletedPitchComparison correctness ---
 
     #[test]
     fn test_completed_comparison_has_correct_timestamp() {
@@ -730,7 +730,7 @@ mod tests {
     // --- Observer notification ---
 
     #[test]
-    fn test_observer_receives_comparison_completed() {
+    fn test_observer_receives_pitch_comparison_completed() {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
@@ -748,7 +748,7 @@ mod tests {
         let (normal_observer, normal_calls) = MockObserver::new();
         let panicking_observer = PanickingObserver;
 
-        let mut session = ComparisonSession::new(
+        let mut session = PitchComparisonSession::new(
             profile,
             vec![
                 Box::new(panicking_observer),
@@ -764,7 +764,7 @@ mod tests {
 
         // Normal observer should still receive the event despite panicking observer
         assert_eq!(normal_calls.borrow().len(), 1);
-        assert_eq!(session.state(), ComparisonSessionState::ShowingFeedback);
+        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
     }
 
     // --- AC8: No loudness variation ---
@@ -810,7 +810,7 @@ mod tests {
     #[test]
     fn test_playback_data_amplitude_varies_when_configured() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        let mut session = ComparisonSession::new(profile, vec![], vec![]);
+        let mut session = PitchComparisonSession::new(profile, vec![], vec![]);
         let settings = LoudnessTestSettings {
             vary_loudness: 0.5,
         };
@@ -829,7 +829,7 @@ mod tests {
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
         session.stop();
-        assert_eq!(session.state(), ComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
         assert!(session.current_playback_data().is_none());
         assert!(!session.show_feedback());
     }
@@ -858,7 +858,7 @@ mod tests {
     fn test_stop_from_idle_is_noop() {
         let mut session = create_session();
         session.stop(); // Should not panic
-        assert_eq!(session.state(), ComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
     }
 
     // --- Session best tracking ---
@@ -910,7 +910,7 @@ mod tests {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.reset_training_data();
-        assert_eq!(session.state(), ComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
     }
 
     #[test]
@@ -921,7 +921,7 @@ mod tests {
             .update(MIDINote::new(60), 50.0, true);
         assert!(profile.borrow().overall_mean().is_some());
 
-        let mut session = ComparisonSession::new(Rc::clone(&profile), vec![], vec![]);
+        let mut session = PitchComparisonSession::new(Rc::clone(&profile), vec![], vec![]);
         session.reset_training_data();
         assert_eq!(profile.borrow().overall_mean(), None);
     }
@@ -931,7 +931,7 @@ mod tests {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (resettable, count) = MockResettable::new();
         let mut session =
-            ComparisonSession::new(profile, vec![], vec![Box::new(resettable)]);
+            PitchComparisonSession::new(profile, vec![], vec![Box::new(resettable)]);
         session.reset_training_data();
         assert_eq!(count.get(), 1);
     }

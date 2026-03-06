@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use crate::training::{CompletedComparison, CompletedPitchMatching};
+use crate::training::{CompletedPitchComparison, CompletedPitchMatching};
 use crate::tuning::TuningSystem;
 use crate::types::Interval;
 
 /// Flat persistence record for a completed comparison.
 /// Blueprint §10.1 — field names match storage schema exactly.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ComparisonRecord {
+pub struct PitchComparisonRecord {
     pub reference_note: u8,
     pub target_note: u8,
     pub cent_offset: f64,
@@ -17,7 +17,7 @@ pub struct ComparisonRecord {
     pub timestamp: String,
 }
 
-impl ComparisonRecord {
+impl PitchComparisonRecord {
     /// Construct a flat persistence record from a completed comparison.
     ///
     /// The `interval` field stores semitone distance. `Interval::between()` returns
@@ -25,11 +25,11 @@ impl ComparisonRecord {
     /// with large transposition intervals. Defaulting to 0 (Prime) is safe here
     /// because this field is informational for the storage schema, not used for
     /// any logic that depends on accurate interval reconstruction.
-    pub fn from_completed(completed: &CompletedComparison) -> Self {
-        let comparison = completed.comparison();
+    pub fn from_completed(completed: &CompletedPitchComparison) -> Self {
+        let pitch_comparison = completed.pitch_comparison();
         let interval = Interval::between(
-            comparison.reference_note(),
-            comparison.target_note().note,
+            pitch_comparison.reference_note(),
+            pitch_comparison.target_note().note,
         )
         .map(|i| i.semitones())
         .unwrap_or(0);
@@ -40,9 +40,9 @@ impl ComparisonRecord {
         };
 
         Self {
-            reference_note: comparison.reference_note().raw_value(),
-            target_note: comparison.target_note().note.raw_value(),
-            cent_offset: comparison.target_note().offset.raw_value,
+            reference_note: pitch_comparison.reference_note().raw_value(),
+            target_note: pitch_comparison.target_note().note.raw_value(),
+            cent_offset: pitch_comparison.target_note().offset.raw_value,
             is_correct: completed.is_correct(),
             interval,
             tuning_system: tuning_system.to_string(),
@@ -98,7 +98,7 @@ impl PitchMatchingRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::training::Comparison;
+    use crate::training::PitchComparison;
     use crate::types::{Cents, DetunedMIDINote, MIDINote};
 
     fn make_completed(
@@ -107,21 +107,21 @@ mod tests {
         offset: f64,
         higher: bool,
         tuning: TuningSystem,
-    ) -> CompletedComparison {
-        let comp = Comparison::new(
+    ) -> CompletedPitchComparison {
+        let comp = PitchComparison::new(
             MIDINote::new(ref_note),
             DetunedMIDINote {
                 note: MIDINote::new(target_note),
                 offset: Cents::new(offset),
             },
         );
-        CompletedComparison::new(comp, higher, tuning, "2026-03-03T14:00:00Z".to_string())
+        CompletedPitchComparison::new(comp, higher, tuning, "2026-03-03T14:00:00Z".to_string())
     }
 
     #[test]
     fn test_from_completed_extracts_fields_correctly() {
         let completed = make_completed(60, 64, 25.0, true, TuningSystem::EqualTemperament);
-        let record = ComparisonRecord::from_completed(&completed);
+        let record = PitchComparisonRecord::from_completed(&completed);
 
         assert_eq!(record.reference_note, 60);
         assert_eq!(record.target_note, 64);
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_from_completed_negative_offset() {
         let completed = make_completed(60, 60, -30.0, false, TuningSystem::JustIntonation);
-        let record = ComparisonRecord::from_completed(&completed);
+        let record = PitchComparisonRecord::from_completed(&completed);
 
         assert_eq!(record.cent_offset, -30.0);
         assert!(record.is_correct); // target lower (offset < 0), user said lower
@@ -147,7 +147,7 @@ mod tests {
     fn test_from_completed_interval_exceeds_octave_defaults_to_zero() {
         // 13 semitones apart — exceeds octave, Interval::between returns Err
         let completed = make_completed(60, 73, 10.0, true, TuningSystem::EqualTemperament);
-        let record = ComparisonRecord::from_completed(&completed);
+        let record = PitchComparisonRecord::from_completed(&completed);
 
         assert_eq!(record.interval, 0);
     }
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn test_from_completed_octave_interval() {
         let completed = make_completed(60, 72, 15.0, true, TuningSystem::EqualTemperament);
-        let record = ComparisonRecord::from_completed(&completed);
+        let record = PitchComparisonRecord::from_completed(&completed);
 
         assert_eq!(record.interval, 12);
     }
@@ -163,16 +163,16 @@ mod tests {
     #[test]
     fn test_serde_roundtrip() {
         let completed = make_completed(69, 76, 42.5, true, TuningSystem::EqualTemperament);
-        let record = ComparisonRecord::from_completed(&completed);
+        let record = PitchComparisonRecord::from_completed(&completed);
 
         let json = serde_json::to_string(&record).unwrap();
-        let parsed: ComparisonRecord = serde_json::from_str(&json).unwrap();
+        let parsed: PitchComparisonRecord = serde_json::from_str(&json).unwrap();
         assert_eq!(record, parsed);
     }
 
     #[test]
     fn test_serde_field_names_match_storage_schema() {
-        let record = ComparisonRecord {
+        let record = PitchComparisonRecord {
             reference_note: 60,
             target_note: 67,
             cent_offset: 25.0,
@@ -196,7 +196,7 @@ mod tests {
     fn test_from_completed_zero_offset() {
         // offset=0.0: is_target_higher=false, user_answered_higher=false → correct
         let completed = make_completed(60, 60, 0.0, false, TuningSystem::EqualTemperament);
-        let record = ComparisonRecord::from_completed(&completed);
+        let record = PitchComparisonRecord::from_completed(&completed);
 
         assert_eq!(record.cent_offset, 0.0);
         assert!(record.is_correct);

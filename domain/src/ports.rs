@@ -1,6 +1,6 @@
-use crate::records::ComparisonRecord;
+use crate::records::PitchComparisonRecord;
 use crate::records::PitchMatchingRecord;
-use crate::training::{CompletedComparison, CompletedPitchMatching};
+use crate::training::{CompletedPitchComparison, CompletedPitchMatching};
 use crate::tuning::TuningSystem;
 use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteRange, NoteDuration};
 
@@ -29,8 +29,8 @@ pub trait PlaybackHandle {
 }
 
 /// Observer for comparison training events.
-pub trait ComparisonObserver {
-    fn comparison_completed(&mut self, completed: &CompletedComparison);
+pub trait PitchComparisonObserver {
+    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison);
 }
 
 /// Observer for pitch matching training events.
@@ -73,8 +73,8 @@ pub enum StorageError {
 /// is inherently asynchronous. The trait remains as the canonical domain
 /// contract — future adapters (e.g. in-memory for testing) can implement it.
 pub trait TrainingDataStore {
-    fn save_comparison(&self, record: ComparisonRecord) -> Result<(), StorageError>;
-    fn fetch_all_comparisons(&self) -> Result<Vec<ComparisonRecord>, StorageError>;
+    fn save_pitch_comparison(&self, record: PitchComparisonRecord) -> Result<(), StorageError>;
+    fn fetch_all_pitch_comparisons(&self) -> Result<Vec<PitchComparisonRecord>, StorageError>;
     fn save_pitch_matching(&self, record: PitchMatchingRecord) -> Result<(), StorageError>;
     fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>;
     fn delete_all(&self) -> Result<(), StorageError>;

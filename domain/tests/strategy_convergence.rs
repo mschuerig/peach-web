@@ -8,11 +8,11 @@ fn test_kazez_convergence_all_correct() {
     let settings = TrainingSettings::default();
     let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-    let mut last_completed: Option<CompletedComparison> = None;
+    let mut last_completed: Option<CompletedPitchComparison> = None;
     let mut magnitudes = Vec::new();
 
     for _ in 0..20 {
-        let comp = next_comparison(
+        let comp = next_pitch_comparison(
             &profile,
             &settings,
             last_completed.as_ref(),
@@ -23,7 +23,7 @@ fn test_kazez_convergence_all_correct() {
         magnitudes.push(magnitude);
 
         // Always answer correctly
-        let completed = CompletedComparison::new(
+        let completed = CompletedPitchComparison::new(
             comp,
             comp.is_target_higher(),
             TuningSystem::EqualTemperament,
@@ -68,11 +68,11 @@ fn test_kazez_divergence_all_incorrect() {
     let settings = TrainingSettings::default();
     let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-    let mut last_completed: Option<CompletedComparison> = None;
+    let mut last_completed: Option<CompletedPitchComparison> = None;
     let mut magnitudes = Vec::new();
 
     for _ in 0..10 {
-        let comp = next_comparison(
+        let comp = next_pitch_comparison(
             &profile,
             &settings,
             last_completed.as_ref(),
@@ -83,7 +83,7 @@ fn test_kazez_divergence_all_incorrect() {
         magnitudes.push(magnitude);
 
         // Always answer incorrectly
-        let completed = CompletedComparison::new(
+        let completed = CompletedPitchComparison::new(
             comp,
             !comp.is_target_higher(),
             TuningSystem::EqualTemperament,
@@ -110,10 +110,10 @@ fn test_kazez_oscillation() {
     let settings = TrainingSettings::default();
     let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-    let mut last_completed: Option<CompletedComparison> = None;
+    let mut last_completed: Option<CompletedPitchComparison> = None;
 
     for i in 0..10 {
-        let comp = next_comparison(
+        let comp = next_pitch_comparison(
             &profile,
             &settings,
             last_completed.as_ref(),
@@ -128,7 +128,7 @@ fn test_kazez_oscillation() {
             !comp.is_target_higher()
         };
 
-        let completed = CompletedComparison::new(
+        let completed = CompletedPitchComparison::new(
             comp,
             user_answered,
             TuningSystem::EqualTemperament,
@@ -139,7 +139,7 @@ fn test_kazez_oscillation() {
     }
 
     // After alternating, we should still have a valid comparison
-    let final_comp = next_comparison(
+    let final_comp = next_pitch_comparison(
         &profile,
         &settings,
         last_completed.as_ref(),
@@ -158,7 +158,7 @@ fn test_convergence_with_perfect_fifth_interval() {
     let interval = DirectedInterval::new(Interval::PerfectFifth, Direction::Up);
 
     for _ in 0..20 {
-        let comp = next_comparison(&profile, &settings, None, interval);
+        let comp = next_pitch_comparison(&profile, &settings, None, interval);
 
         // Verify interval transposition is correct
         let ref_val = comp.reference_note().raw_value() as i16;

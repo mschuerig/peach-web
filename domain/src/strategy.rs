@@ -2,8 +2,8 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::profile::PerceptualProfile;
-use crate::training::comparison::Comparison;
-use crate::training::CompletedComparison;
+use crate::training::pitch_comparison::PitchComparison;
+use crate::training::CompletedPitchComparison;
 use crate::types::{Cents, DetunedMIDINote, DirectedInterval, Direction, Frequency, MIDINote, NoteRange};
 
 /// Kazez narrow: reduce difficulty after correct answer.
@@ -80,18 +80,18 @@ impl Default for TrainingSettings {
 /// 3. Random sign (equally likely positive/negative)
 /// 4. Select reference note within range, accounting for interval transposition
 /// 5. Return Comparison
-pub fn next_comparison(
+pub fn next_pitch_comparison(
     profile: &PerceptualProfile,
     settings: &TrainingSettings,
-    last_comparison: Option<&CompletedComparison>,
+    last_pitch_comparison: Option<&CompletedPitchComparison>,
     interval: DirectedInterval,
-) -> Comparison {
+) -> PitchComparison {
     let mut rng = rand::rng();
 
     // Step 1: Determine magnitude
-    let raw_magnitude = match last_comparison {
+    let raw_magnitude = match last_pitch_comparison {
         Some(completed) => {
-            let prev_magnitude = completed.comparison().target_note().offset.magnitude();
+            let prev_magnitude = completed.pitch_comparison().target_note().offset.magnitude();
             if completed.is_correct() {
                 kazez_narrow(prev_magnitude)
             } else {
@@ -140,7 +140,7 @@ pub fn next_comparison(
         offset: Cents::new(cent_offset),
     };
 
-    Comparison::new(reference_note, target_note)
+    PitchComparison::new(reference_note, target_note)
 }
 
 #[cfg(test)]
@@ -202,7 +202,7 @@ mod tests {
         let settings = TrainingSettings::default();
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comparison = next_comparison(&profile, &settings, None, interval);
+        let comparison = next_pitch_comparison(&profile, &settings, None, interval);
         // Cold start: magnitude defaults to max_cent_difference (100)
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
@@ -224,7 +224,7 @@ mod tests {
         let settings = TrainingSettings::default();
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comparison = next_comparison(&profile, &settings, None, interval);
+        let comparison = next_pitch_comparison(&profile, &settings, None, interval);
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
             (magnitude - 50.0).abs() < 1e-10,
@@ -242,7 +242,7 @@ mod tests {
         let settings = TrainingSettings::default(); // min = 0.1
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comparison = next_comparison(&profile, &settings, None, interval);
+        let comparison = next_pitch_comparison(&profile, &settings, None, interval);
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
             magnitude >= settings.min_cent_difference.raw_value,
@@ -259,7 +259,7 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
         for _ in 0..100 {
-            let comparison = next_comparison(&profile, &settings, None, interval);
+            let comparison = next_pitch_comparison(&profile, &settings, None, interval);
             let ref_val = comparison.reference_note().raw_value();
             assert!(
                 (36..=84).contains(&ref_val),
@@ -275,7 +275,7 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Octave, Direction::Up);
 
         for _ in 0..100 {
-            let comparison = next_comparison(&profile, &settings, None, interval);
+            let comparison = next_pitch_comparison(&profile, &settings, None, interval);
             let target_val = comparison.target_note().note.raw_value();
             assert!(
                 target_val <= 127,
@@ -291,7 +291,7 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Octave, Direction::Down);
 
         for _ in 0..100 {
-            let comparison = next_comparison(&profile, &settings, None, interval);
+            let comparison = next_pitch_comparison(&profile, &settings, None, interval);
             let ref_val = comparison.reference_note().raw_value();
             let target_val = comparison.target_note().note.raw_value();
             assert!(
@@ -314,17 +314,17 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
         // First comparison: cold start at 100 cents
-        let comp1 = next_comparison(&profile, &settings, None, interval);
+        let comp1 = next_pitch_comparison(&profile, &settings, None, interval);
 
         // Simulate correct answer
-        let completed = CompletedComparison::new(
+        let completed = CompletedPitchComparison::new(
             comp1,
             comp1.is_target_higher(),
             crate::TuningSystem::EqualTemperament,
             "2026-03-03T14:00:00Z".to_string(),
         );
 
-        let comp2 = next_comparison(&profile, &settings, Some(&completed), interval);
+        let comp2 = next_pitch_comparison(&profile, &settings, Some(&completed), interval);
         let mag2 = comp2.target_note().offset.magnitude();
         // After correct: kazez_narrow(100) = 100*(1 - 0.05*10) ≈ 50
         let expected = kazez_narrow(100.0);
@@ -340,17 +340,17 @@ mod tests {
         let settings = TrainingSettings::default();
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comp1 = next_comparison(&profile, &settings, None, interval);
+        let comp1 = next_pitch_comparison(&profile, &settings, None, interval);
 
         // Simulate incorrect answer
-        let completed = CompletedComparison::new(
+        let completed = CompletedPitchComparison::new(
             comp1,
             !comp1.is_target_higher(),
             crate::TuningSystem::EqualTemperament,
             "2026-03-03T14:00:00Z".to_string(),
         );
 
-        let comp2 = next_comparison(&profile, &settings, Some(&completed), interval);
+        let comp2 = next_pitch_comparison(&profile, &settings, Some(&completed), interval);
         let mag2 = comp2.target_note().offset.magnitude();
         // After incorrect at 100: kazez_widen(100) = 100*(1 + 0.09*10) = 190, clamped to 100
         assert!(
@@ -397,7 +397,7 @@ mod tests {
         let mut pos_count = 0;
         let mut neg_count = 0;
         for _ in 0..200 {
-            let comp = next_comparison(&profile, &settings, None, interval);
+            let comp = next_pitch_comparison(&profile, &settings, None, interval);
             if comp.target_note().offset.raw_value > 0.0 {
                 pos_count += 1;
             } else {

@@ -684,7 +684,7 @@ pub fn SettingsView() -> impl IntoView {
                                         };
                                         format!(
                                             "Found {} comparison records and {} pitch matching records.{} How would you like to import?",
-                                            data.comparisons.len(),
+                                            data.pitch_comparisons.len(),
                                             data.pitch_matchings.len(),
                                             warnings_text,
                                         )
