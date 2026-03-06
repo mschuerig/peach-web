@@ -111,3 +111,4 @@ development_status:
   8-4-ios-ui-alignment: done
   8-5-settings-page-ios-alignment: done
   8-6-pitch-comparison-feedback-icons: done
+  8-7-extract-settings-view-logic: ready-for-dev
