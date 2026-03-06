@@ -47,7 +47,7 @@ pub fn StartPage() -> impl IntoView {
             <PageNav current="start" />
             <h1 class="sr-only">"Peach"</h1>
 
-            <div class="flex w-full flex-col gap-7 md:flex-row md:gap-8">
+            <nav aria-label="Training modes" class="flex w-full flex-col gap-7 md:flex-row md:gap-8">
                 // Single Notes section
                 <section class="flex-1">
                     <h2 class="mb-2.5 text-sm font-medium text-gray-500 dark:text-gray-400">"Single Notes"</h2>
@@ -85,7 +85,7 @@ pub fn StartPage() -> impl IntoView {
                         />
                     </div>
                 </section>
-            </div>
+            </nav>
         </div>
     }
 }

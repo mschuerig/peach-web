@@ -96,7 +96,7 @@ development_status:
   7-0b-extract-constants-and-domain-types: done
   7-1-training-mode-enum-and-config: done
   7-2-progress-timeline-ewma-adaptive-bucketing: done
-  7-3-start-screen-redesign: review
+  7-3-start-screen-redesign: done
   7-4-profile-screen-progress-charts: ready-for-dev
   7-5-training-stats-trend-arrows: ready-for-dev
   7-6-start-page-sparklines: ready-for-dev

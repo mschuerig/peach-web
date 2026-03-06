@@ -1,6 +1,6 @@
 # Story 7.3: Start Screen Redesign
 
-Status: review
+Status: done
 
 ## Story
 
@@ -157,7 +157,9 @@ All acceptance criteria satisfied:
 
 - `web/src/components/start_page.rs` — rewritten (layout, TrainingCard component, interval_href helper)
 - `web/src/components/mod.rs` — removed unused `pub use profile_preview::ProfilePreview` re-export
+- `docs/implementation-artifacts/sprint-status.yaml` — updated story status
 
 ## Change Log
 
 - 2026-03-06: Redesigned start screen with grouped sections and card-style training buttons (story 7.3)
+- 2026-03-06: Code review fixes — restored `<nav>` landmark for accessibility, updated File List, marked done
