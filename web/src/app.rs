@@ -359,6 +359,53 @@ pub async fn connect_worklet(
     Ok((WorkletBridge::new(node), presets))
 }
 
+/// Ensures the worklet bridge is connected and available.
+///
+/// If no bridge exists yet and assets are available, connects the worklet.
+/// If another caller is already connecting, waits up to 5 seconds.
+/// After this returns, callers should read `worklet_bridge.get_untracked()`
+/// to obtain the bridge (may be `None` if connection failed or timed out).
+pub async fn ensure_worklet_connected(
+    ctx_rc: &Rc<RefCell<web_sys::AudioContext>>,
+    worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, leptos::reactive::owner::LocalStorage>,
+    worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, leptos::reactive::owner::LocalStorage>,
+    worklet_connecting: RwSignal<bool>,
+    sf2_presets: RwSignal<Vec<SF2Preset>, leptos::reactive::owner::LocalStorage>,
+) {
+    if worklet_bridge.get_untracked().is_some() {
+        return;
+    }
+
+    if !worklet_connecting.get_untracked()
+        && let Some(assets) = worklet_assets.get_untracked()
+    {
+        worklet_connecting.set(true);
+        match connect_worklet(ctx_rc, &assets).await {
+            Ok((bridge, presets)) => {
+                let bridge_rc = Rc::new(RefCell::new(bridge));
+                worklet_bridge.set(Some(bridge_rc));
+                sf2_presets.set(presets);
+            }
+            Err(e) => {
+                log::warn!("SoundFont worklet connect failed (oscillator fallback): {e}");
+            }
+        }
+        worklet_connecting.set(false);
+        return;
+    }
+
+    // Another caller is connecting — wait with timeout
+    let mut wait_iters = 0u32;
+    while worklet_connecting.get_untracked() {
+        wait_iters += 1;
+        if wait_iters > 100 {
+            log::warn!("Worklet connection wait timed out after 5s");
+            return;
+        }
+        gloo_timers::future::TimeoutFuture::new(50).await;
+    }
+}
+
 /// Wait for a specific message type from the worklet port.
 /// Returns the message data JsValue on success.
 async fn wait_for_worklet_message(

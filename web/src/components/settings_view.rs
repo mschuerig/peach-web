@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use gloo_timers::future::TimeoutFuture;
@@ -8,15 +8,15 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::audio_context::AudioContextManager;
-use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
+use crate::adapters::audio_soundfont::SF2Preset;
 use crate::adapters::csv_export_import;
 use crate::adapters::csv_export_import::{ImportExportStatus, ResetStatus};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
-use crate::adapters::note_player::{create_note_player, UnifiedNotePlayer};
-use crate::app::{connect_worklet, AudioNeedsGesture, SoundFontLoadStatus, WorkletAssets, WorkletConnecting};
-use domain::ports::{NotePlayer, UserSettings};
-use domain::types::{AmplitudeDB, DetunedMIDINote, Frequency, MIDINote, MIDIVelocity, NoteDuration};
+use crate::adapters::sound_preview::SoundPreview;
+use crate::app::{AudioNeedsGesture, SoundFontLoadStatus, WorkletAssets, WorkletConnecting};
+use domain::ports::UserSettings;
+use domain::types::{DetunedMIDINote, Frequency, MIDINote};
 use domain::{
     DirectedInterval, Direction, Interval, PerceptualProfile, ThresholdTimeline, TrendAnalyzer,
     TuningSystem,
@@ -163,54 +163,42 @@ pub fn SettingsView() -> impl IntoView {
     let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
         use_context().expect("db_store not provided");
 
-    // Sound source preview state
+    // Sound source preview
     let audio_ctx_manager: SendWrapper<Rc<RefCell<AudioContextManager>>> =
         use_context().expect("AudioContextManager not provided");
-    let worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, LocalStorage> =
-        use_context().expect("worklet_bridge not provided");
     let AudioNeedsGesture(audio_needs_gesture) =
         use_context().expect("AudioNeedsGesture not provided");
     let worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, LocalStorage> =
         use_context().expect("worklet_assets not provided");
     let WorkletConnecting(worklet_connecting) =
         use_context().expect("WorkletConnecting not provided");
-    let preview_playing = RwSignal::new(false);
-    let preview_player: SendWrapper<Rc<RefCell<Option<UnifiedNotePlayer>>>> =
-        SendWrapper::new(Rc::new(RefCell::new(None)));
-    let timer_cancelled: SendWrapper<Rc<Cell<bool>>> =
-        SendWrapper::new(Rc::new(Cell::new(false)));
+    let worklet_bridge = use_context().expect("worklet_bridge not provided");
+    let preview = SendWrapper::new(SoundPreview::new(
+        PREVIEW_DURATION_SECS,
+        Rc::clone(&*audio_ctx_manager),
+        audio_needs_gesture,
+        worklet_bridge,
+        worklet_assets,
+        worklet_connecting,
+        sf2_presets,
+    ));
 
     // Stop preview on sound source change (Task 4)
-    let player_for_effect = Rc::clone(&*preview_player);
-    let cancel_for_effect = Rc::clone(&*timer_cancelled);
-    let player_for_effect = SendWrapper::new(player_for_effect);
-    let cancel_for_effect = SendWrapper::new(cancel_for_effect);
+    let preview_for_effect = SendWrapper::new((*preview).clone());
     Effect::new(move |prev: Option<String>| {
         let current = sound_source.get();
         if let Some(prev_val) = prev
             && prev_val != current
-            && preview_playing.get_untracked()
         {
-            if let Some(player) = player_for_effect.borrow().as_ref() {
-                player.stop_all();
-            }
-            cancel_for_effect.set(true);
-            preview_playing.set(false);
+            preview_for_effect.stop();
         }
         current
     });
 
     // Stop preview on navigation away (Task 5)
-    let player_for_cleanup = SendWrapper::new(Rc::clone(&*preview_player));
-    let cancel_for_cleanup = SendWrapper::new(Rc::clone(&*timer_cancelled));
+    let preview_for_cleanup = SendWrapper::new((*preview).clone());
     on_cleanup(move || {
-        if preview_playing.get_untracked() {
-            if let Some(player) = player_for_cleanup.borrow().as_ref() {
-                player.stop_all();
-            }
-            cancel_for_cleanup.set(true);
-            preview_playing.set(false);
-        }
+        preview_for_cleanup.stop();
     });
 
     let dialog_ref = NodeRef::<leptos::html::Dialog>::new();
@@ -460,9 +448,8 @@ pub fn SettingsView() -> impl IntoView {
                                 <span class="text-sm text-gray-400 dark:text-gray-500 italic">"Loading sounds\u{2026}"</span>
                             }.into_any(),
                             _ => {
-                                let player_for_click = Rc::clone(&*preview_player);
-                                let cancel_for_click = Rc::clone(&*timer_cancelled);
-                                let ctx_for_click = Rc::clone(&*audio_ctx_manager);
+                                let preview_for_click = (*preview).clone();
+                                let preview_playing = preview.playing_signal();
                                 view! {
                                     <div class="flex items-center gap-2">
                                         <select
@@ -492,91 +479,13 @@ pub fn SettingsView() -> impl IntoView {
                                             aria-label=move || if preview_playing.get() { "Stop preview" } else { "Preview sound" }
                                             class="min-h-[34px] min-w-[34px] flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                                             on:click=move |_| {
-                                                if preview_playing.get_untracked() {
-                                                    // Stop current preview
-                                                    if let Some(player) = player_for_click.borrow().as_ref() {
-                                                        player.stop_all();
-                                                    }
-                                                    cancel_for_click.set(true);
-                                                    preview_playing.set(false);
-                                                } else {
-                                                    // Ensure AudioContext exists and is running (must happen synchronously in user gesture)
-                                                    let ctx_rc = match ctx_for_click.borrow_mut().get_or_create() {
-                                                        Ok(ctx) => {
-                                                            let _ = ctx.borrow().resume();
-                                                            audio_needs_gesture.set(false);
-                                                            ctx
-                                                        }
-                                                        Err(e) => {
-                                                            log::error!("Failed to create AudioContext for preview: {e}");
-                                                            return;
-                                                        }
-                                                    };
-
-                                                    let source = sound_source.get_untracked();
-                                                    let player_for_spawn = player_for_click.clone();
-                                                    let cancel_for_spawn = cancel_for_click.clone();
-                                                    let ctx_manager_for_spawn = Rc::clone(&ctx_for_click);
-
-                                                    preview_playing.set(true);
-                                                    cancel_for_click.set(false);
-
-                                                    spawn_local(async move {
-                                                        // Connect worklet if SF2 selected but bridge not yet available
-                                                        if source.starts_with("sf2:")
-                                                            && worklet_bridge.get_untracked().is_none()
-                                                            && !worklet_connecting.get_untracked()
-                                                            && let Some(assets) = worklet_assets.get_untracked()
-                                                        {
-                                                            worklet_connecting.set(true);
-                                                            match connect_worklet(&ctx_rc, &assets).await {
-                                                                Ok((bridge, presets)) => {
-                                                                    let bridge_rc = Rc::new(RefCell::new(bridge));
-                                                                    worklet_bridge.set(Some(bridge_rc));
-                                                                    sf2_presets.set(presets);
-                                                                }
-                                                                Err(e) => {
-                                                                    log::warn!("SoundFont worklet connect failed (oscillator fallback): {e}");
-                                                                }
-                                                            }
-                                                            worklet_connecting.set(false);
-                                                        }
-
-                                                        // Wait for worklet connection if another view is connecting
-                                                        while worklet_connecting.get_untracked() {
-                                                            TimeoutFuture::new(50).await;
-                                                        }
-
-                                                        let bridge = worklet_bridge.get_untracked();
-                                                        let player = create_note_player(&source, ctx_manager_for_spawn, bridge);
-
-                                                        let pitch = reference_pitch.get_untracked();
-                                                        let frequency = TuningSystem::EqualTemperament.frequency(
-                                                            DetunedMIDINote::from(MIDINote::new(69)),
-                                                            Frequency::new(pitch),
-                                                        );
-
-                                                        if let Err(e) = player.play_for_duration(
-                                                            frequency,
-                                                            NoteDuration::new(PREVIEW_DURATION_SECS),
-                                                            MIDIVelocity::new(63),
-                                                            AmplitudeDB::new(0.0),
-                                                        ) {
-                                                            log::error!("Preview playback failed: {e}");
-                                                            preview_playing.set(false);
-                                                            return;
-                                                        }
-
-                                                        *player_for_spawn.borrow_mut() = Some(player);
-
-                                                        // Timer to reset UI state when preview finishes naturally
-                                                        let cancel_for_timer = cancel_for_spawn.clone();
-                                                        TimeoutFuture::new((PREVIEW_DURATION_SECS * 1000.0) as u32).await;
-                                                        if !cancel_for_timer.get() {
-                                                            preview_playing.set(false);
-                                                        }
-                                                    });
-                                                }
+                                                let source = sound_source.get_untracked();
+                                                let pitch = reference_pitch.get_untracked();
+                                                let frequency = TuningSystem::EqualTemperament.frequency(
+                                                    DetunedMIDINote::from(MIDINote::new(69)),
+                                                    Frequency::new(pitch),
+                                                );
+                                                preview_for_click.toggle(&source, frequency);
                                             }
                                         >
                                             {move || if preview_playing.get() {
