@@ -61,6 +61,59 @@ impl Interval {
         }
     }
 
+    /// Interval code for CSV export (iOS compatibility).
+    ///
+    /// Same as `short_label()` except Tritone returns `"A4"` (iOS CSV format).
+    pub fn csv_code(&self) -> &'static str {
+        match self {
+            Interval::Tritone => "A4",
+            other => other.short_label(),
+        }
+    }
+
+    /// Parse an interval code string back to an `Interval`.
+    ///
+    /// Accepts both `"A4"` and `"d5"` for tritone.
+    pub fn from_csv_code(code: &str) -> Option<Interval> {
+        match code {
+            "P1" => Some(Interval::Prime),
+            "m2" => Some(Interval::MinorSecond),
+            "M2" => Some(Interval::MajorSecond),
+            "m3" => Some(Interval::MinorThird),
+            "M3" => Some(Interval::MajorThird),
+            "P4" => Some(Interval::PerfectFourth),
+            "A4" | "d5" => Some(Interval::Tritone),
+            "P5" => Some(Interval::PerfectFifth),
+            "m6" => Some(Interval::MinorSixth),
+            "M6" => Some(Interval::MajorSixth),
+            "m7" => Some(Interval::MinorSeventh),
+            "M7" => Some(Interval::MajorSeventh),
+            "P8" => Some(Interval::Octave),
+            _ => None,
+        }
+    }
+
+    /// Human-readable display name (e.g. "Minor Second", "Perfect Fifth").
+    ///
+    /// Returns just the interval name without direction suffix.
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Interval::Prime => "Prime",
+            Interval::MinorSecond => "Minor Second",
+            Interval::MajorSecond => "Major Second",
+            Interval::MinorThird => "Minor Third",
+            Interval::MajorThird => "Major Third",
+            Interval::PerfectFourth => "Perfect Fourth",
+            Interval::Tritone => "Tritone",
+            Interval::PerfectFifth => "Perfect Fifth",
+            Interval::MinorSixth => "Minor Sixth",
+            Interval::MajorSixth => "Major Sixth",
+            Interval::MinorSeventh => "Minor Seventh",
+            Interval::MajorSeventh => "Major Seventh",
+            Interval::Octave => "Octave",
+        }
+    }
+
     /// Number of semitones in this interval.
     pub fn semitones(&self) -> u8 {
         *self as u8
@@ -72,7 +125,7 @@ impl Interval {
         Self::from_semitones(diff)
     }
 
-    fn from_semitones(semitones: u8) -> Result<Interval, DomainError> {
+    pub fn from_semitones(semitones: u8) -> Result<Interval, DomainError> {
         match semitones {
             0 => Ok(Interval::Prime),
             1 => Ok(Interval::MinorSecond),
@@ -253,6 +306,103 @@ mod tests {
         for (i, interval) in all.iter().enumerate() {
             assert_eq!(interval.semitones() as usize, i);
         }
+    }
+
+    #[test]
+    fn test_csv_code_all_intervals() {
+        let expected = [
+            (Interval::Prime, "P1"),
+            (Interval::MinorSecond, "m2"),
+            (Interval::MajorSecond, "M2"),
+            (Interval::MinorThird, "m3"),
+            (Interval::MajorThird, "M3"),
+            (Interval::PerfectFourth, "P4"),
+            (Interval::Tritone, "A4"),
+            (Interval::PerfectFifth, "P5"),
+            (Interval::MinorSixth, "m6"),
+            (Interval::MajorSixth, "M6"),
+            (Interval::MinorSeventh, "m7"),
+            (Interval::MajorSeventh, "M7"),
+            (Interval::Octave, "P8"),
+        ];
+        for (interval, code) in expected {
+            assert_eq!(interval.csv_code(), code, "wrong csv_code for {interval:?}");
+        }
+    }
+
+    #[test]
+    fn test_csv_code_tritone_differs_from_short_label() {
+        assert_eq!(Interval::Tritone.csv_code(), "A4");
+        assert_eq!(Interval::Tritone.short_label(), "d5");
+    }
+
+    #[test]
+    fn test_from_csv_code_all_values() {
+        let expected = [
+            ("P1", Interval::Prime),
+            ("m2", Interval::MinorSecond),
+            ("M2", Interval::MajorSecond),
+            ("m3", Interval::MinorThird),
+            ("M3", Interval::MajorThird),
+            ("P4", Interval::PerfectFourth),
+            ("A4", Interval::Tritone),
+            ("d5", Interval::Tritone),
+            ("P5", Interval::PerfectFifth),
+            ("m6", Interval::MinorSixth),
+            ("M6", Interval::MajorSixth),
+            ("m7", Interval::MinorSeventh),
+            ("M7", Interval::MajorSeventh),
+            ("P8", Interval::Octave),
+        ];
+        for (code, interval) in expected {
+            assert_eq!(Interval::from_csv_code(code), Some(interval), "code={code}");
+        }
+    }
+
+    #[test]
+    fn test_from_csv_code_invalid() {
+        assert_eq!(Interval::from_csv_code("X1"), None);
+        assert_eq!(Interval::from_csv_code(""), None);
+        assert_eq!(Interval::from_csv_code("p1"), None);
+    }
+
+    #[test]
+    fn test_csv_code_roundtrip_all_intervals() {
+        for interval in Interval::all_chromatic() {
+            let code = interval.csv_code();
+            let back = Interval::from_csv_code(code).unwrap();
+            assert_eq!(back, *interval, "roundtrip failed for {interval:?} -> {code}");
+        }
+    }
+
+    #[test]
+    fn test_display_name_all_intervals() {
+        let expected = [
+            (Interval::Prime, "Prime"),
+            (Interval::MinorSecond, "Minor Second"),
+            (Interval::MajorSecond, "Major Second"),
+            (Interval::MinorThird, "Minor Third"),
+            (Interval::MajorThird, "Major Third"),
+            (Interval::PerfectFourth, "Perfect Fourth"),
+            (Interval::Tritone, "Tritone"),
+            (Interval::PerfectFifth, "Perfect Fifth"),
+            (Interval::MinorSixth, "Minor Sixth"),
+            (Interval::MajorSixth, "Major Sixth"),
+            (Interval::MinorSeventh, "Minor Seventh"),
+            (Interval::MajorSeventh, "Major Seventh"),
+            (Interval::Octave, "Octave"),
+        ];
+        for (interval, name) in expected {
+            assert_eq!(interval.display_name(), name, "wrong display_name for {interval:?}");
+        }
+    }
+
+    #[test]
+    fn test_from_semitones_public() {
+        assert_eq!(Interval::from_semitones(0).unwrap(), Interval::Prime);
+        assert_eq!(Interval::from_semitones(7).unwrap(), Interval::PerfectFifth);
+        assert_eq!(Interval::from_semitones(12).unwrap(), Interval::Octave);
+        assert!(Interval::from_semitones(13).is_err());
     }
 
     #[test]

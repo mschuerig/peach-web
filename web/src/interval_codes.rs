@@ -42,21 +42,10 @@ fn prime_up_set() -> HashSet<DirectedInterval> {
 
 /// Human-readable label for an interval with direction (e.g. "Perfect Fifth Up").
 pub fn interval_label(interval: Interval, direction: Direction) -> String {
-    let name = match interval {
-        Interval::Prime => return "Prime".to_string(),
-        Interval::MinorSecond => "Minor Second",
-        Interval::MajorSecond => "Major Second",
-        Interval::MinorThird => "Minor Third",
-        Interval::MajorThird => "Major Third",
-        Interval::PerfectFourth => "Perfect Fourth",
-        Interval::Tritone => "Tritone",
-        Interval::PerfectFifth => "Perfect Fifth",
-        Interval::MinorSixth => "Minor Sixth",
-        Interval::MajorSixth => "Major Sixth",
-        Interval::MinorSeventh => "Minor Seventh",
-        Interval::MajorSeventh => "Major Seventh",
-        Interval::Octave => "Octave",
-    };
+    let name = interval.display_name();
+    if interval == Interval::Prime {
+        return name.to_string();
+    }
     let dir = match direction {
         Direction::Up => "Up",
         Direction::Down => "Down",

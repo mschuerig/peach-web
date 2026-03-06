@@ -13,7 +13,8 @@ use super::progress_card::ProgressCard;
 pub fn ProfileView() -> impl IntoView {
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline context");
-    let is_profile_loaded: RwSignal<bool> = use_context().expect("is_profile_loaded context");
+    let crate::app::IsProfileLoaded(is_profile_loaded) =
+        use_context().expect("is_profile_loaded context");
 
     let ptl = progress_timeline.clone();
 

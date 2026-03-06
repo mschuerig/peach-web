@@ -56,7 +56,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         use_context().expect("worklet_assets not provided");
     let sf2_load_status: RwSignal<SoundFontLoadStatus> =
         use_context().expect("SoundFontLoadStatus not provided");
-    let worklet_connecting: RwSignal<bool> =
+    let crate::app::WorkletConnecting(worklet_connecting) =
         use_context().expect("worklet_connecting not provided");
 
     // Eagerly create AudioContext in synchronous render path.
@@ -454,7 +454,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         });
     }
 
-    let audio_needs_gesture: RwSignal<bool> =
+    let crate::app::AudioNeedsGesture(audio_needs_gesture) =
         use_context().expect("audio_needs_gesture context");
 
     // Start the async training loop
