@@ -1503,3 +1503,19 @@ Open-ended epic for bug fixes, reliability improvements, and incremental enhance
 4. Sound settings (instrument, duration, concert pitch, tuning system) are grouped in a single card
 5. All changes maintain keyboard accessibility and screen reader support
 6. Dark mode preserved, no regressions
+
+### Story 8.6: Pitch Comparison Feedback Icons
+
+**As a** user,
+**I want** to see a brief checkmark (correct) or X (incorrect) in a colored circle after each pitch comparison answer,
+**So that** the feedback is clean, consistent with the help text, and positioned like the pitch matching screen.
+
+**Acceptance Criteria:**
+1. Correct answers show a white checkmark inside a green circle in the top-right area of the header
+2. Incorrect answers show a white "X" inside a red circle in the top-right area of the header
+3. Feedback position mirrors the pitch matching view layout: stats left, feedback indicator right
+4. The help text already says "checkmark (correct) or X (incorrect)" and remains accurate
+5. The old thumbs-up/thumbs-down emoji feedback in the center row is removed
+6. Feedback timing and duration remain unchanged
+7. Dark mode preserved, no regressions
+8. Screen reader announcement behavior unchanged
