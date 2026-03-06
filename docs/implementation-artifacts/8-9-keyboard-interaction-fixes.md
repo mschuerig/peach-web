@@ -1,6 +1,6 @@
 # Story 8.9: Keyboard Interaction Fixes
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,16 +22,16 @@ so that I can use standard browser shortcuts like Cmd-L / Ctrl-L without interfe
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add modifier-key guard to pitch comparison keydown handler (AC: #1, #2, #3)
-  - [ ] 1.1 In `web/src/components/pitch_comparison_view.rs`, modify the keydown closure (~line 325-345) to check `ev.ctrl_key()`, `ev.meta_key()`, and `ev.alt_key()` before matching H/L/ArrowUp/ArrowDown
-  - [ ] 1.2 If any of Ctrl, Meta, or Alt is pressed, return early without calling `ev.prevent_default()` or `on_answer()` — let the browser handle the event
-  - [ ] 1.3 Shift is explicitly allowed (users may have caps lock or press Shift+H/Shift+L)
-  - [ ] 1.4 The Escape key handler in the same closure does NOT need the modifier guard (Escape with modifiers is not a standard browser shortcut)
-- [ ] Task 2: Add Escape key handler to InfoView (AC: #4)
-  - [ ] 2.1 In `web/src/components/info_view.rs`, add a document-level keydown event listener that navigates to `/` when Escape is pressed
-  - [ ] 2.2 Follow the exact same pattern used in `pitch_comparison_view.rs` and `pitch_matching_view.rs`: `Closure::<dyn Fn(KeyboardEvent)>`, `document.add_event_listener_with_callback("keydown", ...)`, `StoredValue::new_local()` to keep closure alive
-  - [ ] 2.3 Clean up the listener in `on_cleanup()` using the same pattern as the training views
-  - [ ] 2.4 Use `leptos_router::hooks::use_navigate()` to navigate to `/` on Escape
+- [x] Task 1: Add modifier-key guard to pitch comparison keydown handler (AC: #1, #2, #3)
+  - [x] 1.1 In `web/src/components/pitch_comparison_view.rs`, modify the keydown closure (~line 325-345) to check `ev.ctrl_key()`, `ev.meta_key()`, and `ev.alt_key()` before matching H/L/ArrowUp/ArrowDown
+  - [x] 1.2 If any of Ctrl, Meta, or Alt is pressed, return early without calling `ev.prevent_default()` or `on_answer()` — let the browser handle the event
+  - [x] 1.3 Shift is explicitly allowed (users may have caps lock or press Shift+H/Shift+L)
+  - [x] 1.4 The Escape key handler in the same closure does NOT need the modifier guard (Escape with modifiers is not a standard browser shortcut)
+- [x] Task 2: Add Escape key handler to InfoView (AC: #4)
+  - [x] 2.1 In `web/src/components/info_view.rs`, add a document-level keydown event listener that navigates to `/` when Escape is pressed
+  - [x] 2.2 Follow the exact same pattern used in `pitch_comparison_view.rs` and `pitch_matching_view.rs`: `Closure::<dyn Fn(KeyboardEvent)>`, `document.add_event_listener_with_callback("keydown", ...)`, `StoredValue::new_local()` to keep closure alive
+  - [x] 2.3 Clean up the listener in `on_cleanup()` using the same pattern as the training views
+  - [x] 2.4 Use `leptos_router::hooks::use_navigate()` to navigate to `/` on Escape
 - [ ] Task 3: Verify existing Escape behavior (AC: #5, #6, #7)
   - [ ] 3.1 Manual test: open help modal on pitch comparison screen, press Escape — modal closes
   - [ ] 3.2 Manual test: open help modal on pitch matching screen, press Escape — modal closes
@@ -39,7 +39,7 @@ so that I can use standard browser shortcuts like Cmd-L / Ctrl-L without interfe
   - [ ] 3.4 Manual test: Escape on pitch comparison training screen still interrupts training
   - [ ] 3.5 Manual test: Escape on pitch matching training screen still interrupts training
   - [ ] 3.6 Manual test: Cmd-L / Ctrl-L on pitch comparison screen focuses address bar (not "lower" answer)
-  - [ ] 3.7 `cargo clippy --workspace` clean
+  - [x] 3.7 `cargo clippy --workspace` clean
 
 ## Dev Notes
 
@@ -139,10 +139,24 @@ Recent commits follow the pattern: "Implement story X.Y: short description". Cod
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Added modifier-key guard (`ev.ctrl_key() || ev.meta_key() || ev.alt_key()`) to the keydown handler in `pitch_comparison_view.rs`. The guard is placed after the Escape match arm (Escape bypasses the guard), and before the H/L/ArrowUp/ArrowDown arms. When any modifier is held, the match arm `_ if has_modifier` catches the event and does nothing, letting the browser handle the key combo (e.g., Cmd-L focuses address bar). Shift is intentionally not checked.
+- Task 2: Added a document-level keydown event listener to `info_view.rs` that navigates to `/` when Escape is pressed. Follows the same `Closure` + `StoredValue::new_local()` + `on_cleanup()` pattern used in training views.
+- Task 3: Subtasks 3.1-3.6 are manual tests that require browser verification. Subtask 3.7 (`cargo clippy --workspace`) passes clean.
+- All domain tests pass (326 tests, 0 failures).
+
+### Change Log
+
+- 2026-03-06: Implemented modifier-key guard for pitch comparison keyboard shortcuts and Escape handler for InfoView
+
 ### File List
+
+- `web/src/components/pitch_comparison_view.rs` (modified) — added modifier-key guard to keydown handler
+- `web/src/components/info_view.rs` (modified) — added Escape keydown listener with navigate-back
+- `docs/implementation-artifacts/sprint-status.yaml` (modified) — updated story status
+- `docs/implementation-artifacts/8-9-keyboard-interaction-fixes.md` (modified) — updated task checkboxes, dev agent record

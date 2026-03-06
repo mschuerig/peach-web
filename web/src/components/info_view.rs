@@ -1,4 +1,8 @@
 use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::KeyboardEvent;
 
 use super::help_content::HelpContent;
 use super::nav_bar::NavBar;
@@ -6,6 +10,32 @@ use crate::help_sections::{INFO_ACKNOWLEDGMENTS, INFO_HELP};
 
 #[component]
 pub fn InfoView() -> impl IntoView {
+    // Escape key handler — navigates back to start page
+    let navigate = use_navigate();
+    let keydown_handler = Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
+        if ev.key() == "Escape" {
+            ev.prevent_default();
+            navigate("/", Default::default());
+        }
+    });
+
+    let document = web_sys::window().unwrap().document().unwrap();
+    let keydown_fn: JsValue = keydown_handler.as_ref().clone();
+    document
+        .add_event_listener_with_callback("keydown", keydown_fn.unchecked_ref())
+        .unwrap();
+
+    // Keep closure alive for component lifetime
+    let _keydown_closure = StoredValue::new_local(keydown_handler);
+
+    // Clean up listener on component unmount
+    on_cleanup(move || {
+        if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+            let _ = document
+                .remove_event_listener_with_callback("keydown", keydown_fn.unchecked_ref());
+        }
+    });
+
     view! {
         <div class="pt-4 pb-12">
             <NavBar title="Peach" back_href="/">

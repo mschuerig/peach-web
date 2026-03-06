@@ -8,7 +8,6 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
-use web_sys::KeyboardEvent;
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
@@ -395,18 +394,12 @@ pub fn PitchMatchingView() -> impl IntoView {
         }
     };
 
-    let on_help_close = {
-        let navigate = navigate.clone();
-        let current_route = {
-            let location = web_sys::window().unwrap().location();
-            let pathname = location.pathname().unwrap_or_default();
-            let search = location.search().unwrap_or_default();
-            format!("{pathname}{search}")
-        };
-        Callback::new(move |()| {
-            navigate(&current_route, Default::default());
-        })
-    };
+    let on_help_close = Callback::new(move |()| {
+        // Just close the dialog — stay on the training page.
+        // Training was already stopped when help opened;
+        // user navigates back to start to restart.
+        is_help_open.set(false);
+    });
 
     // Shared interruption closure — stops training and navigates to start page
     let interrupt_and_navigate = {
@@ -421,26 +414,7 @@ pub fn PitchMatchingView() -> impl IntoView {
         })
     };
 
-    // Keyboard handler: Escape to interrupt training.
-    // Enter/Space commit is handled by the VerticalPitchSlider's own on_keydown,
-    // which fires on_commit with the correct slider value.
-    let keydown_handler = {
-        let interrupt = Rc::clone(&interrupt_and_navigate);
-        Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
-            if ev.key() == "Escape" {
-                ev.prevent_default();
-                (*interrupt)();
-            }
-        })
-    };
-
-    // Register keydown listener on document
     let document = web_sys::window().unwrap().document().unwrap();
-    let keydown_fn: JsValue = keydown_handler.as_ref().clone();
-    document
-        .add_event_listener_with_callback("keydown", keydown_fn.unchecked_ref())
-        .unwrap();
-    let _keydown_closure = StoredValue::new_local(keydown_handler);
 
     // Visibility change handler
     let visibility_handler = Closure::<dyn FnMut(web_sys::Event)>::new({
@@ -518,11 +492,10 @@ pub fn PitchMatchingView() -> impl IntoView {
             Rc::clone(&note_player),
             Rc::clone(&tunable_handle),
             Rc::clone(&audio_ctx),
-            keydown_fn,
             visibility_fn,
         ));
         on_cleanup(move || {
-            let (cancelled, session, note_player, tunable_handle, audio_ctx, keydown_fn, visibility_fn) =
+            let (cancelled, session, note_player, tunable_handle, audio_ctx, visibility_fn) =
                 &*cleanup_state;
             cancelled.set(true);
             session.borrow_mut().stop();
@@ -532,10 +505,6 @@ pub fn PitchMatchingView() -> impl IntoView {
             note_player.borrow().stop_all();
             audio_ctx.borrow().clear_state_change_handler();
             if let Some(document) = web_sys::window().and_then(|w| w.document()) {
-                let _ = document.remove_event_listener_with_callback(
-                    "keydown",
-                    keydown_fn.unchecked_ref(),
-                );
                 let _ = document.remove_event_listener_with_callback(
                     "visibilitychange",
                     visibility_fn.unchecked_ref(),

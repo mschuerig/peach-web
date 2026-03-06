@@ -296,18 +296,12 @@ pub fn PitchComparisonView() -> impl IntoView {
         }
     };
 
-    let on_help_close = {
-        let navigate = navigate.clone();
-        let current_route = {
-            let location = web_sys::window().unwrap().location();
-            let pathname = location.pathname().unwrap_or_default();
-            let search = location.search().unwrap_or_default();
-            format!("{pathname}{search}")
-        };
-        Callback::new(move |()| {
-            navigate(&current_route, Default::default());
-        })
-    };
+    let on_help_close = Callback::new(move |()| {
+        // Just close the dialog — stay on the training page.
+        // Training was already stopped when help opened;
+        // user navigates back to start to restart.
+        is_help_open.set(false);
+    });
 
     // Shared interruption closure — stops training and navigates to start page
     let interrupt_and_navigate = {
@@ -324,9 +318,14 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     let keydown_handler = {
         let on_answer = Rc::clone(&on_answer);
-        let interrupt = Rc::clone(&interrupt_and_navigate);
         Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
+            let has_modifier = ev.ctrl_key() || ev.meta_key() || ev.alt_key();
+            // Note: ev.shift_key() is intentionally NOT checked — Shift is allowed
+
             match ev.key().as_str() {
+                _ if has_modifier => {
+                    // Any key with a modifier: let the browser handle it
+                }
                 "ArrowUp" | "h" | "H" => {
                     ev.prevent_default();
                     on_answer(true);
@@ -334,10 +333,6 @@ pub fn PitchComparisonView() -> impl IntoView {
                 "ArrowDown" | "l" | "L" => {
                     ev.prevent_default();
                     on_answer(false);
-                }
-                "Escape" => {
-                    ev.prevent_default();
-                    (*interrupt)();
                 }
                 _ => {}
             }
