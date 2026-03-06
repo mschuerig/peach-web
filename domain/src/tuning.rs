@@ -83,7 +83,7 @@ fn just_intonation_cents(interval: Interval) -> f64 {
         Interval::MajorSixth => 884.359,
         Interval::MinorSeventh => 1017.596,
         Interval::MajorSeventh => 1088.269,
-        Interval::Octave => 1200.0,
+        Interval::Octave => Cents::PER_OCTAVE,
     }
 }
 

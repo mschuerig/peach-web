@@ -1,6 +1,6 @@
 # Story 7.0b: Extract Constants and Thread Domain Types
 
-Status: review
+Status: done
 
 ## Story
 
@@ -159,3 +159,4 @@ All 6 tasks completed. 306 domain tests pass (291 unit + 15 integration). Zero c
 ## Change Log
 
 - 2026-03-06: Implemented all tasks — extracted magic numbers into named constants, threaded `Cents` type through profile and strategy APIs, updated all callers and tests
+- 2026-03-06: Code review — replaced remaining `1200.0` literal in `just_intonation_cents` (`tuning.rs:86`) with `Cents::PER_OCTAVE`; test literals left as-is (intentional independent verification); marked done
