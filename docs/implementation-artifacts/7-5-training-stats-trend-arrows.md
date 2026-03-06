@@ -1,6 +1,6 @@
 # Story 7.5: Training Stats with Trend Arrows
 
-Status: review
+Status: done
 
 ## Story
 
@@ -145,3 +145,4 @@ Depends on: Story 7.2 (ProgressTimeline for trend data).
 ## Change Log
 
 - 2026-03-06: Implemented story 7.5 — TrainingStats component with trend arrows on both training screens
+- 2026-03-06: Code review fixes — session best tracks all attempts (M1), remove duplicate aria-live (M2), re-export TrainingStats (L1), fix import paths (L1), rename latest_cent_offset to latest_cent_difference (L3), and mark done

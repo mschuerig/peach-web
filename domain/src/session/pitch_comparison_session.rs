@@ -204,18 +204,16 @@ impl PitchComparisonSession {
             timestamp,
         );
 
-        // Update session best cent difference (only on correct answers)
-        if completed.is_correct() {
-            let cent_diff = comparison.target_note().offset.magnitude();
-            match self.session_best_cent_difference {
-                Some(best) if cent_diff < best => {
-                    self.session_best_cent_difference = Some(cent_diff);
-                }
-                None => {
-                    self.session_best_cent_difference = Some(cent_diff);
-                }
-                _ => {}
+        // Update session best cent difference (all attempts, not just correct)
+        let cent_diff = comparison.target_note().offset.magnitude();
+        match self.session_best_cent_difference {
+            Some(best) if cent_diff < best => {
+                self.session_best_cent_difference = Some(cent_diff);
             }
+            None => {
+                self.session_best_cent_difference = Some(cent_diff);
+            }
+            _ => {}
         }
 
         self.is_last_answer_correct = completed.is_correct();
@@ -874,18 +872,16 @@ mod tests {
     // --- Session best tracking ---
 
     #[test]
-    fn test_session_best_only_updates_on_correct() {
+    fn test_session_best_updates_on_all_answers() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
 
-        // Get target direction for correct answer
-        let data = session.current_playback_data().unwrap();
-        let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
-
         session.on_reference_note_finished();
         session.on_target_note_finished();
-        // Answer correctly
-        session.handle_answer(is_higher, "2026-03-03T14:00:00Z".to_string());
+        // Answer incorrectly — session best should still update
+        let data = session.current_playback_data().unwrap();
+        let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
+        session.handle_answer(!is_higher, "2026-03-03T14:00:00Z".to_string());
         assert!(session.session_best_cent_difference().is_some());
     }
 

@@ -34,7 +34,7 @@ pub fn TrainingStats(
     trend: Signal<Option<Trend>>,
 ) -> impl IntoView {
     view! {
-        <div class="text-left mb-4" aria-live="polite">
+        <div class="text-left mb-4">
             // Latest value
             <div
                 class=move || {

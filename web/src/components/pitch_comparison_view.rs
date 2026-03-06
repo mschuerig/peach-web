@@ -16,7 +16,7 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
 use crate::bridge::{DataStoreObserver, ProfileObserver, ProgressTimelineObserver, TimelineObserver, TrendObserver};
-use crate::components::training_stats::TrainingStats;
+use crate::components::TrainingStats;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{PitchComparisonObserver, NotePlayer};
 use domain::types::{AmplitudeDB, MIDIVelocity};
@@ -110,7 +110,7 @@ pub fn PitchComparisonView() -> impl IntoView {
     };
 
     // Training stats signals
-    let latest_cent_offset: RwSignal<Option<f64>> = RwSignal::new(None);
+    let latest_cent_difference: RwSignal<Option<f64>> = RwSignal::new(None);
     let stats_session_best: RwSignal<Option<f64>> = RwSignal::new(None);
     let stats_trend: RwSignal<Option<Trend>> = RwSignal::new(None);
 
@@ -209,7 +209,7 @@ pub fn PitchComparisonView() -> impl IntoView {
             // Update training stats signals
             {
                 let s = session.borrow();
-                latest_cent_offset.set(s.last_cent_difference());
+                latest_cent_difference.set(s.last_cent_difference());
                 stats_session_best.set(s.session_best_cent_difference());
             }
             stats_trend.set(progress_timeline.borrow().trend(training_mode));
@@ -568,7 +568,7 @@ pub fn PitchComparisonView() -> impl IntoView {
 
             // Training stats
             <TrainingStats
-                latest_value=latest_cent_offset.into()
+                latest_value=latest_cent_difference.into()
                 session_best=stats_session_best.into()
                 trend=stats_trend.into()
             />
