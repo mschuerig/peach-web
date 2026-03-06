@@ -16,7 +16,7 @@ use crate::adapters::audio_context::AudioContextManager;
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
-    ComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
+    PitchComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
 use domain::types::MIDINote;
 use domain::{PerceptualProfile, ThresholdTimeline, TrendAnalyzer};
@@ -54,7 +54,7 @@ pub fn App() -> impl IntoView {
             Ok(store) => {
                 let store = Rc::new(store);
 
-                match store.fetch_all_comparisons().await {
+                match store.fetch_all_pitch_comparisons().await {
                     Ok(records) => {
                         let mut prof = profile_for_hydration.borrow_mut();
                         let mut trend = trend_for_hydration.borrow_mut();
@@ -182,7 +182,7 @@ pub fn App() -> impl IntoView {
                         }
                     }>
                         <Route path=path!("/") view=StartPage />
-                        <Route path=path!("/training/comparison") view=ComparisonView />
+                        <Route path=path!("/training/comparison") view=PitchComparisonView />
                         <Route path=path!("/training/pitch-matching") view=PitchMatchingView />
                         <Route path=path!("/profile") view=ProfileView />
                         <Route path=path!("/settings") view=SettingsView />

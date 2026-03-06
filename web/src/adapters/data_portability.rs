@@ -6,7 +6,7 @@ use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
 use domain::portability::{
     from_interval_code, midi_note_name, to_interval_code, truncate_timestamp_to_second,
 };
-use domain::records::{ComparisonRecord, PitchMatchingRecord};
+use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
 
 use super::indexeddb_store::IndexedDbStore;
 
@@ -15,7 +15,7 @@ const CSV_HEADER: &str = "trainingType,timestamp,referenceNote,referenceNoteName
 /// Result of parsing an import CSV file.
 #[derive(Clone)]
 pub struct ParsedImportData {
-    pub comparisons: Vec<ComparisonRecord>,
+    pub pitch_comparisons: Vec<PitchComparisonRecord>,
     pub pitch_matchings: Vec<PitchMatchingRecord>,
     pub warnings: Vec<String>,
 }
@@ -30,10 +30,10 @@ pub struct MergeResult {
 
 /// Export all training data as a CSV file download.
 pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
-    let comparisons = store
-        .fetch_all_comparisons()
+    let pitch_comparisons = store
+        .fetch_all_pitch_comparisons()
         .await
-        .map_err(|e| format!("Failed to fetch comparisons: {e:?}"))?;
+        .map_err(|e| format!("Failed to fetch pitch comparisons: {e:?}"))?;
     let pitch_matchings = store
         .fetch_all_pitch_matchings()
         .await
@@ -45,12 +45,12 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
 
     // Collect all records with timestamps for chronological sorting
     enum Record<'a> {
-        Comparison(&'a ComparisonRecord),
+        Comparison(&'a PitchComparisonRecord),
         PitchMatching(&'a PitchMatchingRecord),
     }
 
-    let mut all_records: Vec<Record> = Vec::with_capacity(comparisons.len() + pitch_matchings.len());
-    for r in &comparisons {
+    let mut all_records: Vec<Record> = Vec::with_capacity(pitch_comparisons.len() + pitch_matchings.len());
+    for r in &pitch_comparisons {
         all_records.push(Record::Comparison(r));
     }
     for r in &pitch_matchings {
@@ -161,7 +161,7 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
         return Err("Invalid file format: header row does not match expected columns".to_string());
     }
 
-    let mut comparisons = Vec::new();
+    let mut pitch_comparisons = Vec::new();
     let mut pitch_matchings = Vec::new();
     let mut warnings = Vec::new();
     let mut has_data = false;
@@ -184,7 +184,7 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
         match training_type {
             "comparison" => {
                 match parse_comparison_row(&fields, row_num) {
-                    Ok(record) => comparisons.push(record),
+                    Ok(record) => pitch_comparisons.push(record),
                     Err(msg) => warnings.push(msg),
                 }
             }
@@ -207,13 +207,13 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
     }
 
     Ok(ParsedImportData {
-        comparisons,
+        pitch_comparisons,
         pitch_matchings,
         warnings,
     })
 }
 
-fn parse_comparison_row(fields: &[&str], row_num: usize) -> Result<ComparisonRecord, String> {
+fn parse_comparison_row(fields: &[&str], row_num: usize) -> Result<PitchComparisonRecord, String> {
     let timestamp = fields[1].to_string();
     let reference_note: u8 = fields[2]
         .parse()
@@ -235,7 +235,7 @@ fn parse_comparison_row(fields: &[&str], row_num: usize) -> Result<ComparisonRec
         }
     };
 
-    Ok(ComparisonRecord {
+    Ok(PitchComparisonRecord {
         reference_note,
         target_note,
         cent_offset,
@@ -289,9 +289,9 @@ pub async fn import_replace(
         .await
         .map_err(|e| format!("Failed to delete existing data: {e:?}"))?;
 
-    for record in &data.comparisons {
+    for record in &data.pitch_comparisons {
         store
-            .save_comparison(record)
+            .save_pitch_comparison(record)
             .await
             .map_err(|e| format!("Failed to save comparison: {e:?}"))?;
     }
@@ -303,7 +303,7 @@ pub async fn import_replace(
             .map_err(|e| format!("Failed to save pitch matching: {e:?}"))?;
     }
 
-    Ok(data.comparisons.len() + data.pitch_matchings.len())
+    Ok(data.pitch_comparisons.len() + data.pitch_matchings.len())
 }
 
 /// Import records in merge mode: skip duplicates based on timestamp+type comparison.
@@ -313,11 +313,11 @@ pub async fn import_merge(
     data: &ParsedImportData,
 ) -> Result<MergeResult, String> {
     // Build sets of existing timestamps (truncated to second) per type
-    let existing_comparisons = store
-        .fetch_all_comparisons()
+    let existing_pitch_comparisons = store
+        .fetch_all_pitch_comparisons()
         .await
-        .map_err(|e| format!("Failed to fetch comparisons: {e:?}"))?;
-    let mut existing_comparison_ts: HashSet<String> = existing_comparisons
+        .map_err(|e| format!("Failed to fetch pitch comparisons: {e:?}"))?;
+    let mut existing_pitch_comparison_ts: HashSet<String> = existing_pitch_comparisons
         .iter()
         .map(|r| truncate_timestamp_to_second(&r.timestamp))
         .collect();
@@ -338,16 +338,16 @@ pub async fn import_merge(
         pitch_matching_skipped: 0,
     };
 
-    for record in &data.comparisons {
+    for record in &data.pitch_comparisons {
         let ts = truncate_timestamp_to_second(&record.timestamp);
-        if existing_comparison_ts.contains(&ts) {
+        if existing_pitch_comparison_ts.contains(&ts) {
             result.comparison_skipped += 1;
         } else {
             store
-                .save_comparison(record)
+                .save_pitch_comparison(record)
                 .await
                 .map_err(|e| format!("Failed to save comparison: {e:?}"))?;
-            existing_comparison_ts.insert(ts);
+            existing_pitch_comparison_ts.insert(ts);
             result.comparison_imported += 1;
         }
     }

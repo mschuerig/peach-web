@@ -1,4 +1,4 @@
-mod comparison_view;
+mod pitch_comparison_view;
 mod info_view;
 mod page_nav;
 mod pitch_matching_view;
@@ -9,7 +9,7 @@ mod profile_visualization;
 mod settings_view;
 mod start_page;
 
-pub use comparison_view::ComparisonView;
+pub use pitch_comparison_view::PitchComparisonView;
 pub use info_view::InfoView;
 pub use pitch_matching_view::PitchMatchingView;
 // VerticalPitchSlider is used internally by PitchMatchingView via crate::components::pitch_slider

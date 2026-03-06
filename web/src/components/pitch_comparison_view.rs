@@ -17,10 +17,10 @@ use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
 use crate::bridge::{DataStoreObserver, ProfileObserver, TimelineObserver, TrendObserver};
 use crate::interval_codes::{interval_label, parse_intervals_param};
-use domain::ports::{ComparisonObserver, NotePlayer};
+use domain::ports::{PitchComparisonObserver, NotePlayer};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
-    ComparisonSession, ComparisonSessionState, Interval, PerceptualProfile, ThresholdTimeline,
+    PitchComparisonSession, PitchComparisonSessionState, Interval, PerceptualProfile, ThresholdTimeline,
     TrendAnalyzer, FEEDBACK_DURATION_SECS,
 };
 use leptos::reactive::owner::LocalStorage;
@@ -29,7 +29,7 @@ use leptos_router::hooks::use_query_map;
 const POLL_INTERVAL_MS: u32 = 50;
 
 #[component]
-pub fn ComparisonView() -> impl IntoView {
+pub fn PitchComparisonView() -> impl IntoView {
     let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
         use_context().expect("PerceptualProfile not provided");
     let audio_ctx: SendWrapper<Rc<RefCell<AudioContextManager>>> =
@@ -74,14 +74,14 @@ pub fn ComparisonView() -> impl IntoView {
     // Build observers list — DataStoreObserver holds the signal and checks
     // store availability on each call, so it works even if IndexedDB
     // opens after ComparisonView mounts.
-    let observers: Vec<Box<dyn ComparisonObserver>> = vec![
+    let observers: Vec<Box<dyn PitchComparisonObserver>> = vec![
         Box::new(ProfileObserver::new(Rc::clone(&profile))),
         Box::new(TrendObserver::new(Rc::clone(&trend_analyzer))),
         Box::new(TimelineObserver::new(Rc::clone(&timeline))),
         Box::new(DataStoreObserver::new(db_store, storage_error)),
     ];
 
-    let session = Rc::new(RefCell::new(ComparisonSession::new(
+    let session = Rc::new(RefCell::new(PitchComparisonSession::new(
         Rc::clone(&profile),
         observers,
         vec![],
@@ -106,7 +106,7 @@ pub fn ComparisonView() -> impl IntoView {
 
     // Sync all UI signals from session state — extracted for readability
     fn sync_session_to_signals(
-        session: &RefCell<ComparisonSession>,
+        session: &RefCell<PitchComparisonSession>,
         show_feedback: RwSignal<bool>,
         is_last_correct: RwSignal<bool>,
         buttons_enabled: RwSignal<bool>,
@@ -119,8 +119,8 @@ pub fn ComparisonView() -> impl IntoView {
         is_last_correct.set(s.is_last_answer_correct());
         let state = s.state();
         buttons_enabled.set(
-            state == ComparisonSessionState::PlayingTargetNote
-                || state == ComparisonSessionState::AwaitingAnswer,
+            state == PitchComparisonSessionState::PlayingTargetNote
+                || state == PitchComparisonSessionState::AwaitingAnswer,
         );
         if s.show_feedback() {
             sr_announcement.set(if s.is_last_answer_correct() {
@@ -175,8 +175,8 @@ pub fn ComparisonView() -> impl IntoView {
                 return;
             }
             let state = session.borrow().state();
-            if state != ComparisonSessionState::PlayingTargetNote
-                && state != ComparisonSessionState::AwaitingAnswer
+            if state != PitchComparisonSessionState::PlayingTargetNote
+                && state != PitchComparisonSessionState::AwaitingAnswer
             {
                 log::info!("User pressed {answer_str} — ignored (state: {state:?})");
                 return;
@@ -441,7 +441,7 @@ pub fn ComparisonView() -> impl IntoView {
                         break 'training;
                     }
                     // Detect early answer: answer handler transitions to ShowingFeedback
-                    if session.borrow().state() == ComparisonSessionState::ShowingFeedback {
+                    if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
                         break;
                     }
                     TimeoutFuture::new(POLL_INTERVAL_MS).await;
@@ -452,22 +452,22 @@ pub fn ComparisonView() -> impl IntoView {
                 }
 
                 // On early answer, stop target note audio immediately
-                if session.borrow().state() == ComparisonSessionState::ShowingFeedback {
+                if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
                     note_player.borrow().stop_all();
                 }
 
                 // Transition to AwaitingAnswer if no early answer was given
-                if session.borrow().state() == ComparisonSessionState::PlayingTargetNote {
+                if session.borrow().state() == PitchComparisonSessionState::PlayingTargetNote {
                     session.borrow_mut().on_target_note_finished();
                     sync();
                 }
 
                 // === Wait for answer if not already given ===
-                while session.borrow().state() != ComparisonSessionState::ShowingFeedback {
+                while session.borrow().state() != PitchComparisonSessionState::ShowingFeedback {
                     if cancelled.get() {
                         break 'training;
                     }
-                    if session.borrow().state() == ComparisonSessionState::Idle {
+                    if session.borrow().state() == PitchComparisonSessionState::Idle {
                         break 'training;
                     }
                     TimeoutFuture::new(POLL_INTERVAL_MS).await;
@@ -481,7 +481,7 @@ pub fn ComparisonView() -> impl IntoView {
                 }
 
                 // End feedback, generate next comparison
-                if session.borrow().state() == ComparisonSessionState::ShowingFeedback {
+                if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
                     session.borrow_mut().on_feedback_finished();
                     sync();
                 }

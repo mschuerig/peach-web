@@ -91,7 +91,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 **Component Architecture:**
 
-- Component functions use `PascalCase` (e.g. `fn StartPage()`, `fn ComparisonView()`)
+- Component functions use `PascalCase` (e.g. `fn StartPage()`, `fn PitchComparisonView()`)
 - Components receive signals as props via `#[component]` function parameters
 - No prop drilling beyond one level — use Leptos context providers for deeply nested data
 - One view component per route, composing smaller custom components
@@ -148,18 +148,18 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 | Element | Convention | Example |
 |---|---|---|
-| Types, structs, enums | `PascalCase` | `MIDINote`, `ComparisonSession` |
-| Functions, methods | `snake_case` | `next_comparison()`, `handle_answer()` |
+| Types, structs, enums | `PascalCase` | `MIDINote`, `PitchComparisonSession` |
+| Functions, methods | `snake_case` | `next_pitch_comparison()`, `handle_answer()` |
 | Variables, fields | `snake_case` | `reference_note`, `sample_count` |
 | Constants | `SCREAMING_SNAKE_CASE` | `FEEDBACK_DURATION`, `REFERENCE_MIDI_NOTE` |
 | Modules, files | `snake_case` | `tuning.rs`, `pitch_matching.rs` |
 | Enum variants | `PascalCase` | `PlayingReferenceNote`, `AwaitingAnswer` |
-| Leptos components | `PascalCase` functions | `fn StartPage()`, `fn ComparisonView()` |
+| Leptos components | `PascalCase` functions | `fn StartPage()`, `fn PitchComparisonView()` |
 
 **Domain Blueprint Fidelity (critical):**
 
 - Use EXACT type names from the domain blueprint — no renaming, no abbreviation
-- `MIDINote`, not `MidiNote` or `Note`. `DetunedMIDINote`, not `PitchOffset`. `CompletedComparison`, not `ComparisonResult`.
+- `MIDINote`, not `MidiNote` or `Note`. `DetunedMIDINote`, not `PitchOffset`. `CompletedPitchComparison`, not `ComparisonResult`.
 - The blueprint is the shared language between agents and documentation
 
 **Module Organization:**
@@ -216,7 +216,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 **Observer Contract:**
 
-- Signatures follow the blueprint exactly: `fn comparison_completed(&mut self, completed: &CompletedComparison)`
+- Signatures follow the blueprint exactly: `fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison)`
 - Observers take data by reference (`&`), not owned — the session owns the data
 - Observers must never panic — internal errors logged via `web_sys::console::warn_1()`
 - Observers must never return errors — fire-and-forget pattern
