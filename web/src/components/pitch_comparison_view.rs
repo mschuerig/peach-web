@@ -203,6 +203,10 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     // Cancellation flag shared between loop and event handlers
     let cancelled = Rc::new(Cell::new(false));
+    // Permanent exit flag — distinguishes real cancellation from help-pause
+    let terminated = Rc::new(Cell::new(false));
+    // Help modal pause — when true, training loop waits instead of exiting
+    let help_paused: RwSignal<bool> = RwSignal::new(false);
 
     // Answer handler — used by both buttons and keyboard
     // No feedback timer here — the main loop controls feedback timing.
@@ -260,10 +264,12 @@ pub fn PitchComparisonView() -> impl IntoView {
     // Navigation away handler — stops training before nav
     let on_nav_away = {
         let cancelled = Rc::clone(&cancelled);
+        let terminated = Rc::clone(&terminated);
         let session = Rc::clone(&session);
         let note_player = Rc::clone(&note_player);
         let sync = sync_signals.clone();
         move || {
+            terminated.set(true);
             cancelled.set(true);
             session.borrow_mut().stop();
             note_player.borrow().stop_all();
@@ -284,23 +290,18 @@ pub fn PitchComparisonView() -> impl IntoView {
     let is_help_open = RwSignal::new(false);
     let on_help_open = {
         let cancelled = Rc::clone(&cancelled);
-        let session = Rc::clone(&session);
         let note_player = Rc::clone(&note_player);
-        let sync = sync_signals.clone();
         move |_| {
+            help_paused.set(true);
             cancelled.set(true);
-            session.borrow_mut().stop();
             note_player.borrow().stop_all();
-            sync();
             is_help_open.set(true);
         }
     };
 
     let on_help_close = Callback::new(move |()| {
-        // Just close the dialog — stay on the training page.
-        // Training was already stopped when help opened;
-        // user navigates back to start to restart.
         is_help_open.set(false);
+        help_paused.set(false);
     });
 
     // Shared interruption closure — stops training and navigates to start page
@@ -423,6 +424,7 @@ pub fn PitchComparisonView() -> impl IntoView {
     {
         let cleanup_state = SendWrapper::new((
             Rc::clone(&cancelled),
+            Rc::clone(&terminated),
             Rc::clone(&session),
             Rc::clone(&note_player),
             Rc::clone(&audio_ctx),
@@ -430,9 +432,11 @@ pub fn PitchComparisonView() -> impl IntoView {
             visibility_fn,
         ));
         on_cleanup(move || {
-            let (cancelled, session, note_player, audio_ctx, keydown_fn, visibility_fn) =
+            let (cancelled, terminated, session, note_player, audio_ctx, keydown_fn, visibility_fn) =
                 &*cleanup_state;
+            terminated.set(true);
             cancelled.set(true);
+            help_paused.set(false);
             session.borrow_mut().stop();
             note_player.borrow().stop_all();
             audio_ctx.borrow().clear_state_change_handler();
@@ -460,6 +464,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         let session = Rc::clone(&session);
         let note_player = Rc::clone(&note_player);
         let cancelled = Rc::clone(&cancelled);
+        let terminated = Rc::clone(&terminated);
         let audio_ctx_for_loop = Rc::clone(&audio_ctx);
         let sync = sync_signals.clone();
         spawn_local(async move {
@@ -523,112 +528,132 @@ pub fn PitchComparisonView() -> impl IntoView {
                 );
             }
 
-            session.borrow_mut().start(intervals_from_query, &settings);
-            sync();
-            sr_announcement.set("Training started".into());
-
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;
 
-            'training: loop {
-                if cancelled.get() {
-                    break;
-                }
+            // Outer loop enables training restart after help modal close.
+            // Inner 'training loop breaks on cancelled; outer loop checks whether
+            // to restart (help_paused) or exit permanently (terminated).
+            'session: loop {
+                if terminated.get() { break; }
 
-                let data = match session.borrow().current_playback_data() {
-                    Some(data) => data,
-                    None => break,
-                };
-
-                let duration_ms = (data.duration.raw_value() * 1000.0) as u32;
-
-                // === PlayingReferenceNote phase (buttons disabled) ===
-                note_player.borrow().stop_all(); // Stop any lingering audio
-                if let Err(e) = note_player.borrow().play_for_duration(
-                    data.reference_frequency,
-                    data.duration,
-                    MIDIVelocity::new(63),
-                    AmplitudeDB::new(0.0),
-                ) {
-                    log::error!("Reference note playback failed: {e}");
-                    audio_error.set(Some("Audio playback failed".into()));
-                }
-                // Wait for reference note duration with responsive cancellation
-                let mut elapsed = 0u32;
-                while elapsed < duration_ms {
-                    if cancelled.get() {
-                        break 'training;
-                    }
-                    TimeoutFuture::new(POLL_INTERVAL_MS).await;
-                    elapsed += POLL_INTERVAL_MS;
-                }
-                if cancelled.get() {
-                    break;
-                }
-
-                // Transition: PlayingReferenceNote → PlayingTargetNote
-                session.borrow_mut().on_reference_note_finished();
+                session.borrow_mut().stop();
+                session.borrow_mut().start(intervals_from_query.clone(), &settings);
+                cancelled.set(false);
                 sync();
+                sr_announcement.set("Training started".into());
 
-                // === PlayingTargetNote phase (buttons enabled — early answer possible) ===
-                if let Err(e) = note_player.borrow().play_for_duration(
-                    data.target_frequency,
-                    data.duration,
-                    MIDIVelocity::new(63),
-                    data.target_amplitude_db,
-                ) {
-                    log::error!("Target note playback failed: {e}");
-                    audio_error.set(Some("Audio playback failed".into()));
-                }
-                // Wait for target note duration OR early answer
-                elapsed = 0;
-                while elapsed < duration_ms {
+                'training: loop {
                     if cancelled.get() {
-                        break 'training;
-                    }
-                    // Detect early answer: answer handler transitions to ShowingFeedback
-                    if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
                         break;
                     }
-                    TimeoutFuture::new(POLL_INTERVAL_MS).await;
-                    elapsed += POLL_INTERVAL_MS;
-                }
-                if cancelled.get() {
-                    break;
-                }
 
-                // On early answer, stop target note audio immediately
-                if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
-                    note_player.borrow().stop_all();
-                }
+                    let data = match session.borrow().current_playback_data() {
+                        Some(data) => data,
+                        None => break,
+                    };
 
-                // Transition to AwaitingAnswer if no early answer was given
-                if session.borrow().state() == PitchComparisonSessionState::PlayingTargetNote {
-                    session.borrow_mut().on_target_note_finished();
-                    sync();
-                }
+                    let duration_ms = (data.duration.raw_value() * 1000.0) as u32;
 
-                // === Wait for answer if not already given ===
-                while session.borrow().state() != PitchComparisonSessionState::ShowingFeedback {
+                    // === PlayingReferenceNote phase (buttons disabled) ===
+                    note_player.borrow().stop_all(); // Stop any lingering audio
+                    if let Err(e) = note_player.borrow().play_for_duration(
+                        data.reference_frequency,
+                        data.duration,
+                        MIDIVelocity::new(63),
+                        AmplitudeDB::new(0.0),
+                    ) {
+                        log::error!("Reference note playback failed: {e}");
+                        audio_error.set(Some("Audio playback failed".into()));
+                    }
+                    // Wait for reference note duration with responsive cancellation
+                    let mut elapsed = 0u32;
+                    while elapsed < duration_ms {
+                        if cancelled.get() {
+                            break 'training;
+                        }
+                        TimeoutFuture::new(POLL_INTERVAL_MS).await;
+                        elapsed += POLL_INTERVAL_MS;
+                    }
                     if cancelled.get() {
-                        break 'training;
+                        break;
                     }
-                    if session.borrow().state() == PitchComparisonSessionState::Idle {
-                        break 'training;
-                    }
-                    TimeoutFuture::new(POLL_INTERVAL_MS).await;
-                }
 
-                // === ShowingFeedback phase — main loop controls timing ===
-                sync(); // Ensure feedback indicator is visible
-                TimeoutFuture::new(feedback_ms).await;
-                if cancelled.get() {
-                    break;
-                }
-
-                // End feedback, generate next comparison
-                if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
-                    session.borrow_mut().on_feedback_finished();
+                    // Transition: PlayingReferenceNote → PlayingTargetNote
+                    session.borrow_mut().on_reference_note_finished();
                     sync();
+
+                    // === PlayingTargetNote phase (buttons enabled — early answer possible) ===
+                    if let Err(e) = note_player.borrow().play_for_duration(
+                        data.target_frequency,
+                        data.duration,
+                        MIDIVelocity::new(63),
+                        data.target_amplitude_db,
+                    ) {
+                        log::error!("Target note playback failed: {e}");
+                        audio_error.set(Some("Audio playback failed".into()));
+                    }
+                    // Wait for target note duration OR early answer
+                    elapsed = 0;
+                    while elapsed < duration_ms {
+                        if cancelled.get() {
+                            break 'training;
+                        }
+                        // Detect early answer: answer handler transitions to ShowingFeedback
+                        if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
+                            break;
+                        }
+                        TimeoutFuture::new(POLL_INTERVAL_MS).await;
+                        elapsed += POLL_INTERVAL_MS;
+                    }
+                    if cancelled.get() {
+                        break;
+                    }
+
+                    // On early answer, stop target note audio immediately
+                    if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
+                        note_player.borrow().stop_all();
+                    }
+
+                    // Transition to AwaitingAnswer if no early answer was given
+                    if session.borrow().state() == PitchComparisonSessionState::PlayingTargetNote {
+                        session.borrow_mut().on_target_note_finished();
+                        sync();
+                    }
+
+                    // === Wait for answer if not already given ===
+                    while session.borrow().state() != PitchComparisonSessionState::ShowingFeedback {
+                        if cancelled.get() {
+                            break 'training;
+                        }
+                        if session.borrow().state() == PitchComparisonSessionState::Idle {
+                            break 'training;
+                        }
+                        TimeoutFuture::new(POLL_INTERVAL_MS).await;
+                    }
+
+                    // === ShowingFeedback phase — main loop controls timing ===
+                    sync(); // Ensure feedback indicator is visible
+                    TimeoutFuture::new(feedback_ms).await;
+                    if cancelled.get() {
+                        break;
+                    }
+
+                    // End feedback, generate next comparison
+                    if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
+                        session.borrow_mut().on_feedback_finished();
+                        sync();
+                    }
+                }
+
+                // After 'training loop exits, decide: restart or exit
+                if !help_paused.get_untracked() {
+                    break 'session; // Real cancellation (nav, visibility, etc.)
+                }
+
+                // Help modal is open — wait for it to close, then restart
+                while help_paused.get_untracked() {
+                    if terminated.get() { break 'session; }
+                    TimeoutFuture::new(POLL_INTERVAL_MS).await;
                 }
             }
 
