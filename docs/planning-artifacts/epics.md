@@ -1460,3 +1460,18 @@ Open-ended epic for bug fixes, reliability improvements, and incremental enhance
 5. User sees a brief notification when note playback fails
 6. Diagnostic `[DIAG]` logs downgraded to `debug` level
 7. No regressions in pitch comparison or pitch matching modes
+
+### Story 8.3: SoundFont Loading UX
+
+**As a** user,
+**I want** the app to wait for my chosen SoundFont to load before I can start training,
+**So that** I always hear the sound I selected instead of an unexpected oscillator fallback.
+
+**Acceptance Criteria:**
+1. When the user's `sound_source` setting starts with `"sf2:"`, the Start Page training buttons are disabled until SoundFont assets have finished loading
+2. A loading indicator is visible on the Start Page while SoundFont assets are being fetched
+3. Once Phase 1 fetch completes successfully, training buttons become enabled and the loading indicator disappears
+4. If Phase 1 fetch fails, the app falls back to oscillator, enables training buttons, and shows a brief non-blocking notification
+5. When the user's `sound_source` is `"oscillator:sine"` (or any non-SF2 value), training buttons are enabled immediately
+6. On Firefox (and all browsers), the app shell and Start Page render immediately — the SF2 fetch does not block page rendering
+7. All existing training functionality continues to work — no regressions
