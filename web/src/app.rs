@@ -264,7 +264,7 @@ async fn fetch_worklet_assets() -> Result<WorkletAssets, String> {
     let wasm_response = JsFuture::from(
         web_sys::window()
             .ok_or("no window")?
-            .fetch_with_str("/soundfont/synth_worklet.wasm"),
+            .fetch_with_str("./soundfont/synth_worklet.wasm"),
     )
     .await
     .map_err(|e| format!("fetch synth WASM failed: {e:?}"))?;
@@ -286,7 +286,7 @@ async fn fetch_worklet_assets() -> Result<WorkletAssets, String> {
     let sf2_response = JsFuture::from(
         web_sys::window()
             .ok_or("no window")?
-            .fetch_with_str("/GeneralUser-GS.sf2"),
+            .fetch_with_str("./GeneralUser-GS.sf2"),
     )
     .await
     .map_err(|e| format!("fetch SF2 failed: {e:?}"))?;
@@ -321,7 +321,7 @@ pub async fn connect_worklet(
             .audio_worklet()
             .map_err(|e| format!("audioWorklet unavailable: {e:?}"))?;
         audio_worklet
-            .add_module("/soundfont/synth-processor.js?v=2")
+            .add_module("./soundfont/synth-processor.js?v=2")
             .map_err(|e| format!("addModule failed: {e:?}"))?
     };
     JsFuture::from(add_module_promise)
