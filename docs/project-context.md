@@ -193,7 +193,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 **Project Structure:**
 
-- Cargo workspace with two crates: `domain/` (pure Rust) and `web/` (Leptos + browser)
+- Cargo workspace with three crates: `domain/` (pure Rust), `web/` (Leptos + browser), and `synth-worklet/` (WASM AudioWorklet)
 - `index.html` at project root — Trunk entry point
 - `Trunk.toml` — build pipeline configuration
 - `input.css` — Tailwind directives, processed via Trunk build hook
@@ -202,7 +202,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 **Deployment:**
 
 - Static files from `dist/` uploaded to Apache on personal website
-- No CI/CD pipeline (deferred)
+- CI quality gate via GitHub Actions (`.github/workflows/ci.yml`): `cargo fmt --check`, `cargo clippy`, `cargo test -p domain` on push/PR to `main`
 - Manual browser testing for web crate behavior
 
 ### Critical Don't-Miss Rules
