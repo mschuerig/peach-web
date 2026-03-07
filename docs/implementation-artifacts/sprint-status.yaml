@@ -127,3 +127,8 @@ development_status:
   10-1-ci-quality-gate: done
   10-2-build-and-deploy-to-github-pages: done
   epic-10-retrospective: optional
+
+  # Epic 11: UI Polish & Sound Level
+  epic-11: in-progress
+  11-1-ui-consistency-and-sound-level: ready-for-dev
+  epic-11-retrospective: optional
