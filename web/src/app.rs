@@ -241,7 +241,7 @@ pub fn App() -> impl IntoView {
     }
 }
 
-/// Pre-fetched worklet assets (WASM module + SF2 data) stored for Phase 2 connection.
+/// Pre-fetched worklet assets (compiled WASM module + SF2 data) stored for Phase 2 connection.
 pub struct WorkletAssets {
     pub wasm_module: JsValue,
     pub sf2_buffer: JsValue,
@@ -249,9 +249,11 @@ pub struct WorkletAssets {
 
 /// Phase 1: Fetch and compile worklet assets without creating an AudioContext.
 ///
-/// This runs at app mount and does not require a user gesture.
+/// Compiles WASM on the main thread so the compiled Module can be sent to the
+/// AudioWorklet via postMessage. This is more compatible than compiling inside
+/// the worklet scope (recommended pattern for iOS Safari 16.4+).
 async fn fetch_worklet_assets() -> Result<WorkletAssets, String> {
-    // Fetch and compile the synth WASM module
+    // Fetch and compile the synth WASM module on the main thread
     let wasm_response = JsFuture::from(
         web_sys::window()
             .ok_or("no window")?
@@ -305,14 +307,14 @@ pub async fn connect_worklet(
     ctx_rc: &Rc<RefCell<web_sys::AudioContext>>,
     assets: &WorkletAssets,
 ) -> Result<(WorkletBridge, Vec<SF2Preset>), String> {
-    // Register processor JS via addModule
+    // Register processor JS via addModule (cache-busting query param for unhashed asset)
     let add_module_promise = {
         let ctx = ctx_rc.borrow();
         let audio_worklet = ctx
             .audio_worklet()
             .map_err(|e| format!("audioWorklet unavailable: {e:?}"))?;
         audio_worklet
-            .add_module("/soundfont/synth-processor.js")
+            .add_module("/soundfont/synth-processor.js?v=2")
             .map_err(|e| format!("addModule failed: {e:?}"))?
     };
     JsFuture::from(add_module_promise)
@@ -340,7 +342,7 @@ pub async fn connect_worklet(
         (node, port)
     };
 
-    // Wait for 'ready' message from worklet
+    // Wait for 'ready' message from worklet (after async WASM instantiation)
     let _ = wait_for_worklet_message(&port, "ready").await?;
 
     // Send SF2 data to worklet
@@ -388,6 +390,9 @@ pub async fn ensure_worklet_connected(
             }
             Err(e) => {
                 log::warn!("SoundFont worklet connect failed (oscillator fallback): {e}");
+                // Temporary: surface error on mobile where console is inaccessible
+                let _ = web_sys::window()
+                    .and_then(|w| w.alert_with_message(&format!("Worklet error: {e}")).ok());
             }
         }
         worklet_connecting.set(false);
