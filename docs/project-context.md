@@ -201,9 +201,18 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 **Deployment:**
 
-- Static files from `dist/` uploaded to Apache on personal website
-- CI quality gate via GitHub Actions (`.github/workflows/ci.yml`): `cargo fmt --check`, `cargo clippy`, `cargo test -p domain` on push/PR to `main`
+- GitHub Pages at `https://mschuerig.github.io/peach-web/` — deployed automatically via CI on push to `main`
+- CI pipeline (`.github/workflows/ci.yml`): `quality-gate` job (fmt, clippy, tests) → `build-deploy` job (Trunk build + deploy to Pages)
+- `trunk build --release --public-url /peach-web/` — the `--public-url` flag prefixes asset URLs but does NOT auto-insert a `<base>` tag (see Subpath Deployment below)
 - Manual browser testing for web crate behavior
+
+**Subpath Deployment (GitHub Pages):**
+
+- The app is served from `/peach-web/`, not root `/`. This requires three things to work:
+  1. `<base data-trunk-public-url/>` in `index.html` — Trunk replaces this with `<base href="/peach-web/">` at build time. Without it, the `<base>` tag is missing entirely. During local dev (`trunk serve`), it becomes `<base href="/">`.
+  2. `<Router base=base_path()>` in `app.rs` — reads the `<base href>` from the DOM and passes it to the Leptos Router so it strips the `/peach-web` prefix before matching routes. Without this, the router sees `/peach-web/` and falls through to the fallback.
+  3. `cp dist/index.html dist/404.html` after build — GitHub Pages serves `404.html` for unknown paths, enabling SPA deep-link routing (e.g. `/peach-web/profile`).
+- All runtime asset fetches in Rust code must use relative paths (`./soundfont/...`, `./GeneralUser-GS.sf2`), never root-absolute (`/soundfont/...`). Trunk only rewrites paths in HTML, not in compiled WASM. Relative paths resolve against the `<base href>` and work correctly under any base path.
 
 ### Critical Don't-Miss Rules
 
@@ -269,6 +278,9 @@ These patterns caused repeated failures. Check this section before implementing 
 | Worklet bridge assumed available | Bridge is `None` until first training view connects it | Check for `None` and connect on-demand (cold-start pattern) |
 | Guard logic created but not wired | Enum variant exists but fetch/action runs unconditionally | After creating a guard enum, grep for every call site and add the guard check |
 | Story tasks taken literally | Dev Notes say "no changes needed" but edge cases exist | Always ask: what are ALL entry paths? What state can signals be in? |
+| Root-absolute asset paths in Rust | Fetch calls like `/soundfont/foo.wasm` 404 on subpath deployments | Use relative paths (`./soundfont/foo.wasm`) — they resolve against `<base href>` |
+| Missing `<base data-trunk-public-url/>` | Trunk `--public-url` rewrites HTML asset URLs but does NOT insert a `<base>` tag | Add the tag to `index.html` — without it, router base and relative fetches break |
+| No `404.html` for GitHub Pages SPA | Direct navigation to deep routes (e.g. `/peach-web/profile`) returns GitHub's 404 | Copy `index.html` to `404.html` in build output |
 
 ## Implementation Edge-Case Checklist
 
