@@ -307,6 +307,18 @@ Challenge story Dev Notes: if they say "no changes needed" for a module, verify 
 
 After completing a code review, check whether any HIGH or MEDIUM finding reflects a repeatable pattern (not a one-off typo). Ask: "Would a different agent making a different change hit this same problem?" If yes, and the pattern is not already documented, add it to the Common Pitfalls table above.
 
+## Research-First Protocol
+
+Before writing code that uses an API, pattern, or browser feature you have not already used in this codebase, STOP and follow these steps:
+
+1. **Search the codebase first.** Use `Grep` to find existing usage of the type, function, or pattern. If there is a working example, follow it exactly.
+2. **Read project docs.** Check `project-context.md` (this file), `docs/planning-artifacts/architecture.md`, and `docs/ios-reference/domain-blueprint.md` for relevant rules or prior decisions.
+3. **Read upstream docs.** For Leptos, `web-sys`, `wasm-bindgen`, or any crate API, read the official documentation (use `WebFetch` on docs.rs or the crate's guide). Do not guess at API signatures, lifetime requirements, or behavioral contracts.
+4. **Search for known issues.** If the pattern involves browser APIs (Web Audio, IndexedDB, AudioWorklet) or WASM-specific constraints, use `WebSearch` to find authoritative examples and known pitfalls.
+5. **Only then write the implementation.** If after research you are still uncertain, state your uncertainty and ask the user before proceeding.
+
+**When to trigger:** Any time you think "I'm not sure how this works" or "let me try this and see." That impulse is your signal to research, not experiment. Trial-and-error wastes the user's time and often introduces secondary bugs.
+
 ## Debugging Protocol
 
 When a runtime bug appears during implementation, follow this protocol in order:
