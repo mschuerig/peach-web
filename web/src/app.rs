@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -13,6 +14,28 @@ use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::MessagePort;
 
 use crate::adapters::audio_context::AudioContextManager;
+
+/// Read the base path from the HTML `<base href>` tag injected by Trunk's `--public-url`.
+/// Returns empty string for root (local dev) and `"/peach-web"` on GitHub Pages.
+fn base_path() -> Cow<'static, str> {
+    let base = (|| {
+        let href = web_sys::window()?
+            .document()?
+            .query_selector("base[href]")
+            .ok()??
+            .get_attribute("href")?;
+        let trimmed = href.trim_end_matches('/');
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })();
+    match base {
+        Some(s) => Cow::Owned(s),
+        None => Cow::Borrowed(""),
+    }
+}
 
 // Newtype wrappers for RwSignal<bool> contexts — Leptos uses types for context
 // lookup, so multiple RwSignal<bool> values would shadow each other.
@@ -212,7 +235,7 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        <Router>
+        <Router base=base_path()>
 
             <a
                 href="#main-content"
