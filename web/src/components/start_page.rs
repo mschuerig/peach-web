@@ -9,9 +9,7 @@ use domain::{Interval, TrainingMode};
 
 fn interval_href(path: &str) -> String {
     let intervals = LocalStorageSettings::get_selected_intervals();
-    let has_non_prime = intervals
-        .iter()
-        .any(|di| di.interval != Interval::Prime);
+    let has_non_prime = intervals.iter().any(|di| di.interval != Interval::Prime);
     let code = if has_non_prime {
         encode_intervals(&intervals)
     } else {
@@ -68,8 +66,8 @@ pub fn StartPage() -> impl IntoView {
     let interval_comparison_href = interval_href("/training/comparison");
     let interval_pitch_matching_href = interval_href("/training/pitch-matching");
 
-    let sf2_status: RwSignal<SoundFontLoadStatus> = use_context()
-        .expect("SoundFontLoadStatus signal must be provided");
+    let sf2_status: RwSignal<SoundFontLoadStatus> =
+        use_context().expect("SoundFontLoadStatus signal must be provided");
 
     let can_start_training = Memo::new(move |_| {
         matches!(
@@ -83,7 +81,8 @@ pub fn StartPage() -> impl IntoView {
     // Auto-dismiss failure notification after 5 seconds
     let sf2_error_dismissed = RwSignal::new(false);
     Effect::new(move || {
-        if matches!(sf2_status.get(), SoundFontLoadStatus::Failed(_)) && !sf2_error_dismissed.get() {
+        if matches!(sf2_status.get(), SoundFontLoadStatus::Failed(_)) && !sf2_error_dismissed.get()
+        {
             let signal = sf2_error_dismissed;
             gloo_timers::callback::Timeout::new(5000, move || {
                 signal.set(true);

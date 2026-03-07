@@ -34,9 +34,8 @@ impl AudioContextManager {
             return Ok(Rc::clone(ctx));
         }
 
-        let ctx = AudioContext::new().map_err(|e| {
-            AudioError::EngineStartFailed(format!("{:?}", e))
-        })?;
+        let ctx =
+            AudioContext::new().map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
 
         log::debug!(
             "[DIAG] AudioContext created — state: {:?}, sampleRate: {}",
@@ -117,9 +116,7 @@ pub fn provide_audio_gesture(
 /// and awaits the promise. Returns `Err` if the context cannot be resumed.
 ///
 /// Free function because `&self` on AudioContextManager cannot be held across await.
-pub async fn ensure_running(
-    ctx_rc: &Rc<RefCell<AudioContext>>,
-) -> Result<(), AudioError> {
+pub async fn ensure_running(ctx_rc: &Rc<RefCell<AudioContext>>) -> Result<(), AudioError> {
     use web_sys::AudioContextState;
 
     let state = ctx_rc.borrow().state();

@@ -5,13 +5,14 @@ use std::rc::Rc;
 use rand::prelude::IndexedRandom;
 
 use crate::ports::{PitchComparisonObserver, Resettable, UserSettings};
-use crate::profile::PerceptualProfile;
 use crate::profile::PerceptualNote;
-use crate::strategy::{next_pitch_comparison, TrainingSettings, MIN_CENT_DIFFERENCE};
+use crate::profile::PerceptualProfile;
+use crate::strategy::{MIN_CENT_DIFFERENCE, TrainingSettings, next_pitch_comparison};
 use crate::training::{CompletedPitchComparison, PitchComparison};
 use crate::tuning::TuningSystem;
 use crate::types::{
-    AmplitudeDB, Cents, DetunedMIDINote, DirectedInterval, Frequency, MIDINote, NoteRange, NoteDuration,
+    AmplitudeDB, Cents, DetunedMIDINote, DirectedInterval, Frequency, MIDINote, NoteDuration,
+    NoteRange,
 };
 
 /// Feedback display duration in seconds.
@@ -120,9 +121,9 @@ impl PitchComparisonSession {
     }
 
     pub fn current_interval(&self) -> Option<DirectedInterval> {
-        self.current_comparison.as_ref().and_then(|c| {
-            DirectedInterval::between(c.reference_note(), c.target_note().note).ok()
-        })
+        self.current_comparison
+            .as_ref()
+            .and_then(|c| DirectedInterval::between(c.reference_note(), c.target_note().note).ok())
     }
 
     pub fn current_playback_data(&self) -> Option<PitchComparisonPlaybackData> {
@@ -141,7 +142,10 @@ impl PitchComparisonSession {
             PitchComparisonSessionState::Idle,
             "start() requires Idle state"
         );
-        assert!(!intervals.is_empty(), "start() requires at least one interval");
+        assert!(
+            !intervals.is_empty(),
+            "start() requires at least one interval"
+        );
 
         // Snapshot settings for the session
         self.session_intervals = intervals;
@@ -222,8 +226,16 @@ impl PitchComparisonSession {
         #[cfg(feature = "training-log")]
         log::info!(
             "Answer was {} (target was {})",
-            if completed.is_correct() { "\u{2713} CORRECT" } else { "\u{2717} WRONG" },
-            if comparison.is_target_higher() { "higher" } else { "lower" },
+            if completed.is_correct() {
+                "\u{2713} CORRECT"
+            } else {
+                "\u{2717} WRONG"
+            },
+            if comparison.is_target_higher() {
+                "higher"
+            } else {
+                "lower"
+            },
         );
 
         // Notify observers with panic isolation
@@ -315,7 +327,9 @@ impl PitchComparisonSession {
                 comparison.reference_note(),
                 comparison.target_note().note,
             )
-            .map_or("?".to_string(), |di| format!("{:?}{:?}", di.interval, di.direction));
+            .map_or("?".to_string(), |di| {
+                format!("{:?}{:?}", di.interval, di.direction)
+            });
             let tuning_str = match self.session_tuning_system {
                 TuningSystem::EqualTemperament => "ET",
                 TuningSystem::JustIntonation => "JI",
@@ -337,7 +351,9 @@ impl PitchComparisonSession {
     fn random_interval(&self) -> DirectedInterval {
         let intervals_vec: Vec<_> = self.session_intervals.iter().collect();
         let mut rng = rand::rng();
-        **intervals_vec.choose(&mut rng).expect("session_intervals must not be empty")
+        **intervals_vec
+            .choose(&mut rng)
+            .expect("session_intervals must not be empty")
     }
 
     fn notify_observers(&mut self, completed: &CompletedPitchComparison) {
@@ -475,12 +491,13 @@ mod tests {
         PitchComparisonSession::new(profile, vec![], vec![])
     }
 
-    fn create_session_with_observer()
-    -> (PitchComparisonSession, Rc<RefCell<Vec<CompletedPitchComparison>>>) {
+    fn create_session_with_observer() -> (
+        PitchComparisonSession,
+        Rc<RefCell<Vec<CompletedPitchComparison>>>,
+    ) {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (observer, calls) = MockObserver::new();
-        let session =
-            PitchComparisonSession::new(profile, vec![Box::new(observer)], vec![]);
+        let session = PitchComparisonSession::new(profile, vec![Box::new(observer)], vec![]);
         (session, calls)
     }
 
@@ -503,7 +520,10 @@ mod tests {
     fn test_start_transitions_to_playing_reference_note() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
-        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::PlayingReferenceNote
+        );
     }
 
     #[test]
@@ -549,7 +569,10 @@ mod tests {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
-        assert_eq!(session.state(), PitchComparisonSessionState::PlayingTargetNote);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::PlayingTargetNote
+        );
     }
 
     // --- AC5: TargetNote to AwaitingAnswer ---
@@ -572,7 +595,10 @@ mod tests {
         session.on_reference_note_finished();
         session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::ShowingFeedback
+        );
         assert!(session.show_feedback());
     }
 
@@ -585,7 +611,10 @@ mod tests {
         session.on_reference_note_finished();
         // Answer while still playing target note (early answer)
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::ShowingFeedback
+        );
     }
 
     // --- AC7: Feedback state ---
@@ -598,7 +627,10 @@ mod tests {
         session.on_target_note_finished();
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         session.on_feedback_finished();
-        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::PlayingReferenceNote
+        );
         assert!(!session.show_feedback());
         assert!(session.current_playback_data().is_some());
     }
@@ -614,11 +646,17 @@ mod tests {
 
         // Start → PlayingReferenceNote
         session.start(default_intervals(), &DefaultTestSettings);
-        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::PlayingReferenceNote
+        );
 
         // on_reference_note_finished → PlayingTargetNote
         session.on_reference_note_finished();
-        assert_eq!(session.state(), PitchComparisonSessionState::PlayingTargetNote);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::PlayingTargetNote
+        );
 
         // on_target_note_finished → AwaitingAnswer
         session.on_target_note_finished();
@@ -626,12 +664,18 @@ mod tests {
 
         // handle_answer → ShowingFeedback
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::ShowingFeedback
+        );
         assert!(session.show_feedback());
 
         // on_feedback_finished → PlayingReferenceNote (next cycle)
         session.on_feedback_finished();
-        assert_eq!(session.state(), PitchComparisonSessionState::PlayingReferenceNote);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::PlayingReferenceNote
+        );
         assert!(!session.show_feedback());
     }
 
@@ -758,10 +802,7 @@ mod tests {
 
         let mut session = PitchComparisonSession::new(
             profile,
-            vec![
-                Box::new(panicking_observer),
-                Box::new(normal_observer),
-            ],
+            vec![Box::new(panicking_observer), Box::new(normal_observer)],
             vec![],
         );
 
@@ -772,7 +813,10 @@ mod tests {
 
         // Normal observer should still receive the event despite panicking observer
         assert_eq!(normal_calls.borrow().len(), 1);
-        assert_eq!(session.state(), PitchComparisonSessionState::ShowingFeedback);
+        assert_eq!(
+            session.state(),
+            PitchComparisonSessionState::ShowingFeedback
+        );
     }
 
     // --- AC8: No loudness variation ---
@@ -819,9 +863,7 @@ mod tests {
     fn test_playback_data_amplitude_varies_when_configured() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let mut session = PitchComparisonSession::new(profile, vec![], vec![]);
-        let settings = LoudnessTestSettings {
-            vary_loudness: 0.5,
-        };
+        let settings = LoudnessTestSettings { vary_loudness: 0.5 };
         session.start(default_intervals(), &settings);
         let data = session.current_playback_data().unwrap();
         // With vary_loudness=0.5, max range is ±2.5 dB
@@ -897,10 +939,7 @@ mod tests {
                 data.target_frequency.raw_value() > data.reference_frequency.raw_value();
             session.on_reference_note_finished();
             session.on_target_note_finished();
-            session.handle_answer(
-                is_higher,
-                format!("2026-03-03T14:0{}:00Z", i),
-            );
+            session.handle_answer(is_higher, format!("2026-03-03T14:0{}:00Z", i));
             session.on_feedback_finished();
         }
 
@@ -976,8 +1015,7 @@ mod tests {
     fn test_reset_training_data_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (resettable, count) = MockResettable::new();
-        let mut session =
-            PitchComparisonSession::new(profile, vec![], vec![Box::new(resettable)]);
+        let mut session = PitchComparisonSession::new(profile, vec![], vec![Box::new(resettable)]);
         session.reset_training_data();
         assert_eq!(count.get(), 1);
     }

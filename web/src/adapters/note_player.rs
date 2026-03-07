@@ -89,8 +89,7 @@ pub fn create_note_player(
             // Parse bank:preset from "sf2:<bank>:<preset>"
             let parts: Vec<&str> = s.splitn(3, ':').collect();
             if let (Some(bank_str), Some(preset_str)) = (parts.get(1), parts.get(2))
-                && let (Ok(bank), Ok(preset)) =
-                    (bank_str.parse::<u32>(), preset_str.parse::<u8>())
+                && let (Ok(bank), Ok(preset)) = (bank_str.parse::<u32>(), preset_str.parse::<u8>())
                 && let Err(e) = bridge.borrow().send_select_program(bank, preset)
             {
                 log::warn!("Failed to select SoundFont program: {e}");

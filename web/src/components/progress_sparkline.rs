@@ -10,7 +10,7 @@ fn trend_stroke_color(trend: Option<Trend>) -> &'static str {
     match trend {
         Some(Trend::Improving) => "#16a34a", // green-600
         Some(Trend::Stable) => "#f59e0b",    // amber-500
-        _ => "#9ca3af",                       // gray-400
+        _ => "#9ca3af",                      // gray-400
     }
 }
 

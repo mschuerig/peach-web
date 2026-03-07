@@ -10,9 +10,7 @@ const NOTE_NAMES: [&str; 12] = [
 ];
 
 /// A MIDI note number (0-127). Panics on out-of-range (programming error invariant).
-#[derive(
-    Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MIDINote {
     raw_value: u8,
 }
@@ -68,9 +66,7 @@ impl MIDINote {
 }
 
 /// MIDI velocity (1-127). Panics on out-of-range (programming error invariant).
-#[derive(
-    Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MIDIVelocity {
     raw_value: u8,
 }
@@ -149,20 +145,21 @@ mod tests {
     #[test]
     fn test_midi_note_transposed_up_perfect_fifth() {
         let c4 = MIDINote::new(60);
-        let result = c4.transposed(DirectedInterval::new(
-            Interval::PerfectFifth,
-            Direction::Up,
-        )).unwrap();
+        let result = c4
+            .transposed(DirectedInterval::new(Interval::PerfectFifth, Direction::Up))
+            .unwrap();
         assert_eq!(result.raw_value(), 67);
     }
 
     #[test]
     fn test_midi_note_transposed_down() {
         let g4 = MIDINote::new(67);
-        let result = g4.transposed(DirectedInterval::new(
-            Interval::PerfectFifth,
-            Direction::Down,
-        )).unwrap();
+        let result = g4
+            .transposed(DirectedInterval::new(
+                Interval::PerfectFifth,
+                Direction::Down,
+            ))
+            .unwrap();
         assert_eq!(result.raw_value(), 60);
     }
 
@@ -213,7 +210,9 @@ mod tests {
     #[test]
     fn test_midi_note_transposed_by_prime() {
         let c4 = MIDINote::new(60);
-        let result = c4.transposed(DirectedInterval::new(Interval::Prime, Direction::Up)).unwrap();
+        let result = c4
+            .transposed(DirectedInterval::new(Interval::Prime, Direction::Up))
+            .unwrap();
         assert_eq!(result.raw_value(), 60);
     }
 

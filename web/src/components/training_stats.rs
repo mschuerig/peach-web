@@ -21,9 +21,17 @@ mod tests {
 
 fn trend_arrow(trend: Trend) -> (&'static str, &'static str, &'static str) {
     match trend {
-        Trend::Improving => ("\u{2198}", "text-green-600 dark:text-green-400", "Improving"),
+        Trend::Improving => (
+            "\u{2198}",
+            "text-green-600 dark:text-green-400",
+            "Improving",
+        ),
         Trend::Stable => ("\u{2192}", "text-gray-500 dark:text-gray-400", "Stable"),
-        Trend::Declining => ("\u{2197}", "text-orange-500 dark:text-orange-400", "Declining"),
+        Trend::Declining => (
+            "\u{2197}",
+            "text-orange-500 dark:text-orange-400",
+            "Declining",
+        ),
     }
 }
 

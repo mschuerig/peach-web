@@ -120,14 +120,17 @@ mod tests {
 
     #[test]
     fn test_frequency_for_note_convenience() {
-        let freq =
-            TuningSystem::EqualTemperament.frequency_for_note(MIDINote::new(69), Frequency::CONCERT_440);
+        let freq = TuningSystem::EqualTemperament
+            .frequency_for_note(MIDINote::new(69), Frequency::CONCERT_440);
         assert!((freq.raw_value() - 440.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_equal_temperament_cent_offsets() {
-        assert_eq!(TuningSystem::EqualTemperament.cent_offset(Interval::Prime), 0.0);
+        assert_eq!(
+            TuningSystem::EqualTemperament.cent_offset(Interval::Prime),
+            0.0
+        );
         assert_eq!(
             TuningSystem::EqualTemperament.cent_offset(Interval::PerfectFifth),
             700.0

@@ -1,8 +1,10 @@
 use std::collections::HashSet;
 
-use domain::ports::UserSettings;
-use domain::types::{DirectedInterval, Direction, Frequency, Interval, MIDINote, NoteRange, NoteDuration};
 use domain::TuningSystem;
+use domain::ports::UserSettings;
+use domain::types::{
+    DirectedInterval, Direction, Frequency, Interval, MIDINote, NoteDuration, NoteRange,
+};
 
 pub struct LocalStorageSettings;
 
@@ -70,8 +72,7 @@ impl UserSettings for LocalStorageSettings {
             .unwrap_or(MIDINote::new(36));
         let max = MIDINote::try_new(Self::get_u8("peach.note_range_max", 84))
             .unwrap_or(MIDINote::new(84));
-        NoteRange::try_new(min, max)
-            .unwrap_or(NoteRange::new(MIDINote::new(36), MIDINote::new(84)))
+        NoteRange::try_new(min, max).unwrap_or(NoteRange::new(MIDINote::new(36), MIDINote::new(84)))
     }
 
     fn note_duration(&self) -> NoteDuration {

@@ -1,5 +1,5 @@
-use domain::types::{Cents, DetunedMIDINote, Frequency, MIDINote};
 use domain::TuningSystem;
+use domain::types::{Cents, DetunedMIDINote, Frequency, MIDINote};
 
 /// Verify that equal temperament frequency conversions are accurate to within 0.1 cent
 /// of mathematically correct values (NFR2 precision requirement).

@@ -21,7 +21,12 @@ fn process_markdown(text: &str) -> String {
         if let Some(end) = result[start + 2..].find("**") {
             let bold_text = &result[start + 2..start + 2 + end].to_string();
             let replacement = format!("<strong>{bold_text}</strong>");
-            result = format!("{}{}{}", &result[..start], replacement, &result[start + 2 + end + 2..]);
+            result = format!(
+                "{}{}{}",
+                &result[..start],
+                replacement,
+                &result[start + 2 + end + 2..]
+            );
         } else {
             break;
         }
@@ -33,7 +38,12 @@ fn process_markdown(text: &str) -> String {
         if let Some(end) = result[start + 1..].find('*') {
             let italic_text = &result[start + 1..start + 1 + end].to_string();
             let replacement = format!("<em>{italic_text}</em>");
-            result = format!("{}{}{}", &result[..start], replacement, &result[start + 1 + end + 1..]);
+            result = format!(
+                "{}{}{}",
+                &result[..start],
+                replacement,
+                &result[start + 1 + end + 1..]
+            );
         } else {
             break;
         }
@@ -165,10 +175,7 @@ mod tests {
 
     #[test]
     fn test_process_markdown_newlines() {
-        assert_eq!(
-            process_markdown("first\n\nsecond"),
-            "first<br><br>second"
-        );
+        assert_eq!(process_markdown("first\n\nsecond"), "first<br><br>second");
     }
 
     #[test]

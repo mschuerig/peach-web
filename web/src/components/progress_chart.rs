@@ -116,16 +116,17 @@ pub fn ProgressChart(
             .iter()
             .enumerate()
             .filter(|(i, _)| *i % step == 0 || *i == buckets.len() - 1)
-            .map(|(_, b)| (map_x(b.period_start), format_x_label(b.period_start, b.bucket_size)))
+            .map(|(_, b)| {
+                (
+                    map_x(b.period_start),
+                    format_x_label(b.period_start, b.bucket_size),
+                )
+            })
             .collect();
         // Deduplicate adjacent identical labels
         let mut deduped: Vec<(f64, String)> = Vec::new();
         for (x, label) in raw {
-            if deduped
-                .last()
-                .map(|(_, l)| l != &label)
-                .unwrap_or(true)
-            {
+            if deduped.last().map(|(_, l)| l != &label).unwrap_or(true) {
                 deduped.push((x, label));
             }
         }

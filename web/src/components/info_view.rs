@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use web_sys::KeyboardEvent;
 
 use super::help_content::HelpContent;
@@ -31,8 +31,8 @@ pub fn InfoView() -> impl IntoView {
     // Clean up listener on component unmount
     on_cleanup(move || {
         if let Some(document) = web_sys::window().and_then(|w| w.document()) {
-            let _ = document
-                .remove_event_listener_with_callback("keydown", keydown_fn.unchecked_ref());
+            let _ =
+                document.remove_event_listener_with_callback("keydown", keydown_fn.unchecked_ref());
         }
     });
 

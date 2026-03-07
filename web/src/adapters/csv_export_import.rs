@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
 use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
 
 use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
@@ -68,7 +68,8 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
         PitchMatching(&'a PitchMatchingRecord),
     }
 
-    let mut all_records: Vec<Record> = Vec::with_capacity(pitch_comparisons.len() + pitch_matchings.len());
+    let mut all_records: Vec<Record> =
+        Vec::with_capacity(pitch_comparisons.len() + pitch_matchings.len());
     for r in &pitch_comparisons {
         all_records.push(Record::Comparison(r));
     }
@@ -94,7 +95,10 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
     for record in &all_records {
         match record {
             Record::Comparison(r) => {
-                let interval_code = Interval::from_semitones(r.interval).ok().map(|i| i.csv_code()).unwrap_or("P1");
+                let interval_code = Interval::from_semitones(r.interval)
+                    .ok()
+                    .map(|i| i.csv_code())
+                    .unwrap_or("P1");
                 let ref_name = MIDINote::new(r.reference_note).name();
                 let target_name = MIDINote::new(r.target_note).name();
                 let ts = truncate_timestamp_to_second(&r.timestamp);
@@ -112,7 +116,10 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                 ));
             }
             Record::PitchMatching(r) => {
-                let interval_code = Interval::from_semitones(r.interval).ok().map(|i| i.csv_code()).unwrap_or("P1");
+                let interval_code = Interval::from_semitones(r.interval)
+                    .ok()
+                    .map(|i| i.csv_code())
+                    .unwrap_or("P1");
                 let ref_name = MIDINote::new(r.reference_note).name();
                 let target_name = MIDINote::new(r.target_note).name();
                 let ts = truncate_timestamp_to_second(&r.timestamp);
@@ -201,18 +208,14 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
 
         let training_type = fields[0];
         match training_type {
-            "comparison" => {
-                match parse_comparison_row(&fields, row_num) {
-                    Ok(record) => pitch_comparisons.push(record),
-                    Err(msg) => warnings.push(msg),
-                }
-            }
-            "pitchMatching" => {
-                match parse_pitch_matching_row(&fields, row_num) {
-                    Ok(record) => pitch_matchings.push(record),
-                    Err(msg) => warnings.push(msg),
-                }
-            }
+            "comparison" => match parse_comparison_row(&fields, row_num) {
+                Ok(record) => pitch_comparisons.push(record),
+                Err(msg) => warnings.push(msg),
+            },
+            "pitchMatching" => match parse_pitch_matching_row(&fields, row_num) {
+                Ok(record) => pitch_matchings.push(record),
+                Err(msg) => warnings.push(msg),
+            },
             other => {
                 warnings.push(format!(
                     "Row {row_num}: unknown trainingType '{other}', skipped"
@@ -242,7 +245,12 @@ fn parse_comparison_row(fields: &[&str], row_num: usize) -> Result<PitchComparis
         .map_err(|_| format!("Row {row_num}: invalid targetNote, skipped"))?;
     let interval = Interval::from_csv_code(fields[6])
         .map(|i| i.semitones())
-        .ok_or_else(|| format!("Row {row_num}: invalid interval code '{}', skipped", fields[6]))?;
+        .ok_or_else(|| {
+            format!(
+                "Row {row_num}: invalid interval code '{}', skipped",
+                fields[6]
+            )
+        })?;
     let tuning_system = fields[7].to_string();
     let cent_offset: f64 = fields[8]
         .parse()
@@ -279,7 +287,12 @@ fn parse_pitch_matching_row(
         .map_err(|_| format!("Row {row_num}: invalid targetNote, skipped"))?;
     let interval = Interval::from_csv_code(fields[6])
         .map(|i| i.semitones())
-        .ok_or_else(|| format!("Row {row_num}: invalid interval code '{}', skipped", fields[6]))?;
+        .ok_or_else(|| {
+            format!(
+                "Row {row_num}: invalid interval code '{}', skipped",
+                fields[6]
+            )
+        })?;
     let tuning_system = fields[7].to_string();
     let initial_cent_offset: f64 = fields[10]
         .parse()
@@ -394,7 +407,8 @@ pub async fn import_merge(
 ///
 /// Wraps the callback-based FileReader into a Future.
 pub async fn read_file_as_text(file: web_sys::File) -> Result<String, String> {
-    let reader = web_sys::FileReader::new().map_err(|e| format!("Failed to create FileReader: {e:?}"))?;
+    let reader =
+        web_sys::FileReader::new().map_err(|e| format!("Failed to create FileReader: {e:?}"))?;
 
     let (sender, receiver) = futures_channel::oneshot::channel::<Result<String, String>>();
     let mut sender = Some(sender);

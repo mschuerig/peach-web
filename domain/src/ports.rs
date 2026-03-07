@@ -2,7 +2,7 @@ use crate::records::PitchComparisonRecord;
 use crate::records::PitchMatchingRecord;
 use crate::training::{CompletedPitchComparison, CompletedPitchMatching};
 use crate::tuning::TuningSystem;
-use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteRange, NoteDuration};
+use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteDuration, NoteRange};
 
 /// Error type for audio engine operations.
 #[derive(Debug, thiserror::Error)]
@@ -225,9 +225,7 @@ mod tests {
                 AmplitudeDB::new(0.0),
             )
             .unwrap();
-        handle
-            .adjust_frequency(Frequency::new(880.0))
-            .unwrap();
+        handle.adjust_frequency(Frequency::new(880.0)).unwrap();
         handle.stop();
         player
             .play_for_duration(

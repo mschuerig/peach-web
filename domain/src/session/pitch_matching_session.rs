@@ -5,11 +5,11 @@ use std::rc::Rc;
 use rand::prelude::IndexedRandom;
 
 use crate::ports::{PitchMatchingObserver, Resettable, UserSettings};
-use crate::types::Cents;
 use crate::profile::PerceptualProfile;
 use crate::training::{CompletedPitchMatching, PitchMatchingChallenge};
 use crate::tuning::TuningSystem;
-use crate::types::{DirectedInterval, Direction, Frequency, MIDINote, NoteRange, NoteDuration};
+use crate::types::Cents;
+use crate::types::{DirectedInterval, Direction, Frequency, MIDINote, NoteDuration, NoteRange};
 
 /// MIDI velocity for pitch matching playback (fixed at 63).
 pub const PITCH_MATCHING_VELOCITY: u8 = 63;
@@ -115,9 +115,9 @@ impl PitchMatchingSession {
     }
 
     pub fn current_interval(&self) -> Option<DirectedInterval> {
-        self.current_challenge.as_ref().and_then(|c| {
-            DirectedInterval::between(c.reference_note(), c.target_note()).ok()
-        })
+        self.current_challenge
+            .as_ref()
+            .and_then(|c| DirectedInterval::between(c.reference_note(), c.target_note()).ok())
     }
 
     // --- State transitions ---
@@ -132,7 +132,10 @@ impl PitchMatchingSession {
             PitchMatchingSessionState::Idle,
             "start() requires Idle state"
         );
-        assert!(!intervals.is_empty(), "start() requires at least one interval");
+        assert!(
+            !intervals.is_empty(),
+            "start() requires at least one interval"
+        );
 
         // Snapshot settings for the session
         self.session_intervals = intervals;
@@ -194,7 +197,9 @@ impl PitchMatchingSession {
         );
 
         let value = value.clamp(-1.0, 1.0);
-        let challenge = self.current_challenge.expect("challenge must exist in PlayingTunable");
+        let challenge = self
+            .current_challenge
+            .expect("challenge must exist in PlayingTunable");
         let user_cent_error = challenge.initial_cent_offset() + value * PITCH_SLIDER_CENTS_RANGE;
 
         let completed = CompletedPitchMatching::new(
@@ -310,7 +315,8 @@ impl PitchMatchingSession {
         let target_note = reference_note
             .transposed(interval)
             .expect("range-adjusted reference ensures valid transposition");
-        let initial_cent_offset = rand::random::<f64>() * INITIAL_OFFSET_RANGE - PITCH_SLIDER_CENTS_RANGE; // [-PITCH_SLIDER_CENTS_RANGE, +PITCH_SLIDER_CENTS_RANGE]
+        let initial_cent_offset =
+            rand::random::<f64>() * INITIAL_OFFSET_RANGE - PITCH_SLIDER_CENTS_RANGE; // [-PITCH_SLIDER_CENTS_RANGE, +PITCH_SLIDER_CENTS_RANGE]
 
         PitchMatchingChallenge::new(reference_note, target_note, initial_cent_offset)
     }
@@ -438,12 +444,13 @@ mod tests {
         PitchMatchingSession::new(profile, vec![], vec![])
     }
 
-    fn create_session_with_observer()
-    -> (PitchMatchingSession, Rc<RefCell<Vec<CompletedPitchMatching>>>) {
+    fn create_session_with_observer() -> (
+        PitchMatchingSession,
+        Rc<RefCell<Vec<CompletedPitchMatching>>>,
+    ) {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (observer, calls) = MockPitchMatchingObserver::new();
-        let session =
-            PitchMatchingSession::new(profile, vec![Box::new(observer)], vec![]);
+        let session = PitchMatchingSession::new(profile, vec![Box::new(observer)], vec![]);
         (session, calls)
     }
 
@@ -559,10 +566,18 @@ mod tests {
             fn note_range(&self) -> NoteRange {
                 NoteRange::new(MIDINote::new(60), MIDINote::new(65)) // only 5 semitones
             }
-            fn note_duration(&self) -> NoteDuration { NoteDuration::new(1.0) }
-            fn reference_pitch(&self) -> Frequency { Frequency::CONCERT_440 }
-            fn tuning_system(&self) -> TuningSystem { TuningSystem::EqualTemperament }
-            fn vary_loudness(&self) -> f64 { 0.0 }
+            fn note_duration(&self) -> NoteDuration {
+                NoteDuration::new(1.0)
+            }
+            fn reference_pitch(&self) -> Frequency {
+                Frequency::CONCERT_440
+            }
+            fn tuning_system(&self) -> TuningSystem {
+                TuningSystem::EqualTemperament
+            }
+            fn vary_loudness(&self) -> f64 {
+                0.0
+            }
         }
 
         let mut intervals = HashSet::new();
@@ -582,7 +597,10 @@ mod tests {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_finished();
-        assert_eq!(session.state(), PitchMatchingSessionState::AwaitingSliderTouch);
+        assert_eq!(
+            session.state(),
+            PitchMatchingSessionState::AwaitingSliderTouch
+        );
     }
 
     #[test]
@@ -595,8 +613,7 @@ mod tests {
         let target_freq = TuningSystem::EqualTemperament
             .frequency_for_note(challenge.target_note(), Frequency::CONCERT_440);
         let expected_tunable = Frequency::new(
-            target_freq.raw_value()
-                * 2.0_f64.powf(challenge.initial_cent_offset() / 1200.0),
+            target_freq.raw_value() * 2.0_f64.powf(challenge.initial_cent_offset() / 1200.0),
         );
 
         session.on_reference_finished();
@@ -839,7 +856,10 @@ mod tests {
 
         // on_reference_finished → AwaitingSliderTouch
         session.on_reference_finished();
-        assert_eq!(session.state(), PitchMatchingSessionState::AwaitingSliderTouch);
+        assert_eq!(
+            session.state(),
+            PitchMatchingSessionState::AwaitingSliderTouch
+        );
 
         // adjust_pitch (first touch) → PlayingTunable
         let freq = session.adjust_pitch(0.3);
@@ -896,10 +916,7 @@ mod tests {
 
         let mut session = PitchMatchingSession::new(
             profile,
-            vec![
-                Box::new(panicking_observer),
-                Box::new(normal_observer),
-            ],
+            vec![Box::new(panicking_observer), Box::new(normal_observer)],
             vec![],
         );
 
@@ -918,15 +935,14 @@ mod tests {
     #[test]
     fn test_reset_training_data_stops_session_resets_matching_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        profile.borrow_mut().update_matching(MIDINote::new(60), Cents::new(5.0));
+        profile
+            .borrow_mut()
+            .update_matching(MIDINote::new(60), Cents::new(5.0));
         assert!(profile.borrow().matching_mean().is_some());
 
         let (resettable, count) = MockResettable::new();
-        let mut session = PitchMatchingSession::new(
-            Rc::clone(&profile),
-            vec![],
-            vec![Box::new(resettable)],
-        );
+        let mut session =
+            PitchMatchingSession::new(Rc::clone(&profile), vec![], vec![Box::new(resettable)]);
 
         session.start(default_intervals(), &DefaultTestSettings);
         session.reset_training_data();

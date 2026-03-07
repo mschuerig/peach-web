@@ -104,18 +104,9 @@ mod tests {
     #[test]
     fn test_encode_multiple() {
         let mut set = HashSet::new();
-        set.insert(DirectedInterval::new(
-            Interval::MajorThird,
-            Direction::Up,
-        ));
-        set.insert(DirectedInterval::new(
-            Interval::MajorThird,
-            Direction::Down,
-        ));
-        set.insert(DirectedInterval::new(
-            Interval::MinorSixth,
-            Direction::Up,
-        ));
+        set.insert(DirectedInterval::new(Interval::MajorThird, Direction::Up));
+        set.insert(DirectedInterval::new(Interval::MajorThird, Direction::Down));
+        set.insert(DirectedInterval::new(Interval::MinorSixth, Direction::Up));
         let encoded = encode_intervals(&set);
         // Sorted alphabetically
         assert_eq!(encoded, "M3d,M3u,m6u");
@@ -133,7 +124,10 @@ mod tests {
         let set = decode_intervals("M3u,M3d,m6u");
         assert_eq!(set.len(), 3);
         assert!(set.contains(&DirectedInterval::new(Interval::MajorThird, Direction::Up)));
-        assert!(set.contains(&DirectedInterval::new(Interval::MajorThird, Direction::Down)));
+        assert!(set.contains(&DirectedInterval::new(
+            Interval::MajorThird,
+            Direction::Down
+        )));
         assert!(set.contains(&DirectedInterval::new(Interval::MinorSixth, Direction::Up)));
     }
 
@@ -142,7 +136,10 @@ mod tests {
         let set = decode_intervals("M3u,INVALID,P5d");
         assert_eq!(set.len(), 2);
         assert!(set.contains(&DirectedInterval::new(Interval::MajorThird, Direction::Up)));
-        assert!(set.contains(&DirectedInterval::new(Interval::PerfectFifth, Direction::Down)));
+        assert!(set.contains(&DirectedInterval::new(
+            Interval::PerfectFifth,
+            Direction::Down
+        )));
     }
 
     #[test]
@@ -205,7 +202,10 @@ mod tests {
         let set = parse_intervals_param("M3u,P5d");
         assert_eq!(set.len(), 2);
         assert!(set.contains(&DirectedInterval::new(Interval::MajorThird, Direction::Up)));
-        assert!(set.contains(&DirectedInterval::new(Interval::PerfectFifth, Direction::Down)));
+        assert!(set.contains(&DirectedInterval::new(
+            Interval::PerfectFifth,
+            Direction::Down
+        )));
     }
 
     #[test]

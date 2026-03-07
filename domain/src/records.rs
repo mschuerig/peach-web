@@ -71,12 +71,9 @@ impl PitchMatchingRecord {
     /// `Err` when the distance exceeds one octave (13+ semitones). Defaulting to 0
     /// (Prime) is safe here because this field is informational for the storage schema.
     pub fn from_completed(completed: &CompletedPitchMatching) -> Self {
-        let interval = Interval::between(
-            completed.reference_note(),
-            completed.target_note(),
-        )
-        .map(|i| i.semitones())
-        .unwrap_or(0);
+        let interval = Interval::between(completed.reference_note(), completed.target_note())
+            .map(|i| i.semitones())
+            .unwrap_or(0);
 
         let tuning_system = match completed.tuning_system() {
             TuningSystem::EqualTemperament => "equalTemperament",
