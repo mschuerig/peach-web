@@ -179,8 +179,10 @@ None — no issues encountered.
 - 2026-03-07: Implemented build-deploy job in CI workflow (Tasks 1–4). Task 5 deferred to user.
 - 2026-03-07: Fixed hardcoded root-absolute asset paths in `web/src/app.rs` — changed `/soundfont/synth_worklet.wasm`, `/soundfont/synth-processor.js`, and `/GeneralUser-GS.sf2` to relative (`./`) so they resolve correctly under GitHub Pages subpath (`/peach-web/`). Without this fix, all three fetches 404'd on GitHub Pages.
 - 2026-03-07: Added `base` prop to Leptos `<Router>` reading from `<base href>` tag that Trunk injects via `--public-url`. Without this, the router saw `/peach-web/` as the path and fell through to the fallback ("Page not found").
+- 2026-03-07: Added `<base data-trunk-public-url/>` to `index.html` — Trunk does NOT auto-insert this tag; it only rewrites asset URLs. Without it, the `<base href>` element was missing from the built HTML, so `base_path()` returned empty and the router had no base prefix to strip. Also added `cp dist/index.html dist/404.html` step in CI for GitHub Pages SPA deep-link routing.
 
 ### File List
 
 - Modified: `.github/workflows/ci.yml`
 - Modified: `web/src/app.rs` — asset fetch paths changed from root-absolute to relative; router base path from `<base href>` tag
+- Modified: `index.html` — added `<base data-trunk-public-url/>` for Trunk to populate
