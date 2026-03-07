@@ -6,6 +6,7 @@ use web_sys::KeyboardEvent;
 
 use super::help_content::HelpContent;
 use super::nav_bar::NavBar;
+use crate::app::base_href;
 use crate::help_sections::{INFO_ACKNOWLEDGMENTS, INFO_HELP};
 
 #[component]
@@ -15,7 +16,7 @@ pub fn InfoView() -> impl IntoView {
     let keydown_handler = Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
         if ev.key() == "Escape" {
             ev.prevent_default();
-            navigate("/", Default::default());
+            navigate(&base_href("/"), Default::default());
         }
     });
 
@@ -38,7 +39,7 @@ pub fn InfoView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title="Peach" back_href="/">
+            <NavBar title="Peach" back_href=base_href("/")>
             </NavBar>
             <p class="text-sm text-gray-500 dark:text-gray-400 text-center -mt-2 mb-4">"Version 0.1.0"</p>
 

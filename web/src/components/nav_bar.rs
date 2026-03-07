@@ -41,8 +41,8 @@ pub fn NavBar(
     /// The page title displayed centered in the bar.
     title: &'static str,
     /// Optional href for back navigation. If None, no back button is shown (unless left_content provided).
-    #[prop(optional)]
-    back_href: Option<&'static str>,
+    #[prop(optional, into)]
+    back_href: Option<String>,
     /// Optional click handler for back button (for training views that need to stop sessions).
     #[prop(optional, into)]
     on_back: Option<Callback<leptos::ev::MouseEvent>>,

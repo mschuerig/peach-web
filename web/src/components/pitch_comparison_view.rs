@@ -8,6 +8,8 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
+
+use crate::app::base_href;
 use web_sys::KeyboardEvent;
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
@@ -284,7 +286,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         move |ev: leptos::ev::MouseEvent| {
             ev.prevent_default();
             on_nav_away();
-            navigate("/", Default::default());
+            navigate(&base_href("/"), Default::default());
         }
     };
     // Help modal state
@@ -314,7 +316,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                 return;
             }
             on_nav_away();
-            navigate("/", Default::default());
+            navigate(&base_href("/"), Default::default());
         })
     };
 
@@ -687,7 +689,7 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title=comparison_title back_href="/" on_back=on_back_cb>
+            <NavBar title=comparison_title back_href=base_href("/") on_back=on_back_cb>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb />
             </NavBar>
             <HelpModal title="Comparison Training" sections=COMPARISON_HELP is_open=is_help_open on_close=on_help_close />

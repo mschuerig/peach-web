@@ -4,6 +4,8 @@ use std::rc::Rc;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 
+use crate::app::base_href;
+
 use domain::{ProgressTimeline, TrainingMode, TrainingModeState};
 
 use super::nav_bar::NavBar;
@@ -20,7 +22,7 @@ pub fn ProfileView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title="Profile" back_href="/">
+            <NavBar title="Profile" back_href=base_href("/")>
             </NavBar>
 
             {move || {

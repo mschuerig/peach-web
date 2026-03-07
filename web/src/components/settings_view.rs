@@ -8,6 +8,7 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::audio_context::AudioContextManager;
+use crate::app::base_href;
 use crate::adapters::audio_soundfont::SF2Preset;
 use crate::adapters::csv_export_import;
 use crate::adapters::csv_export_import::{ImportExportStatus, ResetStatus};
@@ -267,7 +268,7 @@ pub fn SettingsView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title="Settings" back_href="/">
+            <NavBar title="Settings" back_href=base_href("/")>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) />
             </NavBar>
             <HelpModal title="Settings Help" sections=SETTINGS_HELP is_open=is_help_open />
