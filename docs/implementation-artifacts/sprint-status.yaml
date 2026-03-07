@@ -116,3 +116,8 @@ development_status:
   8-9-keyboard-interaction-fixes: done
   8-10-settings-sound-source-preview: done
   epic-8-retrospective: done
+
+  # Epic 9: Mobile Compatibility
+  epic-9: in-progress
+  9-1-mobile-soundfont-playback: ready-for-dev
+  epic-9-retrospective: optional

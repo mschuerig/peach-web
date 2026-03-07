@@ -1558,3 +1558,21 @@ Open-ended epic for bug fixes, reliability improvements, and incremental enhance
 10. `interval_label()` long-name mapping in `interval_codes.rs` moved to `Interval::display_name()` in the domain crate
 11. All existing functionality works identically -- zero behavioral changes
 12. `cargo test -p domain` passes, `cargo clippy` clean on both crates
+
+## Epic 9: Mobile Compatibility
+
+Bug fixes for mobile browser compatibility issues discovered during real-device testing.
+
+### Story 9.1: Mobile SoundFont Playback
+
+**As a** user,
+**I want** SoundFont playback to work on mobile browsers (iOS Safari, mobile Chromium),
+**So that** I hear realistic instrument sounds during training on my phone, not just oscillator tones.
+
+**Acceptance Criteria:**
+1. SoundFont playback produces audible sound on iOS Safari (17+) when the user has selected a SoundFont preset as sound source
+2. SoundFont playback produces audible sound on mobile Chromium-based browsers (Chrome, Edge, Brave on Android/iOS) when the user has selected a SoundFont preset
+3. The SoundFont file loads, presets appear in settings, and the selected preset plays during training -- the full pipeline works end-to-end on mobile
+4. Desktop browser playback (Chrome, Firefox, Safari, Edge) continues to work without regression
+5. The oscillator fallback still activates when SoundFont loading fails (network error, unsupported browser)
+6. Settings sound source preview (story 8.10) works on mobile with SoundFont presets
