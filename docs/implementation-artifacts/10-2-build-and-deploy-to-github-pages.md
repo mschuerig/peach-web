@@ -41,10 +41,10 @@ so that the latest version of the app is always live without manual intervention
   - [x] 4.1 Upload `dist/` as artifact using `actions/upload-pages-artifact@v3` with `path: dist`
   - [x] 4.2 Deploy using `actions/deploy-pages@v4`
   - [x] 4.3 Add `environment: github-pages` with the deployment URL to the job
-- [ ] Task 5: Verify deployment (AC: 7)
-  - [ ] 5.1 Push to `main` and confirm GitHub Actions pipeline runs both jobs — deferred to user: verify on GitHub Actions tab
-  - [ ] 5.2 Confirm app loads at `https://<username>.github.io/peach-web/` — deferred to user: manual browser verification
-  - [ ] 5.3 Confirm SoundFont loads and audio playback works — deferred to user: manual browser verification
+- [x] Task 5: Verify deployment (AC: 7)
+  - [x] 5.1 Push to `main` and confirm GitHub Actions pipeline runs both jobs — verified by user
+  - [x] 5.2 Confirm app loads at `https://mschuerig.github.io/peach-web/` — verified by user
+  - [x] 5.3 Confirm SoundFont loads and audio playback works — verified by user
 
 ## Dev Notes
 
@@ -180,9 +180,20 @@ None — no issues encountered.
 - 2026-03-07: Fixed hardcoded root-absolute asset paths in `web/src/app.rs` — changed `/soundfont/synth_worklet.wasm`, `/soundfont/synth-processor.js`, and `/GeneralUser-GS.sf2` to relative (`./`) so they resolve correctly under GitHub Pages subpath (`/peach-web/`). Without this fix, all three fetches 404'd on GitHub Pages.
 - 2026-03-07: Added `base` prop to Leptos `<Router>` reading from `<base href>` tag that Trunk injects via `--public-url`. Without this, the router saw `/peach-web/` as the path and fell through to the fallback ("Page not found").
 - 2026-03-07: Added `<base data-trunk-public-url/>` to `index.html` — Trunk does NOT auto-insert this tag; it only rewrites asset URLs. Without it, the `<base href>` element was missing from the built HTML, so `base_path()` returned empty and the router had no base prefix to strip. Also added `cp dist/index.html dist/404.html` step in CI for GitHub Pages SPA deep-link routing.
+- 2026-03-07: Resolved worklet `addModule()` URL absolutely via `document.baseURI` — `addModule()` may not respect `<base href>`.
+- 2026-03-07: Added `BasePath` context and `base_href()` helper — Leptos Router 0.8 `<A>` does not prepend base for `/`-prefixed hrefs. All `<A>` hrefs use `base_href()`. Note: `navigate()` resolves internally, so does NOT use `base_href()` (would double-prefix).
+- 2026-03-07: User verified: app loads, navigation works, SoundFont playback works on desktop and mobile.
 
 ### File List
 
-- Modified: `.github/workflows/ci.yml`
-- Modified: `web/src/app.rs` — asset fetch paths changed from root-absolute to relative; router base path from `<base href>` tag
-- Modified: `index.html` — added `<base data-trunk-public-url/>` for Trunk to populate
+- Modified: `.github/workflows/ci.yml` — build-deploy job, permissions, concurrency, 404.html copy
+- Modified: `web/src/app.rs` — relative asset paths, router base, `BasePath` context, `base_href()` helper, absolute worklet URL
+- Modified: `index.html` — added `<base data-trunk-public-url/>`
+- Modified: `web/src/components/start_page.rs` — `base_href()` for all link hrefs
+- Modified: `web/src/components/nav_bar.rs` — `back_href` type changed to `Option<String>`
+- Modified: `web/src/components/profile_view.rs` — `base_href()` for back link
+- Modified: `web/src/components/settings_view.rs` — `base_href()` for back link
+- Modified: `web/src/components/info_view.rs` — `base_href()` for back link
+- Modified: `web/src/components/pitch_comparison_view.rs` — `base_href()` for back link
+- Modified: `web/src/components/pitch_matching_view.rs` — `base_href()` for back link
+- Modified: `docs/project-context.md` — subpath deployment rules, new pitfalls
