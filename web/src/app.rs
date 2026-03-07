@@ -337,14 +337,25 @@ pub async fn connect_worklet(
     ctx_rc: &Rc<RefCell<web_sys::AudioContext>>,
     assets: &WorkletAssets,
 ) -> Result<(WorkletBridge, Vec<SF2Preset>), String> {
-    // Register processor JS via addModule (cache-busting query param for unhashed asset)
+    // Register processor JS via addModule (cache-busting query param for unhashed asset).
+    // Resolve to absolute URL via the document base URI because addModule() may not
+    // respect the <base href> tag in all browsers.
+    let processor_url = {
+        let base = web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.base_uri().ok().flatten())
+            .unwrap_or_default();
+        web_sys::Url::new_with_base("./soundfont/synth-processor.js?v=2", &base)
+            .map_err(|e| format!("URL resolution failed: {e:?}"))?
+            .href()
+    };
     let add_module_promise = {
         let ctx = ctx_rc.borrow();
         let audio_worklet = ctx
             .audio_worklet()
             .map_err(|e| format!("audioWorklet unavailable: {e:?}"))?;
         audio_worklet
-            .add_module("./soundfont/synth-processor.js?v=2")
+            .add_module(&processor_url)
             .map_err(|e| format!("addModule failed: {e:?}"))?
     };
     JsFuture::from(add_module_promise)
