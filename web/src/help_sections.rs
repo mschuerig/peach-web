@@ -82,5 +82,5 @@ pub static INFO_HELP: &[HelpSection] = &[
 
 pub static INFO_ACKNOWLEDGMENTS: &[HelpSection] = &[HelpSection {
     title: "Acknowledgments",
-    body: "Sounds provided by GeneralUser GS by S. Christian Collins.",
+    body: "Sounds provided by <a href=\"https://schristiancollins.com/generaluser.php\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-indigo-600 underline dark:text-indigo-400\">GeneralUser GS by S. Christian Collins</a>.",
 }];
