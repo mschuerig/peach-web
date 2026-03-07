@@ -123,7 +123,7 @@ development_status:
   epic-9-retrospective: optional
 
   # Epic 10: CI/CD Pipeline & GitHub Pages Deployment
-  epic-10: backlog
-  10-1-ci-quality-gate: backlog
+  epic-10: in-progress
+  10-1-ci-quality-gate: ready-for-dev
   10-2-build-and-deploy-to-github-pages: backlog
   epic-10-retrospective: optional
