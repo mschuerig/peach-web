@@ -180,6 +180,21 @@ cargo generate --git https://github.com/leptos-rs/start-trunk
 - Hub-and-spoke: start page is root, all views one level deep
 - **Rationale:** Enables bookmarkable training links. Future option to accept configuration via query parameters (e.g. `?tuning=just`).
 
+**View Entry Paths (all must be handled):**
+
+Any story touching navigation, audio init, or loading states must consider ALL entry paths:
+
+| View | Entry Paths |
+|---|---|
+| Start Page (`/`) | App launch, back button from any view, direct URL |
+| Pitch Comparison (`/training/comparison`) | Start Page card click, direct URL/bookmark, page refresh |
+| Pitch Matching (`/training/pitch-matching`) | Start Page card click, direct URL/bookmark, page refresh |
+| Profile (`/profile`) | Start Page icon, direct URL/bookmark, page refresh |
+| Settings (`/settings`) | Start Page icon, direct URL/bookmark, page refresh |
+| Info (`/info`) | Start Page icon, direct URL/bookmark, page refresh |
+
+For training views, direct URL entry means no prior user gesture has occurred — AudioContext will be in `suspended` state. The `AudioGateOverlay` pattern handles this. For settings, the worklet bridge may be `None` (cold-start) if no training view has been visited yet.
+
 **Styling:**
 - Tailwind CSS integrated with Trunk build
 - System font stack, `prefers-color-scheme` dark mode support via Tailwind's dark mode utilities

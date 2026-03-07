@@ -73,6 +73,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 - `Rc<RefCell<...>>` for shared ownership between async training loop and UI event handlers
 - No `Arc`/`Mutex` — single-threaded WASM environment, these are unnecessary overhead
+- Leptos 0.8 requires `Send + Sync` for `provide_context`, `on_cleanup`, and all closures captured by reactive primitives (signals, effects, view macros). Wrap `Rc<RefCell<T>>` in `SendWrapper` at the definition site — this is safe because WASM is single-threaded. Example: `let player = SendWrapper::new(Rc::new(RefCell::new(None::<Player>)));`
 
 **Serialization:**
 
@@ -88,6 +89,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Signal setters (`.set()`) for domain-related signals happen ONLY inside the `UIObserver` bridge — components never call `.set()` on domain signals
 - Signal naming mirrors domain state: `session_state`, `show_feedback`, `is_last_correct`
 - Loading state signals: `is_profile_loaded: RwSignal<bool>`, `soundfont_status: RwSignal<SoundFontStatus>` (enum: `Loading`, `Ready`, `Failed`)
+- Context shadowing: `use_context` is type-based. Multiple `RwSignal<bool>` contexts shadow each other — only the last `provide_context` call wins. Always wrap in newtypes (e.g. `struct IsProfileLoaded(pub RwSignal<bool>)`)
+- Navigation: always use `leptos_router::components::A` for internal links, never raw `<a>`. Raw `<a>` breaks client-side routing and user-gesture propagation for Web Audio
 
 **Component Architecture:**
 
@@ -227,7 +230,15 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - AudioContext requires user gesture to create — training start button is the gesture
 - Tab visibility change → stop active session, return to start page
 - SoundFont loading is non-blocking — oscillator fallback always available
-- SoundFont load failure → fall back silently to oscillators (no error shown)
+- SoundFont load failure → fall back to oscillators with brief user notification
+- Two-phase worklet init: Phase 1 (fetch assets at app mount, no AudioContext) and Phase 2 (connect worklet at training start, after `ensure_running()`). The worklet bridge is `None` until Phase 2 completes — any code using SF2 playback must handle the cold-start case
+- User-gesture chain: switching from `<button onclick>` to `<A href>` breaks gesture propagation. Any navigation that leads to AudioContext creation must preserve the gesture chain
+- Entry paths: users can reach training views via Start Page click, direct URL, bookmark, or page refresh. All paths must handle AudioContext gesture requirements (the `AudioGateOverlay` pattern)
+
+**Disabled Interactive Elements:**
+
+- Disabled `<a>` elements: remove the `href` attribute entirely and set `tabindex="-1"`. CSS-only disabling or `prevent_default` on click is insufficient — middle-click and right-click bypass JS handlers
+- Disabled buttons: use the native `disabled` attribute
 
 **Storage Edge Cases:**
 
@@ -241,6 +252,54 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - State transitions, observer notifications, profile updates < 16ms (single frame)
 - Profile hydration < 1s for 10,000 records
 - Real-time pitch adjustment: no perceptible lag between slider and frequency change
+
+---
+
+## Common Pitfalls (Epic 8 Retrospective)
+
+These patterns caused repeated failures. Check this section before implementing any story.
+
+| Pitfall | What Goes Wrong | Fix |
+|---|---|---|
+| Raw `Rc<RefCell<T>>` in Leptos closures | Compilation fails with `Send + Sync` error | Wrap in `SendWrapper` at definition site, not at clone site |
+| Multiple `RwSignal<bool>` in context | `use_context` returns the wrong signal (type-based lookup) | Use newtypes: `struct IsProfileLoaded(pub RwSignal<bool>)` |
+| Raw `<a>` for internal navigation | Breaks client-side routing and user-gesture chain for Web Audio | Use `leptos_router::components::A` |
+| Disabled `<a>` with `href` still set | Users can navigate via middle-click, right-click, or keyboard | Remove `href` and set `tabindex="-1"` when disabled |
+| `<button>` to `<A href>` migration | Breaks user-gesture propagation for AudioContext | Audit all paths that lead to AudioContext creation |
+| Worklet bridge assumed available | Bridge is `None` until first training view connects it | Check for `None` and connect on-demand (cold-start pattern) |
+| Guard logic created but not wired | Enum variant exists but fetch/action runs unconditionally | After creating a guard enum, grep for every call site and add the guard check |
+| Story tasks taken literally | Dev Notes say "no changes needed" but edge cases exist | Always ask: what are ALL entry paths? What state can signals be in? |
+
+## Implementation Edge-Case Checklist
+
+Before writing ANY code for a story task, answer these questions:
+
+1. What are ALL entry paths to this code? (start page click, direct URL, bookmark, back button, page refresh)
+2. What state can each signal/resource be in when this code runs? (None, Loading, Ready, Failed, stale)
+3. What happens if an async operation is still in progress when this code executes?
+4. What happens if the user navigates away mid-operation?
+5. Does this change break any user-gesture chains required by Web Audio or other browser APIs?
+6. If a guard enum/status is created, are ALL call sites checked? Grep every usage.
+
+Challenge story Dev Notes: if they say "no changes needed" for a module, verify this is actually true for all entry paths. Check MEMORY.md and the Common Pitfalls table above for known patterns that apply.
+
+**Verification honesty:** NEVER mark a manual testing task as complete unless you actually performed the test. If you cannot run the browser, mark the task as UNCHECKED and note "deferred to user — agent cannot verify in browser."
+
+## Code Review: Feed Back Patterns
+
+After completing a code review, check whether any HIGH or MEDIUM finding reflects a repeatable pattern (not a one-off typo). Ask: "Would a different agent making a different change hit this same problem?" If yes, and the pattern is not already documented, add it to the Common Pitfalls table above.
+
+## Debugging Protocol
+
+When a runtime bug appears during implementation, follow this protocol in order:
+
+1. **Check MEMORY.md first.** The bug pattern may already be documented.
+2. **Isolate your changes.** `git stash` and test the original code. If the bug exists without your changes, it is pre-existing — document it and move on. If it disappears, your changes caused it.
+3. **Form a hypothesis tree.** List all possible causes, then eliminate them systematically. Do not guess sequentially.
+4. **Binary search.** If you changed multiple files, revert half and test. Narrow down to the specific change that introduced the bug.
+5. **3-attempt limit.** If you cannot resolve the bug within 3 focused attempts, stop and ask the user for diagnostic help. Do not flail for 20+ rounds.
+
+Never blame caching, console filters, or pre-existing conditions without evidence. Never mark a hypothesis as "CONFIRMED" from code reading alone — reproduce and observe.
 
 ---
 

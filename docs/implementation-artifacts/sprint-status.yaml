@@ -104,7 +104,7 @@ development_status:
   epic-7-retrospective: optional
 
   # Epic 8: Fixes & Improvements
-  epic-8: in-progress
+  epic-8: done
   8-1-audio-playback-reliability-research: done
   8-2-audio-playback-reliability-fix: done
   8-3-soundfont-loading-ux: done
@@ -112,6 +112,7 @@ development_status:
   8-5-settings-page-ios-alignment: done
   8-6-pitch-comparison-feedback-icons: done
   8-7-extract-settings-view-logic: done
-  8-8-clean-up-export-import-architecture: review
+  8-8-clean-up-export-import-architecture: done  # abandoned — issues addressed in 8-9
   8-9-keyboard-interaction-fixes: done
   8-10-settings-sound-source-preview: done
+  epic-8-retrospective: done
