@@ -189,6 +189,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - `trunk serve --open` — dev server with auto-rebuild and browser reload
 - `trunk build --release` — production build, outputs to `dist/`
 - `cargo test -p domain` — run domain tests natively (fast feedback loop)
+- `cargo fmt` — format code before every commit (CI enforces `cargo fmt --check`)
 - `cargo clippy` — lint check before committing
 
 **Project Structure:**
