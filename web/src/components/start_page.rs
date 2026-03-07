@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use super::nav_bar::{NavBar, NavIconButton};
 use super::progress_sparkline::ProgressSparkline;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
-use crate::app::SoundFontLoadStatus;
+use crate::app::{SoundFontLoadStatus, base_href};
 use crate::interval_codes::encode_intervals;
 use domain::{Interval, TrainingMode};
 
@@ -15,7 +15,7 @@ fn interval_href(path: &str) -> String {
     } else {
         "P1".to_string()
     };
-    format!("{path}?intervals={code}")
+    format!("{}?intervals={code}", base_href(path))
 }
 
 #[component]
@@ -96,11 +96,11 @@ pub fn StartPage() -> impl IntoView {
             <NavBar
                 title="Peach"
                 left_content=ViewFn::from(move || view! {
-                    <NavIconButton label="Info".to_string() icon="\u{24D8}".to_string() href="/info".to_string() />
+                    <NavIconButton label="Info".to_string() icon="\u{24D8}".to_string() href=base_href("/info") />
                 })
             >
-                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href="/profile".to_string() />
-                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href="/settings".to_string() />
+                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
+                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
             </NavBar>
 
             // Loading indicator
@@ -128,7 +128,7 @@ pub fn StartPage() -> impl IntoView {
                         <TrainingCard
                             label="Hear & Compare"
                             icon="\u{1F442}"
-                            href="/training/comparison".to_string()
+                            href=base_href("/training/comparison")
                             aria_label="Hear and Compare, Single Notes"
                             mode=TrainingMode::UnisonPitchComparison
                             disabled=disabled
@@ -136,7 +136,7 @@ pub fn StartPage() -> impl IntoView {
                         <TrainingCard
                             label="Tune & Match"
                             icon="\u{1F3AF}"
-                            href="/training/pitch-matching".to_string()
+                            href=base_href("/training/pitch-matching")
                             aria_label="Tune and Match, Single Notes"
                             mode=TrainingMode::UnisonMatching
                             disabled=disabled

@@ -37,6 +37,23 @@ fn base_path() -> Cow<'static, str> {
     }
 }
 
+/// Base path prefix for all app routes (e.g. "/peach-web" on GitHub Pages, "" locally).
+/// Stored in Leptos context by `App`. Use `base_href()` to build links.
+#[derive(Clone)]
+pub struct BasePath(pub String);
+
+/// Prepend the app base path to an absolute route path.
+/// Leptos Router 0.8's `<A>` component does not prepend the base for `/`-prefixed hrefs,
+/// so all links and `navigate()` calls must use this helper.
+pub fn base_href(path: &str) -> String {
+    let base = use_context::<BasePath>().map(|b| b.0).unwrap_or_default();
+    if path == "/" {
+        format!("{base}/")
+    } else {
+        format!("{base}{path}")
+    }
+}
+
 // Newtype wrappers for RwSignal<bool> contexts — Leptos uses types for context
 // lookup, so multiple RwSignal<bool> values would shadow each other.
 #[derive(Clone, Copy)]
@@ -97,6 +114,7 @@ pub fn App() -> impl IntoView {
     provide_context(worklet_assets);
     provide_context(WorkletConnecting(worklet_connecting));
     provide_context(AudioNeedsGesture(audio_needs_gesture));
+    provide_context(BasePath(base_path().into_owned()));
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);
@@ -250,7 +268,7 @@ pub fn App() -> impl IntoView {
                             <div class="py-12 text-center">
                                 <h1 class="text-2xl font-bold dark:text-white">"Page not found"</h1>
                                 <A
-                                    href="/"
+                                    href=base_href("/")
                                     attr:class="mt-4 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
                                 >
                                     "Back to Start"
