@@ -1,6 +1,6 @@
 # Story 10.2: Build & Deploy to GitHub Pages
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -50,7 +50,7 @@ so that the latest version of the app is always live without manual intervention
 
 ### Technical Requirements
 
-- **Extend existing workflow** — do NOT create a separate workflow file. Add the `build-deploy` job to `.github/workflows/ci.yml`
+- **Extend existing workflow** — do NOT create a separate workflow file. Add the `build-deploy` job to `.github/workflows/ci.yml`. Note: subpath deployment required Rust code changes (relative asset paths, router base, `base_href()` helper) beyond the CI-only scope originally anticipated.
 - **Job dependency:** `needs: quality-gate` ensures build never runs if quality checks fail (Story 10.1 designed for this)
 - **GitHub Pages permissions:** The workflow needs `pages: write` and `id-token: write` permissions at the top level for OIDC token-based deployment
 - **Trunk `--public-url`:** Critical for GitHub Pages subpath deployment. Without this flag, all asset paths would be root-relative (`/index.js`) instead of subpath-relative (`/peach-web/index.js`), causing 404s
@@ -183,6 +183,7 @@ None — no issues encountered.
 - 2026-03-07: Resolved worklet `addModule()` URL absolutely via `document.baseURI` — `addModule()` may not respect `<base href>`.
 - 2026-03-07: Added `BasePath` context and `base_href()` helper — Leptos Router 0.8 `<A>` does not prepend base for `/`-prefixed hrefs. All `<A>` hrefs use `base_href()`. Note: `navigate()` resolves internally, so does NOT use `base_href()` (would double-prefix).
 - 2026-03-07: User verified: app loads, navigation works, SoundFont playback works on desktop and mobile.
+- 2026-03-07: Code review fixes — (H1) scoped CI permissions to build-deploy job only, (H2) moved concurrency group to build-deploy job so PRs aren't blocked, (M1) fixed inaccurate `base_href()` docstring, (M2) replaced raw `<a>` with `<A>` in TrainingCard for client-side routing, (M3) added error checking to Trunk install step, (L1/L2) updated Dev Notes and File List.
 
 ### File List
 
@@ -197,3 +198,4 @@ None — no issues encountered.
 - Modified: `web/src/components/pitch_comparison_view.rs` — `base_href()` for back link
 - Modified: `web/src/components/pitch_matching_view.rs` — `base_href()` for back link
 - Modified: `docs/project-context.md` — subpath deployment rules, new pitfalls
+- Modified: `docs/implementation-artifacts/sprint-status.yaml` — story status tracking

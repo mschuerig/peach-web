@@ -8,12 +8,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   quality-gate:
@@ -42,6 +36,13 @@ jobs:
     needs: quality-gate
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -57,8 +58,10 @@ jobs:
 
       - name: Install Trunk
         run: |
-          TRUNK_VERSION=$(curl -sL https://api.github.com/repos/trunk-rs/trunk/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
-          curl -sL "https://github.com/trunk-rs/trunk/releases/download/${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar xzf - -C /usr/local/bin
+          TRUNK_VERSION=$(curl -sfL https://api.github.com/repos/trunk-rs/trunk/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+          if [ -z "$TRUNK_VERSION" ]; then echo "::error::Failed to fetch Trunk version from GitHub API" && exit 1; fi
+          curl -sfL "https://github.com/trunk-rs/trunk/releases/download/${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar xzf - -C /usr/local/bin
+          trunk --version
 
       - name: Cache SoundFont
         uses: actions/cache@v4

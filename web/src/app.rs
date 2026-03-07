@@ -44,7 +44,8 @@ pub struct BasePath(pub String);
 
 /// Prepend the app base path to an absolute route path.
 /// Leptos Router 0.8's `<A>` component does not prepend the base for `/`-prefixed hrefs,
-/// so all links and `navigate()` calls must use this helper.
+/// so all `<A>` hrefs must use this helper. Do NOT use with `navigate()` — it resolves
+/// the base internally and `base_href()` would double-prefix.
 pub fn base_href(path: &str) -> String {
     let base = use_context::<BasePath>().map(|b| b.0).unwrap_or_default();
     if path == "/" {

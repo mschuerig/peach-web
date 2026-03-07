@@ -125,5 +125,5 @@ development_status:
   # Epic 10: CI/CD Pipeline & GitHub Pages Deployment
   epic-10: in-progress
   10-1-ci-quality-gate: done
-  10-2-build-and-deploy-to-github-pages: review
+  10-2-build-and-deploy-to-github-pages: done
   epic-10-retrospective: optional

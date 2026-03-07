@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos_router::components::A;
 
 use super::nav_bar::{NavBar, NavIconButton};
 use super::progress_sparkline::ProgressSparkline;
@@ -31,33 +32,38 @@ fn TrainingCard(
     let enabled_class = " bg-gray-100 text-gray-800 active:opacity-70 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700";
     let disabled_class = " bg-gray-100 text-gray-400 cursor-not-allowed opacity-60 dark:bg-gray-800 dark:text-gray-500";
 
+    let enabled_cls = format!("{base_class}{enabled_class}");
+    let disabled_cls = format!("{base_class}{disabled_class}");
+
     view! {
-        <a
-            href=move || if disabled.get() { None } else { Some(href.clone()) }
-            aria-label=aria_label
-            aria-disabled=move || if disabled.get() { "true" } else { "false" }
-            tabindex=move || if disabled.get() { "-1" } else { "0" }
-            class=move || {
-                let mut c = base_class.to_string();
-                if disabled.get() {
-                    c.push_str(disabled_class);
-                } else {
-                    c.push_str(enabled_class);
-                }
-                c
+        {move || {
+            if disabled.get() {
+                view! {
+                    <span
+                        aria-label=aria_label
+                        aria-disabled="true"
+                        tabindex="-1"
+                        class=disabled_cls.clone()
+                    >
+                        <span class="text-xl" aria-hidden="true">{icon}</span>
+                        <div class="flex flex-col">
+                            <span>{label}</span>
+                            <ProgressSparkline mode=mode />
+                        </div>
+                    </span>
+                }.into_any()
+            } else {
+                view! {
+                    <A href=href.clone() attr:aria-label=aria_label attr:class=enabled_cls.clone()>
+                        <span class="text-xl" aria-hidden="true">{icon}</span>
+                        <div class="flex flex-col">
+                            <span>{label}</span>
+                            <ProgressSparkline mode=mode />
+                        </div>
+                    </A>
+                }.into_any()
             }
-            on:click=move |ev| {
-                if disabled.get() {
-                    ev.prevent_default();
-                }
-            }
-        >
-            <span class="text-xl" aria-hidden="true">{icon}</span>
-            <div class="flex flex-col">
-                <span>{label}</span>
-                <ProgressSparkline mode=mode />
-            </div>
-        </a>
+        }}
     }
 }
 
