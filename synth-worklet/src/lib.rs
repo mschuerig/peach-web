@@ -29,6 +29,7 @@ pub unsafe extern "C" fn dealloc(ptr: *mut u8, size: usize) {
 pub extern "C" fn synth_new(sample_rate: f32) -> *mut Synth {
     let desc = SynthDescriptor {
         sample_rate,
+        gain: 1.0,
         reverb_active: false,
         chorus_active: false,
         ..Default::default()
