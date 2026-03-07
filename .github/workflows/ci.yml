@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
@@ -28,3 +37,49 @@ jobs:
 
       - name: Run domain tests
         run: cargo test -p domain
+
+  build-deploy:
+    needs: quality-gate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Trunk
+        run: |
+          TRUNK_VERSION=$(curl -sL https://api.github.com/repos/trunk-rs/trunk/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+          curl -sL "https://github.com/trunk-rs/trunk/releases/download/${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar xzf - -C /usr/local/bin
+
+      - name: Cache SoundFont
+        uses: actions/cache@v4
+        with:
+          path: .cache/
+          key: soundfont-${{ hashFiles('bin/sf2-sources.conf') }}
+
+      - name: Download SoundFont
+        run: bin/download-sf2.sh
+
+      - name: Verify SoundFont exists
+        run: test -f .cache/GeneralUser-GS.sf2
+
+      - name: Build WASM app
+        run: trunk build --release --public-url /peach-web/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
