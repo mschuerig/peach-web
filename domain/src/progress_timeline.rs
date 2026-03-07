@@ -282,7 +282,10 @@ impl ProgressTimeline {
 
     /// Returns time-grouped buckets for the given mode.
     pub fn buckets(&self, mode: TrainingMode) -> Vec<TimeBucket> {
-        self.modes.get(&mode).map(|s| s.buckets.clone()).unwrap_or_default()
+        self.modes
+            .get(&mode)
+            .map(|s| s.buckets.clone())
+            .unwrap_or_default()
     }
 
     /// Returns the current EWMA for the given mode.
@@ -351,7 +354,11 @@ fn bucket_assignment(timestamp: f64, now: f64) -> (BucketSize, f64) {
 }
 
 /// Build adaptive time buckets from sorted (timestamp, metric) pairs.
-fn build_adaptive_buckets(points: &[(f64, f64)], now: f64, session_gap_secs: f64) -> Vec<TimeBucket> {
+fn build_adaptive_buckets(
+    points: &[(f64, f64)],
+    now: f64,
+    session_gap_secs: f64,
+) -> Vec<TimeBucket> {
     if points.is_empty() {
         return Vec::new();
     }
@@ -387,7 +394,8 @@ fn build_adaptive_buckets(points: &[(f64, f64)], now: f64, session_gap_secs: f64
         };
 
         if let Some((ref cur_size, cur_key, _)) = current_group
-            && *cur_size == size && cur_key == group_key
+            && *cur_size == size
+            && cur_key == group_key
         {
             if let Some((_, _, ref mut pts)) = current_group {
                 pts.push((ts, metric));
@@ -423,7 +431,11 @@ fn build_adaptive_buckets(points: &[(f64, f64)], now: f64, session_gap_secs: f64
                 let delta2 = metric - mean;
                 m2 += delta * delta2;
             }
-            let stddev = if n > 1 { (m2 / (n - 1) as f64).sqrt() } else { 0.0 };
+            let stddev = if n > 1 {
+                (m2 / (n - 1) as f64).sqrt()
+            } else {
+                0.0
+            };
 
             TimeBucket {
                 period_start: first_ts,
@@ -541,22 +553,38 @@ mod tests {
         ];
         tl.rebuild(&records, &[], now_epoch());
 
-        assert_eq!(tl.state(TrainingMode::UnisonPitchComparison), TrainingModeState::Active);
-        assert_eq!(tl.state(TrainingMode::IntervalPitchComparison), TrainingModeState::NoData);
-        assert_eq!(tl.state(TrainingMode::UnisonMatching), TrainingModeState::NoData);
-        assert_eq!(tl.state(TrainingMode::IntervalMatching), TrainingModeState::NoData);
+        assert_eq!(
+            tl.state(TrainingMode::UnisonPitchComparison),
+            TrainingModeState::Active
+        );
+        assert_eq!(
+            tl.state(TrainingMode::IntervalPitchComparison),
+            TrainingModeState::NoData
+        );
+        assert_eq!(
+            tl.state(TrainingMode::UnisonMatching),
+            TrainingModeState::NoData
+        );
+        assert_eq!(
+            tl.state(TrainingMode::IntervalMatching),
+            TrainingModeState::NoData
+        );
     }
 
     #[test]
     fn test_rebuild_matching_interval_active() {
         let mut tl = ProgressTimeline::new();
-        let records = vec![
-            make_matching(7, 5.0, "2026-03-06T11:00:00Z"),
-        ];
+        let records = vec![make_matching(7, 5.0, "2026-03-06T11:00:00Z")];
         tl.rebuild(&[], &records, now_epoch());
 
-        assert_eq!(tl.state(TrainingMode::IntervalMatching), TrainingModeState::Active);
-        assert_eq!(tl.state(TrainingMode::UnisonMatching), TrainingModeState::NoData);
+        assert_eq!(
+            tl.state(TrainingMode::IntervalMatching),
+            TrainingModeState::Active
+        );
+        assert_eq!(
+            tl.state(TrainingMode::UnisonMatching),
+            TrainingModeState::NoData
+        );
     }
 
     // --- AC4: Adaptive bucketing ---
@@ -683,9 +711,7 @@ mod tests {
     fn test_ewma_single_bucket() {
         let mut tl = ProgressTimeline::new();
         let now = now_epoch();
-        let records = vec![
-            make_comparison(0, 20.0, "2026-03-06T11:00:00Z"),
-        ];
+        let records = vec![make_comparison(0, 20.0, "2026-03-06T11:00:00Z")];
         tl.rebuild(&records, &[], now);
 
         let ewma = tl.current_ewma(TrainingMode::UnisonPitchComparison);
@@ -765,7 +791,12 @@ mod tests {
 
     #[test]
     fn test_bucket_size_variants() {
-        let sizes = [BucketSize::Session, BucketSize::Day, BucketSize::Week, BucketSize::Month];
+        let sizes = [
+            BucketSize::Session,
+            BucketSize::Day,
+            BucketSize::Week,
+            BucketSize::Month,
+        ];
         assert_eq!(sizes.len(), 4);
     }
 
@@ -779,9 +810,18 @@ mod tests {
         let record = make_comparison(0, 15.0, "2026-03-06T11:55:00Z");
         tl.add_comparison(&record, now);
 
-        assert_eq!(tl.state(TrainingMode::UnisonPitchComparison), TrainingModeState::Active);
-        assert_eq!(tl.state(TrainingMode::IntervalPitchComparison), TrainingModeState::NoData);
-        assert!(tl.current_ewma(TrainingMode::UnisonPitchComparison).is_some());
+        assert_eq!(
+            tl.state(TrainingMode::UnisonPitchComparison),
+            TrainingModeState::Active
+        );
+        assert_eq!(
+            tl.state(TrainingMode::IntervalPitchComparison),
+            TrainingModeState::NoData
+        );
+        assert!(
+            tl.current_ewma(TrainingMode::UnisonPitchComparison)
+                .is_some()
+        );
     }
 
     // --- AC10: Incremental matching update ---
@@ -794,8 +834,14 @@ mod tests {
         let record = make_matching(0, 5.0, "2026-03-06T11:55:00Z");
         tl.add_matching(&record, now);
 
-        assert_eq!(tl.state(TrainingMode::UnisonMatching), TrainingModeState::Active);
-        assert_eq!(tl.state(TrainingMode::IntervalMatching), TrainingModeState::NoData);
+        assert_eq!(
+            tl.state(TrainingMode::UnisonMatching),
+            TrainingModeState::Active
+        );
+        assert_eq!(
+            tl.state(TrainingMode::IntervalMatching),
+            TrainingModeState::NoData
+        );
     }
 
     #[test]
@@ -827,8 +873,12 @@ mod tests {
         assert_eq!(rebuild_buckets.len(), incr_buckets.len());
         for (rb, ib) in rebuild_buckets.iter().zip(incr_buckets.iter()) {
             assert!((rb.mean - ib.mean).abs() < 1e-10, "mean mismatch");
-            assert!((rb.stddev - ib.stddev).abs() < 1e-10,
-                "stddev mismatch: rebuild={}, incremental={}", rb.stddev, ib.stddev);
+            assert!(
+                (rb.stddev - ib.stddev).abs() < 1e-10,
+                "stddev mismatch: rebuild={}, incremental={}",
+                rb.stddev,
+                ib.stddev
+            );
         }
     }
 
@@ -844,7 +894,10 @@ mod tests {
             make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
         tl.rebuild(&records, &[], now);
-        assert_eq!(tl.state(TrainingMode::UnisonPitchComparison), TrainingModeState::Active);
+        assert_eq!(
+            tl.state(TrainingMode::UnisonPitchComparison),
+            TrainingModeState::Active
+        );
 
         tl.reset();
         for mode in TrainingMode::ALL {
@@ -893,12 +946,12 @@ mod tests {
         };
 
         let mut month = 1;
-        for m in 1..=12 {
-            if remaining < month_days[m] {
+        for (m, &days) in month_days.iter().enumerate().skip(1) {
+            if remaining < days {
                 month = m;
                 break;
             }
-            remaining -= month_days[m];
+            remaining -= days;
         }
         let day = remaining + 1;
 

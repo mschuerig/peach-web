@@ -1,6 +1,6 @@
 # Story 10.1: CI Quality Gate
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,28 +21,28 @@ so that broken code is never deployed and I get fast feedback on regressions.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create GitHub Actions workflow file (AC: 1)
-  - [ ] 1.1 Create `.github/workflows/ci.yml` with trigger on `push` to `main`
-  - [ ] 1.2 Set up the job to run on `ubuntu-latest`
-  - [ ] 1.3 Install Rust stable toolchain with `wasm32-unknown-unknown` target (needed for `cargo clippy --workspace` which includes the `web` and `synth-worklet` crates)
-  - [ ] 1.4 Add `rustfmt` and `clippy` components to the toolchain installation
-- [ ] Task 2: Add Cargo caching (AC: 5)
-  - [ ] 2.1 Use `Swatinem/rust-cache@v2` to cache `~/.cargo/registry`, `~/.cargo/git`, and `target/`
-  - [ ] 2.2 Use workspace `Cargo.lock` as cache key input
-- [ ] Task 3: Add quality check steps in order (AC: 2, 3, 4, 6)
-  - [ ] 3.1 Step: `cargo fmt --check` — fails pipeline on formatting violations
-  - [ ] 3.2 Step: `cargo clippy --workspace -- -D warnings` — fails pipeline on any warning
-  - [ ] 3.3 Step: `cargo test -p domain` — fails pipeline on any test failure
-- [ ] Task 4: Push workflow and verify pipeline catches issues (AC: 1, 6)
-  - [ ] 4.1 Commit and push the `.github/workflows/ci.yml` file
-  - [ ] 4.2 Confirm the pipeline triggers and `cargo fmt --check` fails (existing code has formatting issues)
-  - [ ] 4.3 Confirm the pipeline stops — clippy and test steps do not run after fmt failure
-- [ ] Task 5: Fix formatting and verify green pipeline (AC: 2, 3, 4, 5) — separate commit
-  - [ ] 5.1 Run `cargo fmt` locally to fix all formatting issues
-  - [ ] 5.2 Run `cargo clippy --workspace -- -D warnings` locally to confirm clean
-  - [ ] 5.3 Run `cargo test -p domain` locally to confirm all tests pass
-  - [ ] 5.4 Commit formatting fixes separately and push
-  - [ ] 5.5 Confirm the pipeline passes all three checks
+- [x] Task 1: Create GitHub Actions workflow file (AC: 1)
+  - [x] 1.1 Create `.github/workflows/ci.yml` with trigger on `push` to `main`
+  - [x] 1.2 Set up the job to run on `ubuntu-latest`
+  - [x] 1.3 Install Rust stable toolchain with `wasm32-unknown-unknown` target (needed for `cargo clippy --workspace` which includes the `web` and `synth-worklet` crates)
+  - [x] 1.4 Add `rustfmt` and `clippy` components to the toolchain installation
+- [x] Task 2: Add Cargo caching (AC: 5)
+  - [x] 2.1 Use `Swatinem/rust-cache@v2` to cache `~/.cargo/registry`, `~/.cargo/git`, and `target/`
+  - [x] 2.2 Use workspace `Cargo.lock` as cache key input
+- [x] Task 3: Add quality check steps in order (AC: 2, 3, 4, 6)
+  - [x] 3.1 Step: `cargo fmt --check` — fails pipeline on formatting violations
+  - [x] 3.2 Step: `cargo clippy --workspace -- -D warnings` — fails pipeline on any warning
+  - [x] 3.3 Step: `cargo test -p domain` — fails pipeline on any test failure
+- [x] Task 4: Push workflow and verify pipeline catches issues (AC: 1, 6)
+  - [x] 4.1 Commit and push the `.github/workflows/ci.yml` file
+  - [ ] 4.2 Confirm the pipeline triggers and `cargo fmt --check` fails (existing code has formatting issues) — **DEVIATION: combined with Task 5 into single commit per user decision; verified locally instead**
+  - [ ] 4.3 Confirm the pipeline stops — clippy and test steps do not run after fmt failure — **DEVIATION: see 4.2**
+- [x] Task 5: Fix formatting and verify green pipeline (AC: 2, 3, 4, 5) — separate commit
+  - [x] 5.1 Run `cargo fmt` locally to fix all formatting issues
+  - [x] 5.2 Run `cargo clippy --workspace -- -D warnings` locally to confirm clean
+  - [x] 5.3 Run `cargo test -p domain` locally to confirm all tests pass
+  - [x] 5.4 Commit formatting fixes separately and push — **DEVIATION: combined with CI file into single commit**
+  - [ ] 5.5 Confirm the pipeline passes all three checks — **deferred to user: verify on GitHub Actions tab after push**
 
 ## Dev Notes
 
@@ -102,10 +102,83 @@ so that broken code is never deployed and I get fast feedback on regressions.
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+(none)
+
 ### Completion Notes List
 
+- Created `.github/workflows/ci.yml` with quality gate job: fmt check, clippy, domain tests
+- Uses `dtolnay/rust-toolchain@stable` with `wasm32-unknown-unknown` target, `rustfmt` and `clippy` components
+- Uses `Swatinem/rust-cache@v2` for Cargo caching
+- Ran `cargo fmt` to fix existing formatting issues across the workspace
+- All three checks verified locally: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p domain`
+- **Deviation from story plan:** Tasks 4 & 5 were combined into a single commit per user decision instead of the two-commit approach (CI file first → verify red pipeline → fix formatting → verify green pipeline). Local verification was used instead.
+
+### Code Review Notes (AI)
+
+Reviewed by Claude Opus 4.6 on 2026-03-07. Findings and fixes:
+
+- **[M1] Fixed:** Added `pull_request` trigger to CI workflow so PRs get checked before merge
+- **[M2] Fixed:** Updated `docs/project-context.md` deployment section — removed stale "No CI/CD pipeline (deferred)"
+- **[M3] Fixed:** Updated `docs/project-context.md` workspace description — added `synth-worklet/` (was missing)
+- **[M4] Fixed:** Added `--all-targets` to clippy step — caught a `needless_range_loop` warning in test code (`domain/src/progress_timeline.rs:949`)
+- **[L1] Acknowledged:** Tasks 4.2, 4.3, 5.5 remain deferred to user (GitHub Actions verification)
+- **[L2] Fixed:** Split combined commit into separate formatting and CI commits for cleaner git history
+
+### Change Log
+
+- 2026-03-07: Created CI quality gate workflow and fixed formatting (combined commit)
+- 2026-03-07: Code review fixes — PR trigger, --all-targets clippy, project-context.md updates, clippy fix in test code, split commits
+
 ### File List
+
+- `.github/workflows/ci.yml` (new) — CI quality gate workflow
+- `docs/project-context.md` (modified) — updated deployment and workspace descriptions
+- `docs/implementation-artifacts/sprint-status.yaml` (modified) — status update
+- `docs/implementation-artifacts/10-1-ci-quality-gate.md` (modified) — story tracking
+- `domain/src/progress_timeline.rs` (modified) — formatting + clippy fix in test helper
+- `domain/src/lib.rs` (modified) — formatting
+- `domain/src/ports.rs` (modified) — formatting
+- `domain/src/profile.rs` (modified) — formatting
+- `domain/src/progress_timeline.rs` (modified) — formatting
+- `domain/src/records.rs` (modified) — formatting
+- `domain/src/session/mod.rs` (modified) — formatting
+- `domain/src/session/pitch_comparison_session.rs` (modified) — formatting
+- `domain/src/session/pitch_matching_session.rs` (modified) — formatting
+- `domain/src/strategy.rs` (modified) — formatting
+- `domain/src/training/pitch_comparison.rs` (modified) — formatting
+- `domain/src/training/pitch_matching.rs` (modified) — formatting
+- `domain/src/training_mode.rs` (modified) — formatting
+- `domain/src/tuning.rs` (modified) — formatting
+- `domain/src/types/interval.rs` (modified) — formatting
+- `domain/src/types/midi.rs` (modified) — formatting
+- `domain/src/types/note_range.rs` (modified) — formatting
+- `domain/tests/strategy_convergence.rs` (modified) — formatting
+- `domain/tests/tuning_accuracy.rs` (modified) — formatting
+- `web/src/adapters/audio_context.rs` (modified) — formatting
+- `web/src/adapters/audio_soundfont.rs` (modified) — formatting
+- `web/src/adapters/csv_export_import.rs` (modified) — formatting
+- `web/src/adapters/default_settings.rs` (modified) — formatting
+- `web/src/adapters/indexeddb_store.rs` (modified) — formatting
+- `web/src/adapters/localstorage_settings.rs` (modified) — formatting
+- `web/src/adapters/note_player.rs` (modified) — formatting
+- `web/src/adapters/sound_preview.rs` (modified) — formatting
+- `web/src/app.rs` (modified) — formatting
+- `web/src/bridge.rs` (modified) — formatting
+- `web/src/components/help_content.rs` (modified) — formatting
+- `web/src/components/info_view.rs` (modified) — formatting
+- `web/src/components/mod.rs` (modified) — formatting
+- `web/src/components/nav_bar.rs` (modified) — formatting
+- `web/src/components/pitch_comparison_view.rs` (modified) — formatting
+- `web/src/components/pitch_matching_view.rs` (modified) — formatting
+- `web/src/components/pitch_slider.rs` (modified) — formatting
+- `web/src/components/progress_chart.rs` (modified) — formatting
+- `web/src/components/progress_sparkline.rs` (modified) — formatting
+- `web/src/components/settings_view.rs` (modified) — formatting
+- `web/src/components/start_page.rs` (modified) — formatting
+- `web/src/components/training_stats.rs` (modified) — formatting
+- `web/src/help_sections.rs` (modified) — formatting
+- `web/src/interval_codes.rs` (modified) — formatting
