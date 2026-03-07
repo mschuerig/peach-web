@@ -16,7 +16,7 @@ pub fn InfoView() -> impl IntoView {
     let keydown_handler = Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
         if ev.key() == "Escape" {
             ev.prevent_default();
-            navigate(&base_href("/"), Default::default());
+            navigate("/", Default::default());
         }
     });
 

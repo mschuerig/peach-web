@@ -215,7 +215,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
   3. `cp dist/index.html dist/404.html` after build — GitHub Pages serves `404.html` for unknown paths, enabling SPA deep-link routing (e.g. `/peach-web/profile`).
 - All runtime asset fetches in Rust code must use relative paths (`./soundfont/...`, `./GeneralUser-GS.sf2`), never root-absolute (`/soundfont/...`). Trunk only rewrites paths in HTML, not in compiled WASM. Relative paths resolve against the `<base href>` and work correctly under any base path.
 - `AudioWorklet.addModule()` may not respect `<base href>` — resolve to absolute URL via `document.base_uri()` before calling it.
-- Leptos Router 0.8 `<A href="/path">` does NOT prepend the base for `/`-prefixed hrefs. All links and `navigate()` calls must use `base_href("/path")` (from `app.rs`) which reads the `BasePath` context. This applies to `<A>`, `NavBar back_href`, `NavIconButton href`, raw `<a href>` in `TrainingCard`, and `navigate()` calls.
+- Leptos Router 0.8 `<A href="/path">` does NOT prepend the base for `/`-prefixed hrefs. All `<A>` hrefs, `NavBar back_href`, `NavIconButton href`, and raw `<a href>` must use `base_href("/path")` (from `app.rs`) which reads the `BasePath` context.
+- **Exception:** `navigate()` (from `use_navigate()`) DOES resolve against the base internally (via `resolve_path`). Do NOT use `base_href()` with `navigate()` — it would double-prefix. Use plain paths: `navigate("/", Default::default())`.
 
 ### Critical Don't-Miss Rules
 
@@ -284,7 +285,7 @@ These patterns caused repeated failures. Check this section before implementing 
 | Root-absolute asset paths in Rust | Fetch calls like `/soundfont/foo.wasm` 404 on subpath deployments | Use relative paths (`./soundfont/foo.wasm`) — they resolve against `<base href>` |
 | Missing `<base data-trunk-public-url/>` | Trunk `--public-url` rewrites HTML asset URLs but does NOT insert a `<base>` tag | Add the tag to `index.html` — without it, router base and relative fetches break |
 | No `404.html` for GitHub Pages SPA | Direct navigation to deep routes (e.g. `/peach-web/profile`) returns GitHub's 404 | Copy `index.html` to `404.html` in build output |
-| `<A href="/path">` ignores router base | Leptos Router 0.8 returns `/`-prefixed paths as-is without prepending base | Use `base_href("/path")` for all links and `navigate()` calls |
+| `<A href="/path">` ignores router base | Leptos Router 0.8 returns `/`-prefixed paths as-is without prepending base | Use `base_href("/path")` for `<A>` hrefs, but NOT for `navigate()` which resolves internally |
 | `addModule()` ignores `<base href>` | AudioWorklet module URL resolves against document URL, not `<base>` | Resolve to absolute URL via `document.base_uri()` before calling `addModule()` |
 
 ## Implementation Edge-Case Checklist
