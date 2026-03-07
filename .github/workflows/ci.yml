@@ -75,6 +75,9 @@ jobs:
       - name: Build WASM app
         run: trunk build --release --public-url /peach-web/
 
+      - name: Copy index.html to 404.html for SPA routing
+        run: cp dist/index.html dist/404.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
