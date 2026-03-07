@@ -699,11 +699,7 @@ pub fn PitchMatchingView() -> impl IntoView {
         });
     }
 
-    let matching_title = if is_interval_mode {
-        "Interval Pitch Matching"
-    } else {
-        "Pitch Matching Training"
-    };
+    let matching_title = "Tune & Match";
 
     #[allow(clippy::redundant_closure)]
     let on_back_cb = {
@@ -718,8 +714,10 @@ pub fn PitchMatchingView() -> impl IntoView {
 
     view! {
         <div class="flex flex-col pt-4 pb-12 h-screen">
-            <NavBar title=matching_title back_href=base_href("/") on_back=on_back_cb>
+            <NavBar title=matching_title back_href=base_href("/") on_back=on_back_cb title_left=true pill_group=true>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb />
+                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
+                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
             </NavBar>
             <HelpModal title="Pitch Matching Training" sections=PITCH_MATCHING_HELP is_open=is_help_open on_close=on_help_close />
 

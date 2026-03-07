@@ -661,11 +661,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         });
     }
 
-    let comparison_title = if is_interval_mode {
-        "Interval Comparison"
-    } else {
-        "Comparison Training"
-    };
+    let comparison_title = "Hear & Compare";
     let tuning_label = if is_interval_mode {
         let ts = LocalStorageSettings.tuning_system();
         match ts {
@@ -689,8 +685,10 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title=comparison_title back_href=base_href("/") on_back=on_back_cb>
+            <NavBar title=comparison_title back_href=base_href("/") on_back=on_back_cb title_left=true pill_group=true>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb />
+                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
+                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
             </NavBar>
             <HelpModal title="Comparison Training" sections=COMPARISON_HELP is_open=is_help_open on_close=on_help_close />
 
