@@ -121,3 +121,9 @@ development_status:
   epic-9: in-progress
   9-1-mobile-soundfont-playback: review
   epic-9-retrospective: optional
+
+  # Epic 10: CI/CD Pipeline & GitHub Pages Deployment
+  epic-10: backlog
+  10-1-ci-quality-gate: backlog
+  10-2-build-and-deploy-to-github-pages: backlog
+  epic-10-retrospective: optional

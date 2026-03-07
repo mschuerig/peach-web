@@ -1576,3 +1576,37 @@ Bug fixes for mobile browser compatibility issues discovered during real-device 
 4. Desktop browser playback (Chrome, Firefox, Safari, Edge) continues to work without regression
 5. The oscillator fallback still activates when SoundFont loading fails (network error, unsupported browser)
 6. Settings sound source preview (story 8.10) works on mobile with SoundFont presets
+
+## Epic 10: CI/CD Pipeline & GitHub Pages Deployment
+
+Automated quality checks and deployment to GitHub Pages on every push to `main`. The app is deployed at `https://<username>.github.io/peach-web/`.
+
+### Story 10.1: CI Quality Gate
+
+**As a** developer,
+**I want** automated quality checks to run on every push to `main`,
+**So that** broken code is never deployed and I get fast feedback on regressions.
+
+**Acceptance Criteria:**
+1. A GitHub Actions workflow triggers on push to `main`
+2. `cargo fmt --check` runs and fails the pipeline if formatting is wrong
+3. `cargo clippy --workspace` runs and fails the pipeline if there are warnings
+4. `cargo test -p domain` runs and fails the pipeline if any test fails
+5. The workflow uses caching for the Cargo registry and build artifacts to speed up subsequent runs
+6. If any check fails, the pipeline stops — no build or deploy step runs
+
+### Story 10.2: Build & Deploy to GitHub Pages
+
+**As a** developer,
+**I want** the app to be automatically built and deployed to GitHub Pages after all checks pass,
+**So that** the latest version of the app is always live without manual intervention.
+
+**Acceptance Criteria:**
+1. This job only runs after Story 10.1's quality gate passes
+2. Rust toolchain with `wasm32-unknown-unknown` target and Trunk are installed in CI
+3. The SoundFont file is downloaded via `bin/download-sf2.sh` with GitHub Actions caching so it is fetched only once (or when the cache expires)
+4. `trunk build --public-url /peach-web/` produces the deployable WASM artifacts
+5. The build output is deployed to GitHub Pages using `actions/deploy-pages`
+6. The GitHub repository is configured with GitHub Pages source set to GitHub Actions
+7. The app is accessible and functional at `https://<username>.github.io/peach-web/`
+8. Cargo registry, build artifacts, and SoundFont caches are shared between the quality gate and build jobs where possible
