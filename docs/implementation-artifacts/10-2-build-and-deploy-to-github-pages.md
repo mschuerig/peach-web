@@ -1,6 +1,6 @@
 # Story 10.2: Build & Deploy to GitHub Pages
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -23,24 +23,24 @@ so that the latest version of the app is always live without manual intervention
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `build-deploy` job to CI workflow (AC: 1, 2, 3, 4, 8)
-  - [ ] 1.1 Add `build-deploy` job with `needs: quality-gate` dependency in `.github/workflows/ci.yml`
-  - [ ] 1.2 Add `permissions: pages: write, id-token: write, contents: read` at workflow level (required by `actions/deploy-pages`)
-  - [ ] 1.3 Add `concurrency` group `pages` with `cancel-in-progress: false` to prevent overlapping deployments
-  - [ ] 1.4 Install Rust stable toolchain with `wasm32-unknown-unknown` target (reuse same action as quality-gate)
-  - [ ] 1.5 Add Cargo caching via `Swatinem/rust-cache@v2` (each job needs its own cache step; caches are shared by key)
-  - [ ] 1.6 Install Trunk via download of pre-built binary from GitHub releases (faster than `cargo install trunk`)
-- [ ] Task 2: Download and cache SoundFont file (AC: 3, 8)
-  - [ ] 2.1 Cache `.cache/` directory using `actions/cache@v4` with key based on `hashFiles('bin/sf2-sources.conf')` hash
-  - [ ] 2.2 Run `bin/download-sf2.sh` — script skips download if cached file exists with correct checksum
-  - [ ] 2.3 Verify the SF2 file exists at `.cache/GeneralUser-GS.sf2` after the step
-- [ ] Task 3: Build WASM app with Trunk (AC: 4)
-  - [ ] 3.1 Run `trunk build --release --public-url /peach-web/` to produce `dist/` output
-  - [ ] 3.2 Verify build includes: index.html, WASM binaries, CSS, synth_worklet.wasm, GeneralUser-GS.sf2, sw.js
-- [ ] Task 4: Deploy to GitHub Pages (AC: 5, 6, 7)
-  - [ ] 4.1 Upload `dist/` as artifact using `actions/upload-pages-artifact@v3` with `path: dist`
-  - [ ] 4.2 Deploy using `actions/deploy-pages@v4`
-  - [ ] 4.3 Add `environment: github-pages` with the deployment URL to the job
+- [x] Task 1: Add `build-deploy` job to CI workflow (AC: 1, 2, 3, 4, 8)
+  - [x] 1.1 Add `build-deploy` job with `needs: quality-gate` dependency in `.github/workflows/ci.yml`
+  - [x] 1.2 Add `permissions: pages: write, id-token: write, contents: read` at workflow level (required by `actions/deploy-pages`)
+  - [x] 1.3 Add `concurrency` group `pages` with `cancel-in-progress: false` to prevent overlapping deployments
+  - [x] 1.4 Install Rust stable toolchain with `wasm32-unknown-unknown` target (reuse same action as quality-gate)
+  - [x] 1.5 Add Cargo caching via `Swatinem/rust-cache@v2` (each job needs its own cache step; caches are shared by key)
+  - [x] 1.6 Install Trunk via download of pre-built binary from GitHub releases (faster than `cargo install trunk`)
+- [x] Task 2: Download and cache SoundFont file (AC: 3, 8)
+  - [x] 2.1 Cache `.cache/` directory using `actions/cache@v4` with key based on `hashFiles('bin/sf2-sources.conf')` hash
+  - [x] 2.2 Run `bin/download-sf2.sh` — script skips download if cached file exists with correct checksum
+  - [x] 2.3 Verify the SF2 file exists at `.cache/GeneralUser-GS.sf2` after the step
+- [x] Task 3: Build WASM app with Trunk (AC: 4)
+  - [x] 3.1 Run `trunk build --release --public-url /peach-web/` to produce `dist/` output
+  - [x] 3.2 Verify build includes: index.html, WASM binaries, CSS, synth_worklet.wasm, GeneralUser-GS.sf2, sw.js
+- [x] Task 4: Deploy to GitHub Pages (AC: 5, 6, 7)
+  - [x] 4.1 Upload `dist/` as artifact using `actions/upload-pages-artifact@v3` with `path: dist`
+  - [x] 4.2 Deploy using `actions/deploy-pages@v4`
+  - [x] 4.3 Add `environment: github-pages` with the deployment URL to the job
 - [ ] Task 5: Verify deployment (AC: 7)
   - [ ] 5.1 Push to `main` and confirm GitHub Actions pipeline runs both jobs — deferred to user: verify on GitHub Actions tab
   - [ ] 5.2 Confirm app loads at `https://<username>.github.io/peach-web/` — deferred to user: manual browser verification
@@ -154,10 +154,30 @@ The `build-deploy` job must be added below the `quality-gate` job in this file.
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None — no issues encountered.
+
 ### Completion Notes List
 
+- Added `build-deploy` job to `.github/workflows/ci.yml` with `needs: quality-gate` dependency
+- Job only runs on push to main (`if: github.ref == 'refs/heads/main' && github.event_name == 'push'`) — PRs only run quality-gate
+- Workflow-level permissions: `contents: read`, `pages: write`, `id-token: write` for OIDC deployment
+- Concurrency group `pages` with `cancel-in-progress: false` prevents overlapping deployments
+- Trunk installed via pre-built binary from GitHub releases (faster than `cargo install`)
+- SoundFont cached via `actions/cache@v4` keyed on `hashFiles('bin/sf2-sources.conf')`
+- Build uses `trunk build --release --public-url /peach-web/` for correct subpath asset URLs
+- Deployment via `actions/upload-pages-artifact@v3` + `actions/deploy-pages@v4`
+- Environment `github-pages` configured with deployment URL output
+- Task 5 (verification) deferred to user — requires push to main and manual browser verification
+- **Manual setup required:** GitHub repo Settings > Pages > Source must be set to "GitHub Actions"
+
+### Change Log
+
+- 2026-03-07: Implemented build-deploy job in CI workflow (Tasks 1–4). Task 5 deferred to user.
+
 ### File List
+
+- Modified: `.github/workflows/ci.yml`
