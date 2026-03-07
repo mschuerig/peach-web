@@ -376,7 +376,7 @@ pub fn PitchMatchingView() -> impl IntoView {
         move |ev: leptos::ev::MouseEvent| {
             ev.prevent_default();
             on_nav_away();
-            navigate(&base_href("/"), Default::default());
+            navigate("/", Default::default());
         }
     };
     // Help modal state
@@ -410,7 +410,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                 return;
             }
             on_nav_away();
-            navigate(&base_href("/"), Default::default());
+            navigate("/", Default::default());
         })
     };
 
