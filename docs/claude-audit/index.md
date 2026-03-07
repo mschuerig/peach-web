@@ -1,19 +1,67 @@
 ---
 repo: "/Users/michael/Projekte/peach-web"
-total_commits: 95
-audited_commits: 95
+total_commits: 144
+audited_commits: 143
 detail: "full"
-generated: "2026-03-05T00:58:13.304933+00:00"
+generated: "2026-03-07T00:51:08.946718+00:00"
 ---
 
 # Claude Code Audit Log
 
 Repository: `/Users/michael/Projekte/peach-web`  
-Total commits: 95  
-Commits with Claude Code sessions: 95
+Total commits: 144  
+Commits with Claude Code sessions: 143
 
 ## Commits
 
+- [27e46a4e2d](27e46a4e2d.md) — 2026-03-07T01:33 — Epic 8 retrospective: findings, action items, and process improvements (1 session, 314 messages)
+- [0ed57372a8](0ed57372a8.md) — 2026-03-07T00:34 — Code review fixes for story 8.10: settings sound source preview (1 session, 290 messages)
+- [f7058fd461](f7058fd461.md) — 2026-03-07T00:11 — Implement story 8.10: settings sound source preview (2 sessions, 218 messages)
+- [effc45b44d](effc45b44d.md) — 2026-03-06T23:57 — Add story 8.10: settings sound source preview (2 sessions, 107 messages)
+- [2a39406918](2a39406918.md) — 2026-03-06T23:47 — Code review fixes for story 8.9: help modal pause/resume training (1 session, 151 messages)
+- [80ecd60c17](80ecd60c17.md) — 2026-03-06T23:20 — Implement story 8.9: keyboard interaction fixes (2 sessions, 180 messages)
+- [07bc6b046a](07bc6b046a.md) — 2026-03-06T23:07 — Add story 8.9: keyboard interaction fixes (2 sessions, 110 messages)
+- [2ceff046cb](2ceff046cb.md) — 2026-03-06T22:57 — Implement story 8.8: clean up export/import architecture (1 session, 564 messages)
+- [7abbf3d2b3](7abbf3d2b3.md) — 2026-03-06T21:44 — Add story 8.8: clean up export/import architecture (1 session, 152 messages)
+- [0920ec367b](0920ec367b.md) — 2026-03-06T21:41 — Code review fixes for story 8.7: mark partial Task 4, update status to done (1 session, 143 messages)
+- [0b913e4c79](0b913e4c79.md) — 2026-03-06T21:21 — Implement story 8.7: extract business logic from settings view (1 session, 161 messages)
+- [af6bbb6f09](af6bbb6f09.md) — 2026-03-06T21:03 — Add story 8.7: extract business logic from settings view (2 sessions, 111 messages)
+- [731b23da36](731b23da36.md) — 2026-03-06T20:49 — Code review fixes for story 8.6: dark mode circle colors, consistent Unicode glyphs (2 sessions, 170 messages)
+- [9668c2bf5b](9668c2bf5b.md) — 2026-03-06T20:44 — Implement story 8.6: replace thumbs emoji with checkmark/X colored circles in header (1 session, 82 messages)
+- [2adeb52835](2adeb52835.md) — 2026-03-06T20:38 — Add story 8.6: pitch comparison feedback icons (checkmark/X in colored circles) (2 sessions, 102 messages)
+- [b173250bbf](b173250bbf.md) — 2026-03-06T20:01 — Code review fixes for story 8.5: SF2 always-fetch, preset header parsing, settings UI polish (1 session, 249 messages)
+- [024764ad6e](024764ad6e.md) — 2026-03-06T19:19 — Refactor settings page to iOS-style grouped card layout (story 8.5) (2 sessions, 148 messages)
+- [e6e451d82e](e6e451d82e.md) — 2026-03-06T19:05 — Code review fixes for story 8.4: routing compliance, layout centering, button sizing (1 session, 125 messages)
+- [01edb1cce8](01edb1cce8.md) — 2026-03-06T18:54 — Replace text-link nav with iOS-style NavBar, fix AudioContext gesture handling (story 8.4) (2 sessions, 411 messages)
+- [0d385b785c](0d385b785c.md) — 2026-03-06T18:03 — Add stories 8.4 (iOS UI alignment) and 8.5 (settings page iOS alignment) (1 session, 108 messages)
+- [84d5cf1b3f](84d5cf1b3f.md) — 2026-03-06T17:12 — Code review fixes for stories 8.2 and 8.3: guard SF2 fetch, fix disabled link bypass, prevent connect race (1 session, 133 messages)
+- [195784f8bc](195784f8bc.md) — 2026-03-06T16:57 — Add SoundFont loading UX gate — disable training until SF2 ready (story 8.3) (2 sessions, 204 messages)
+- [bf4179b449](bf4179b449.md) — 2026-03-06T16:21 — Add story 8.3: SoundFont loading UX — gate training on SF2 readiness (1 session, 66 messages)
+- [3cfe282b2b](3cfe282b2b.md) — 2026-03-06T16:05 — Fix audio playback reliability: ensure_running, two-phase worklet init, soft onstatechange (story 8.2) (1 session, 228 messages)
+- [2000e90ff5](2000e90ff5.md) — 2026-03-06T14:32 — Add story 8.2: audio playback reliability fix based on 8.1 research findings (2 sessions, 114 messages)
+- [fda4cc26ae](fda4cc26ae.md) — 2026-03-06T14:24 — Code review fixes for story 8.1: complete diagnostic logging coverage and mark done (1 session, 105 messages)
+- [9bf80f13d2](9bf80f13d2.md) — 2026-03-06T14:07 — Audio playback reliability research (story 8.1): root cause analysis and diagnostic logging (1 session, 125 messages)
+- [5bfeed4203](5bfeed4203.md) — 2026-03-06T12:57 — Add epic 8 (Fixes & Improvements) and story 8.1 for audio playback reliability research (2 sessions, 141 messages)
+- [45bddcd56c](45bddcd56c.md) — 2026-03-06T11:48 — Mark epic 7 as done (1 session, 110 messages)
+- [7df014b83e](7df014b83e.md) — 2026-03-06T11:45 — Code review fixes for story 7.7: fix help resume, double callback, heading hierarchy, and mark done (1 session, 106 messages)
+- [d18a204d9f](d18a204d9f.md) — 2026-03-06T11:24 — Add contextual help system to all views (story 7.7) (2 sessions, 184 messages)
+- [9ec58b8338](9ec58b8338.md) — 2026-03-06T10:30 — Code review fixes for story 7.6: fix SVG stroke clipping, clean up sparkline component, and mark done (1 session, 133 messages)
+- [f74283e8ea](f74283e8ea.md) — 2026-03-06T10:22 — Add progress sparklines to start page training cards (story 7.6) (2 sessions, 177 messages)
+- [6f466952df](6f466952df.md) — 2026-03-06T10:16 — Code review fixes for story 7.5: track session best on all attempts, fix accessibility, and mark done (2 sessions, 152 messages)
+- [9e7b80cf2e](9e7b80cf2e.md) — 2026-03-06T10:05 — Add training stats with trend arrows to both training screens (story 7.5) (3 sessions, 200 messages)
+- [a1f01f1d02](a1f01f1d02.md) — 2026-03-06T09:50 — Code review fixes for story 7.4: fix SVG stroke distortion, skip single-bucket chart, and mark done (1 session, 130 messages)
+- [f5d4896fac](f5d4896fac.md) — 2026-03-06T09:40 — Replace profile piano keyboard with per-mode progress charts (story 7.4) (2 sessions, 171 messages)
+- [fc31c9964c](fc31c9964c.md) — 2026-03-06T09:31 — Code review fixes for story 7.3: restore nav landmark and mark done (1 session, 98 messages)
+- [f101767f2e](f101767f2e.md) — 2026-03-06T09:20 — Redesign start screen with grouped sections and card-style training buttons (story 7.3) (2 sessions, 138 messages)
+- [4755ec521b](4755ec521b.md) — 2026-03-06T09:14 — Code review fixes for story 7.2: fix stddev bug, wire per-mode config, and mark done (2 sessions, 140 messages)
+- [c54d44fcfd](c54d44fcfd.md) — 2026-03-06T09:04 — Add ProgressTimeline with EWMA and adaptive bucketing (story 7.2) (1 session, 187 messages)
+- [5dd4e755d7](5dd4e755d7.md) — 2026-03-06T08:53 — Code review fixes for story 7.1: add cross-mode category guards and mark done (2 sessions, 136 messages)
+- [b183adaf38](b183adaf38.md) — 2026-03-06T08:39 — Add TrainingMode enum with per-mode config and metric extraction (story 7.1) (2 sessions, 122 messages)
+- [88cebc3779](88cebc3779.md) — 2026-03-06T08:34 — Code review fixes for story 7.0b: replace last magic 1200.0 and mark done (2 sessions, 146 messages)
+- [316e5f9c7e](316e5f9c7e.md) — 2026-03-06T08:28 — Extract constants and thread Cents domain type through APIs (story 7.0b) (2 sessions, 398 messages)
+- [48f1b0a880](48f1b0a880.md) — 2026-03-06T08:12 — Code review fixes for story 7.0a: update stale comments and mark done (3 sessions, 610 messages)
+- [ebe1f31c7c](ebe1f31c7c.md) — 2026-03-06T08:07 — Rename Comparison* types to PitchComparison* for iOS naming parity (story 7.0a) (2 sessions, 456 messages)
+- [52080eb499](52080eb499.md) — 2026-03-06T01:38 — Add Epic 7: iOS Parity — Profile & UI Refresh (9 stories) (1 session, 172 messages)
 - [86935d7903](86935d7903.md) — 2026-03-04T23:42 — Code review fixes for story 6.4: use relative paths for subpath deployment (1 session, 152 messages)
 - [965ce1cd2a](965ce1cd2a.md) — 2026-03-04T23:26 — Implement story 6.4 Service Worker & Offline Support and mark as review (1 session, 108 messages)
 - [82a025a24d](82a025a24d.md) — 2026-03-04T23:14 — Add story 6.4 Service Worker & Offline Support and mark as ready-for-dev (1 session, 108 messages)
