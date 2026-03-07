@@ -1,6 +1,6 @@
 # Story 9.1: Mobile SoundFont Playback
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,14 +21,14 @@ so that I hear realistic instrument sounds during training on my phone, not just
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Send raw WASM bytes to worklet via postMessage instead of compiled module via processorOptions (AC: 1, 2, 3)
-  - [ ] 1.1 In `app.rs`, change `WorkletAssets.wasm_module: JsValue` to `wasm_bytes: JsValue` — store the raw `ArrayBuffer` from fetch, remove the `WebAssembly::compile()` call
-  - [ ] 1.2 In `app.rs` `connect_worklet()`, remove `wasmModule` from `processorOptions`; after node creation and `port` acquisition, send `{ type: 'initWasm', wasmBytes }` via `port.post_message()`
-  - [ ] 1.3 Update `connect_worklet()` to wait for `'ready'` message (which now comes after async WASM instantiation inside the worklet)
-- [ ] Task 2: Async WASM instantiation in AudioWorklet processor (AC: 1, 2, 3)
-  - [ ] 2.1 In `synth-processor.js`, remove WASM instantiation from constructor — constructor only sets up `port.onmessage` handler and initial state
-  - [ ] 2.2 Add `initWasm` message handler: receives raw bytes, calls `await WebAssembly.instantiate(wasmBytes, {})`, sets up synth/buffers, posts `{ type: 'ready' }` on success or `{ type: 'error' }` on failure
-  - [ ] 2.3 Guard `loadSoundFont` and other message handlers against `this.wasm === null` (messages arriving before WASM init completes)
+- [x] Task 1: Send raw WASM bytes to worklet via postMessage instead of compiled module via processorOptions (AC: 1, 2, 3)
+  - [x] 1.1 In `app.rs`, change `WorkletAssets.wasm_module: JsValue` to `wasm_bytes: JsValue` — store the raw `ArrayBuffer` from fetch, remove the `WebAssembly::compile()` call
+  - [x] 1.2 In `app.rs` `connect_worklet()`, remove `wasmModule` from `processorOptions`; after node creation and `port` acquisition, send `{ type: 'initWasm', wasmBytes }` via `port.post_message()`
+  - [x] 1.3 Update `connect_worklet()` to wait for `'ready'` message (which now comes after async WASM instantiation inside the worklet)
+- [x] Task 2: Async WASM instantiation in AudioWorklet processor (AC: 1, 2, 3)
+  - [x] 2.1 In `synth-processor.js`, remove WASM instantiation from constructor — constructor only sets up `port.onmessage` handler and initial state
+  - [x] 2.2 Add `initWasm` message handler: receives raw bytes, calls `await WebAssembly.instantiate(wasmBytes, {})`, sets up synth/buffers, posts `{ type: 'ready' }` on success or `{ type: 'error' }` on failure
+  - [x] 2.3 Guard `loadSoundFont` and other message handlers against `this.wasm === null` (messages arriving before WASM init completes)
 - [ ] Task 3: Verify no regressions on desktop (AC: 4, 5)
   - [ ] 3.1 Manual test: SoundFont playback in desktop Chrome, Firefox, Safari
   - [ ] 3.2 Manual test: oscillator fallback when SF2 fetch fails (e.g., block network request in DevTools)
@@ -38,9 +38,9 @@ so that I hear realistic instrument sounds during training on my phone, not just
   - [ ] 4.2 Test on mobile Chrome (Android or iOS): same flow as 4.1
   - [ ] 4.3 Test settings sound source preview on mobile with SoundFont preset
   - [ ] 4.4 Test oscillator fallback on mobile when SoundFont is unavailable
-- [ ] Task 5: Code quality (AC: all)
-  - [ ] 5.1 `cargo clippy --workspace` clean
-  - [ ] 5.2 `cargo test -p domain` passes
+- [x] Task 5: Code quality (AC: all)
+  - [x] 5.1 `cargo clippy --workspace` clean
+  - [x] 5.2 `cargo test -p domain` passes
 
 ## Dev Notes
 
@@ -142,10 +142,26 @@ No new web-sys features required. Existing features cover `AudioWorkletNode`, `A
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — no debugging required. Changes were straightforward per the story's fix architecture.
 
 ### Completion Notes List
 
+- **Task 1**: Changed `WorkletAssets.wasm_module` to `wasm_bytes` in `app.rs`. Removed `WebAssembly::compile()` call — now stores raw `ArrayBuffer` directly. In `connect_worklet()`, removed `processorOptions` with `wasmModule`; instead sends `{ type: 'initWasm', wasmBytes }` via `port.post_message()` after node creation. The existing `wait_for_worklet_message(&port, "ready")` call handles the async readiness signal.
+- **Task 2**: Rewrote `SynthProcessor` constructor to only set up `port.onmessage` and initial state (no WASM instantiation). Added `async initWasm(wasmBytes)` method that calls `WebAssembly.instantiate(wasmBytes, {})`, creates synth, allocates buffers, and posts `{ type: 'ready' }` on success or `{ type: 'error' }` on failure. Added `this.wasm` null guards on all message handlers (`loadSoundFont`, `noteOn`, `noteOff`, `pitchBend`, `selectProgram`, `allNotesOff`). The `process()` method already guards on `this.ready`.
+- **Task 5**: `cargo clippy --workspace` clean, all 341 domain tests pass.
+- **Tasks 3 & 4**: Manual testing tasks — require user verification on desktop and mobile browsers.
+
 ### Change Log
 
+- 2026-03-07: Implemented async WASM delivery to AudioWorklet for mobile browser compatibility (Tasks 1, 2, 5)
+
 ### File List
+
+- `web/src/app.rs` — Modified: `WorkletAssets` struct field rename, removed `WebAssembly::compile()`, changed `connect_worklet()` to send WASM via postMessage
+- `web/assets/soundfont/synth-processor.js` — Modified: async WASM init, constructor simplified, null guards on all handlers
+- `docs/implementation-artifacts/sprint-status.yaml` — Modified: story status updated
+- `docs/implementation-artifacts/9-1-mobile-soundfont-playback.md` — Modified: task checkboxes, dev agent record

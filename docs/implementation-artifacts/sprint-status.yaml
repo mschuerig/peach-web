@@ -119,5 +119,5 @@ development_status:
 
   # Epic 9: Mobile Compatibility
   epic-9: in-progress
-  9-1-mobile-soundfont-playback: ready-for-dev
+  9-1-mobile-soundfont-playback: review
   epic-9-retrospective: optional

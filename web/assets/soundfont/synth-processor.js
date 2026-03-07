@@ -1,6 +1,6 @@
 // synth-processor.js — AudioWorkletProcessor wrapping the OxiSynth WASM module.
-// Receives a compiled WebAssembly.Module via processorOptions, instantiates it,
-// and renders audio samples in real-time via process().
+// Receives a compiled WebAssembly.Module via processorOptions, instantiates it
+// asynchronously (to avoid mobile sync size limits), and renders audio via process().
 
 // Parse SF2 preset headers (PHDR) from raw SF2 bytes.
 // Returns array of { bank, program, name } sorted by bank then program.
@@ -73,42 +73,56 @@ class SynthProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
 
-    this.synth = 0; // pointer to Synth instance in WASM memory
+    this.wasm = null;
+    this.synth = 0;
     this.leftPtr = 0;
     this.rightPtr = 0;
     this.ready = false;
 
-    const wasmModule = options.processorOptions.wasmModule;
-
-    // Instantiate the WASM module synchronously (allowed in AudioWorklet scope)
-    const instance = new WebAssembly.Instance(wasmModule, {});
-    this.wasm = instance.exports;
-
-    // Create synth at the AudioContext's sample rate
-    this.synth = this.wasm.synth_new(sampleRate);
-    if (this.synth === 0) {
-      this.port.postMessage({ type: 'error', message: 'synth_new returned null' });
-      return;
-    }
-
-    // Pre-allocate stereo output buffers in WASM memory (128 samples each)
-    this.leftPtr = this.wasm.alloc(128 * 4); // 128 f32 samples
-    this.rightPtr = this.wasm.alloc(128 * 4);
-
     this.port.onmessage = (e) => this.handleMessage(e.data);
-    this.ready = true;
-    this.port.postMessage({ type: 'ready' });
+
+    // Async WASM instantiation — avoids the sync size limit on mobile browsers.
+    // processorOptions.wasmModule is a compiled WebAssembly.Module from the main thread.
+    const wasmModule = options.processorOptions && options.processorOptions.wasmModule;
+    if (wasmModule) {
+      this.initWasm(wasmModule);
+    } else {
+      this.port.postMessage({
+        type: 'error',
+        message: 'wasmModule missing from processorOptions (type: ' + typeof wasmModule + ')'
+      });
+    }
+  }
+
+  async initWasm(wasmModule) {
+    try {
+      const instance = await WebAssembly.instantiate(wasmModule, {});
+      this.wasm = instance.exports;
+
+      this.synth = this.wasm.synth_new(sampleRate);
+      if (this.synth === 0) {
+        this.port.postMessage({ type: 'error', message: 'synth_new returned null' });
+        return;
+      }
+
+      this.leftPtr = this.wasm.alloc(128 * 4);
+      this.rightPtr = this.wasm.alloc(128 * 4);
+
+      this.ready = true;
+      this.port.postMessage({ type: 'ready' });
+    } catch (e) {
+      this.port.postMessage({ type: 'error', message: 'WASM instantiation failed: ' + e });
+    }
   }
 
   handleMessage(msg) {
     switch (msg.type) {
       case 'loadSoundFont': {
+        if (!this.wasm) break;
         const sf2Bytes = new Uint8Array(msg.data);
-        // Parse preset headers from the raw SF2 before handing to WASM
         const presets = parseSF2Presets(sf2Bytes);
         const len = sf2Bytes.length;
         const ptr = this.wasm.alloc(len);
-        // Copy SF2 bytes into WASM linear memory
         new Uint8Array(this.wasm.memory.buffer, ptr, len).set(sf2Bytes);
         const result = this.wasm.synth_load_soundfont(this.synth, ptr, len);
         this.wasm.dealloc(ptr, len);
@@ -120,19 +134,19 @@ class SynthProcessor extends AudioWorkletProcessor {
         break;
       }
       case 'noteOn':
-        this.wasm.synth_note_on(this.synth, msg.key, msg.vel);
+        if (this.wasm) this.wasm.synth_note_on(this.synth, msg.key, msg.vel);
         break;
       case 'noteOff':
-        this.wasm.synth_note_off(this.synth, msg.key);
+        if (this.wasm) this.wasm.synth_note_off(this.synth, msg.key);
         break;
       case 'pitchBend':
-        this.wasm.synth_pitch_bend(this.synth, msg.value);
+        if (this.wasm) this.wasm.synth_pitch_bend(this.synth, msg.value);
         break;
       case 'selectProgram':
-        this.wasm.synth_select_program(this.synth, msg.bank, msg.preset);
+        if (this.wasm) this.wasm.synth_select_program(this.synth, msg.bank, msg.preset);
         break;
       case 'allNotesOff':
-        this.wasm.synth_all_notes_off(this.synth);
+        if (this.wasm) this.wasm.synth_all_notes_off(this.synth);
         break;
     }
   }
