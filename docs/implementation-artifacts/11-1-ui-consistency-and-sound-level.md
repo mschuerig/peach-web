@@ -1,6 +1,6 @@
 # Story 11.1: UI Consistency and Sound Level Fixes
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -31,28 +31,28 @@ so that the experience is consistent across platforms.
   - [ ] 1.1 In `web/src/audio_oscillator.rs`, add a constant `MASTER_GAIN_DB: f32 = 12.0` and apply it as an offset when converting `amplitude_db` to linear gain (line ~108). The formula becomes: `10_f32.powf((amplitude_db.raw_value() + MASTER_GAIN_DB) / 20.0)`.
   - [ ] 1.2 In `web/src/audio_soundfont.rs`, implement the `_amplitude_db` parameter that is currently ignored (~line 183). Apply the same `MASTER_GAIN_DB` offset.
   - [ ] 1.3 Verify `AmplitudeDB` clamp range (`-90.0..=+12.0` in `domain/src/types/amplitude.rs`) still makes sense — with the +12 dB offset, a 0.0 dB setting will produce +12 dB linear gain. Consider whether the max should be lowered to 0.0 to prevent clipping when vary_loudness is active.
-- [ ] Task 2: Fix training mode name consistency (AC: #2)
-  - [ ] 2.1 Decide on canonical short names for the start page cards. Current state: start page shows "Hear & Compare" / "Tune & Match" (no suffix); training pages use full `display_name` like "Hear & Compare -- Single Notes". The section headers ("Single Notes", "Intervals") already provide context, so the short labels may be intentional. **Ask Michael:** Should cards show the full name, or is the current short label + section header approach correct? If short labels are correct, ensure training page titles use the same short form.
-  - [ ] 2.2 In `web/src/components/start_page.rs`, update card labels OR training page NavBar titles to be consistent (based on decision above).
-  - [ ] 2.3 Check `web/src/help_sections.rs` uses en-dash ("---") vs double-dash ("--") in display names — align with `domain/src/training_mode.rs`.
-- [ ] Task 3: Use circled question mark for Help icon (AC: #3)
-  - [ ] 3.1 In `web/src/components/pitch_comparison_view.rs` (~line 693) and `web/src/components/pitch_matching_view.rs` (~line 722), change `icon="?".to_string()` to `icon="\u{24E0}".to_string()` (circled latin small letter q) or another appropriate circled question mark character. Test rendering across browsers. Note: There is no standard "circled question mark" in Unicode BMP like there is for info (U+24D8). Alternatives: U+2753 (red question mark ornament), U+003F in a styled circle via CSS, or keeping "?" and relying on the existing `rounded-full` button styling for the circle. **Recommendation:** Use `"\u{003F}"` (plain ?) and ensure the button background circle is always visible (see Task 5 pill styling).
-  - [ ] 3.2 Also update `web/src/components/settings_view.rs` help icon if present.
-- [ ] Task 4: Start page header — iOS layout alignment (AC: #4)
-  - [ ] 4.1 In `web/src/components/nav_bar.rs`, add a new prop `pill_group: bool` (default false) to `NavBar` that wraps the children div in a pill-shaped container: `class="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-1"` (or similar). When `pill_group` is true, right-side icons get the pill background.
-  - [ ] 4.2 In `web/src/components/start_page.rs` (~line 102-110), set `pill_group=true` on the NavBar.
-  - [ ] 4.3 Give the info icon button on the start page a visible circle background (same as back button styling: `bg-gray-100 dark:bg-gray-800`). This may require a new prop on `NavIconButton` like `filled: bool`, or a separate CSS class.
-- [ ] Task 5: Center section titles (AC: #5)
-  - [ ] 5.1 In `web/src/components/start_page.rs` (~lines 132, 155), add `text-center` to the `<h2>` class.
-- [ ] Task 6: Fixed-height training cards (AC: #6)
-  - [ ] 6.1 In `web/src/components/start_page.rs` (~line 31), determine the rendered height of a card with a sparkline (likely ~68-72px with the 24px SVG + text + padding). Set a fixed height class (e.g. `h-[4.5rem]`) instead of `min-h-11`.
-  - [ ] 6.2 Ensure the sparkline `<div>` and the no-data `<span>` both occupy the same vertical space, or use `overflow-hidden` on the card.
-- [ ] Task 7: Training page header — iOS layout alignment (AC: #7)
-  - [ ] 7.1 Restructure the `NavBar` layout for training pages. In the iOS screenshot, the title is left-aligned after the back button (not centered). This requires either a new NavBar variant or a prop like `align_title_left: bool`.
-  - [ ] 7.2 Add Settings and Chart icons to the training page right side. In `pitch_comparison_view.rs` and `pitch_matching_view.rs`, add `NavIconButton` for settings (href to settings page) and profile/chart (href to profile page) alongside the existing help button.
-  - [ ] 7.3 Set `pill_group=true` on training page NavBars so the three right-side icons are grouped in a pill.
-- [ ] Task 8: Link SoundFont credit to author's page (AC: #8)
-  - [ ] 8.1 In `web/src/help_sections.rs` (~line 85), change the plain text "GeneralUser GS by S. Christian Collins" to include a hyperlink. Since help section bodies are plain strings rendered in Leptos views, check how the body is rendered (likely as text content). May need to change the body field to support inline HTML/view fragments, or split the text and insert an `<a>` tag with `target="_blank"` and `rel="noopener noreferrer"` pointing to `https://schristiancollins.com/generaluser.php`.
+- [x] Task 2: Fix training mode name consistency (AC: #2)
+  - [x] 2.1 Decided with Michael: training pages use simple names "Hear & Compare" / "Tune & Match" regardless of interval mode. Start page short labels + section headers are correct as-is.
+  - [x] 2.2 Updated training page NavBar titles in `pitch_comparison_view.rs` and `pitch_matching_view.rs` to use simple names.
+  - [x] 2.3 Checked help_sections.rs — uses em dash (U+2014) in info page help text, domain uses "--" in display_name. No visible inconsistency since domain display_name isn't directly rendered. No change needed.
+- [x] Task 3: Use circled question mark for Help icon (AC: #3)
+  - [x] 3.1 Kept plain "?" character. The visible circle comes from the pill container (pill_group=true on training pages) which matches the circled info icon approach.
+  - [x] 3.2 Settings view help icon unchanged — it renders as a button with rounded-full styling already.
+- [x] Task 4: Start page header — iOS layout alignment (AC: #4)
+  - [x] 4.1 Added `pill_group: bool` and `filled: bool` props to `NavBar` and `NavIconButton` respectively in `nav_bar.rs`.
+  - [x] 4.2 Set `pill_group=true` on start page NavBar.
+  - [x] 4.3 Set `filled=true` on info icon button for visible circle background.
+- [x] Task 5: Center section titles (AC: #5)
+  - [x] 5.1 Added `text-center` to both section title `<h2>` elements in `start_page.rs`.
+- [x] Task 6: Fixed-height training cards (AC: #6)
+  - [x] 6.1 Changed `min-h-11` to `h-[4.5rem]` on training cards in `start_page.rs`.
+  - [x] 6.2 Fixed height ensures consistent card size regardless of sparkline presence.
+- [x] Task 7: Training page header — iOS layout alignment (AC: #7)
+  - [x] 7.1 Added `title_left: bool` prop to NavBar; set on training pages for left-aligned title.
+  - [x] 7.2 Added Settings and Profile/Chart NavIconButtons to both training page NavBars.
+  - [x] 7.3 Set `pill_group=true` on training page NavBars to group right-side icons.
+- [x] Task 8: Link SoundFont credit to author's page (AC: #8)
+  - [x] 8.1 Changed plain text to `<a>` hyperlink in `help_sections.rs`. Body is rendered via `inner_html` so raw HTML works directly. Link opens in new tab with `target="_blank"` and `rel="noopener noreferrer"`.
 
 ## Dev Notes
 
@@ -121,9 +121,26 @@ There is no standard Unicode "circled question mark" equivalent to ⓘ. Options:
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6
 
 ### Debug Log References
+None — clean implementation, no debugging needed.
 
 ### Completion Notes List
+- Training page titles simplified to "Hear & Compare" / "Tune & Match" (per user decision)
+- NavBar enhanced with `pill_group`, `title_left` props; NavIconButton enhanced with `filled` prop
+- Training pages now show Help, Settings, and Profile icons in a pill-shaped container with left-aligned title
+- Start page info icon has visible circle background; right icons grouped in pill
+- Section titles centered; training cards have fixed height (h-[4.5rem])
+- SoundFont credit linked to author's website via inline HTML in help section body
 
 ### File List
+- web/src/components/nav_bar.rs (modified — added pill_group, title_left, filled props)
+- web/src/components/start_page.rs (modified — pill_group, filled info icon, centered titles, fixed card height)
+- web/src/components/pitch_comparison_view.rs (modified — simple title, title_left, pill_group, settings+profile icons)
+- web/src/components/pitch_matching_view.rs (modified — simple title, title_left, pill_group, settings+profile icons)
+- web/src/help_sections.rs (modified — SoundFont credit hyperlink)
+- docs/implementation-artifacts/sprint-status.yaml (modified — story status)
+
+### Change Log
+- 2026-03-08: Implemented tasks 2-8 for story 11.1 — UI consistency fixes (audio level pending investigation)
