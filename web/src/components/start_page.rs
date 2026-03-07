@@ -28,7 +28,7 @@ fn TrainingCard(
     mode: TrainingMode,
     #[prop(into)] disabled: Signal<bool>,
 ) -> impl IntoView {
-    let base_class = "flex w-full items-center gap-3 rounded-xl px-4 py-3 min-h-11 text-lg font-medium no-underline transition-opacity duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900";
+    let base_class = "flex w-full items-center gap-3 rounded-xl px-4 py-3 h-[4.5rem] text-lg font-medium no-underline transition-opacity duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900";
     let enabled_class = " bg-gray-100 text-gray-800 active:opacity-70 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700";
     let disabled_class = " bg-gray-100 text-gray-400 cursor-not-allowed opacity-60 dark:bg-gray-800 dark:text-gray-500";
 
@@ -101,8 +101,9 @@ pub fn StartPage() -> impl IntoView {
         <div class="flex flex-col items-center gap-6 pt-4 pb-12">
             <NavBar
                 title="Peach"
+                pill_group=true
                 left_content=ViewFn::from(move || view! {
-                    <NavIconButton label="Info".to_string() icon="\u{24D8}".to_string() href=base_href("/info") />
+                    <NavIconButton label="Info".to_string() icon="\u{24D8}".to_string() href=base_href("/info") filled=true />
                 })
             >
                 <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
@@ -129,7 +130,7 @@ pub fn StartPage() -> impl IntoView {
             <nav aria-label="Training modes" class="flex w-full flex-col gap-7 md:flex-row md:gap-8">
                 // Single Notes section
                 <section class="flex-1">
-                    <h2 class="mb-2.5 text-sm font-medium text-gray-500 dark:text-gray-400">"Single Notes"</h2>
+                    <h2 class="mb-2.5 text-center text-sm font-medium text-gray-500 dark:text-gray-400">"Single Notes"</h2>
                     <div class="flex flex-col gap-2.5">
                         <TrainingCard
                             label="Hear & Compare"
@@ -152,7 +153,7 @@ pub fn StartPage() -> impl IntoView {
 
                 // Intervals section
                 <section class="flex-1">
-                    <h2 class="mb-2.5 text-sm font-medium text-gray-500 dark:text-gray-400">"Intervals"</h2>
+                    <h2 class="mb-2.5 text-center text-sm font-medium text-gray-500 dark:text-gray-400">"Intervals"</h2>
                     <div class="flex flex-col gap-2.5">
                         <TrainingCard
                             label="Hear & Compare"
