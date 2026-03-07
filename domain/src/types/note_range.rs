@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::error::DomainError;
 use super::midi::MIDINote;
+use crate::error::DomainError;
 
 /// A validated MIDI note range where min <= max.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

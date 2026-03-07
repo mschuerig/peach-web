@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{IdbDatabase, IdbOpenDbRequest, IdbRequest, IdbTransactionMode};
 
@@ -78,7 +78,10 @@ impl IndexedDbStore {
         Ok(Self { db })
     }
 
-    pub async fn save_pitch_comparison(&self, record: &PitchComparisonRecord) -> Result<(), StorageError> {
+    pub async fn save_pitch_comparison(
+        &self,
+        record: &PitchComparisonRecord,
+    ) -> Result<(), StorageError> {
         let transaction = self
             .db
             .transaction_with_str_and_mode(COMPARISON_STORE, IdbTransactionMode::Readwrite)
@@ -129,7 +132,9 @@ impl IndexedDbStore {
         Ok(())
     }
 
-    pub async fn fetch_all_pitch_comparisons(&self) -> Result<Vec<PitchComparisonRecord>, StorageError> {
+    pub async fn fetch_all_pitch_comparisons(
+        &self,
+    ) -> Result<Vec<PitchComparisonRecord>, StorageError> {
         let transaction = self
             .db
             .transaction_with_str_and_mode(COMPARISON_STORE, IdbTransactionMode::Readonly)

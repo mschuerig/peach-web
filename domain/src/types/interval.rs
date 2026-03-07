@@ -292,7 +292,11 @@ mod tests {
             (Interval::Octave, "P8"),
         ];
         for (interval, label) in expected {
-            assert_eq!(interval.short_label(), label, "wrong label for {interval:?}");
+            assert_eq!(
+                interval.short_label(),
+                label,
+                "wrong label for {interval:?}"
+            );
         }
     }
 
@@ -371,7 +375,10 @@ mod tests {
         for interval in Interval::all_chromatic() {
             let code = interval.csv_code();
             let back = Interval::from_csv_code(code).unwrap();
-            assert_eq!(back, *interval, "roundtrip failed for {interval:?} -> {code}");
+            assert_eq!(
+                back, *interval,
+                "roundtrip failed for {interval:?} -> {code}"
+            );
         }
     }
 
@@ -393,7 +400,11 @@ mod tests {
             (Interval::Octave, "Octave"),
         ];
         for (interval, name) in expected {
-            assert_eq!(interval.display_name(), name, "wrong display_name for {interval:?}");
+            assert_eq!(
+                interval.display_name(),
+                name,
+                "wrong display_name for {interval:?}"
+            );
         }
     }
 

@@ -278,44 +278,108 @@ mod tests {
     #[test]
     fn test_boundary_interval_zero_is_unison() {
         let comp = comparison_record(0, 10.0);
-        assert!(TrainingMode::UnisonPitchComparison.extract_comparison_metric(&comp).is_some());
-        assert!(TrainingMode::IntervalPitchComparison.extract_comparison_metric(&comp).is_none());
+        assert!(
+            TrainingMode::UnisonPitchComparison
+                .extract_comparison_metric(&comp)
+                .is_some()
+        );
+        assert!(
+            TrainingMode::IntervalPitchComparison
+                .extract_comparison_metric(&comp)
+                .is_none()
+        );
 
         let matching = matching_record(0, 5.0);
-        assert!(TrainingMode::UnisonMatching.extract_matching_metric(&matching).is_some());
-        assert!(TrainingMode::IntervalMatching.extract_matching_metric(&matching).is_none());
+        assert!(
+            TrainingMode::UnisonMatching
+                .extract_matching_metric(&matching)
+                .is_some()
+        );
+        assert!(
+            TrainingMode::IntervalMatching
+                .extract_matching_metric(&matching)
+                .is_none()
+        );
     }
 
     #[test]
     fn test_boundary_interval_one_is_interval() {
         let comp = comparison_record(1, 10.0);
-        assert!(TrainingMode::UnisonPitchComparison.extract_comparison_metric(&comp).is_none());
-        assert!(TrainingMode::IntervalPitchComparison.extract_comparison_metric(&comp).is_some());
+        assert!(
+            TrainingMode::UnisonPitchComparison
+                .extract_comparison_metric(&comp)
+                .is_none()
+        );
+        assert!(
+            TrainingMode::IntervalPitchComparison
+                .extract_comparison_metric(&comp)
+                .is_some()
+        );
 
         let matching = matching_record(1, 5.0);
-        assert!(TrainingMode::UnisonMatching.extract_matching_metric(&matching).is_none());
-        assert!(TrainingMode::IntervalMatching.extract_matching_metric(&matching).is_some());
+        assert!(
+            TrainingMode::UnisonMatching
+                .extract_matching_metric(&matching)
+                .is_none()
+        );
+        assert!(
+            TrainingMode::IntervalMatching
+                .extract_matching_metric(&matching)
+                .is_some()
+        );
     }
 
     #[test]
     fn test_matching_modes_return_none_for_comparison_records() {
         let comp = comparison_record(0, 10.0);
-        assert!(TrainingMode::UnisonMatching.extract_comparison_metric(&comp).is_none());
-        assert!(TrainingMode::IntervalMatching.extract_comparison_metric(&comp).is_none());
+        assert!(
+            TrainingMode::UnisonMatching
+                .extract_comparison_metric(&comp)
+                .is_none()
+        );
+        assert!(
+            TrainingMode::IntervalMatching
+                .extract_comparison_metric(&comp)
+                .is_none()
+        );
 
         let comp_interval = comparison_record(4, 10.0);
-        assert!(TrainingMode::UnisonMatching.extract_comparison_metric(&comp_interval).is_none());
-        assert!(TrainingMode::IntervalMatching.extract_comparison_metric(&comp_interval).is_none());
+        assert!(
+            TrainingMode::UnisonMatching
+                .extract_comparison_metric(&comp_interval)
+                .is_none()
+        );
+        assert!(
+            TrainingMode::IntervalMatching
+                .extract_comparison_metric(&comp_interval)
+                .is_none()
+        );
     }
 
     #[test]
     fn test_comparison_modes_return_none_for_matching_records() {
         let matching = matching_record(0, 5.0);
-        assert!(TrainingMode::UnisonPitchComparison.extract_matching_metric(&matching).is_none());
-        assert!(TrainingMode::IntervalPitchComparison.extract_matching_metric(&matching).is_none());
+        assert!(
+            TrainingMode::UnisonPitchComparison
+                .extract_matching_metric(&matching)
+                .is_none()
+        );
+        assert!(
+            TrainingMode::IntervalPitchComparison
+                .extract_matching_metric(&matching)
+                .is_none()
+        );
 
         let matching_interval = matching_record(7, 5.0);
-        assert!(TrainingMode::UnisonPitchComparison.extract_matching_metric(&matching_interval).is_none());
-        assert!(TrainingMode::IntervalPitchComparison.extract_matching_metric(&matching_interval).is_none());
+        assert!(
+            TrainingMode::UnisonPitchComparison
+                .extract_matching_metric(&matching_interval)
+                .is_none()
+        );
+        assert!(
+            TrainingMode::IntervalPitchComparison
+                .extract_matching_metric(&matching_interval)
+                .is_none()
+        );
     }
 }

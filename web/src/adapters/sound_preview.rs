@@ -11,8 +11,8 @@ use domain::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteDuration};
 
 use super::audio_context::AudioContextManager;
 use super::audio_soundfont::{SF2Preset, WorkletBridge};
-use super::note_player::{create_note_player, UnifiedNotePlayer};
-use crate::app::{ensure_worklet_connected, WorkletAssets};
+use super::note_player::{UnifiedNotePlayer, create_note_player};
+use crate::app::{WorkletAssets, ensure_worklet_connected};
 
 /// Manages sound preview playback with auto-stop timer and cancellation.
 ///
@@ -107,7 +107,11 @@ impl SoundPreview {
         spawn_local(async move {
             if source.starts_with("sf2:") {
                 ensure_worklet_connected(
-                    &ctx_rc, worklet_bridge, worklet_assets, worklet_connecting, sf2_presets,
+                    &ctx_rc,
+                    worklet_bridge,
+                    worklet_assets,
+                    worklet_connecting,
+                    sf2_presets,
                 )
                 .await;
             }

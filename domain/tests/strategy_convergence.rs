@@ -12,12 +12,7 @@ fn test_kazez_convergence_all_correct() {
     let mut magnitudes = Vec::new();
 
     for _ in 0..20 {
-        let comp = next_pitch_comparison(
-            &profile,
-            &settings,
-            last_completed.as_ref(),
-            interval,
-        );
+        let comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
 
         let magnitude = comp.target_note().offset.magnitude();
         magnitudes.push(magnitude);
@@ -72,12 +67,7 @@ fn test_kazez_divergence_all_incorrect() {
     let mut magnitudes = Vec::new();
 
     for _ in 0..10 {
-        let comp = next_pitch_comparison(
-            &profile,
-            &settings,
-            last_completed.as_ref(),
-            interval,
-        );
+        let comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
 
         let magnitude = comp.target_note().offset.magnitude();
         magnitudes.push(magnitude);
@@ -113,12 +103,7 @@ fn test_kazez_oscillation() {
     let mut last_completed: Option<CompletedPitchComparison> = None;
 
     for i in 0..10 {
-        let comp = next_pitch_comparison(
-            &profile,
-            &settings,
-            last_completed.as_ref(),
-            interval,
-        );
+        let comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
 
         // Alternate correct/incorrect
         let is_correct_answer = i % 2 == 0;
@@ -139,12 +124,7 @@ fn test_kazez_oscillation() {
     }
 
     // After alternating, we should still have a valid comparison
-    let final_comp = next_pitch_comparison(
-        &profile,
-        &settings,
-        last_completed.as_ref(),
-        interval,
-    );
+    let final_comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
     let mag = final_comp.target_note().offset.magnitude();
     assert!(mag >= settings.min_cent_difference().raw_value);
     assert!(mag <= settings.max_cent_difference().raw_value);

@@ -32,19 +32,14 @@ const PREVIEW_DURATION_SECS: f64 = 2.0;
 /// Extract the `.value` property from an event's target element.
 fn target_value(ev: &web_sys::Event) -> String {
     ev.target()
-        .and_then(|t| {
-            js_sys::Reflect::get(&t, &wasm_bindgen::JsValue::from_str("value")).ok()
-        })
+        .and_then(|t| js_sys::Reflect::get(&t, &wasm_bindgen::JsValue::from_str("value")).ok())
         .and_then(|v| v.as_string())
         .unwrap_or_default()
 }
 
 /// iOS-style grouped settings section with a muted header and rounded card.
 #[component]
-fn SettingsSection(
-    title: &'static str,
-    children: Children,
-) -> impl IntoView {
+fn SettingsSection(title: &'static str, children: Children) -> impl IntoView {
     view! {
         <div class="mt-6">
             <h2 class="px-4 mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -59,10 +54,7 @@ fn SettingsSection(
 
 /// A single row inside a SettingsSection card.
 #[component]
-fn SettingsRow(
-    label: &'static str,
-    children: Children,
-) -> impl IntoView {
+fn SettingsRow(label: &'static str, children: Children) -> impl IntoView {
     view! {
         <div class="flex items-center justify-between px-4 py-3 min-h-[44px]">
             <span class="text-sm text-gray-900 dark:text-gray-100">{label}</span>
@@ -75,10 +67,7 @@ fn SettingsRow(
 
 /// A row with a dynamic (reactive) label.
 #[component]
-fn SettingsRowDynamic(
-    label: Signal<String>,
-    children: Children,
-) -> impl IntoView {
+fn SettingsRowDynamic(label: Signal<String>, children: Children) -> impl IntoView {
     view! {
         <div class="flex items-center justify-between px-4 py-3 min-h-[44px]">
             <span class="text-sm text-gray-900 dark:text-gray-100">{move || label.get()}</span>
@@ -208,9 +197,7 @@ pub fn SettingsView() -> impl IntoView {
         if let Some(dialog) = dialog_ref.get()
             && let Err(e) = dialog.show_modal()
         {
-            web_sys::console::warn_1(
-                &format!("Failed to open reset dialog: {e:?}").into(),
-            );
+            web_sys::console::warn_1(&format!("Failed to open reset dialog: {e:?}").into());
         }
     };
 
@@ -274,7 +261,9 @@ pub fn SettingsView() -> impl IntoView {
 
     // Derived signals for sound settings display
     let duration_label = Signal::derive(move || format!("Duration: {:.1}s", note_duration.get()));
-    let pitch_label = Signal::derive(move || format!("Concert Pitch: {} Hz", reference_pitch.get().round() as i32));
+    let pitch_label = Signal::derive(move || {
+        format!("Concert Pitch: {} Hz", reference_pitch.get().round() as i32)
+    });
 
     view! {
         <div class="pt-4 pb-12">

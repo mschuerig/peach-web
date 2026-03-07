@@ -84,9 +84,7 @@ pub fn VerticalPitchSlider(
         if let Some(target) = ev.current_target() {
             let el: web_sys::Element = target.unchecked_into();
             if let Err(e) = el.release_pointer_capture(ev.pointer_id()) {
-                web_sys::console::warn_1(
-                    &format!("releasePointerCapture failed: {e:?}").into(),
-                );
+                web_sys::console::warn_1(&format!("releasePointerCapture failed: {e:?}").into());
             }
         }
         if enabled.get_untracked() {

@@ -33,9 +33,9 @@ impl PitchComparison {
     /// to cents and combined with the offset to determine the overall
     /// pitch direction.
     pub fn is_target_higher(&self) -> bool {
-        let semitone_cents =
-            (self.target_note.note.raw_value() as f64 - self.reference_note.raw_value() as f64)
-                * Cents::PER_SEMITONE_ET;
+        let semitone_cents = (self.target_note.note.raw_value() as f64
+            - self.reference_note.raw_value() as f64)
+            * Cents::PER_SEMITONE_ET;
         semitone_cents + self.target_note.offset.raw_value > 0.0
     }
 

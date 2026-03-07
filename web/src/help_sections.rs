@@ -80,9 +80,7 @@ pub static INFO_HELP: &[HelpSection] = &[
     },
 ];
 
-pub static INFO_ACKNOWLEDGMENTS: &[HelpSection] = &[
-    HelpSection {
-        title: "Acknowledgments",
-        body: "Sounds provided by GeneralUser GS by S. Christian Collins.",
-    },
-];
+pub static INFO_ACKNOWLEDGMENTS: &[HelpSection] = &[HelpSection {
+    title: "Acknowledgments",
+    body: "Sounds provided by GeneralUser GS by S. Christian Collins.",
+}];

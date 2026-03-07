@@ -3,13 +3,13 @@ use std::rc::Rc;
 
 use leptos::prelude::*;
 use leptos_router::{
-    components::{Route, Router, Routes, A},
+    components::{A, Route, Router, Routes},
     path,
 };
 use send_wrapper::SendWrapper;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::{spawn_local, JsFuture};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::MessagePort;
 
 use crate::adapters::audio_context::AudioContextManager;
@@ -27,7 +27,7 @@ pub struct AudioNeedsGesture(pub RwSignal<bool>);
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
-    PitchComparisonView, InfoView, PitchMatchingView, ProfileView, SettingsView, StartPage,
+    InfoView, PitchComparisonView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
 use domain::types::MIDINote;
 use domain::{PerceptualProfile, ProgressTimeline, ThresholdTimeline, TrendAnalyzer};
@@ -119,9 +119,14 @@ pub fn App() -> impl IntoView {
                         }
 
                         if skipped > 0 {
-                            log::warn!("Skipped {skipped} records with invalid MIDI note values during hydration");
+                            log::warn!(
+                                "Skipped {skipped} records with invalid MIDI note values during hydration"
+                            );
                         }
-                        log::info!("Profile comparison hydrated from {} records", records.len() - skipped as usize);
+                        log::info!(
+                            "Profile comparison hydrated from {} records",
+                            records.len() - skipped as usize
+                        );
                         records
                     }
                     Err(e) => {
@@ -149,7 +154,9 @@ pub fn App() -> impl IntoView {
                         }
 
                         if skipped > 0 {
-                            log::warn!("Skipped {skipped} pitch matching records with invalid MIDI note values during hydration");
+                            log::warn!(
+                                "Skipped {skipped} pitch matching records with invalid MIDI note values during hydration"
+                            );
                         }
                         log::info!(
                             "Profile pitch matching hydrated from {} records",
@@ -326,16 +333,19 @@ pub async fn connect_worklet(
         let ctx = ctx_rc.borrow();
         let options = web_sys::AudioWorkletNodeOptions::new();
         let processor_options = js_sys::Object::new();
-        js_sys::Reflect::set(&processor_options, &"wasmModule".into(), &assets.wasm_module)
-            .map_err(|e| format!("set processorOptions failed: {e:?}"))?;
+        js_sys::Reflect::set(
+            &processor_options,
+            &"wasmModule".into(),
+            &assets.wasm_module,
+        )
+        .map_err(|e| format!("set processorOptions failed: {e:?}"))?;
         options.set_processor_options(Some(&processor_options));
         let output_channels = js_sys::Array::new();
         output_channels.push(&JsValue::from(2));
         options.set_output_channel_count(&output_channels);
 
-        let node =
-            web_sys::AudioWorkletNode::new_with_options(&ctx, "synth-processor", &options)
-                .map_err(|e| format!("AudioWorkletNode creation failed: {e:?}"))?;
+        let node = web_sys::AudioWorkletNode::new_with_options(&ctx, "synth-processor", &options)
+            .map_err(|e| format!("AudioWorkletNode creation failed: {e:?}"))?;
         node.connect_with_audio_node(&ctx.destination())
             .map_err(|e| format!("connect to destination failed: {e:?}"))?;
         let port = node.port().map_err(|e| format!("no port: {e:?}"))?;
@@ -369,7 +379,10 @@ pub async fn connect_worklet(
 /// to obtain the bridge (may be `None` if connection failed or timed out).
 pub async fn ensure_worklet_connected(
     ctx_rc: &Rc<RefCell<web_sys::AudioContext>>,
-    worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, leptos::reactive::owner::LocalStorage>,
+    worklet_bridge: RwSignal<
+        Option<Rc<RefCell<WorkletBridge>>>,
+        leptos::reactive::owner::LocalStorage,
+    >,
     worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, leptos::reactive::owner::LocalStorage>,
     worklet_connecting: RwSignal<bool>,
     sf2_presets: RwSignal<Vec<SF2Preset>, leptos::reactive::owner::LocalStorage>,

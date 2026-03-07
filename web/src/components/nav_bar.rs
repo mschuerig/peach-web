@@ -59,24 +59,20 @@ pub fn NavBar(
         left_fn.run()
     } else {
         match (back_href, on_back) {
-            (Some(href), Some(on_back)) => {
-                view! {
-                    <A href=href attr:class=back_class attr:aria-label="Back"
-                        on:click=move |ev| on_back.run(ev)
-                    >
-                        <span aria-hidden="true">{"\u{2039}"}</span>
-                    </A>
-                }
-                .into_any()
+            (Some(href), Some(on_back)) => view! {
+                <A href=href attr:class=back_class attr:aria-label="Back"
+                    on:click=move |ev| on_back.run(ev)
+                >
+                    <span aria-hidden="true">{"\u{2039}"}</span>
+                </A>
             }
-            (Some(href), None) => {
-                view! {
-                    <A href=href attr:class=back_class attr:aria-label="Back">
-                        <span aria-hidden="true">{"\u{2039}"}</span>
-                    </A>
-                }
-                .into_any()
+            .into_any(),
+            (Some(href), None) => view! {
+                <A href=href attr:class=back_class attr:aria-label="Back">
+                    <span aria-hidden="true">{"\u{2039}"}</span>
+                </A>
             }
+            .into_any(),
             _ => view! { <span></span> }.into_any(),
         }
     };

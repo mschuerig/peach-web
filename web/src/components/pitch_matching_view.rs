@@ -5,29 +5,29 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 use send_wrapper::SendWrapper;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::{spawn_local, JsFuture};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::{JsFuture, spawn_local};
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
-use crate::adapters::note_player::{create_note_player, UnifiedPlaybackHandle};
+use crate::adapters::note_player::{UnifiedPlaybackHandle, create_note_player};
 use crate::app::{SoundFontLoadStatus, WorkletAssets, ensure_worklet_connected};
 use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
+use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
 use crate::components::nav_bar::{NavBar, NavIconButton};
 use crate::components::pitch_slider::VerticalPitchSlider;
-use crate::components::TrainingStats;
 use crate::help_sections::PITCH_MATCHING_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity};
 use domain::{
-    Interval, PitchMatchingSession, PitchMatchingSessionState, PerceptualProfile,
-    ProgressTimeline, TrainingMode, Trend, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
+    FEEDBACK_DURATION_SECS, Interval, PITCH_MATCHING_VELOCITY, PerceptualProfile,
+    PitchMatchingSession, PitchMatchingSessionState, ProgressTimeline, TrainingMode, Trend,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -142,8 +142,7 @@ pub fn PitchMatchingView() -> impl IntoView {
     let reset_trigger = RwSignal::new(0u32);
 
     // Tunable note handle for real-time frequency adjustment
-    let tunable_handle: Rc<RefCell<Option<UnifiedPlaybackHandle>>> =
-        Rc::new(RefCell::new(None));
+    let tunable_handle: Rc<RefCell<Option<UnifiedPlaybackHandle>>> = Rc::new(RefCell::new(None));
 
     // Sync UI signals from session state
     fn sync_session_to_signals(
@@ -213,9 +212,7 @@ pub fn PitchMatchingView() -> impl IntoView {
             sr_announcement.set(String::new());
         }
 
-        if is_interval_mode
-            && let Some(di) = s.current_interval()
-        {
+        if is_interval_mode && let Some(di) = s.current_interval() {
             if di.interval != Interval::Prime {
                 let label = interval_label(di.interval, di.direction);
                 sr_announcement.set(label.clone());
@@ -305,8 +302,8 @@ pub fn PitchMatchingView() -> impl IntoView {
             let tunable_handle = Rc::clone(&tunable_handle);
             let note_player = Rc::clone(&note_player);
             move |value: f64| {
-                let was_awaiting = session.borrow().state()
-                    == PitchMatchingSessionState::AwaitingSliderTouch;
+                let was_awaiting =
+                    session.borrow().state() == PitchMatchingSessionState::AwaitingSliderTouch;
                 if let Some(freq) = session.borrow_mut().adjust_pitch(value) {
                     if was_awaiting {
                         // First touch: start the tunable note
@@ -460,8 +457,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                                         TimeoutFuture::new(500).await;
                                         if let Some(ctx) =
                                             target.dyn_ref::<web_sys::BaseAudioContext>()
-                                            && ctx.state()
-                                                != web_sys::AudioContextState::Running
+                                            && ctx.state() != web_sys::AudioContextState::Running
                                         {
                                             (*interrupt)();
                                         }
@@ -497,8 +493,15 @@ pub fn PitchMatchingView() -> impl IntoView {
             visibility_fn,
         ));
         on_cleanup(move || {
-            let (cancelled, terminated, session, note_player, tunable_handle, audio_ctx, visibility_fn) =
-                &*cleanup_state;
+            let (
+                cancelled,
+                terminated,
+                session,
+                note_player,
+                tunable_handle,
+                audio_ctx,
+                visibility_fn,
+            ) = &*cleanup_state;
             terminated.set(true);
             cancelled.set(true);
             help_paused.set(false);
@@ -535,7 +538,9 @@ pub fn PitchMatchingView() -> impl IntoView {
                 &audio_ctx_for_loop,
                 audio_needs_gesture,
                 &cancelled,
-            ).await {
+            )
+            .await
+            {
                 Ok(ctx) => ctx,
                 Err(e) => {
                     log::error!("AudioContext failed: {e}");
@@ -546,20 +551,32 @@ pub fn PitchMatchingView() -> impl IntoView {
 
             // Wait for SF2 assets if user selected SoundFont
             if sound_source_clone.starts_with("sf2:") {
-                while matches!(sf2_load_status.get_untracked(), SoundFontLoadStatus::Fetching) {
-                    if cancelled.get() { return; }
+                while matches!(
+                    sf2_load_status.get_untracked(),
+                    SoundFontLoadStatus::Fetching
+                ) {
+                    if cancelled.get() {
+                        return;
+                    }
                     TimeoutFuture::new(100).await;
                 }
                 if let SoundFontLoadStatus::Failed(ref msg) = sf2_load_status.get_untracked() {
                     log::warn!("SF2 load failed, falling back to oscillator: {msg}");
-                    audio_error.set(Some("Selected sound could not be loaded. Using default sound.".into()));
+                    audio_error.set(Some(
+                        "Selected sound could not be loaded. Using default sound.".into(),
+                    ));
                 }
             }
 
             // Phase 2: connect worklet if assets are available but bridge isn't.
             ensure_worklet_connected(
-                &ctx_rc, worklet_bridge, worklet_assets, worklet_connecting, sf2_presets,
-            ).await;
+                &ctx_rc,
+                worklet_bridge,
+                worklet_assets,
+                worklet_connecting,
+                sf2_presets,
+            )
+            .await;
             *note_player.borrow_mut() = create_note_player(
                 &sound_source_clone,
                 Rc::clone(&audio_ctx_for_loop),
@@ -572,10 +589,14 @@ pub fn PitchMatchingView() -> impl IntoView {
             // Inner 'training loop breaks on cancelled; outer loop checks whether
             // to restart (help_paused) or exit permanently (terminated).
             'session: loop {
-                if terminated.get() { break; }
+                if terminated.get() {
+                    break;
+                }
 
                 session.borrow_mut().stop();
-                session.borrow_mut().start(intervals_from_query.clone(), &settings);
+                session
+                    .borrow_mut()
+                    .start(intervals_from_query.clone(), &settings);
                 cancelled.set(false);
                 sync();
                 sr_announcement.set("Training started".into());
@@ -659,7 +680,9 @@ pub fn PitchMatchingView() -> impl IntoView {
 
                 // Help modal is open — wait for it to close, then restart
                 while help_paused.get_untracked() {
-                    if terminated.get() { break 'session; }
+                    if terminated.get() {
+                        break 'session;
+                    }
                     TimeoutFuture::new(POLL_INTERVAL_MS).await;
                 }
             }
@@ -674,7 +697,11 @@ pub fn PitchMatchingView() -> impl IntoView {
         });
     }
 
-    let matching_title = if is_interval_mode { "Interval Pitch Matching" } else { "Pitch Matching Training" };
+    let matching_title = if is_interval_mode {
+        "Interval Pitch Matching"
+    } else {
+        "Pitch Matching Training"
+    };
 
     #[allow(clippy::redundant_closure)]
     let on_back_cb = {

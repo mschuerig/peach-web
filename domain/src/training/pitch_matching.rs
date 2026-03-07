@@ -94,11 +94,7 @@ mod tests {
 
     #[test]
     fn test_pitch_matching_challenge_new() {
-        let challenge = PitchMatchingChallenge::new(
-            MIDINote::new(60),
-            MIDINote::new(67),
-            15.0,
-        );
+        let challenge = PitchMatchingChallenge::new(MIDINote::new(60), MIDINote::new(67), 15.0);
         assert_eq!(challenge.reference_note().raw_value(), 60);
         assert_eq!(challenge.target_note().raw_value(), 67);
         assert_eq!(challenge.initial_cent_offset(), 15.0);
@@ -106,11 +102,7 @@ mod tests {
 
     #[test]
     fn test_pitch_matching_challenge_negative_offset() {
-        let challenge = PitchMatchingChallenge::new(
-            MIDINote::new(69),
-            MIDINote::new(69),
-            -18.5,
-        );
+        let challenge = PitchMatchingChallenge::new(MIDINote::new(69), MIDINote::new(69), -18.5);
         assert_eq!(challenge.initial_cent_offset(), -18.5);
     }
 
@@ -147,11 +139,7 @@ mod tests {
 
     #[test]
     fn test_pitch_matching_challenge_serde_roundtrip() {
-        let challenge = PitchMatchingChallenge::new(
-            MIDINote::new(60),
-            MIDINote::new(67),
-            15.0,
-        );
+        let challenge = PitchMatchingChallenge::new(MIDINote::new(60), MIDINote::new(67), 15.0);
         let json = serde_json::to_string(&challenge).unwrap();
         let parsed: PitchMatchingChallenge = serde_json::from_str(&json).unwrap();
         assert_eq!(challenge, parsed);

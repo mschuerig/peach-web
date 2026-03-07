@@ -21,9 +21,9 @@ mod note_array_serde {
         D: Deserializer<'de>,
     {
         let vec = Vec::<PerceptualNote>::deserialize(deserializer)?;
-        let arr: [PerceptualNote; 128] = vec
-            .try_into()
-            .map_err(|v: Vec<_>| serde::de::Error::custom(format!("expected 128 notes, got {}", v.len())))?;
+        let arr: [PerceptualNote; 128] = vec.try_into().map_err(|v: Vec<_>| {
+            serde::de::Error::custom(format!("expected 128 notes, got {}", v.len()))
+        })?;
         Ok(arr)
     }
 }
@@ -187,7 +187,9 @@ impl PerceptualProfile {
         if trained.is_empty() {
             None
         } else {
-            Some(Cents::new(trained.iter().sum::<f64>() / trained.len() as f64))
+            Some(Cents::new(
+                trained.iter().sum::<f64>() / trained.len() as f64,
+            ))
         }
     }
 
@@ -483,7 +485,10 @@ mod tests {
         assert_eq!(stats.mean(), 0.0);
         assert_eq!(stats.std_dev(), 0.0);
         assert_eq!(stats.sample_count(), 0);
-        assert_eq!(stats.current_difficulty(), PerceptualNote::COLD_START_DIFFICULTY);
+        assert_eq!(
+            stats.current_difficulty(),
+            PerceptualNote::COLD_START_DIFFICULTY
+        );
         assert!(!stats.is_trained());
     }
 

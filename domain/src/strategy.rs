@@ -2,9 +2,11 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::profile::{PerceptualNote, PerceptualProfile};
-use crate::training::pitch_comparison::PitchComparison;
 use crate::training::CompletedPitchComparison;
-use crate::types::{Cents, DetunedMIDINote, DirectedInterval, Direction, Frequency, MIDINote, NoteRange};
+use crate::training::pitch_comparison::PitchComparison;
+use crate::types::{
+    Cents, DetunedMIDINote, DirectedInterval, Direction, Frequency, MIDINote, NoteRange,
+};
 
 /// Kazez narrow factor: difficulty reduction per correct answer.
 pub const KAZEZ_NARROW_FACTOR: f64 = 0.05;
@@ -102,7 +104,13 @@ pub fn next_pitch_comparison(
     // Step 1: Determine magnitude
     let raw_magnitude = match last_pitch_comparison {
         Some(completed) => {
-            let prev_magnitude = Cents::new(completed.pitch_comparison().target_note().offset.magnitude());
+            let prev_magnitude = Cents::new(
+                completed
+                    .pitch_comparison()
+                    .target_note()
+                    .offset
+                    .magnitude(),
+            );
             if completed.is_correct() {
                 kazez_narrow(prev_magnitude).raw_value
             } else {
@@ -257,7 +265,8 @@ mod tests {
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
             magnitude >= settings.min_cent_difference.raw_value,
-            "Magnitude {magnitude} should be >= min {}", settings.min_cent_difference.raw_value
+            "Magnitude {magnitude} should be >= min {}",
+            settings.min_cent_difference.raw_value
         );
     }
 
@@ -385,7 +394,12 @@ mod tests {
     #[test]
     fn test_training_settings_equal_range() {
         let range = NoteRange::new(MIDINote::new(60), MIDINote::new(60));
-        let s = TrainingSettings::new(range, Frequency::CONCERT_440, Cents::new(0.1), Cents::new(100.0));
+        let s = TrainingSettings::new(
+            range,
+            Frequency::CONCERT_440,
+            Cents::new(0.1),
+            Cents::new(100.0),
+        );
         assert_eq!(s.note_range().min(), s.note_range().max());
     }
 

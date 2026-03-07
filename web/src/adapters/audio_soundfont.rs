@@ -190,7 +190,9 @@ impl NotePlayer for SoundFontNotePlayer {
         // Send NoteOn
         log::debug!(
             "[DIAG] SoundFontNotePlayer::play — key: {}, vel: {}, freq: {}",
-            key, vel, frequency.raw_value()
+            key,
+            vel,
+            frequency.raw_value()
         );
         self.bridge.borrow().send_note_on(key, vel)?;
 
