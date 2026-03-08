@@ -1,6 +1,6 @@
 # Story 11.1: UI Consistency and Sound Level Fixes
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -129,7 +129,7 @@ None — clean implementation, no debugging needed.
 ### Completion Notes List
 - Root-caused SoundFont volume difference: OxiSynth default gain 0.2 vs iOS AVAudioUnitSampler. Fixed by setting gain to 1.0.
 - Training page titles simplified to "Hear & Compare" / "Tune & Match" (per user decision)
-- NavBar enhanced with `pill_group`, `title_left` props; NavIconButton enhanced with `filled` prop
+- NavBar enhanced with `pill_group`, `title_left` props; NavIconButton enhanced with `filled`, `circled` props
 - Training pages now show Help, Settings, and Profile icons in a pill-shaped container with left-aligned title
 - Start page info icon has visible circle background; right icons grouped in pill
 - Section titles centered; training cards have fixed height (h-[4.5rem])
@@ -137,12 +137,13 @@ None — clean implementation, no debugging needed.
 
 ### File List
 - synth-worklet/src/lib.rs (modified — set OxiSynth gain from 0.2 to 1.0)
-- web/src/components/nav_bar.rs (modified — added pill_group, title_left, filled props)
+- web/src/components/nav_bar.rs (modified — added pill_group, title_left, filled, circled props; w-full on nav)
 - web/src/components/start_page.rs (modified — pill_group, filled info icon, centered titles, fixed card height)
-- web/src/components/pitch_comparison_view.rs (modified — simple title, title_left, pill_group, settings+profile icons)
-- web/src/components/pitch_matching_view.rs (modified — simple title, title_left, pill_group, settings+profile icons)
+- web/src/components/pitch_comparison_view.rs (modified — simple title, title_left, pill_group, settings+profile icons, circled help icon)
+- web/src/components/pitch_matching_view.rs (modified — simple title, title_left, pill_group, settings+profile icons, circled help icon)
 - web/src/help_sections.rs (modified — SoundFont credit hyperlink)
 - docs/implementation-artifacts/sprint-status.yaml (modified — story status)
 
 ### Change Log
 - 2026-03-08: Implemented all 8 tasks for story 11.1 — UI consistency and sound level fixes
+- 2026-03-08: Code review fixes — NavBar full-width layout (w-full), circled help icon (border circle matching ⓘ), filled bg-gray-200 for contrast

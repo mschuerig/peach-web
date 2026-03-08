@@ -4,6 +4,7 @@ use leptos_router::components::A;
 /// Reusable icon button for navigation bars.
 /// Renders as `<A>` when href provided, `<button>` when on_click provided.
 /// When `filled` is true, the button has a visible circle background (matching back button style).
+/// When `circled` is true, the icon character gets a thin border circle (matching ⓘ style).
 #[component]
 pub fn NavIconButton(
     #[prop(into)] label: String,
@@ -11,17 +12,24 @@ pub fn NavIconButton(
     #[prop(optional, into)] href: Option<String>,
     #[prop(optional, into)] on_click: Option<Callback<leptos::ev::MouseEvent>>,
     #[prop(optional)] filled: bool,
+    #[prop(optional)] circled: bool,
 ) -> impl IntoView {
     let class = if filled {
-        "min-h-11 min-w-11 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
+        "min-h-11 min-w-11 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
     } else {
         "min-h-11 min-w-11 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 dark:focus:ring-offset-gray-900"
+    };
+
+    let icon_class = if circled {
+        "flex items-center justify-center w-5 h-5 rounded-full border border-current text-sm"
+    } else {
+        ""
     };
 
     if let Some(href) = href {
         view! {
             <A href=href attr:class=class attr:aria-label=label.clone()>
-                <span aria-hidden="true">{icon}</span>
+                <span class=icon_class aria-hidden="true">{icon}</span>
             </A>
         }
         .into_any()
@@ -33,7 +41,7 @@ pub fn NavIconButton(
                 class=class
                 aria-label=label.clone()
             >
-                <span aria-hidden="true">{icon}</span>
+                <span class=icon_class aria-hidden="true">{icon}</span>
             </button>
         }
         .into_any()
@@ -102,7 +110,7 @@ pub fn NavBar(
     };
 
     view! {
-        <nav role="navigation" aria-label="Page navigation" class="flex items-center gap-2 mb-4">
+        <nav role="navigation" aria-label="Page navigation" class="flex w-full items-center gap-2 mb-4">
             // Left: back button, custom content, or spacer
             <div class="w-11 shrink-0">
                 {left}
