@@ -131,4 +131,5 @@ development_status:
   # Epic 11: UI Polish & Sound Level
   epic-11: in-progress
   11-1-ui-consistency-and-sound-level: done
+  11-2-headline-layout-and-modal-consistency: ready-for-dev
   epic-11-retrospective: optional
