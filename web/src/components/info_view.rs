@@ -6,7 +6,6 @@ use web_sys::KeyboardEvent;
 
 use super::help_content::HelpContent;
 use super::nav_bar::NavBar;
-use crate::app::base_href;
 use crate::help_sections::{INFO_ACKNOWLEDGMENTS, INFO_HELP};
 
 #[component]
@@ -39,7 +38,21 @@ pub fn InfoView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title="Peach" back_href=base_href("/")>
+            <NavBar title="Peach" left_content=ViewFn::from({
+                let navigate = use_navigate();
+                move || {
+                    let navigate = navigate.clone();
+                    view! {
+                        <button
+                            on:click=move |_| navigate("/", Default::default())
+                            class="min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
+                            aria-label="Done"
+                        >
+                            "Done"
+                        </button>
+                    }.into_any()
+                }
+            })>
             </NavBar>
             <p class="text-sm text-gray-500 dark:text-gray-400 text-center -mt-2 mb-4">"Version 0.1.0"</p>
 

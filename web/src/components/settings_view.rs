@@ -269,7 +269,7 @@ pub fn SettingsView() -> impl IntoView {
     view! {
         <div class="pt-4 pb-12">
             <NavBar title="Settings" back_href=base_href("/")>
-                <NavIconButton label="Help".to_string() icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) />
+                <NavIconButton label="Help".to_string() icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) circled=true />
             </NavBar>
             <HelpModal title="Settings Help" sections=SETTINGS_HELP is_open=is_help_open />
 

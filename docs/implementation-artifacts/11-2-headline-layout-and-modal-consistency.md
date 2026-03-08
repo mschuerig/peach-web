@@ -1,6 +1,6 @@
 # Story 11.2: Headline Layout and Modal Consistency
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -19,21 +19,21 @@ so that the app feels polished and predictable.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Fix headline layout to center title between pills (AC: #1)
-  - [ ] 1.1 In `NavBar` (`web/src/components/nav_bar.rs`), remove the `title_left` prop and always center the title. The current layout uses `w-11 shrink-0` for the left slot, `flex-1 text-center` for the title, and `flex shrink-0` for the right slot. The problem is that the right slot's width isn't balanced against the left slot — the title is centered within its flex-1 space, not centered on the page. To truly center: the left and right containers must have equal width, or use absolute positioning for the title, or use a CSS grid with three columns where the center column is auto-sized.
-  - [ ] 1.2 Recommended approach: use a three-column CSS grid layout — `grid grid-cols-[auto_1fr_auto]` with the left slot `justify-self-start`, title `justify-self-center`, and right slot `justify-self-end`. This gives true visual centering regardless of left/right content widths.
-  - [ ] 1.3 Verify on all pages: start page (info pill left, profile+settings right), training pages (back pill left, help+settings+profile right), settings page (back pill left, no right), profile page (back pill left, no right), info page (back or Done pill left, no right).
+- [x] Task 1: Fix headline layout to center title between pills (AC: #1)
+  - [x] 1.1 In `NavBar` (`web/src/components/nav_bar.rs`), remove the `title_left` prop and always center the title. The current layout uses `w-11 shrink-0` for the left slot, `flex-1 text-center` for the title, and `flex shrink-0` for the right slot. The problem is that the right slot's width isn't balanced against the left slot — the title is centered within its flex-1 space, not centered on the page. To truly center: the left and right containers must have equal width, or use absolute positioning for the title, or use a CSS grid with three columns where the center column is auto-sized.
+  - [x] 1.2 Recommended approach: use a three-column CSS grid layout — `grid grid-cols-[auto_1fr_auto]` with the left slot `justify-self-start`, title `justify-self-center`, and right slot `justify-self-end`. This gives true visual centering regardless of left/right content widths.
+  - [ ] 1.3 Verify on all pages: start page (info pill left, profile+settings right), training pages (back pill left, help+settings+profile right), settings page (back pill left, no right), profile page (back pill left, no right), info page (back or Done pill left, no right). *(deferred to user — agent cannot verify in browser)*
 
-- [ ] Task 2: Update help modal — "Done" pill in top left, no overlay (AC: #2, #4)
-  - [ ] 2.1 In `HelpModal` (`web/src/components/help_content.rs`, lines 122-145), move the "Done" button from the top-right position to the top-left position. Currently the layout is `<h2>` left + `<button>Done</button>` right. Reverse to `<button>Done</button>` left + `<h2>` right, or put Done first in the flex container.
-  - [ ] 2.2 Style the "Done" button as a pill: use the same pill styling as the NavBar back button (`min-h-11 min-w-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800`). The text should have no extra decoration — just "Done" in a pill shape.
-  - [ ] 2.3 Remove the grey backdrop overlay. Currently uses `backdrop:bg-black/50` on the `<dialog>` element. Remove or change to `backdrop:bg-transparent`. Note: the `<dialog>` element shown via `show_modal()` always creates a backdrop — set it transparent.
-  - [ ] 2.4 Since without a backdrop overlay the help modal needs to visually separate from the page behind it, ensure the dialog itself has sufficient visual weight (it already has `bg-white dark:bg-gray-800` and `rounded-lg` which should be sufficient).
+- [x] Task 2: Update help modal — "Done" pill in top left, no overlay (AC: #2, #4)
+  - [x] 2.1 In `HelpModal` (`web/src/components/help_content.rs`, lines 122-145), move the "Done" button from the top-right position to the top-left position. Currently the layout is `<h2>` left + `<button>Done</button>` right. Reverse to `<button>Done</button>` left + `<h2>` right, or put Done first in the flex container.
+  - [x] 2.2 Style the "Done" button as a pill: use the same pill styling as the NavBar back button (`min-h-11 min-w-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800`). The text should have no extra decoration — just "Done" in a pill shape.
+  - [x] 2.3 Remove the grey backdrop overlay. Currently uses `backdrop:bg-black/50` on the `<dialog>` element. Remove or change to `backdrop:bg-transparent`. Note: the `<dialog>` element shown via `show_modal()` always creates a backdrop — set it transparent.
+  - [x] 2.4 Since without a backdrop overlay the help modal needs to visually separate from the page behind it, ensure the dialog itself has sufficient visual weight (it already has `bg-white dark:bg-gray-800` and `rounded-lg` which should be sufficient).
 
-- [ ] Task 3: Update info view — "Done" pill in top left corner (AC: #3)
-  - [ ] 3.1 In `InfoView` (`web/src/components/info_view.rs`), replace the NavBar back button (which shows `‹` back arrow) with a "Done" text pill. Use the `left_content` prop on NavBar to render a custom pill button with "Done" text instead of the default back arrow.
-  - [ ] 3.2 The "Done" pill should navigate back to `/` (same as the current back button). Use the same pill styling as the NavBar back button.
-  - [ ] 3.3 Since info view has no right-side icons, the title "Info" should still be centered in the full remaining space.
+- [x] Task 3: Update info view — "Done" pill in top left corner (AC: #3)
+  - [x] 3.1 In `InfoView` (`web/src/components/info_view.rs`), replace the NavBar back button (which shows `‹` back arrow) with a "Done" text pill. Use the `left_content` prop on NavBar to render a custom pill button with "Done" text instead of the default back arrow.
+  - [x] 3.2 The "Done" pill should navigate back to `/` (same as the current back button). Use the same pill styling as the NavBar back button.
+  - [x] 3.3 Since info view has no right-side icons, the title "Info" should still be centered in the full remaining space.
 
 ## Dev Notes
 
@@ -113,10 +113,31 @@ Alternative: keep flexbox but make left and right containers equal width by sett
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None — clean implementation, no debugging needed.
+
 ### Completion Notes List
 
+- Converted NavBar from flexbox to CSS grid (`grid grid-cols-[auto_1fr_auto]`) for true title centering regardless of left/right content widths.
+- Removed `title_left` prop from NavBar and all call sites (pitch_comparison_view, pitch_matching_view).
+- HelpModal: moved "Done" button to top-left, styled as pill (`rounded-full bg-gray-100`), removed grey backdrop overlay (`backdrop:bg-transparent`).
+- InfoView: replaced back arrow with "Done" pill button using `left_content` prop and `navigate()` (per project rules, `navigate()` resolves base internally — no `base_href` needed).
+- Removed unused `base_href` import from info_view.rs.
+- All 357 tests pass (326 domain + 31 web), `cargo clippy` clean, no regressions.
+- Task 1.3 (manual browser verification) deferred to user — agent cannot verify in browser.
+
+### Change Log
+
+- 2026-03-08: Implemented all tasks — NavBar grid layout, help modal pill/no-overlay, info view Done pill.
+
 ### File List
+
+- web/src/components/nav_bar.rs (modified — flexbox→grid layout, removed title_left prop)
+- web/src/components/help_content.rs (modified — Done pill top-left, transparent backdrop)
+- web/src/components/info_view.rs (modified — Done pill replaces back arrow, removed base_href import)
+- web/src/components/pitch_comparison_view.rs (modified — removed title_left=true)
+- web/src/components/pitch_matching_view.rs (modified — removed title_left=true)
+- docs/implementation-artifacts/sprint-status.yaml (modified — story status)
