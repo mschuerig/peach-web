@@ -121,7 +121,7 @@ None — clean implementation, no debugging needed.
 
 ### Completion Notes List
 
-- Converted NavBar from flexbox to CSS grid (`grid grid-cols-[auto_1fr_auto]`) for true title centering regardless of left/right content widths.
+- Converted NavBar to iOS-style flex centering: both sides use `flex-1` for equal space (page-centering title), the smaller side shrinks first when the title is long (shift), then the title truncates with ellipsis (no pill overlap).
 - Removed `title_left` prop from NavBar and all call sites (pitch_comparison_view, pitch_matching_view).
 - HelpModal: moved "Done" button to top-left, styled as pill (`rounded-full bg-gray-100`), removed grey backdrop overlay (`backdrop:bg-transparent`).
 - InfoView: replaced back arrow with "Done" pill button using `left_content` prop and `navigate()` (per project rules, `navigate()` resolves base internally — no `base_href` needed).
@@ -132,6 +132,7 @@ None — clean implementation, no debugging needed.
 ### Change Log
 
 - 2026-03-08: Implemented all tasks — NavBar grid layout, help modal pill/no-overlay, info view Done pill.
+- 2026-03-10: Code review fixes — replaced absolute-positioning layout with iOS-style flex centering (flex-1 equal sides, shift-then-truncate), corrected completion notes, added settings_view.rs to File List, fixed HelpModal dark mode pill color (gray-700→gray-800), added aria-label to HelpModal Done button, applied same flex centering to HelpModal header.
 
 ### File List
 
@@ -140,4 +141,5 @@ None — clean implementation, no debugging needed.
 - web/src/components/info_view.rs (modified — Done pill replaces back arrow, removed base_href import)
 - web/src/components/pitch_comparison_view.rs (modified — removed title_left=true)
 - web/src/components/pitch_matching_view.rs (modified — removed title_left=true)
+- web/src/components/settings_view.rs (modified — added circled=true to Help icon)
 - docs/implementation-artifacts/sprint-status.yaml (modified — story status)

@@ -128,14 +128,18 @@ pub fn HelpModal(
             class="rounded-lg p-0 max-w-lg w-full mx-auto bg-white text-gray-900 backdrop:bg-transparent dark:bg-gray-800 dark:text-gray-100 max-h-[85vh]"
         >
             <div class="flex flex-col h-full p-6">
-                <div class="relative flex items-center mb-4">
-                    <h2 class="absolute inset-0 flex items-center justify-center text-xl font-bold pointer-events-none">{title}</h2>
-                    <button
-                        on:click=handle_close
-                        class="relative z-10 min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
-                    >
-                        "Done"
-                    </button>
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="flex-1 flex items-center">
+                        <button
+                            on:click=handle_close
+                            class="min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
+                            aria-label="Done"
+                        >
+                            "Done"
+                        </button>
+                    </div>
+                    <h2 class="shrink min-w-0 text-center text-xl font-bold truncate">{title}</h2>
+                    <div class="flex-1"></div>
                 </div>
                 <div class="overflow-y-auto flex-1">
                     <HelpContent sections=sections />

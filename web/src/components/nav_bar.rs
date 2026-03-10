@@ -49,8 +49,9 @@ pub fn NavIconButton(
 }
 
 /// iOS-style navigation bar with back arrow (or custom left content), centered title,
-/// and right-side action slots. Uses CSS grid for true title centering regardless of
-/// left/right content widths.
+/// and right-side action slots. Both sides use `flex-1` so they share space equally,
+/// keeping the title page-centered. When the title grows long, the smaller side shrinks
+/// first (iOS-like shift), then the title truncates with an ellipsis.
 #[component]
 pub fn NavBar(
     /// The page title displayed centered in the bar.
@@ -98,20 +99,22 @@ pub fn NavBar(
     let right_class = if pill_group {
         "flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full px-1"
     } else {
-        "flex items-center gap-1 min-w-11 justify-end"
+        "flex items-center gap-1"
     };
 
     view! {
-        <nav role="navigation" aria-label="Page navigation" class="relative flex w-full items-center justify-between gap-2 mb-4">
-            // Title: absolutely centered across the full nav width, behind pills
-            <h1 class="absolute inset-0 flex items-center justify-center text-lg font-bold truncate dark:text-white pointer-events-none">{title}</h1>
-            // Left: back button, custom content, or spacer
-            <div class="relative z-10 shrink-0">
+        <nav role="navigation" aria-label="Page navigation" class="flex w-full items-center gap-2 mb-4">
+            // Left: back button, custom content, or spacer — flex-1 for equal side widths
+            <div class="flex-1 flex items-center">
                 {left}
             </div>
-            // Right: action icons
-            <div class={format!("relative z-10 shrink-0 {right_class}")}>
-                {children.map(|c| c())}
+            // Center: title — shrinks and truncates when space is tight
+            <h1 class="shrink min-w-0 text-center text-lg font-bold truncate dark:text-white">{title}</h1>
+            // Right: action icons — flex-1 mirrors left for centering
+            <div class="flex-1 flex justify-end">
+                <div class=right_class>
+                    {children.map(|c| c())}
+                </div>
             </div>
         </nav>
     }
