@@ -2,7 +2,7 @@
 title: 'Fix disposed reactive value panic on navigation'
 slug: 'fix-disposed-signal-timeout-panic'
 created: '2026-03-10'
-status: 'ready-for-dev'
+status: 'completed'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['leptos 0.8', 'gloo-timers', 'wasm-bindgen-futures']
 files_to_modify:
@@ -63,7 +63,7 @@ Replace all `Timeout::new(...).forget()` auto-dismiss patterns with `spawn_local
 
 ### Tasks
 
-- [ ] **Task 1:** Fix `pitch_matching_view.rs` auto-dismiss effects
+- [x] **Task 1:** Fix `pitch_matching_view.rs` auto-dismiss effects
   - File: `web/src/components/pitch_matching_view.rs`
   - Action: Replace `Timeout::new(5000, ...).forget()` with `spawn_local(async move { TimeoutFuture::new(5000).await; signal.set(None); })` in both the `storage_error` effect (line 107) and `audio_error` effect (line 118)
   - Before (each effect):
@@ -90,11 +90,11 @@ Replace all `Timeout::new(...).forget()` auto-dismiss patterns with `spawn_local
     });
     ```
 
-- [ ] **Task 2:** Fix `pitch_comparison_view.rs` auto-dismiss effects
+- [x] **Task 2:** Fix `pitch_comparison_view.rs` auto-dismiss effects
   - File: `web/src/components/pitch_comparison_view.rs`
   - Action: Identical transformation as Task 1 for `storage_error` (line 118) and `audio_error` (line 129) effects
 
-- [ ] **Task 3:** Fix `start_page.rs` auto-dismiss effect
+- [x] **Task 3:** Fix `start_page.rs` auto-dismiss effect
   - File: `web/src/components/start_page.rs`
   - Action: Add imports `use gloo_timers::future::TimeoutFuture;` and `use wasm_bindgen_futures::spawn_local;`, then replace the `sf2_error_dismissed` effect (line 89)
   - Before:
@@ -123,20 +123,20 @@ Replace all `Timeout::new(...).forget()` auto-dismiss patterns with `spawn_local
     });
     ```
 
-- [ ] **Task 4:** Remove unused `gloo_timers::callback::Timeout` imports
+- [x] **Task 4:** Remove unused `gloo_timers::callback::Timeout` imports
   - Files: All 3 files above
   - Action: Check each file for remaining uses of `gloo_timers::callback::Timeout`. If none remain, remove the import.
 
-- [ ] **Task 5:** Add convention rule to `project-context.md`
+- [x] **Task 5:** Add convention rule to `project-context.md`
   - File: `docs/project-context.md`
   - Action: Add rule: "Never use `gloo_timers::callback::Timeout` with `.forget()` inside Leptos components — the timer outlives the component and causes disposed-signal panics. Use `spawn_local` + `TimeoutFuture::new(ms).await` instead, which is automatically cancelled when the reactive owner disposes."
 
 ### Acceptance Criteria
 
-- [ ] **AC 1:** Given a user is on a training page, when they navigate back to the start page before the 5-second auto-dismiss fires, then no "reactive value already disposed" panic appears in the console.
-- [ ] **AC 2:** Given a user is on the start page with a soundfont load failure, when they navigate away before the 5-second dismiss fires, then no panic appears.
-- [ ] **AC 3:** Given an error is displayed and the user stays on the page, when 5 seconds elapse, then the error is still auto-dismissed as before.
-- [ ] **AC 4:** Given the codebase compiles, when `cargo clippy --workspace` runs, then no new warnings are introduced.
+- [x] **AC1:** Given a user is on a training page, when they navigate back to the start page before the 5-second auto-dismiss fires, then no "reactive value already disposed" panic appears in the console.
+- [x] **AC2:** Given a user is on the start page with a soundfont load failure, when they navigate away before the 5-second dismiss fires, then no panic appears.
+- [x] **AC3:** Given an error is displayed and the user stays on the page, when 5 seconds elapse, then the error is still auto-dismissed as before.
+- [x] **AC4:** Given the codebase compiles, when `cargo clippy --workspace` runs, then no new warnings are introduced.
 
 ## Additional Context
 
@@ -153,3 +153,11 @@ No new dependencies. `gloo_timers::future::TimeoutFuture` and `wasm_bindgen_futu
 ### Notes
 
 The `gloo_timers::callback::Timeout` in `audio_soundfont.rs` `play_for_duration` is safe — it owns the `SoundFontPlaybackHandle` and never accesses reactive signals.
+
+## Review Notes
+
+- Adversarial review completed
+- Findings: 6 total, 3 fixed (F-01 critical, F-02 high, F-03 high), 3 skipped (pre-existing/benign)
+- Resolution approach: auto-fix
+- Key correction: tech spec originally specified `spawn_local` but adversarial review identified it lacks owner-disposal cancellation. Changed to `leptos::task::spawn_local_scoped_with_cancellation` which uses `AbortHandle` + `on_cleanup`.
+- Additional fix (beyond original scope): training loop's `spawn_local` task accessed `help_paused` signal after navigation disposal. Added `terminated.get()` guard before `help_paused.get_untracked()` and wrapped final cleanup in `!terminated.get()` check in both training views.

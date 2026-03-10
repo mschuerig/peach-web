@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
+use leptos::task::spawn_local_scoped_with_cancellation;
 use leptos_router::hooks::use_navigate;
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
@@ -117,22 +118,20 @@ pub fn PitchComparisonView() -> impl IntoView {
     // Auto-dismiss storage error after 5 seconds
     Effect::new(move || {
         if storage_error.get().is_some() {
-            let signal = storage_error;
-            gloo_timers::callback::Timeout::new(5000, move || {
-                signal.set(None);
-            })
-            .forget();
+            spawn_local_scoped_with_cancellation(async move {
+                TimeoutFuture::new(5000).await;
+                storage_error.set(None);
+            });
         }
     });
 
     // Auto-dismiss audio error after 5 seconds
     Effect::new(move || {
         if audio_error.get().is_some() {
-            let signal = audio_error;
-            gloo_timers::callback::Timeout::new(5000, move || {
-                signal.set(None);
-            })
-            .forget();
+            spawn_local_scoped_with_cancellation(async move {
+                TimeoutFuture::new(5000).await;
+                audio_error.set(None);
+            });
         }
     });
 
@@ -646,7 +645,8 @@ pub fn PitchComparisonView() -> impl IntoView {
                 }
 
                 // After 'training loop exits, decide: restart or exit
-                if !help_paused.get_untracked() {
+                // Check terminated first — signal may already be disposed after navigation
+                if terminated.get() || !help_paused.get_untracked() {
                     break 'session; // Real cancellation (nav, visibility, etc.)
                 }
 
@@ -659,10 +659,12 @@ pub fn PitchComparisonView() -> impl IntoView {
                 }
             }
 
-            // Final cleanup
-            session.borrow_mut().stop();
-            note_player.borrow().stop_all();
-            sync();
+            // Final cleanup — skip signal writes if terminated (signals already disposed)
+            if !terminated.get() {
+                session.borrow_mut().stop();
+                note_player.borrow().stop_all();
+                sync();
+            }
         });
     }
 

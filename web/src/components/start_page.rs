@@ -1,4 +1,6 @@
+use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
+use leptos::task::spawn_local_scoped_with_cancellation;
 use leptos_router::components::A;
 
 use super::nav_bar::{NavBar, NavIconButton};
@@ -89,11 +91,10 @@ pub fn StartPage() -> impl IntoView {
     Effect::new(move || {
         if matches!(sf2_status.get(), SoundFontLoadStatus::Failed(_)) && !sf2_error_dismissed.get()
         {
-            let signal = sf2_error_dismissed;
-            gloo_timers::callback::Timeout::new(5000, move || {
-                signal.set(true);
-            })
-            .forget();
+            spawn_local_scoped_with_cancellation(async move {
+                TimeoutFuture::new(5000).await;
+                sf2_error_dismissed.set(true);
+            });
         }
     });
 
