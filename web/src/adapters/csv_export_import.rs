@@ -30,9 +30,13 @@ pub enum ImportExportStatus {
 }
 
 const CSV_HEADER: &str = "trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,initialCentOffset,userCentError";
+#[allow(dead_code)] // Used in tests for consistency check against METADATA_LINE
+const FORMAT_VERSION: u32 = 1;
+const METADATA_PREFIX: &str = "# peach-export-format:";
+const METADATA_LINE: &str = "# peach-export-format:1";
 
 /// Result of parsing an import CSV file.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ParsedImportData {
     pub pitch_comparisons: Vec<PitchComparisonRecord>,
     pub pitch_matchings: Vec<PitchMatchingRecord>,
@@ -59,6 +63,8 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
         .map_err(|e| format!("Failed to fetch pitch matchings: {e:?}"))?;
 
     let mut csv = String::new();
+    csv.push_str(METADATA_LINE);
+    csv.push('\n');
     csv.push_str(CSV_HEADER);
     csv.push('\n');
 
@@ -173,6 +179,17 @@ fn trigger_download(content: &str, filename: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Extract the format version number from the first line of a CSV file.
+fn read_format_version(first_line: &str) -> Result<u32, String> {
+    if let Some(version_str) = first_line.strip_prefix(METADATA_PREFIX) {
+        version_str.parse::<u32>().map_err(|_| {
+            format!("The file contains unreadable format metadata on line 1: '{first_line}'.")
+        })
+    } else {
+        Err("This file does not contain format version metadata. It may have been created by an older version of the app. Please re-export your data with the current version.".to_string())
+    }
+}
+
 /// Parse a CSV file's text content into structured records.
 pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
     let content = content.trim();
@@ -181,12 +198,29 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
     }
 
     let mut lines = content.lines();
-    let header = lines.next().ok_or("File is empty")?;
+    // Safe: content is non-empty after trim, so at least one line exists
+    let first_line = lines
+        .next()
+        .expect("non-empty content has at least one line");
+    let version = read_format_version(first_line)?;
 
+    let header = lines
+        .next()
+        .ok_or("File has no header row after version line")?;
     if header != CSV_HEADER {
         return Err("Invalid file format: header row does not match expected columns".to_string());
     }
 
+    match version {
+        1 => parse_v1(lines),
+        v => Err(format!(
+            "Unsupported export format version {v}. Please update the app to import this file."
+        )),
+    }
+}
+
+/// Parse CSV data rows in the v1 format.
+fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
     let mut pitch_comparisons = Vec::new();
     let mut pitch_matchings = Vec::new();
     let mut warnings = Vec::new();
@@ -198,7 +232,7 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
             continue;
         }
         has_data = true;
-        let row_num = line_num + 2; // 1-indexed, header is line 1
+        let row_num = line_num + 3; // 1-indexed: metadata is line 1, header is line 2
 
         let fields: Vec<&str> = line.split(',').collect();
         if fields.len() < 12 {
@@ -453,5 +487,160 @@ fn truncate_timestamp_to_second(ts: &str) -> String {
 pub fn reload_page() {
     if let Some(window) = web_sys::window() {
         let _ = window.location().reload();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a CSV string with the metadata line, header, and the given data rows.
+    fn make_csv(rows: &[&str]) -> String {
+        let mut csv = String::new();
+        csv.push_str(METADATA_LINE);
+        csv.push('\n');
+        csv.push_str(CSV_HEADER);
+        csv.push('\n');
+        for row in rows {
+            csv.push_str(row);
+            csv.push('\n');
+        }
+        csv
+    }
+
+    // --- Version reader tests ---
+
+    #[test]
+    fn test_read_format_version_valid() {
+        assert_eq!(read_format_version("# peach-export-format:1"), Ok(1));
+    }
+
+    #[test]
+    fn test_read_format_version_higher() {
+        assert_eq!(read_format_version("# peach-export-format:42"), Ok(42));
+    }
+
+    #[test]
+    fn test_read_format_version_missing_prefix() {
+        let result = read_format_version("trainingType,timestamp,referenceNote");
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .contains("does not contain format version metadata")
+        );
+    }
+
+    #[test]
+    fn test_read_format_version_invalid_number() {
+        let result = read_format_version("# peach-export-format:abc");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("unreadable format metadata"));
+    }
+
+    #[test]
+    fn test_read_format_version_empty_after_prefix() {
+        let result = read_format_version("# peach-export-format:");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("unreadable format metadata"));
+    }
+
+    // --- Metadata constant consistency ---
+
+    #[test]
+    fn test_metadata_line_matches_prefix_and_version() {
+        assert_eq!(METADATA_LINE, format!("{METADATA_PREFIX}{FORMAT_VERSION}"));
+    }
+
+    // --- Import orchestrator tests ---
+
+    #[test]
+    fn test_import_valid_v1_comparison() {
+        let csv = make_csv(&["comparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 1);
+        assert_eq!(result.pitch_matchings.len(), 0);
+        assert!(result.warnings.is_empty());
+        let r = &result.pitch_comparisons[0];
+        assert_eq!(r.reference_note, 60);
+        assert_eq!(r.target_note, 64);
+        assert!(r.is_correct);
+    }
+
+    #[test]
+    fn test_import_valid_v1_pitch_matching() {
+        let csv = make_csv(&["pitchMatching,2026-03-04T14:30:00Z,60,C4,67,G4,P5,equal,,,25.5,3.2"]);
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.pitch_matchings.len(), 1);
+        assert!(result.warnings.is_empty());
+        let r = &result.pitch_matchings[0];
+        assert_eq!(r.reference_note, 60);
+        assert_eq!(r.target_note, 67);
+        assert!((r.initial_cent_offset - 25.5).abs() < f64::EPSILON);
+        assert!((r.user_cent_error - 3.2).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_import_missing_version() {
+        let csv = format!(
+            "{CSV_HEADER}\ncomparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3u,equal,0,true,,\n"
+        );
+        let result = parse_import_file(&csv);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .contains("does not contain format version metadata")
+        );
+    }
+
+    #[test]
+    fn test_import_unsupported_version() {
+        let csv = format!(
+            "# peach-export-format:99\n{CSV_HEADER}\ncomparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3u,equal,0,true,,\n"
+        );
+        let result = parse_import_file(&csv);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .contains("Unsupported export format version 99")
+        );
+    }
+
+    #[test]
+    fn test_import_invalid_metadata() {
+        let csv = format!(
+            "# peach-export-format:xyz\n{CSV_HEADER}\ncomparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3u,equal,0,true,,\n"
+        );
+        let result = parse_import_file(&csv);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("unreadable format metadata"));
+    }
+
+    #[test]
+    fn test_import_empty_file() {
+        let result = parse_import_file("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "File is empty");
+    }
+
+    #[test]
+    fn test_import_crlf_line_endings() {
+        let csv = format!(
+            "{METADATA_LINE}\r\n{CSV_HEADER}\r\ncomparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,\r\n"
+        );
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 1);
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_import_version_only_no_data() {
+        let csv = make_csv(&[]);
+        let result = parse_import_file(&csv);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("No records found"));
     }
 }

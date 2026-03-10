@@ -2,7 +2,7 @@
 title: 'Add CSV Format Version Metadata'
 slug: 'add-csv-format-version-metadata'
 created: '2026-03-10'
-status: 'ready-for-dev'
+status: 'completed'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['Rust', 'wasm32-unknown-unknown', 'Leptos 0.8 CSR', 'web-sys']
 files_to_modify: ['web/src/adapters/csv_export_import.rs']
@@ -94,7 +94,7 @@ Prepend `# peach-export-format:1` as the first line of all CSV exports. On impor
 
 All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
 
-- [ ] Task 1: Add format version constants
+- [x] Task 1: Add format version constants
   - Action: Add three constants alongside `CSV_HEADER`:
     ```rust
     const FORMAT_VERSION: u32 = 1;
@@ -103,7 +103,7 @@ All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
     ```
   - Notes: `METADATA_LINE` is derived from prefix + version conceptually, but since Rust `const` doesn't support `format!`, define it as a literal. A test will verify consistency between the three constants.
 
-- [ ] Task 2: Add version reader function
+- [x] Task 2: Add version reader function
   - Action: Create a private function that extracts the version from line 1:
     ```rust
     fn read_format_version(first_line: &str) -> Result<u32, String>
@@ -116,7 +116,7 @@ All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
     5. Return `Ok(version)`
   - Notes: Operates on a single line, not the whole file. The caller is responsible for splitting lines and passing line 1.
 
-- [ ] Task 3: Add v1 parse function
+- [x] Task 3: Add v1 parse function
   - Action: Extract the current body of `parse_import_file` (everything after the empty-file check and header extraction) into a new private function:
     ```rust
     fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String>
@@ -124,7 +124,7 @@ All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
   - Logic: Receives an iterator positioned after the header line. Contains all current row-parsing logic (the `for (line_num, line) in lines.enumerate()` loop and the `has_data` check). Header validation is done by the caller before dispatching.
   - Notes: `parse_comparison_row` and `parse_pitch_matching_row` are unchanged — `parse_v1` calls them as before.
 
-- [ ] Task 4: Refactor `parse_import_file` into version-dispatched orchestrator
+- [x] Task 4: Refactor `parse_import_file` into version-dispatched orchestrator
   - Action: Rewrite `parse_import_file` to:
     1. Trim and check for empty input (existing logic)
     2. Extract line 1 via `lines.next()`
@@ -141,7 +141,7 @@ All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
        ```
   - Notes: The public API signature is unchanged — `pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String>`. The `settings_view.rs` caller requires no changes.
 
-- [ ] Task 5: Update `export_all_data` to prepend metadata line
+- [x] Task 5: Update `export_all_data` to prepend metadata line
   - Action: In `export_all_data()`, insert the metadata line before the header:
     ```rust
     let mut csv = String::new();
@@ -152,7 +152,7 @@ All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
     ```
   - Notes: Replaces the current two lines (`csv.push_str(CSV_HEADER); csv.push('\n');`).
 
-- [ ] Task 6: Add `#[cfg(test)]` module with unit tests
+- [x] Task 6: Add `#[cfg(test)]` module with unit tests
   - Action: Add a test module at the bottom of the file. Tests cover:
     - **Version reader tests:**
       - `test_read_format_version_valid` — `"# peach-export-format:1"` → `Ok(1)`
@@ -176,13 +176,13 @@ All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
 
 ### Acceptance Criteria
 
-- [ ] AC 1: Given a CSV export is triggered, when the file is generated, then the first line is `# peach-export-format:1` and the second line is the 12-column header row.
-- [ ] AC 2: Given a valid v1 CSV file with the metadata line, when imported, then all records parse correctly (same behavior as before this change).
-- [ ] AC 3: Given a CSV file without a metadata line (starts with the header row), when imported, then the import fails with an error message containing "does not contain format version metadata".
-- [ ] AC 4: Given a CSV file with an unrecognized version (e.g., `# peach-export-format:99`), when imported, then the import fails with an error message containing "Unsupported export format version 99" and advising to update the app.
-- [ ] AC 5: Given a CSV file with a malformed metadata line (e.g., `# peach-export-format:abc`), when imported, then the import fails with an error message containing "unreadable format metadata".
-- [ ] AC 6: Given this change is deployed, when the existing settings UI displays import errors, then the 3 new error messages render correctly without any UI code changes.
-- [ ] AC 7: Given a future v2 format is needed, when a developer adds it, then they only need to: (a) create a `parse_v2` function, (b) add a `2 => parse_v2(lines)` arm to the match, (c) bump `FORMAT_VERSION` to 2. No changes to `parse_v1`, `read_format_version`, or the orchestrator structure.
+- [x] AC 1: Given a CSV export is triggered, when the file is generated, then the first line is `# peach-export-format:1` and the second line is the 12-column header row.
+- [x] AC 2: Given a valid v1 CSV file with the metadata line, when imported, then all records parse correctly (same behavior as before this change).
+- [x] AC 3: Given a CSV file without a metadata line (starts with the header row), when imported, then the import fails with an error message containing "does not contain format version metadata".
+- [x] AC 4: Given a CSV file with an unrecognized version (e.g., `# peach-export-format:99`), when imported, then the import fails with an error message containing "Unsupported export format version 99" and advising to update the app.
+- [x] AC 5: Given a CSV file with a malformed metadata line (e.g., `# peach-export-format:abc`), when imported, then the import fails with an error message containing "unreadable format metadata".
+- [x] AC 6: Given this change is deployed, when the existing settings UI displays import errors, then the 3 new error messages render correctly without any UI code changes.
+- [x] AC 7: Given a future v2 format is needed, when a developer adds it, then they only need to: (a) create a `parse_v2` function, (b) add a `2 => parse_v2(lines)` arm to the match, (c) bump `FORMAT_VERSION` to 2. No changes to `parse_v1`, `read_format_version`, or the orchestrator structure.
 
 ## Additional Context
 
@@ -217,3 +217,9 @@ All tasks modify a single file: `web/src/adapters/csv_export_import.rs`
 | Missing version | `"This file does not contain format version metadata. It may have been created by an older version of the app. Please re-export your data with the current version."` |
 | Unsupported version | `"Unsupported export format version {v}. Please update the app to import this file."` |
 | Invalid metadata | `"The file contains unreadable format metadata on line 1: '{first_line}'."` |
+
+## Review Notes
+
+- Adversarial review completed
+- Findings: 12 total, 3 fixed, 9 skipped (noise/pre-existing/deferred)
+- Resolution approach: auto-fix
