@@ -9,7 +9,9 @@ use crate::profile::PerceptualProfile;
 use crate::training::{CompletedPitchMatching, PitchMatchingChallenge};
 use crate::tuning::TuningSystem;
 use crate::types::Cents;
-use crate::types::{DirectedInterval, Direction, Frequency, MIDINote, NoteDuration, NoteRange};
+use crate::types::{
+    AmplitudeDB, DirectedInterval, Direction, Frequency, MIDINote, NoteDuration, NoteRange,
+};
 
 /// MIDI velocity for pitch matching playback (fixed at 63).
 pub const PITCH_MATCHING_VELOCITY: u8 = 63;
@@ -19,6 +21,9 @@ pub const PITCH_SLIDER_CENTS_RANGE: f64 = 20.0;
 
 /// Range in cents for the initial random offset of a pitch matching challenge.
 pub const INITIAL_OFFSET_RANGE: f64 = 40.0;
+
+/// Scaling factor for amplitude variation (±10 dB at max vary_loudness).
+pub const AMPLITUDE_VARY_SCALING: f64 = 10.0;
 
 /// State of the pitch matching session state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,6 +41,7 @@ pub struct PitchMatchingPlaybackData {
     pub reference_frequency: Frequency,
     pub tunable_frequency: Frequency,
     pub duration: NoteDuration,
+    pub target_amplitude_db: AmplitudeDB,
 }
 
 /// Pure domain state machine for pitch matching training sessions.
@@ -55,6 +61,7 @@ pub struct PitchMatchingSession {
     session_reference_pitch: Frequency,
     session_note_duration: NoteDuration,
     session_note_range: NoteRange,
+    session_vary_loudness: f64,
 
     // Current challenge state
     current_challenge: Option<PitchMatchingChallenge>,
@@ -84,6 +91,7 @@ impl PitchMatchingSession {
             session_reference_pitch: Frequency::CONCERT_440,
             session_note_duration: NoteDuration::new(1.0),
             session_note_range: NoteRange::new(MIDINote::new(36), MIDINote::new(84)),
+            session_vary_loudness: 0.0,
             current_challenge: None,
             current_playback_data: None,
             last_completed: None,
@@ -143,6 +151,7 @@ impl PitchMatchingSession {
         self.session_reference_pitch = settings.reference_pitch();
         self.session_note_duration = settings.note_duration();
         self.session_note_range = settings.note_range();
+        self.session_vary_loudness = settings.vary_loudness();
 
         // Reset session-level transient state
         self.last_completed = None;
@@ -280,12 +289,15 @@ impl PitchMatchingSession {
             target_frequency.raw_value() * 2.0_f64.powf(initial_offset / Cents::PER_OCTAVE),
         );
 
+        let target_amplitude_db = calculate_target_amplitude(self.session_vary_loudness);
+
         self.target_frequency = Some(target_frequency);
         self.current_challenge = Some(challenge);
         self.current_playback_data = Some(PitchMatchingPlaybackData {
             reference_frequency,
             tunable_frequency,
             duration: self.session_note_duration,
+            target_amplitude_db,
         });
     }
 
@@ -351,6 +363,16 @@ impl PitchMatchingSession {
             }
         }
     }
+}
+
+/// Calculate target amplitude variation based on vary_loudness setting.
+fn calculate_target_amplitude(vary_loudness: f64) -> AmplitudeDB {
+    if vary_loudness <= 0.0 {
+        return AmplitudeDB::new(0.0);
+    }
+    let range = vary_loudness * AMPLITUDE_VARY_SCALING;
+    let offset = rand::random::<f64>() * 2.0 * range - range;
+    AmplitudeDB::new(offset as f32)
 }
 
 #[cfg(test)]
@@ -1002,5 +1024,77 @@ mod tests {
     #[test]
     fn test_pitch_matching_velocity_constant() {
         assert_eq!(PITCH_MATCHING_VELOCITY, 63);
+    }
+
+    // --- Amplitude variation tests ---
+
+    struct LoudnessTestSettings {
+        vary_loudness: f64,
+    }
+
+    impl UserSettings for LoudnessTestSettings {
+        fn note_range(&self) -> NoteRange {
+            NoteRange::new(MIDINote::new(36), MIDINote::new(84))
+        }
+        fn note_duration(&self) -> NoteDuration {
+            NoteDuration::new(1.0)
+        }
+        fn reference_pitch(&self) -> Frequency {
+            Frequency::CONCERT_440
+        }
+        fn tuning_system(&self) -> TuningSystem {
+            TuningSystem::EqualTemperament
+        }
+        fn vary_loudness(&self) -> f64 {
+            self.vary_loudness
+        }
+    }
+
+    #[test]
+    fn test_amplitude_zero_vary_loudness() {
+        let result = calculate_target_amplitude(0.0);
+        assert_eq!(result.raw_value(), 0.0);
+    }
+
+    #[test]
+    fn test_amplitude_with_vary_loudness() {
+        let vary = 0.5;
+        let max_range = vary * 10.0; // 5.0
+
+        for _ in 0..100 {
+            let result = calculate_target_amplitude(vary);
+            assert!(
+                result.raw_value() >= -max_range as f32,
+                "amplitude {} below expected -{}",
+                result.raw_value(),
+                max_range
+            );
+            assert!(
+                result.raw_value() <= max_range as f32,
+                "amplitude {} above expected {}",
+                result.raw_value(),
+                max_range
+            );
+        }
+    }
+
+    #[test]
+    fn test_playback_data_amplitude_zero_when_no_vary() {
+        let mut session = create_session();
+        session.start(default_intervals(), &DefaultTestSettings);
+        let data = session.current_playback_data().unwrap();
+        assert_eq!(data.target_amplitude_db.raw_value(), 0.0);
+    }
+
+    #[test]
+    fn test_playback_data_amplitude_varies_when_loudness_set() {
+        let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
+        let mut session = PitchMatchingSession::new(profile, vec![], vec![]);
+        let settings = LoudnessTestSettings { vary_loudness: 0.5 };
+        session.start(default_intervals(), &settings);
+        let data = session.current_playback_data().unwrap();
+        // With vary_loudness=0.5, max range is ±5.0 dB
+        assert!(data.target_amplitude_db.raw_value() >= -5.0);
+        assert!(data.target_amplitude_db.raw_value() <= 5.0);
     }
 }

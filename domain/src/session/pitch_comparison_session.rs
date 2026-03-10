@@ -18,8 +18,8 @@ use crate::types::{
 /// Feedback display duration in seconds.
 pub const FEEDBACK_DURATION_SECS: f64 = 0.4;
 
-/// Scaling factor for amplitude variation (dB range per unit of vary_loudness).
-pub const AMPLITUDE_VARY_SCALING: f64 = 5.0;
+/// Scaling factor for amplitude variation (±10 dB at max vary_loudness).
+pub const AMPLITUDE_VARY_SCALING: f64 = 10.0;
 
 /// State of the comparison session state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -832,7 +832,7 @@ mod tests {
     #[test]
     fn test_amplitude_with_vary_loudness() {
         let vary = 0.5;
-        let max_range = vary * 5.0; // 2.5
+        let max_range = vary * 10.0; // 5.0
 
         for _ in 0..100 {
             let result = calculate_target_amplitude(vary);
@@ -866,9 +866,9 @@ mod tests {
         let settings = LoudnessTestSettings { vary_loudness: 0.5 };
         session.start(default_intervals(), &settings);
         let data = session.current_playback_data().unwrap();
-        // With vary_loudness=0.5, max range is ±2.5 dB
-        assert!(data.target_amplitude_db.raw_value() >= -2.5);
-        assert!(data.target_amplitude_db.raw_value() <= 2.5);
+        // With vary_loudness=0.5, max range is ±5.0 dB
+        assert!(data.target_amplitude_db.raw_value() >= -5.0);
+        assert!(data.target_amplitude_db.raw_value() <= 5.0);
     }
 
     // --- AC10: Stop ---
