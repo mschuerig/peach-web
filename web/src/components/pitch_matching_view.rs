@@ -56,6 +56,8 @@ pub fn PitchMatchingView() -> impl IntoView {
         use_context().expect("SoundFontLoadStatus not provided");
     let crate::app::WorkletConnecting(worklet_connecting) =
         use_context().expect("worklet_connecting not provided");
+    let sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, LocalStorage> =
+        use_context().expect("sf_gain_node not provided");
 
     // Eagerly create AudioContext in synchronous render path.
     // This ensures creation happens within the user gesture call stack (click on Start Page),
@@ -83,6 +85,7 @@ pub fn PitchMatchingView() -> impl IntoView {
         &sound_source,
         Rc::clone(&audio_ctx),
         worklet_bridge.get_untracked(),
+        sf_gain_node.get_untracked(),
     )));
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
     let audio_error: RwSignal<Option<String>> = RwSignal::new(None);
@@ -306,13 +309,20 @@ pub fn PitchMatchingView() -> impl IntoView {
             move |value: f64| {
                 let was_awaiting =
                     session.borrow().state() == PitchMatchingSessionState::AwaitingSliderTouch;
-                if let Some(freq) = session.borrow_mut().adjust_pitch(value) {
+                // Extract result so the RefMut is dropped before any further borrows
+                let freq = session.borrow_mut().adjust_pitch(value);
+                if let Some(freq) = freq {
                     if was_awaiting {
-                        // First touch: start the tunable note
+                        // First touch: start the tunable note with target amplitude
+                        let amplitude = session
+                            .borrow()
+                            .current_playback_data()
+                            .map(|d| d.target_amplitude_db)
+                            .unwrap_or(AmplitudeDB::new(0.0));
                         match note_player.borrow().play(
                             freq,
                             MIDIVelocity::new(PITCH_MATCHING_VELOCITY),
-                            AmplitudeDB::new(0.0),
+                            amplitude,
                         ) {
                             Ok(handle) => {
                                 tunable_handle.borrow_mut().replace(handle);
@@ -577,12 +587,14 @@ pub fn PitchMatchingView() -> impl IntoView {
                 worklet_assets,
                 worklet_connecting,
                 sf2_presets,
+                sf_gain_node,
             )
             .await;
             *note_player.borrow_mut() = create_note_player(
                 &sound_source_clone,
                 Rc::clone(&audio_ctx_for_loop),
                 worklet_bridge.get_untracked(),
+                sf_gain_node.get_untracked(),
             );
 
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;

@@ -93,6 +93,7 @@ pub fn App() -> impl IntoView {
     let is_profile_loaded = RwSignal::new(false);
     let db_store = RwSignal::new_local(None::<Rc<IndexedDbStore>>);
     let worklet_bridge = RwSignal::new_local(None::<Rc<RefCell<WorkletBridge>>>);
+    let sf_gain_node = RwSignal::new_local(None::<Rc<web_sys::GainNode>>);
     let sf2_presets = RwSignal::new_local(Vec::<SF2Preset>::new());
     let worklet_assets = RwSignal::new_local(None::<Rc<WorkletAssets>>);
     let worklet_connecting = RwSignal::new(false);
@@ -111,6 +112,7 @@ pub fn App() -> impl IntoView {
     provide_context(IsProfileLoaded(is_profile_loaded));
     provide_context(db_store);
     provide_context(worklet_bridge);
+    provide_context(sf_gain_node);
     provide_context(sf2_presets);
     provide_context(worklet_assets);
     provide_context(WorkletConnecting(worklet_connecting));
@@ -355,7 +357,7 @@ async fn fetch_worklet_assets() -> Result<WorkletAssets, String> {
 pub async fn connect_worklet(
     ctx_rc: &Rc<RefCell<web_sys::AudioContext>>,
     assets: &WorkletAssets,
-) -> Result<(WorkletBridge, Vec<SF2Preset>), String> {
+) -> Result<(WorkletBridge, Vec<SF2Preset>, web_sys::GainNode), String> {
     // Register processor JS via addModule (cache-busting query param for unhashed asset).
     // Resolve to absolute URL via the document base URI because addModule() may not
     // respect the <base href> tag in all browsers.
@@ -382,7 +384,7 @@ pub async fn connect_worklet(
         .map_err(|e| format!("addModule promise failed: {e:?}"))?;
 
     // Create AudioWorkletNode with WASM module in processorOptions
-    let (node, port) = {
+    let (node, port, gain_node) = {
         let ctx = ctx_rc.borrow();
         let options = web_sys::AudioWorkletNodeOptions::new();
         let processor_options = js_sys::Object::new();
@@ -399,10 +401,20 @@ pub async fn connect_worklet(
 
         let node = web_sys::AudioWorkletNode::new_with_options(&ctx, "synth-processor", &options)
             .map_err(|e| format!("AudioWorkletNode creation failed: {e:?}"))?;
-        node.connect_with_audio_node(&ctx.destination())
-            .map_err(|e| format!("connect to destination failed: {e:?}"))?;
+
+        // Insert a GainNode between worklet and destination for amplitude control.
+        let gain_node = ctx
+            .create_gain()
+            .map_err(|e| format!("GainNode creation failed: {e:?}"))?;
+        gain_node.gain().set_value(1.0);
+        node.connect_with_audio_node(&gain_node)
+            .map_err(|e| format!("connect worklet to gain failed: {e:?}"))?;
+        gain_node
+            .connect_with_audio_node(&ctx.destination())
+            .map_err(|e| format!("connect gain to destination failed: {e:?}"))?;
+
         let port = node.port().map_err(|e| format!("no port: {e:?}"))?;
-        (node, port)
+        (node, port, gain_node)
     };
 
     // Wait for 'ready' message from worklet (after async WASM instantiation)
@@ -421,7 +433,7 @@ pub async fn connect_worklet(
     let sf2_msg_data = wait_for_worklet_message(&port, "soundFontLoaded").await?;
     let presets = parse_sf2_presets(&sf2_msg_data);
 
-    Ok((WorkletBridge::new(node), presets))
+    Ok((WorkletBridge::new(node), presets, gain_node))
 }
 
 /// Ensures the worklet bridge is connected and available.
@@ -439,6 +451,7 @@ pub async fn ensure_worklet_connected(
     worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, leptos::reactive::owner::LocalStorage>,
     worklet_connecting: RwSignal<bool>,
     sf2_presets: RwSignal<Vec<SF2Preset>, leptos::reactive::owner::LocalStorage>,
+    sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, leptos::reactive::owner::LocalStorage>,
 ) {
     if worklet_bridge.get_untracked().is_some() {
         return;
@@ -449,9 +462,10 @@ pub async fn ensure_worklet_connected(
     {
         worklet_connecting.set(true);
         match connect_worklet(ctx_rc, &assets).await {
-            Ok((bridge, presets)) => {
+            Ok((bridge, presets, gain)) => {
                 let bridge_rc = Rc::new(RefCell::new(bridge));
                 worklet_bridge.set(Some(bridge_rc));
+                sf_gain_node.set(Some(Rc::new(gain)));
                 sf2_presets.set(presets);
             }
             Err(e) => {

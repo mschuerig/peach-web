@@ -157,13 +157,15 @@ use domain::types::{AmplitudeDB, MIDIVelocity, NoteDuration};
 /// Plays notes via OxiSynth running in an AudioWorklet.
 pub struct SoundFontNotePlayer {
     bridge: Rc<RefCell<WorkletBridge>>,
+    gain_node: Rc<web_sys::GainNode>,
     active_handles: RefCell<Vec<SoundFontPlaybackHandle>>,
 }
 
 impl SoundFontNotePlayer {
-    pub fn new(bridge: Rc<RefCell<WorkletBridge>>) -> Self {
+    pub fn new(bridge: Rc<RefCell<WorkletBridge>>, gain_node: Rc<web_sys::GainNode>) -> Self {
         Self {
             bridge,
+            gain_node,
             active_handles: RefCell::new(Vec::new()),
         }
     }
@@ -180,19 +182,24 @@ impl NotePlayer for SoundFontNotePlayer {
         &self,
         frequency: Frequency,
         velocity: MIDIVelocity,
-        _amplitude_db: AmplitudeDB,
+        amplitude_db: AmplitudeDB,
     ) -> Result<Self::Handle, AudioError> {
         self.prune_stopped();
 
         let key = frequency_to_midi(frequency.raw_value());
         let vel = velocity.raw_value();
 
+        // Apply amplitude gain before noteOn
+        let gain_linear = 10_f32.powf(amplitude_db.raw_value() / 20.0);
+        self.gain_node.gain().set_value(gain_linear);
+
         // Send NoteOn
         log::debug!(
-            "[DIAG] SoundFontNotePlayer::play — key: {}, vel: {}, freq: {}",
+            "[DIAG] SoundFontNotePlayer::play — key: {}, vel: {}, freq: {}, gain: {}",
             key,
             vel,
-            frequency.raw_value()
+            frequency.raw_value(),
+            gain_linear
         );
         self.bridge.borrow().send_note_on(key, vel)?;
 

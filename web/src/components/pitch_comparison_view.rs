@@ -63,6 +63,8 @@ pub fn PitchComparisonView() -> impl IntoView {
         use_context().expect("SoundFontLoadStatus not provided");
     let crate::app::WorkletConnecting(worklet_connecting) =
         use_context().expect("worklet_connecting not provided");
+    let sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, LocalStorage> =
+        use_context().expect("sf_gain_node not provided");
 
     // Eagerly create AudioContext in synchronous render path.
     // This ensures creation happens within the user gesture call stack (click on Start Page),
@@ -90,6 +92,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         &sound_source,
         Rc::clone(&audio_ctx),
         worklet_bridge.get_untracked(),
+        sf_gain_node.get_untracked(),
     )));
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
     let audio_error: RwSignal<Option<String>> = RwSignal::new(None);
@@ -510,12 +513,14 @@ pub fn PitchComparisonView() -> impl IntoView {
                 worklet_assets,
                 worklet_connecting,
                 sf2_presets,
+                sf_gain_node,
             )
             .await;
             *note_player.borrow_mut() = create_note_player(
                 &sound_source_clone,
                 Rc::clone(&audio_ctx_for_loop),
                 worklet_bridge.get_untracked(),
+                sf_gain_node.get_untracked(),
             );
 
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;

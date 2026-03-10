@@ -83,9 +83,10 @@ pub fn create_note_player(
     sound_source: &str,
     audio_ctx: Rc<RefCell<AudioContextManager>>,
     worklet_bridge: Option<Rc<RefCell<WorkletBridge>>>,
+    sf_gain_node: Option<Rc<web_sys::GainNode>>,
 ) -> UnifiedNotePlayer {
-    match (sound_source, worklet_bridge) {
-        (s, Some(bridge)) if s.starts_with("sf2:") => {
+    match (sound_source, worklet_bridge, sf_gain_node) {
+        (s, Some(bridge), Some(gain)) if s.starts_with("sf2:") => {
             // Parse bank:preset from "sf2:<bank>:<preset>"
             let parts: Vec<&str> = s.splitn(3, ':').collect();
             if let (Some(bank_str), Some(preset_str)) = (parts.get(1), parts.get(2))
@@ -94,7 +95,7 @@ pub fn create_note_player(
             {
                 log::warn!("Failed to select SoundFont program: {e}");
             }
-            UnifiedNotePlayer::SoundFont(SoundFontNotePlayer::new(bridge))
+            UnifiedNotePlayer::SoundFont(SoundFontNotePlayer::new(bridge, gain))
         }
         _ => UnifiedNotePlayer::Oscillator(OscillatorNotePlayer::new(audio_ctx)),
     }

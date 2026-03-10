@@ -31,9 +31,11 @@ pub struct SoundPreview {
     worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, LocalStorage>,
     worklet_connecting: RwSignal<bool>,
     sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage>,
+    sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, LocalStorage>,
 }
 
 impl SoundPreview {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         duration_secs: f64,
         audio_ctx: Rc<RefCell<AudioContextManager>>,
@@ -42,6 +44,7 @@ impl SoundPreview {
         worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, LocalStorage>,
         worklet_connecting: RwSignal<bool>,
         sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage>,
+        sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, LocalStorage>,
     ) -> Self {
         Self {
             player: Rc::new(RefCell::new(None)),
@@ -54,6 +57,7 @@ impl SoundPreview {
             worklet_assets,
             worklet_connecting,
             sf2_presets,
+            sf_gain_node,
         }
     }
 
@@ -103,6 +107,7 @@ impl SoundPreview {
         let worklet_assets = self.worklet_assets;
         let worklet_connecting = self.worklet_connecting;
         let sf2_presets = self.sf2_presets;
+        let sf_gain_node = self.sf_gain_node;
 
         spawn_local(async move {
             if source.starts_with("sf2:") {
@@ -112,6 +117,7 @@ impl SoundPreview {
                     worklet_assets,
                     worklet_connecting,
                     sf2_presets,
+                    sf_gain_node,
                 )
                 .await;
             }
@@ -122,7 +128,8 @@ impl SoundPreview {
             }
 
             let bridge = worklet_bridge.get_untracked();
-            let player = create_note_player(&source, ctx_manager, bridge);
+            let gain = sf_gain_node.get_untracked();
+            let player = create_note_player(&source, ctx_manager, bridge, gain);
             if let Err(e) = player.play_for_duration(
                 frequency,
                 NoteDuration::new(pv.duration_secs),

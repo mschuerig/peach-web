@@ -2,7 +2,7 @@
 title: 'Vary Loudness — Fix, Extend Range, Add to Pitch Matching'
 slug: 'vary-loudness-fix-extend-add-matching'
 created: '2026-03-10'
-status: 'ready-for-dev'
+status: 'implementation-complete'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: [Rust, Leptos, WASM, OxiSynth worklet, Web Audio API]
 files_to_modify:
@@ -87,48 +87,48 @@ Fix the soundfont backend to apply amplitude_db as a gain adjustment, double the
 
 ### Tasks
 
-- [ ] Task 1: Extend amplitude range
+- [x] Task 1: Extend amplitude range
   - File: `domain/src/session/pitch_comparison_session.rs`
   - Action: Change `AMPLITUDE_VARY_SCALING` from `5.0` to `10.0`
   - Notes: This is line 22. Update the doc comment to say "±10 dB at max".
 
-- [ ] Task 2: Update existing pitch comparison amplitude tests
+- [x] Task 2: Update existing pitch comparison amplitude tests
   - File: `domain/src/session/pitch_comparison_session.rs`
   - Action: Update `test_amplitude_with_vary_loudness` — with vary_loudness=0.5, max range changes from ±2.5 dB to ±5.0 dB. Update the `test_playback_data_amplitude_varies_when` test — the `LoudnessTestSettings { vary_loudness: 0.5 }` assertion bounds change from 2.5 to 5.0.
   - Notes: Search for all test assertions referencing the old 2.5 dB bound and update to 5.0.
 
-- [ ] Task 3: Add `session_vary_loudness` to `PitchMatchingSession`
+- [x] Task 3: Add `session_vary_loudness` to `PitchMatchingSession`
   - File: `domain/src/session/pitch_matching_session.rs`
   - Action: (a) Add `use crate::types::AmplitudeDB;` to imports. (b) Add `pub const AMPLITUDE_VARY_SCALING: f64 = 10.0;` constant. (c) Add `session_vary_loudness: f64` field to struct (after `session_note_range`). (d) Initialize to `0.0` in `new()`. (e) Snapshot in `start()`: `self.session_vary_loudness = settings.vary_loudness();`.
 
-- [ ] Task 4: Add `target_amplitude_db` to `PitchMatchingPlaybackData`
+- [x] Task 4: Add `target_amplitude_db` to `PitchMatchingPlaybackData`
   - File: `domain/src/session/pitch_matching_session.rs`
   - Action: Add `pub target_amplitude_db: AmplitudeDB` field to `PitchMatchingPlaybackData` struct.
 
-- [ ] Task 5: Add `calculate_target_amplitude` and wire into challenge generation
+- [x] Task 5: Add `calculate_target_amplitude` and wire into challenge generation
   - File: `domain/src/session/pitch_matching_session.rs`
   - Action: (a) Add private function `calculate_target_amplitude(vary_loudness: f64) -> AmplitudeDB` — identical to the one in pitch_comparison_session.rs but using the local `AMPLITUDE_VARY_SCALING` constant. (b) In `generate_next_challenge()`, call `let target_amplitude_db = calculate_target_amplitude(self.session_vary_loudness);` and add it to the `PitchMatchingPlaybackData` struct literal.
 
-- [ ] Task 6: Pass amplitude to tunable note playback in pitch matching view
+- [x] Task 6: Pass amplitude to tunable note playback in pitch matching view
   - File: `web/src/components/pitch_matching_view.rs`
   - Action: (a) In the slider `on_input` handler (~line 312-315), where the tunable note is first played with `AmplitudeDB::new(0.0)`, change to use `data.target_amplitude_db` from the current playback data. The `data` variable needs to be captured — read the playback data from the session at the point of first slider touch. (b) The reference note playback (~line 624) stays at `AmplitudeDB::new(0.0)`.
   - Notes: The tunable note is played via `note_player.borrow().play()` (not `play_for_duration`), so only the initial play call needs the amplitude. The continuous frequency adjustments don't change amplitude.
 
-- [ ] Task 7: Insert GainNode into soundfont audio graph
+- [x] Task 7: Insert GainNode into soundfont audio graph
   - File: `web/src/app.rs`
   - Action: In the worklet setup (~line 400-406), after creating the `AudioWorkletNode`, create a `GainNode` with initial gain 1.0. Connect worklet → gainNode → destination (instead of worklet → destination). Pass the `GainNode` alongside the `WorkletBridge` to `SoundFontNotePlayer`.
   - Notes: The GainNode needs to be wrapped in `Rc<RefCell<web_sys::GainNode>>` to be shared. Update `SoundFontNotePlayer::new()` to accept it.
 
-- [ ] Task 8: Apply amplitude_db in SoundFontNotePlayer
+- [x] Task 8: Apply amplitude_db in SoundFontNotePlayer
   - File: `web/src/adapters/audio_soundfont.rs`
   - Action: (a) Add `gain_node: Rc<RefCell<web_sys::GainNode>>` field to `SoundFontNotePlayer`. (b) Update `new()` to accept and store the gain node. (c) In `play()`, rename `_amplitude_db` to `amplitude_db` and add `self.gain_node.borrow().gain().set_value(10_f32.powf(amplitude_db.raw_value() / 20.0));` before the `send_note_on` call.
   - Notes: Import `web_sys::GainNode` at top of file. The gain formula is identical to `audio_oscillator.rs:108`.
 
-- [ ] Task 9: Add pitch matching amplitude tests
+- [x] Task 9: Add pitch matching amplitude tests
   - File: `domain/src/session/pitch_matching_session.rs`
   - Action: Add tests mirroring pitch comparison's amplitude tests: (a) `test_amplitude_zero_vary_loudness` — with default settings (vary_loudness=0.0), `target_amplitude_db` should be `AmplitudeDB::new(0.0)`. (b) `test_amplitude_with_vary_loudness` — with `vary_loudness=0.5`, `target_amplitude_db` should be within ±5.0 dB. (c) `test_playback_data_amplitude_varies_when_loudness_set` — start session with `LoudnessTestSettings { vary_loudness: 0.5 }`, verify playback data has non-trivial amplitude. Add `LoudnessTestSettings` mock struct (same pattern as pitch_comparison_session.rs tests).
 
-- [ ] Task 10: Verify compilation and run domain tests
+- [x] Task 10: Verify compilation and run domain tests
   - Action: Run `cargo clippy --workspace` and `cargo test -p domain` to verify all changes compile and tests pass.
 
 ## Acceptance Criteria

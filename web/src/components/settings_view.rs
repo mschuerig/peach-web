@@ -163,6 +163,8 @@ pub fn SettingsView() -> impl IntoView {
     let WorkletConnecting(worklet_connecting) =
         use_context().expect("WorkletConnecting not provided");
     let worklet_bridge = use_context().expect("worklet_bridge not provided");
+    let sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, LocalStorage> =
+        use_context().expect("sf_gain_node not provided");
     let preview = SendWrapper::new(SoundPreview::new(
         PREVIEW_DURATION_SECS,
         Rc::clone(&*audio_ctx_manager),
@@ -171,6 +173,7 @@ pub fn SettingsView() -> impl IntoView {
         worklet_assets,
         worklet_connecting,
         sf2_presets,
+        sf_gain_node,
     ));
 
     // Stop preview on sound source change (Task 4)
