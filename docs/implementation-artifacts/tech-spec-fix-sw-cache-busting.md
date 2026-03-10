@@ -2,7 +2,7 @@
 title: 'Fix service worker cache busting for app updates'
 slug: 'fix-sw-cache-busting'
 created: '2026-03-10'
-status: 'ready-for-dev'
+status: 'completed'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['JavaScript (sw.js)', 'GitHub Actions YAML']
 files_to_modify: ['sw.js', '.github/workflows/ci.yml']
@@ -66,7 +66,7 @@ Two targeted changes: (1) switch the navigation fetch handler from cache-first t
 
 ### Tasks
 
-- [ ] Task 1: Rewrite `sw.js` navigation fetch handler
+- [x] Task 1: Rewrite `sw.js` navigation fetch handler
   - File: `sw.js`
   - Action: Replace the cache-first navigation handler (lines 31-36) with network-first. Change:
     ```js
@@ -97,7 +97,7 @@ Two targeted changes: (1) switch the navigation fetch handler from cache-first t
     ```
   - Notes: `install` and `activate` handlers remain unchanged. The asset fetch handler (cache-first for hashed assets) also remains unchanged. Add a comment on `CACHE_VERSION` line: `// Replaced at build time by CI`
 
-- [ ] Task 2: Add CI step to inject build hash into `CACHE_VERSION`
+- [x] Task 2: Add CI step to inject build hash into `CACHE_VERSION`
   - File: `.github/workflows/ci.yml`
   - Action: Add a new step between "Copy index.html to 404.html for SPA routing" (line 82) and "Upload Pages artifact" (line 84):
     ```yaml
@@ -144,3 +144,9 @@ None — no new packages or crates required. `sha256sum` and `sed` are pre-insta
 - GitHub Pages sets `Cache-Control: max-age=600` on all files (not customizable)
 - Trunk already hashes CSS/JS/WASM filenames — that part works correctly
 - The `install` handler's `self.skipWaiting()` and `activate` handler's `self.clients.claim()` ensure immediate activation — no "waiting" state
+
+## Review Notes
+
+- Adversarial review completed
+- Findings: 10 total, 5 fixed (F1/F10, F2, F3, F4, F6), 5 skipped (F5 noise, F7/F8 out of scope, F9 pre-existing)
+- Resolution approach: auto-fix

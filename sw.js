@@ -1,5 +1,5 @@
 // sw.js — Service Worker for Peach ear training app
-const CACHE_VERSION = 'peach-v1';
+const CACHE_VERSION = 'peach-v1'; // Replaced at build time by CI (stays peach-v1 in local dev)
 
 self.addEventListener('install', (event) => {
   // Pre-cache only the HTML shell (stable paths)
@@ -25,12 +25,21 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
-  // SPA navigation: return cached index.html for all navigation requests.
-  // Routes like /profile, /settings, /training/comparison are handled by
-  // the Leptos client-side router, not by actual files on the server.
+  // SPA navigation: network-first for index.html so online users always get
+  // the latest version. Offline fallback serves the cached copy.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match('./index.html').then(cached => cached || fetch(event.request))
+      fetch(event.request)
+        .then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_VERSION)
+              .then(cache => cache.put('./index.html', clone))
+              .catch(() => {});
+          }
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
