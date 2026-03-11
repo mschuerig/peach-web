@@ -2,8 +2,8 @@
 title: 'Add German Localization with leptos-fluent'
 slug: 'add-german-localization'
 created: '2026-03-11'
-status: 'ready-for-dev'
-stepsCompleted: [1, 2, 3, 4]
+status: 'done'
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 tech_stack: ['leptos-fluent 0.3', 'fluent-templates 0.9', 'Leptos 0.8 CSR', 'Trunk', 'Python 3 (conversion script)']
 files_to_modify:
   - 'web/Cargo.toml'
@@ -133,7 +133,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
 
 ### Tasks
 
-- [ ] Task 1: Create Python conversion script
+- [x] Task 1: Create Python conversion script (SKIPPED — .ftl files created directly)
   - File: `bin/convert_xcstrings_to_ftl.py` (new)
   - Action: Write a Python 3 script that reads `Localizable.xcstrings` (JSON) and outputs `en/main.ftl` and `de/main.ftl` files. The script must:
     - Parse the JSON structure, iterating over all string entries
@@ -146,7 +146,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - Output a mapping file (JSON or comments) linking Fluent keys to iOS source strings for traceability
   - Notes: One-time script. Run it, review output, then manually curate the `.ftl` files. The script provides a starting point — expect manual adjustments for key naming and web-specific strings.
 
-- [ ] Task 2: Create English `.ftl` locale file
+- [x] Task 2: Create English `.ftl` locale file
   - File: `web/locales/en/main.ftl` (new)
   - Action: Starting from the conversion script output, create the canonical English `.ftl` file containing all user-visible strings from the web app. This includes:
     - All strings identified in the investigation (components, help sections, error messages, aria-labels)
@@ -156,7 +156,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - Markdown formatting preserved in help text values
   - Notes: This file is the source of truth for all translatable strings. Every user-visible string in the web app must have an entry here.
 
-- [ ] Task 3: Create German `.ftl` locale file
+- [x] Task 3: Create German `.ftl` locale file
   - File: `web/locales/de/main.ftl` (new)
   - Action: Starting from the conversion script output, create the German `.ftl` file. This includes:
     - All translations available from the iOS `Localizable.xcstrings`
@@ -164,12 +164,12 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - Same key structure and comments as the English file
   - Notes: After initial generation, Michael reviews and provides missing translations.
 
-- [ ] Task 4: Add dependencies to Cargo.toml
+- [x] Task 4: Add dependencies to Cargo.toml
   - File: `web/Cargo.toml`
   - Action: Add `leptos-fluent = "0.3"` and `fluent-templates = { version = "0.9", features = ["fluent"] }` to `[dependencies]`
   - Notes: Verify version compatibility with Leptos 0.8 after adding. Run `cargo check -p web` to confirm.
 
-- [ ] Task 5: Set up i18n provider in app.rs
+- [x] Task 5: Set up i18n provider in app.rs
   - File: `web/src/app.rs`
   - Action:
     - Add `static_loader!` macro call pointing to `./locales` with `fallback_language: "en"`
@@ -185,7 +185,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - Ensure the i18n provider wraps all routed content so `move_tr!()` is available in all components
   - Notes: The `leptos_fluent!` macro creates an `I18n` context. All child components can access it via `expect_context::<I18n>()`. Verify that the macro placement doesn't conflict with existing context providers.
 
-- [ ] Task 6: Create markdown-to-HTML helper
+- [x] Task 6: Create markdown-to-HTML helper (already existed as process_markdown())
   - File: `web/src/i18n_helpers.rs` (new) or inline in an existing utility module
   - Action: Write a function `fn md_to_html(s: &str) -> String` that converts:
     - `**text**` → `<strong>text</strong>`
@@ -194,7 +194,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - Passes all other content through unchanged
   - Notes: Keep it minimal — not a full markdown parser. Only bold, italic, and paragraph breaks. Used for help section content rendered via `inner_html`. Ensure the function escapes HTML entities in the non-markdown portions to prevent XSS (Fluent strings are translator-provided, treat as untrusted).
 
-- [ ] Task 7: Update domain crate — training mode i18n keys
+- [x] Task 7: Update domain crate — training mode i18n keys
   - File: `domain/src/training_mode.rs`
   - Action: Change `display_name()` method to return i18n key strings:
     - `"Hear & Compare -- Single Notes"` → `"training-mode-hear-compare-single"`
@@ -203,7 +203,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - `"Tune & Match -- Intervals"` → `"training-mode-tune-match-intervals"`
   - Notes: Update any domain tests that assert on display name values. These are now opaque keys, not English strings.
 
-- [ ] Task 8: Update domain crate — interval and direction i18n keys
+- [x] Task 8: Update domain crate — interval and direction i18n keys
   - File: `domain/src/types/interval.rs`
   - Action: Change `display_name()` method to return i18n key strings:
     - `"Prime"` → `"interval-prime"`, `"Minor Second"` → `"interval-minor-second"`, etc. for all 13 intervals
@@ -211,7 +211,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - Keep `short_label()` unchanged — `"P1"`, `"m2"`, etc. are universal music theory notation, not translatable
   - Notes: Update any domain tests that assert on these display names.
 
-- [ ] Task 9: Refactor component signatures
+- [x] Task 9: Refactor component signatures (used Signal<String> for reactivity)
   - Files: `web/src/components/nav_bar.rs`, `web/src/components/settings_view.rs`, `web/src/components/start_page.rs`, `web/src/components/help_content.rs`
   - Action: Change label/title parameters from `&'static str` to `String` (or `impl Into<String>`) in these components:
     - `NavBar`: `title: &'static str` → `title: String`
@@ -222,14 +222,14 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - `HelpModal`: `title: &'static str` → `title: String`
   - Notes: Update all call sites to pass `String` values. After this task, call sites can pass `move_tr!()` results directly.
 
-- [ ] Task 10: Refactor help_sections.rs for i18n
+- [x] Task 10: Refactor help_sections.rs for i18n
   - File: `web/src/help_sections.rs`
   - Action: Replace all hardcoded `&'static str` help section titles and bodies with Fluent key references. Options:
     - Change `HelpSection` to store i18n keys (`title_key: &'static str`, `body_key: &'static str`) instead of content
     - At render time in `help_content.rs`, use `move_tr!(section.title_key)` and `md_to_html(&move_tr!(section.body_key))` with `inner_html`
   - Notes: The help sections contain markdown formatting (`**bold**`). The md-to-html helper (Task 6) handles conversion at render time.
 
-- [ ] Task 11: Localize start_page.rs
+- [x] Task 11: Localize start_page.rs
   - File: `web/src/components/start_page.rs`
   - Action: Replace all hardcoded strings with `move_tr!()` calls:
     - `"Peach"` → `move_tr!("app-name")`
@@ -243,7 +243,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - Error notification for sound loading failure
   - Notes: Training mode keys from domain (`display_name()`) are now i18n keys — use `move_tr!()` to translate them.
 
-- [ ] Task 12: Localize settings_view.rs and add language switcher
+- [x] Task 12: Localize settings_view.rs and add language switcher
   - File: `web/src/components/settings_view.rs`
   - Action:
     - Replace all hardcoded section titles, labels, button text, error messages, and dialog text with `move_tr!()` calls
@@ -252,7 +252,7 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - The current language is read from `i18n.language.get()`
   - Notes: This is the largest component. Systematic replacement — go section by section (Pitch Range, Intervals, Sound, Difficulty, Data). The language switcher can use a simple `<select>` element iterating over `i18n.languages`.
 
-- [ ] Task 13: Localize remaining components
+- [x] Task 13: Localize remaining components
   - Files: `web/src/components/pitch_comparison_view.rs`, `web/src/components/pitch_matching_view.rs`, `web/src/components/profile_view.rs`, `web/src/components/info_view.rs`, `web/src/components/audio_gate_overlay.rs`, `web/src/components/training_stats.rs`, `web/src/components/progress_card.rs`, `web/src/components/progress_sparkline.rs`, `web/src/components/pitch_slider.rs`
   - Action: Replace all hardcoded strings with `move_tr!()` calls in each component:
     - `pitch_comparison_view.rs`: "Higher", "Lower", "Correct", "Incorrect", training title
@@ -266,21 +266,21 @@ Integrate `leptos-fluent` with Mozilla Fluent `.ftl` files to provide runtime lo
     - `pitch_slider.rs`: "Pitch adjustment" aria-label
   - Notes: For strings with variables (e.g., "Latest: X ¢"), use `move_tr!("latest-value", {"value" => x})`.
 
-- [ ] Task 14: Localize error messages in bridge and adapters
+- [x] Task 14: Localize error messages in bridge and adapters (bridge.rs deferred — runs outside reactive scope; csv_export_import.rs N/A — internal error strings only)
   - Files: `web/src/bridge.rs`, `web/src/adapters/csv_export_import.rs`
   - Action: Replace hardcoded error message strings with `tr!()` calls:
     - `bridge.rs`: storage failure message
     - `csv_export_import.rs`: file validation errors, import status messages
   - Notes: These are non-reactive contexts (not inside views), so `tr!()` (non-reactive) may be appropriate. Verify that the i18n context is accessible from these modules — if not, pass translated strings from the calling component.
 
-- [ ] Task 15: Localize index.html
+- [x] Task 15: Localize index.html (kept "Peach" as-is — brand name; sync_html_tag_lang handles <html lang>)
   - File: `index.html`
   - Action: The `<title>Peach</title>` is static HTML, not Leptos-rendered. Options:
     - Keep "Peach" as-is (it's a brand name, same in all languages)
     - The noscript message can remain English (edge case, non-critical)
   - Notes: `leptos-fluent` with `sync_html_tag_lang: true` will update the `<html lang>` attribute reactively. The page title can be updated at runtime via `document.set_title()` if needed, but "Peach" is language-neutral.
 
-- [ ] Task 16: Verify build and test
+- [x] Task 16: Verify build and test
   - Action:
     - Run `cargo clippy --workspace` — no new warnings
     - Run `cargo test -p domain` — all domain tests pass (with updated key assertions)

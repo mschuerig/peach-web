@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos_fluent::move_tr;
 use leptos_router::hooks::use_navigate;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
@@ -38,7 +39,7 @@ pub fn InfoView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title="Peach" left_content=ViewFn::from({
+            <NavBar title=move_tr!("app-name") left_content=ViewFn::from({
                 let navigate = use_navigate();
                 move || {
                     let navigate = navigate.clone();
@@ -46,15 +47,15 @@ pub fn InfoView() -> impl IntoView {
                         <button
                             on:click=move |_| navigate("/", Default::default())
                             class="min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
-                            aria-label="Done"
+                            aria-label=move || move_tr!("done").get()
                         >
-                            "Done"
+                            {move_tr!("done")}
                         </button>
                     }.into_any()
                 }
             })>
             </NavBar>
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center -mt-2 mb-4">"Version 0.1.0"</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 text-center -mt-2 mb-4">{move_tr!("version-label", {"number" => "0.1.0"})}</p>
 
             <div class="mt-8 space-y-8">
                 <HelpContent sections=INFO_HELP use_h2=true />
@@ -62,7 +63,7 @@ pub fn InfoView() -> impl IntoView {
                 <HelpContent sections=INFO_ACKNOWLEDGMENTS use_h2=true />
 
                 <section>
-                    <h2 class="text-lg font-semibold dark:text-white">"Developer"</h2>
+                    <h2 class="text-lg font-semibold dark:text-white">{move_tr!("developer")}</h2>
                     <address class="mt-2 not-italic space-y-1 text-gray-700 dark:text-gray-300">
                         <p>"Michael Sch\u{00FC}rig"</p>
                         <p>
@@ -77,10 +78,10 @@ pub fn InfoView() -> impl IntoView {
                 </section>
 
                 <section>
-                    <h2 class="text-lg font-semibold dark:text-white">"Project"</h2>
+                    <h2 class="text-lg font-semibold dark:text-white">{move_tr!("project")}</h2>
                     <dl class="mt-2 space-y-2 text-gray-700 dark:text-gray-300">
                         <div class="flex gap-2">
-                            <dt>"GitHub:"</dt>
+                            <dt>{move_tr!("github-label")}</dt>
                             <dd>
                                 <a
                                     href="https://github.com/mschuerig/peach-web"
@@ -93,12 +94,12 @@ pub fn InfoView() -> impl IntoView {
                             </dd>
                         </div>
                         <div class="flex gap-2">
-                            <dt>"License:"</dt>
+                            <dt>{move_tr!("license-label")}</dt>
                             <dd>"MIT"</dd>
                         </div>
                         <div class="flex gap-2">
-                            <dt>"Copyright:"</dt>
-                            <dd>"\u{00A9} 2026 Michael Sch\u{00FC}rig"</dd>
+                            <dt>{move_tr!("copyright-label")}</dt>
+                            <dd>{move_tr!("copyright-text")}</dd>
                         </div>
                     </dl>
                 </section>

@@ -1,10 +1,11 @@
 use leptos::prelude::*;
+use leptos_fluent::tr;
 
-/// A single help section with a title and body text.
+/// A help section identified by i18n keys for title and body.
 /// Body text supports simple inline markdown: **bold** and *italic*.
 pub struct HelpSection {
-    pub title: &'static str,
-    pub body: &'static str,
+    pub title_key: &'static str,
+    pub body_key: &'static str,
 }
 
 /// Process simple inline markdown in trusted static text.
@@ -53,26 +54,30 @@ fn process_markdown(text: &str) -> String {
 }
 
 /// Renders a list of help sections with titles and processed body text.
+/// Titles and bodies are looked up from i18n keys at render time.
 #[component]
 pub fn HelpContent(
     sections: &'static [HelpSection],
     #[prop(optional)] use_h2: bool,
 ) -> impl IntoView {
+    let i18n = expect_context::<leptos_fluent::I18n>();
+
     view! {
         <div class="space-y-5">
             {sections.iter().map(|section| {
-                let body_html = process_markdown(section.body);
+                let title_key = section.title_key;
+                let body_key = section.body_key;
                 let heading = if use_h2 {
-                    view! { <h2 class="text-lg font-semibold dark:text-white">{section.title}</h2> }.into_any()
+                    view! { <h2 class="text-lg font-semibold dark:text-white">{move || i18n.tr(title_key)}</h2> }.into_any()
                 } else {
-                    view! { <h3 class="text-lg font-semibold dark:text-white">{section.title}</h3> }.into_any()
+                    view! { <h3 class="text-lg font-semibold dark:text-white">{move || i18n.tr(title_key)}</h3> }.into_any()
                 };
                 view! {
                     <div>
                         {heading}
                         <div
                             class="mt-2 text-gray-700 dark:text-gray-300"
-                            inner_html=body_html
+                            inner_html=move || process_markdown(&i18n.tr(body_key))
                         />
                     </div>
                 }
@@ -85,7 +90,7 @@ pub fn HelpContent(
 /// Uses the native HTML <dialog> element for accessibility (focus trapping, Escape to close, backdrop).
 #[component]
 pub fn HelpModal(
-    title: &'static str,
+    #[prop(into)] title: Signal<String>,
     sections: &'static [HelpSection],
     is_open: RwSignal<bool>,
     #[prop(optional)] on_close: Option<Callback<()>>,
@@ -123,7 +128,7 @@ pub fn HelpModal(
             node_ref=dialog_ref
             role="dialog"
             aria-modal="true"
-            aria-label=title
+            aria-label=move || title.get()
             on:close=on_dialog_close
             class="rounded-lg p-0 max-w-lg w-full mx-auto bg-white text-gray-900 backdrop:bg-transparent dark:bg-gray-800 dark:text-gray-100 max-h-[85vh]"
         >
@@ -133,12 +138,12 @@ pub fn HelpModal(
                         <button
                             on:click=handle_close
                             class="min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
-                            aria-label="Done"
+                            aria-label=move || tr!("done")
                         >
-                            "Done"
+                            {move || tr!("done")}
                         </button>
                     </div>
-                    <h2 class="shrink min-w-0 text-center text-xl font-bold truncate">{title}</h2>
+                    <h2 class="shrink min-w-0 text-center text-xl font-bold truncate">{move || title.get()}</h2>
                     <div class="flex-1"></div>
                 </div>
                 <div class="overflow-y-auto flex-1">

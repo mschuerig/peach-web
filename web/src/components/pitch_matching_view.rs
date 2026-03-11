@@ -10,6 +10,8 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
 
+use leptos_fluent::{I18n, move_tr};
+
 use crate::app::base_href;
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
@@ -148,8 +150,14 @@ pub fn PitchMatchingView() -> impl IntoView {
     // Tunable note handle for real-time frequency adjustment
     let tunable_handle: Rc<RefCell<Option<UnifiedPlaybackHandle>>> = Rc::new(RefCell::new(None));
 
-    // Sync UI signals from session state
+    // Capture I18n context for use in async tasks and closures
+    let i18n: I18n = expect_context();
+
+    // Sync UI signals from session state.
+    // Wrapped in `untrack` because this is called from async tasks where
+    // reactive tracking context is not available.
     fn sync_session_to_signals(
+        i18n: &I18n,
         session: &RefCell<PitchMatchingSession>,
         slider_enabled: RwSignal<bool>,
         show_feedback: RwSignal<bool>,
@@ -160,77 +168,83 @@ pub fn PitchMatchingView() -> impl IntoView {
         interval_label_text: RwSignal<String>,
         is_interval_mode: bool,
     ) {
-        let s = session.borrow();
-        let state = s.state();
-        slider_enabled.set(
-            state == PitchMatchingSessionState::AwaitingSliderTouch
-                || state == PitchMatchingSessionState::PlayingTunable,
-        );
-        show_feedback.set(s.show_feedback());
+        untrack(|| {
+            let s = session.borrow();
+            let state = s.state();
+            slider_enabled.set(
+                state == PitchMatchingSessionState::AwaitingSliderTouch
+                    || state == PitchMatchingSessionState::PlayingTunable,
+            );
+            show_feedback.set(s.show_feedback());
 
-        if s.show_feedback()
-            && let Some(completed) = s.last_completed()
-        {
-            let error = completed.user_cent_error();
-            let abs_error = error.abs();
+            if s.show_feedback()
+                && let Some(completed) = s.last_completed()
+            {
+                let error = completed.user_cent_error();
+                let abs_error = error.abs();
 
-            // Arrow: up for sharp, down for flat, dot for dead center
-            let arrow = if abs_error < 1.0 {
-                "\u{00B7}".to_string() // · (dead center)
-            } else if error > 0.0 {
-                "\u{2191}".to_string() // ↑ (sharp)
+                // Arrow: up for sharp, down for flat, dot for dead center
+                let arrow = if abs_error < 1.0 {
+                    "\u{00B7}".to_string() // · (dead center)
+                } else if error > 0.0 {
+                    "\u{2191}".to_string() // ↑ (sharp)
+                } else {
+                    "\u{2193}".to_string() // ↓ (flat)
+                };
+
+                // Text: signed cent offset or "Dead center"
+                let text = if abs_error < 1.0 {
+                    i18n.tr("dead-center")
+                } else {
+                    format!("{:+.0} cents", error)
+                };
+
+                // Color: green (<10), yellow (10-30), red (>30)
+                let color = if abs_error < 10.0 {
+                    "text-green-600 dark:text-green-400".to_string()
+                } else if abs_error <= 30.0 {
+                    "text-yellow-600 dark:text-yellow-400".to_string()
+                } else {
+                    "text-red-600 dark:text-red-400".to_string()
+                };
+
+                // Screen reader announcement
+                let sr = if abs_error < 1.0 {
+                    i18n.tr("dead-center")
+                } else {
+                    let direction = if error > 0.0 {
+                        i18n.tr("sharp-label")
+                    } else {
+                        i18n.tr("flat-label")
+                    };
+                    format!("{:.0} cents {direction}", abs_error)
+                };
+
+                feedback_arrow.set(arrow);
+                feedback_text.set(text);
+                feedback_color.set(color);
+                sr_announcement.set(sr);
             } else {
-                "\u{2193}".to_string() // ↓ (flat)
-            };
-
-            // Text: signed cent offset or "Dead center"
-            let text = if abs_error < 1.0 {
-                "Dead center".to_string()
-            } else {
-                format!("{:+.0} cents", error)
-            };
-
-            // Color: green (<10), yellow (10-30), red (>30)
-            let color = if abs_error < 10.0 {
-                "text-green-600 dark:text-green-400".to_string()
-            } else if abs_error <= 30.0 {
-                "text-yellow-600 dark:text-yellow-400".to_string()
-            } else {
-                "text-red-600 dark:text-red-400".to_string()
-            };
-
-            // Screen reader announcement
-            let sr = if abs_error < 1.0 {
-                "Dead center".to_string()
-            } else if error > 0.0 {
-                format!("{:.0} cents sharp", abs_error)
-            } else {
-                format!("{:.0} cents flat", abs_error)
-            };
-
-            feedback_arrow.set(arrow);
-            feedback_text.set(text);
-            feedback_color.set(color);
-            sr_announcement.set(sr);
-        } else {
-            sr_announcement.set(String::new());
-        }
-
-        if is_interval_mode && let Some(di) = s.current_interval() {
-            if di.interval != Interval::Prime {
-                let label = interval_label(di.interval, di.direction);
-                sr_announcement.set(label.clone());
-                interval_label_text.set(label);
-            } else {
-                interval_label_text.set(String::new());
+                sr_announcement.set(String::new());
             }
-        }
+
+            if is_interval_mode && let Some(di) = s.current_interval() {
+                if di.interval != Interval::Prime {
+                    let label = interval_label(i18n, di.interval, di.direction);
+                    sr_announcement.set(label.clone());
+                    interval_label_text.set(label);
+                } else {
+                    interval_label_text.set(String::new());
+                }
+            }
+        });
     }
 
     let sync_signals = {
         let session = Rc::clone(&session);
         move || {
             sync_session_to_signals(
+                &i18n,
                 &session,
                 slider_enabled,
                 show_feedback,
@@ -376,7 +390,7 @@ pub fn PitchMatchingView() -> impl IntoView {
             }
             note_player.borrow().stop_all();
             sync();
-            sr_announcement.set("Training stopped".into());
+            sr_announcement.set(untrack(|| i18n.tr("training-stopped")));
         }
     };
     let on_nav_start = {
@@ -555,7 +569,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                 Ok(ctx) => ctx,
                 Err(e) => {
                     log::error!("AudioContext failed: {e}");
-                    audio_error.set(Some("Audio engine failed to start".into()));
+                    audio_error.set(Some(untrack(|| i18n.tr("audio-engine-failed"))));
                     return;
                 }
             };
@@ -612,7 +626,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                     .start(intervals_from_query.clone(), &settings);
                 cancelled.set(false);
                 sync();
-                sr_announcement.set("Training started".into());
+                sr_announcement.set(untrack(|| i18n.tr("training-started")));
 
                 'training: loop {
                     if cancelled.get() {
@@ -635,7 +649,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                         AmplitudeDB::new(0.0),
                     ) {
                         log::error!("Reference note playback failed: {e}");
-                        audio_error.set(Some("Audio playback failed".into()));
+                        audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
                     }
 
                     // Wait for reference note duration
@@ -713,7 +727,7 @@ pub fn PitchMatchingView() -> impl IntoView {
         });
     }
 
-    let matching_title = "Tune & Match";
+    let matching_title = move_tr!("matching-title");
 
     #[allow(clippy::redundant_closure)]
     let on_back_cb = {
@@ -733,7 +747,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                 <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
                 <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
             </NavBar>
-            <HelpModal title="Pitch Matching Training" sections=PITCH_MATCHING_HELP is_open=is_help_open on_close=on_help_close />
+            <HelpModal title=move_tr!("matching-help-title") sections=PITCH_MATCHING_HELP is_open=is_help_open on_close=on_help_close />
 
             <AudioGateOverlay />
 

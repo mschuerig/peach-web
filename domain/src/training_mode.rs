@@ -30,7 +30,7 @@ const EWMA_HALFLIFE_SECS: f64 = 604_800.0; // 7 days
 const SESSION_GAP_SECS: f64 = 1_800.0; // 30 minutes
 
 static UNISON_PITCH_COMPARISON_CONFIG: TrainingModeConfig = TrainingModeConfig {
-    display_name: "Hear & Compare -- Single Notes",
+    display_name: "training-mode-hear-compare-single",
     unit_label: "cents",
     optimal_baseline: 8.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
@@ -38,7 +38,7 @@ static UNISON_PITCH_COMPARISON_CONFIG: TrainingModeConfig = TrainingModeConfig {
 };
 
 static INTERVAL_PITCH_COMPARISON_CONFIG: TrainingModeConfig = TrainingModeConfig {
-    display_name: "Hear & Compare -- Intervals",
+    display_name: "training-mode-hear-compare-intervals",
     unit_label: "cents",
     optimal_baseline: 12.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
@@ -46,7 +46,7 @@ static INTERVAL_PITCH_COMPARISON_CONFIG: TrainingModeConfig = TrainingModeConfig
 };
 
 static UNISON_MATCHING_CONFIG: TrainingModeConfig = TrainingModeConfig {
-    display_name: "Tune & Match -- Single Notes",
+    display_name: "training-mode-tune-match-single",
     unit_label: "cents",
     optimal_baseline: 5.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
@@ -54,7 +54,7 @@ static UNISON_MATCHING_CONFIG: TrainingModeConfig = TrainingModeConfig {
 };
 
 static INTERVAL_MATCHING_CONFIG: TrainingModeConfig = TrainingModeConfig {
-    display_name: "Tune & Match -- Intervals",
+    display_name: "training-mode-tune-match-intervals",
     unit_label: "cents",
     optimal_baseline: 8.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn test_unison_comparison_config() {
         let cfg = TrainingMode::UnisonPitchComparison.config();
-        assert_eq!(cfg.display_name, "Hear & Compare -- Single Notes");
+        assert_eq!(cfg.display_name, "training-mode-hear-compare-single");
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 8.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_interval_comparison_config() {
         let cfg = TrainingMode::IntervalPitchComparison.config();
-        assert_eq!(cfg.display_name, "Hear & Compare -- Intervals");
+        assert_eq!(cfg.display_name, "training-mode-hear-compare-intervals");
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 12.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_unison_matching_config() {
         let cfg = TrainingMode::UnisonMatching.config();
-        assert_eq!(cfg.display_name, "Tune & Match -- Single Notes");
+        assert_eq!(cfg.display_name, "training-mode-tune-match-single");
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 5.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_interval_matching_config() {
         let cfg = TrainingMode::IntervalMatching.config();
-        assert_eq!(cfg.display_name, "Tune & Match -- Intervals");
+        assert_eq!(cfg.display_name, "training-mode-tune-match-intervals");
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 8.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);

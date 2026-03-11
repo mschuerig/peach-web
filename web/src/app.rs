@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use leptos::prelude::*;
+use leptos_fluent::{leptos_fluent, move_tr};
 use leptos_router::{
     components::{A, Route, Router, Routes},
     path,
@@ -256,39 +257,56 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        <Router base=base_path()>
+        <I18nProvider>
+            <Router base=base_path()>
 
-            <a
-                href="#main-content"
-                class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-3 focus:bg-white focus:text-black dark:focus:bg-gray-900 dark:focus:text-white"
-            >
-                "Skip to main content"
-            </a>
-            <main id="main-content" class="min-h-screen bg-white dark:bg-gray-900">
-                <div class="mx-auto max-w-lg px-4">
-                    <Routes fallback=|| {
-                        view! {
-                            <div class="py-12 text-center">
-                                <h1 class="text-2xl font-bold dark:text-white">"Page not found"</h1>
-                                <A
-                                    href=base_href("/")
-                                    attr:class="mt-4 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
-                                >
-                                    "Back to Start"
-                                </A>
-                            </div>
-                        }
-                    }>
-                        <Route path=path!("/") view=StartPage />
-                        <Route path=path!("/training/comparison") view=PitchComparisonView />
-                        <Route path=path!("/training/pitch-matching") view=PitchMatchingView />
-                        <Route path=path!("/profile") view=ProfileView />
-                        <Route path=path!("/settings") view=SettingsView />
-                        <Route path=path!("/info") view=InfoView />
-                    </Routes>
-                </div>
-            </main>
-        </Router>
+                <a
+                    href="#main-content"
+                    class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-3 focus:bg-white focus:text-black dark:focus:bg-gray-900 dark:focus:text-white"
+                >
+                    {move_tr!("skip-to-content")}
+                </a>
+                <main id="main-content" class="min-h-screen bg-white dark:bg-gray-900">
+                    <div class="mx-auto max-w-lg px-4">
+                        <Routes fallback=|| {
+                            view! {
+                                <div class="py-12 text-center">
+                                    <h1 class="text-2xl font-bold dark:text-white">{move_tr!("page-not-found")}</h1>
+                                    <A
+                                        href=base_href("/")
+                                        attr:class="mt-4 inline-block min-h-11 min-w-11 rounded px-3 py-2 text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                    >
+                                        {move_tr!("back-to-start")}
+                                    </A>
+                                </div>
+                            }
+                        }>
+                            <Route path=path!("/") view=StartPage />
+                            <Route path=path!("/training/comparison") view=PitchComparisonView />
+                            <Route path=path!("/training/pitch-matching") view=PitchMatchingView />
+                            <Route path=path!("/profile") view=ProfileView />
+                            <Route path=path!("/settings") view=SettingsView />
+                            <Route path=path!("/info") view=InfoView />
+                        </Routes>
+                    </div>
+                </main>
+            </Router>
+        </I18nProvider>
+    }
+}
+
+#[component]
+fn I18nProvider(children: Children) -> impl IntoView {
+    leptos_fluent! {
+        children: children(),
+        locales: "./locales",
+        default_language: "en",
+        languages: "./locales/languages.json",
+        sync_html_tag_lang: true,
+        initial_language_from_local_storage: true,
+        set_language_to_local_storage: true,
+        initial_language_from_navigator: true,
+        initial_language_from_navigator_to_local_storage: true,
     }
 }
 

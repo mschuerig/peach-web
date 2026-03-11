@@ -5,6 +5,7 @@ use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 
 use domain::{ProgressTimeline, TrainingMode, TrainingModeState, Trend};
+use leptos_fluent::{I18n, tr};
 
 use super::progress_chart::ProgressChart;
 
@@ -29,12 +30,12 @@ fn trend_arrow(trend: Option<Trend>) -> (&'static str, &'static str) {
     }
 }
 
-fn trend_text(trend: Option<Trend>) -> &'static str {
+fn trend_text(trend: Option<Trend>) -> String {
     match trend {
-        Some(Trend::Improving) => "improving",
-        Some(Trend::Stable) => "stable",
-        Some(Trend::Declining) => "declining",
-        None => "",
+        Some(Trend::Improving) => tr!("trend-improving"),
+        Some(Trend::Stable) => tr!("trend-stable"),
+        Some(Trend::Declining) => tr!("trend-declining"),
+        None => String::new(),
     }
 }
 
@@ -45,6 +46,7 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
 
     let ptl = progress_timeline.clone();
     let config = mode.config();
+    let i18n = expect_context::<I18n>();
 
     // Note: this component is only rendered by ProfileView after is_profile_loaded is true,
     // so no additional loading guard is needed here.
@@ -64,12 +66,17 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
             let stddev_str = format_stddev(&buckets);
             let (arrow, arrow_color) = trend_arrow(trend);
             let trend_label = trend_text(trend);
-            let display_name = config.display_name;
+            let display_name = i18n.tr(config.display_name);
 
-            let card_aria = format!(
-                "Progress for {display_name}: {ewma_str} cents, {trend_label}"
-            );
-            let value_aria = format!("{ewma_str} cents, trend {trend_label}");
+            let card_aria = tr!("progress-for", {
+                "name" => display_name.clone(),
+                "ewma" => ewma_str.clone(),
+                "trend" => trend_label.clone()
+            });
+            let value_aria = tr!("value-trend", {
+                "ewma" => ewma_str.clone(),
+                "trend" => trend_label
+            });
 
             view! {
                 <div

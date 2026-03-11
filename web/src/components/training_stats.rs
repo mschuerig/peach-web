@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos_fluent::{move_tr, tr};
 
 use domain::Trend;
 
@@ -19,18 +20,18 @@ mod tests {
     }
 }
 
-fn trend_arrow(trend: Trend) -> (&'static str, &'static str, &'static str) {
+fn trend_arrow(trend: Trend) -> (&'static str, &'static str, String) {
     match trend {
         Trend::Improving => (
             "\u{2198}",
             "text-green-600 dark:text-green-400",
-            "Improving",
+            tr!("trend-improving"),
         ),
-        Trend::Stable => ("\u{2192}", "text-gray-500 dark:text-gray-400", "Stable"),
+        Trend::Stable => ("\u{2192}", "text-gray-500 dark:text-gray-400", tr!("trend-stable")),
         Trend::Declining => (
             "\u{2197}",
             "text-orange-500 dark:text-orange-400",
-            "Declining",
+            tr!("trend-declining"),
         ),
     }
 }
@@ -53,9 +54,9 @@ pub fn TrainingStats(
                     }
                 }
             >
-                <span>"Latest: "</span>
+                <span>{move_tr!("latest")}</span>
                 <span class="font-medium dark:text-gray-300">
-                    {move || latest_value.get().map(|v| format!("{} cents", format_cents(v))).unwrap_or_default()}
+                    {move || latest_value.get().map(|v| tr!("value-cents", {"value" => format_cents(v)})).unwrap_or_default()}
                 </span>
                 // Trend arrow
                 {move || {
@@ -79,9 +80,9 @@ pub fn TrainingStats(
                     }
                 }
             >
-                <span>"Best: "</span>
+                <span>{move_tr!("best")}</span>
                 <span>
-                    {move || session_best.get().map(|v| format!("{} cents", format_cents(v))).unwrap_or_default()}
+                    {move || session_best.get().map(|v| tr!("value-cents", {"value" => format_cents(v)})).unwrap_or_default()}
                 </span>
             </div>
         </div>

@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use leptos::prelude::*;
+use leptos_fluent::move_tr;
 use send_wrapper::SendWrapper;
 
 use crate::adapters::audio_context::{AudioContextManager, provide_audio_gesture};
@@ -39,7 +40,7 @@ pub fn AudioGateOverlay() -> impl IntoView {
                 on:click=move |ev| on_tap.run(ev)
                 class="rounded-2xl bg-blue-500 px-10 py-6 text-xl font-semibold text-white shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-offset-gray-900"
             >
-                "Tap to Start Training"
+                {move_tr!("tap-to-start")}
             </button>
         </div>
     }

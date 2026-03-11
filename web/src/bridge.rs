@@ -70,6 +70,7 @@ impl PitchComparisonObserver for DataStoreObserver {
         spawn_local(async move {
             if let Err(e) = store.save_pitch_comparison(&record).await {
                 log::error!("Storage write failed: {e}");
+                // TODO: localize when called from reactive context
                 error_signal.set(Some(
                     "Training data may not have been saved. Training continues.".to_string(),
                 ));
@@ -155,6 +156,7 @@ impl PitchMatchingObserver for PitchMatchingDataStoreObserver {
         spawn_local(async move {
             if let Err(e) = store.save_pitch_matching(&record).await {
                 log::error!("Storage write failed: {e}");
+                // TODO: localize when called from reactive context
                 error_signal.set(Some(
                     "Training data may not have been saved. Training continues.".to_string(),
                 ));

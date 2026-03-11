@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos_fluent::tr;
 use leptos_router::components::A;
 
 /// Reusable icon button for navigation bars.
@@ -7,7 +8,7 @@ use leptos_router::components::A;
 /// When `circled` is true, the icon character gets a thin border circle (matching ⓘ style).
 #[component]
 pub fn NavIconButton(
-    #[prop(into)] label: String,
+    #[prop(into)] label: Signal<String>,
     #[prop(into)] icon: String,
     #[prop(optional, into)] href: Option<String>,
     #[prop(optional, into)] on_click: Option<Callback<leptos::ev::MouseEvent>>,
@@ -28,7 +29,7 @@ pub fn NavIconButton(
 
     if let Some(href) = href {
         view! {
-            <A href=href attr:class=class attr:aria-label=label.clone()>
+            <A href=href attr:class=class attr:aria-label=move || label.get()>
                 <span class=icon_class aria-hidden="true">{icon}</span>
             </A>
         }
@@ -39,7 +40,7 @@ pub fn NavIconButton(
             <button
                 on:click=move |ev| on_click.run(ev)
                 class=class
-                aria-label=label.clone()
+                aria-label=move || label.get()
             >
                 <span class=icon_class aria-hidden="true">{icon}</span>
             </button>
@@ -55,7 +56,8 @@ pub fn NavIconButton(
 #[component]
 pub fn NavBar(
     /// The page title displayed centered in the bar.
-    title: &'static str,
+    #[prop(into)]
+    title: Signal<String>,
     /// Optional href for back navigation. If None, no back button is shown (unless left_content provided).
     #[prop(optional, into)]
     back_href: Option<String>,
@@ -79,7 +81,7 @@ pub fn NavBar(
     } else {
         match (back_href, on_back) {
             (Some(href), Some(on_back)) => view! {
-                <A href=href attr:class=back_class attr:aria-label="Back"
+                <A href=href attr:class=back_class attr:aria-label=move || tr!("back")
                     on:click=move |ev| on_back.run(ev)
                 >
                     <span aria-hidden="true">{"\u{2039}"}</span>
@@ -87,7 +89,7 @@ pub fn NavBar(
             }
             .into_any(),
             (Some(href), None) => view! {
-                <A href=href attr:class=back_class attr:aria-label="Back">
+                <A href=href attr:class=back_class attr:aria-label=move || tr!("back")>
                     <span aria-hidden="true">{"\u{2039}"}</span>
                 </A>
             }
@@ -103,13 +105,13 @@ pub fn NavBar(
     };
 
     view! {
-        <nav role="navigation" aria-label="Page navigation" class="flex w-full items-center gap-2 mb-4">
+        <nav role="navigation" aria-label=move || tr!("page-navigation") class="flex w-full items-center gap-2 mb-4">
             // Left: back button, custom content, or spacer — flex-1 for equal side widths
             <div class="flex-1 flex items-center">
                 {left}
             </div>
             // Center: title — shrinks and truncates when space is tight
-            <h1 class="shrink min-w-0 text-center text-lg font-bold truncate dark:text-white">{title}</h1>
+            <h1 class="shrink min-w-0 text-center text-lg font-bold truncate dark:text-white">{move || title.get()}</h1>
             // Right: action icons — flex-1 mirrors left for centering
             <div class="flex-1 flex justify-end">
                 <div class=right_class>

@@ -4,6 +4,7 @@ use std::rc::Rc;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
+use leptos_fluent::{move_tr, tr};
 use send_wrapper::SendWrapper;
 use wasm_bindgen_futures::spawn_local;
 
@@ -40,11 +41,11 @@ fn target_value(ev: &web_sys::Event) -> String {
 
 /// iOS-style grouped settings section with a muted header and rounded card.
 #[component]
-fn SettingsSection(title: &'static str, children: Children) -> impl IntoView {
+fn SettingsSection(#[prop(into)] title: Signal<String>, children: Children) -> impl IntoView {
     view! {
         <div class="mt-6">
             <h2 class="px-4 mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                {title}
+                {move || title.get()}
             </h2>
             <div class="rounded-xl bg-gray-100 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {children()}
@@ -55,10 +56,10 @@ fn SettingsSection(title: &'static str, children: Children) -> impl IntoView {
 
 /// A single row inside a SettingsSection card.
 #[component]
-fn SettingsRow(label: &'static str, children: Children) -> impl IntoView {
+fn SettingsRow(#[prop(into)] label: Signal<String>, children: Children) -> impl IntoView {
     view! {
         <div class="flex items-center justify-between px-4 py-3 min-h-[44px]">
-            <span class="text-sm text-gray-900 dark:text-gray-100">{label}</span>
+            <span class="text-sm text-gray-900 dark:text-gray-100">{move || label.get()}</span>
             <div class="flex items-center">
                 {children()}
             </div>
@@ -82,14 +83,14 @@ fn SettingsRowDynamic(label: Signal<String>, children: Children) -> impl IntoVie
 /// iOS-style +/- stepper control.
 #[component]
 fn Stepper(
-    label: &'static str,
+    #[prop(into)] label: Signal<String>,
     on_decrement: Callback<()>,
     on_increment: Callback<()>,
     #[prop(into)] decrement_disabled: Signal<bool>,
     #[prop(into)] increment_disabled: Signal<bool>,
 ) -> impl IntoView {
-    let dec_label = format!("Decrease {label}");
-    let inc_label = format!("Increase {label}");
+    let dec_label = move || format!("Decrease {}", label.get());
+    let inc_label = move || format!("Increase {}", label.get());
     view! {
         <div class="inline-flex items-center rounded-lg bg-gray-200 dark:bg-gray-700" role="group">
             <button
@@ -260,27 +261,58 @@ pub fn SettingsView() -> impl IntoView {
     // Derived signals for pitch range display
     let min_note_name = Signal::derive(move || MIDINote::new(note_range_min.get()).name());
     let max_note_name = Signal::derive(move || MIDINote::new(note_range_max.get()).name());
-    let min_label = Signal::derive(move || format!("Lowest Note: {}", min_note_name.get()));
-    let max_label = Signal::derive(move || format!("Highest Note: {}", max_note_name.get()));
+    let min_label = Signal::derive(move || tr!("lowest-note", {"note" => min_note_name.get()}));
+    let max_label = Signal::derive(move || tr!("highest-note", {"note" => max_note_name.get()}));
 
     // Derived signals for sound settings display
-    let duration_label = Signal::derive(move || format!("Duration: {:.1}s", note_duration.get()));
+    let duration_label = Signal::derive(move || tr!("duration-label", {"value" => format!("{:.1}", note_duration.get())}));
     let pitch_label = Signal::derive(move || {
-        format!("Concert Pitch: {} Hz", reference_pitch.get().round() as i32)
+        tr!("concert-pitch-label", {"value" => (reference_pitch.get().round() as i32).to_string()})
     });
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title="Settings" back_href=base_href("/")>
-                <NavIconButton label="Help".to_string() icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) circled=true />
+            <NavBar title=move_tr!("settings-title") back_href=base_href("/")>
+                <NavIconButton label=Signal::derive(move || tr!("nav-help")) icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) circled=true />
             </NavBar>
-            <HelpModal title="Settings Help" sections=SETTINGS_HELP is_open=is_help_open />
+            <HelpModal title=move_tr!("settings-help-title") sections=SETTINGS_HELP is_open=is_help_open />
+
+            // Language section
+            <SettingsSection title=move_tr!("language-label")>
+                <div class="px-4 py-3">
+                    {move || {
+                        let i18n = expect_context::<leptos_fluent::I18n>();
+                        let languages = i18n.languages;
+                        view! {
+                            <select
+                                class="w-full rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                on:change=move |ev| {
+                                    let val = target_value(&ev);
+                                    if let Some(lang) = languages.iter().find(|l| val.as_str() == l.id.to_string().as_str()) {
+                                        i18n.language.set(lang);
+                                    }
+                                }
+                            >
+                                {languages.iter().map(|lang| {
+                                    let id = lang.id.to_string();
+                                    let selected = i18n.language.get() == *lang;
+                                    view! {
+                                        <option value=id.clone() selected=selected>
+                                            {lang.name}
+                                        </option>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </select>
+                        }
+                    }}
+                </div>
+            </SettingsSection>
 
             // Pitch Range section (AC: 1, 3)
-            <SettingsSection title="Pitch Range">
+            <SettingsSection title=move_tr!("pitch-range")>
                 <SettingsRowDynamic label=min_label>
                     <Stepper
-                        label="lowest note"
+                        label=move_tr!("pitch-range")
                         on_decrement=Callback::new(move |_| {
                             let val = note_range_min.get();
                             if val > 21 {
@@ -304,7 +336,7 @@ pub fn SettingsView() -> impl IntoView {
                 </SettingsRowDynamic>
                 <SettingsRowDynamic label=max_label>
                     <Stepper
-                        label="highest note"
+                        label=move_tr!("pitch-range")
                         on_decrement=Callback::new(move |_| {
                             let val = note_range_max.get();
                             let min = note_range_min.get();
@@ -329,7 +361,7 @@ pub fn SettingsView() -> impl IntoView {
             </SettingsSection>
 
             // Intervals section (AC: 1, 4, 9)
-            <SettingsSection title="Intervals">
+            <SettingsSection title=move_tr!("intervals-section")>
                 <div class="px-4 py-3">
                     <div class="overflow-x-auto">
                         <table class="w-full text-center text-xs">
@@ -371,7 +403,7 @@ pub fn SettingsView() -> impl IntoView {
                                                         set.len() == 1 && set.contains(&di)
                                                     }
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
-                                                    aria-label=format!("{} ascending", interval.short_label())
+                                                    aria-label=format!("{} {}", interval.short_label(), tr!("ascending"))
                                                     class=move || {
                                                         if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
@@ -411,7 +443,7 @@ pub fn SettingsView() -> impl IntoView {
                                                         set.len() == 1 && set.contains(&di)
                                                     }
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
-                                                    aria-label=format!("{} descending", interval.short_label())
+                                                    aria-label=format!("{} {}", interval.short_label(), tr!("descending"))
                                                     class=move || {
                                                         if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
@@ -428,12 +460,12 @@ pub fn SettingsView() -> impl IntoView {
                 </div>
             </SettingsSection>
             <p class="px-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                "Select the intervals you want to practice. At least one must remain active."
+                {move_tr!("intervals-hint")}
             </p>
 
             // Sound section (AC: 1, 5, 6)
-            <SettingsSection title="Sound">
-                <SettingsRow label="Sound">
+            <SettingsSection title=move_tr!("sound-section")>
+                <SettingsRow label=move_tr!("sound-label")>
                     {move || {
                         let status = sf2_load_status.get();
                         match status {
@@ -456,7 +488,7 @@ pub fn SettingsView() -> impl IntoView {
                                         >
                                             {move || {
                                                 let mut options = vec![
-                                                    view! { <option value={"oscillator:sine".to_string()}>{"Sine Oscillator".to_string()}</option> }
+                                                    view! { <option value={"oscillator:sine".to_string()}>{tr!("sine-oscillator")}</option> }
                                                 ];
                                                 let mut presets = sf2_presets.get();
                                                 presets.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -469,7 +501,7 @@ pub fn SettingsView() -> impl IntoView {
                                             }}
                                         </select>
                                         <button
-                                            aria-label=move || if preview_playing.get() { "Stop preview" } else { "Preview sound" }
+                                            aria-label=move || if preview_playing.get() { tr!("stop-preview") } else { tr!("preview-sound") }
                                             class="min-h-[34px] min-w-[34px] flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                                             on:click=move |_| {
                                                 let source = sound_source.get_untracked();
@@ -497,7 +529,7 @@ pub fn SettingsView() -> impl IntoView {
                 </SettingsRow>
                 <SettingsRowDynamic label=duration_label>
                     <Stepper
-                        label="duration"
+                        label=move_tr!("sound-section")
                         on_decrement=Callback::new(move |_| {
                             let val = note_duration.get();
                             let new_val = ((val * 10.0 - 1.0).round() / 10.0).max(0.3);
@@ -516,7 +548,7 @@ pub fn SettingsView() -> impl IntoView {
                 </SettingsRowDynamic>
                 <SettingsRowDynamic label=pitch_label>
                     <Stepper
-                        label="concert pitch"
+                        label=move_tr!("sound-section")
                         on_decrement=Callback::new(move |_| {
                             let val = reference_pitch.get();
                             let new_val = val - 1.0;
@@ -537,7 +569,7 @@ pub fn SettingsView() -> impl IntoView {
                         increment_disabled=Signal::derive(move || reference_pitch.get() >= 460.0)
                     />
                 </SettingsRowDynamic>
-                <SettingsRow label="Tuning">
+                <SettingsRow label=move_tr!("tuning-label")>
                     <select
                         class="text-sm text-right bg-transparent text-gray-500 dark:text-gray-400 border-none focus:outline-none focus:ring-0 cursor-pointer appearance-none pr-0"
                         prop:value=move || tuning_system.get()
@@ -547,24 +579,24 @@ pub fn SettingsView() -> impl IntoView {
                             tuning_system.set(val);
                         }
                     >
-                        <option value="equalTemperament">"Equal Temperament"</option>
-                        <option value="justIntonation">"Just Intonation"</option>
+                        <option value="equalTemperament">{tr!("equal-temperament")}</option>
+                        <option value="justIntonation">{tr!("just-intonation")}</option>
                     </select>
                     <span class="ml-1 text-gray-400 dark:text-gray-500 text-sm">{"\u{203A}"}</span>
                 </SettingsRow>
             </SettingsSection>
             <p class="px-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                "Select the tuning for intervals. Equal temperament divides the octave into 12 equal steps. Just intonation uses pure frequency ratios."
+                {move_tr!("tuning-hint")}
             </p>
 
             // Difficulty section (AC: 1, 7)
-            <SettingsSection title="Difficulty">
+            <SettingsSection title=move_tr!("difficulty-section")>
                 <div class="px-4 py-3 min-h-[44px]">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm text-gray-900 dark:text-gray-100">"Loudness Variation"</span>
+                        <span class="text-sm text-gray-900 dark:text-gray-100">{move_tr!("loudness-variation")}</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-400 dark:text-gray-500">"Off"</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">{tr!("off")}</span>
                         <input
                             type="range"
                             min="0"
@@ -579,15 +611,15 @@ pub fn SettingsView() -> impl IntoView {
                                     LocalStorageSettings::set("peach.vary_loudness", &float_val.to_string());
                                 }
                             }
-                            aria-label="Loudness variation"
+                            aria-label=tr!("loudness-variation-aria")
                         />
-                        <span class="text-xs text-gray-400 dark:text-gray-500">"Max"</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">{tr!("max")}</span>
                     </div>
                 </div>
             </SettingsSection>
 
             // Data section (AC: 1, 8)
-            <SettingsSection title="Data">
+            <SettingsSection title=move_tr!("data-section")>
                 {
                     let ie_status = RwSignal::new(ImportExportStatus::Idle);
                     let sr_announcement = RwSignal::new(String::new());
@@ -602,17 +634,17 @@ pub fn SettingsView() -> impl IntoView {
                                 let result = if let Some(store) = db_store.get_untracked() {
                                     csv_export_import::export_all_data(&store).await
                                 } else {
-                                    Err("Database not available".to_string())
+                                    Err(tr!("database-not-available"))
                                 };
                                 match result {
                                     Ok(()) => {
                                         ie_status.set(ImportExportStatus::ExportSuccess);
-                                        sr_announcement.set("Data exported".into());
+                                        sr_announcement.set(tr!("data-exported"));
                                         TimeoutFuture::new(2000).await;
                                         ie_status.set(ImportExportStatus::Idle);
                                     }
                                     Err(e) => {
-                                        let msg = format!("Export failed: {e}");
+                                        let msg = tr!("export-failed", {"error" => e});
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::Error(msg));
                                         TimeoutFuture::new(3000).await;
@@ -640,7 +672,7 @@ pub fn SettingsView() -> impl IntoView {
                         };
 
                         if file.size() > 10_000_000.0 {
-                            let msg = "File too large (max 10 MB)".to_string();
+                            let msg = tr!("file-too-large");
                             sr_announcement.set(msg.clone());
                             ie_status.set(ImportExportStatus::Error(msg));
                             spawn_local(async move {
@@ -673,7 +705,7 @@ pub fn SettingsView() -> impl IntoView {
                                     }
                                 }
                                 Err(e) => {
-                                    let msg = format!("Import failed: {e}");
+                                    let msg = tr!("import-failed", {"error" => e});
                                     sr_announcement.set(msg.clone());
                                     ie_status.set(ImportExportStatus::Error(msg));
                                     spawn_local(async move {
@@ -696,18 +728,18 @@ pub fn SettingsView() -> impl IntoView {
                                 let result = if let Some(store) = db_store.get_untracked() {
                                     csv_export_import::import_replace(&store, data).await
                                 } else {
-                                    Err("Database not available".to_string())
+                                    Err(tr!("database-not-available"))
                                 };
                                 match result {
                                     Ok(count) => {
-                                        let msg = format!("{count} records imported");
+                                        let msg = tr!("records-imported", {"count" => count.to_string()});
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::ImportSuccess(msg));
                                         TimeoutFuture::new(1500).await;
                                         csv_export_import::reload_page();
                                     }
                                     Err(e) => {
-                                        let msg = format!("Import failed: {e}");
+                                        let msg = tr!("import-failed", {"error" => e});
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::Error(msg));
                                         TimeoutFuture::new(3000).await;
@@ -729,20 +761,20 @@ pub fn SettingsView() -> impl IntoView {
                                 let result = if let Some(store) = db_store.get_untracked() {
                                     csv_export_import::import_merge(&store, data).await
                                 } else {
-                                    Err("Database not available".to_string())
+                                    Err(tr!("database-not-available"))
                                 };
                                 match result {
                                     Ok(r) => {
                                         let imported = r.comparison_imported + r.pitch_matching_imported;
                                         let skipped = r.comparison_skipped + r.pitch_matching_skipped;
-                                        let msg = format!("{imported} records imported, {skipped} duplicates skipped");
+                                        let msg = tr!("records-merged", {"imported" => imported.to_string(), "skipped" => skipped.to_string()});
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::ImportSuccess(msg));
                                         TimeoutFuture::new(1500).await;
                                         csv_export_import::reload_page();
                                     }
                                     Err(e) => {
-                                        let msg = format!("Import failed: {e}");
+                                        let msg = tr!("import-failed", {"error" => e});
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::Error(msg));
                                         TimeoutFuture::new(3000).await;
@@ -768,9 +800,9 @@ pub fn SettingsView() -> impl IntoView {
                             class="w-full text-left px-4 py-3 min-h-[44px] text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
                         >
                             {move || match ie_status.get() {
-                                ImportExportStatus::Exporting => "Exporting\u{2026}".to_string(),
-                                ImportExportStatus::ExportSuccess => "Exported!".to_string(),
-                                _ => "Export Training Data".to_string(),
+                                ImportExportStatus::Exporting => tr!("exporting"),
+                                ImportExportStatus::ExportSuccess => tr!("exported"),
+                                _ => tr!("export-training-data"),
                             }}
                         </button>
                         // Import row
@@ -780,9 +812,9 @@ pub fn SettingsView() -> impl IntoView {
                             class="w-full text-left px-4 py-3 min-h-[44px] text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
                         >
                             {move || match ie_status.get() {
-                                ImportExportStatus::Importing => "Importing\u{2026}".to_string(),
+                                ImportExportStatus::Importing => tr!("importing"),
                                 ImportExportStatus::ImportSuccess(ref msg) => msg.clone(),
-                                _ => "Import Training Data".to_string(),
+                                _ => tr!("import-training-data"),
                             }}
                         </button>
                         // Delete row (destructive, red text)
@@ -792,10 +824,10 @@ pub fn SettingsView() -> impl IntoView {
                             class="w-full text-left px-4 py-3 min-h-[44px] text-sm text-red-600 dark:text-red-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
                         >
                             {move || match reset_status.get() {
-                                ResetStatus::Resetting => "Resetting\u{2026}",
-                                ResetStatus::Success => "Data Reset",
-                                ResetStatus::Error => "Reset Failed",
-                                ResetStatus::Idle => "Delete All Training Data",
+                                ResetStatus::Resetting => tr!("resetting"),
+                                ResetStatus::Success => tr!("data-reset"),
+                                ResetStatus::Error => tr!("reset-failed"),
+                                ResetStatus::Idle => tr!("delete-all-training-data"),
                             }}
                         </button>
 
@@ -806,7 +838,7 @@ pub fn SettingsView() -> impl IntoView {
                             accept=".csv"
                             on:change=handle_file_selected
                             class="sr-only"
-                            aria-label="Select CSV file to import"
+                            aria-label=tr!("select-csv")
                         />
 
                         // Status message
@@ -833,21 +865,20 @@ pub fn SettingsView() -> impl IntoView {
                             aria-labelledby="import-dialog-title"
                             class="rounded-lg p-6 max-w-md mx-auto bg-white text-gray-900 backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
                         >
-                            <h2 id="import-dialog-title" class="text-lg font-bold">"Import Training Data"</h2>
+                            <h2 id="import-dialog-title" class="text-lg font-bold">{tr!("import-dialog-title")}</h2>
                             <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
                                 {move || {
                                     if let Some(ref data) = import_data_signal.get() {
                                         let warnings_text = if data.warnings.is_empty() {
                                             String::new()
                                         } else {
-                                            format!(" ({} rows skipped with warnings)", data.warnings.len())
+                                            tr!("import-dialog-warnings", {"count" => data.warnings.len().to_string()})
                                         };
-                                        format!(
-                                            "Found {} comparison records and {} pitch matching records.{} How would you like to import?",
-                                            data.pitch_comparisons.len(),
-                                            data.pitch_matchings.len(),
-                                            warnings_text,
-                                        )
+                                        tr!("import-dialog-found", {
+                                            "comparisons" => data.pitch_comparisons.len().to_string(),
+                                            "matchings" => data.pitch_matchings.len().to_string(),
+                                            "warnings" => warnings_text,
+                                        })
                                     } else {
                                         String::new()
                                     }
@@ -858,19 +889,19 @@ pub fn SettingsView() -> impl IntoView {
                                     on:click=handle_import_replace
                                     class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-800 dark:ring-offset-gray-900"
                                 >
-                                    "Replace All Data"
+                                    {tr!("replace-all-data")}
                                 </button>
                                 <button
                                     on:click=handle_import_merge
                                     class="min-h-[44px] rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:bg-indigo-700 dark:hover:bg-indigo-800 dark:ring-offset-gray-900"
                                 >
-                                    "Merge with Existing"
+                                    {tr!("merge-with-existing")}
                                 </button>
                                 <button
                                     on:click=handle_import_cancel
                                     class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:ring-offset-gray-900"
                                 >
-                                    "Cancel"
+                                    {tr!("cancel")}
                                 </button>
                             </div>
                         </dialog>
@@ -884,9 +915,9 @@ pub fn SettingsView() -> impl IntoView {
                 aria-labelledby="reset-dialog-title"
                 class="rounded-lg p-6 max-w-md mx-auto bg-white text-gray-900 backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
             >
-                <h2 id="reset-dialog-title" class="text-lg font-bold">"Reset Training Data?"</h2>
+                <h2 id="reset-dialog-title" class="text-lg font-bold">{tr!("reset-dialog-title")}</h2>
                 <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                    "This will permanently delete all training data, including your perceptual profile and comparison history. This cannot be undone."
+                    {tr!("reset-dialog-message")}
                 </p>
                 <div class="mt-6 flex gap-3 justify-end">
                     <button
@@ -894,14 +925,14 @@ pub fn SettingsView() -> impl IntoView {
                         disabled=move || reset_status.get() == ResetStatus::Resetting
                         class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:ring-offset-gray-900 disabled:opacity-50"
                     >
-                        "Cancel"
+                        {tr!("cancel")}
                     </button>
                     <button
                         on:click=handle_confirm
                         disabled=move || reset_status.get() == ResetStatus::Resetting
                         class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-800 dark:ring-offset-gray-900 disabled:opacity-50"
                     >
-                        "Delete All Data"
+                        {tr!("delete-all-data")}
                     </button>
                 </div>
             </dialog>

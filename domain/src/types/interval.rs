@@ -98,19 +98,19 @@ impl Interval {
     /// Returns just the interval name without direction suffix.
     pub fn display_name(&self) -> &'static str {
         match self {
-            Interval::Prime => "Prime",
-            Interval::MinorSecond => "Minor Second",
-            Interval::MajorSecond => "Major Second",
-            Interval::MinorThird => "Minor Third",
-            Interval::MajorThird => "Major Third",
-            Interval::PerfectFourth => "Perfect Fourth",
-            Interval::Tritone => "Tritone",
-            Interval::PerfectFifth => "Perfect Fifth",
-            Interval::MinorSixth => "Minor Sixth",
-            Interval::MajorSixth => "Major Sixth",
-            Interval::MinorSeventh => "Minor Seventh",
-            Interval::MajorSeventh => "Major Seventh",
-            Interval::Octave => "Octave",
+            Interval::Prime => "interval-prime",
+            Interval::MinorSecond => "interval-minor-second",
+            Interval::MajorSecond => "interval-major-second",
+            Interval::MinorThird => "interval-minor-third",
+            Interval::MajorThird => "interval-major-third",
+            Interval::PerfectFourth => "interval-perfect-fourth",
+            Interval::Tritone => "interval-tritone",
+            Interval::PerfectFifth => "interval-perfect-fifth",
+            Interval::MinorSixth => "interval-minor-sixth",
+            Interval::MajorSixth => "interval-major-sixth",
+            Interval::MinorSeventh => "interval-minor-seventh",
+            Interval::MajorSeventh => "interval-major-seventh",
+            Interval::Octave => "interval-octave",
         }
     }
 
@@ -385,19 +385,19 @@ mod tests {
     #[test]
     fn test_display_name_all_intervals() {
         let expected = [
-            (Interval::Prime, "Prime"),
-            (Interval::MinorSecond, "Minor Second"),
-            (Interval::MajorSecond, "Major Second"),
-            (Interval::MinorThird, "Minor Third"),
-            (Interval::MajorThird, "Major Third"),
-            (Interval::PerfectFourth, "Perfect Fourth"),
-            (Interval::Tritone, "Tritone"),
-            (Interval::PerfectFifth, "Perfect Fifth"),
-            (Interval::MinorSixth, "Minor Sixth"),
-            (Interval::MajorSixth, "Major Sixth"),
-            (Interval::MinorSeventh, "Minor Seventh"),
-            (Interval::MajorSeventh, "Major Seventh"),
-            (Interval::Octave, "Octave"),
+            (Interval::Prime, "interval-prime"),
+            (Interval::MinorSecond, "interval-minor-second"),
+            (Interval::MajorSecond, "interval-major-second"),
+            (Interval::MinorThird, "interval-minor-third"),
+            (Interval::MajorThird, "interval-major-third"),
+            (Interval::PerfectFourth, "interval-perfect-fourth"),
+            (Interval::Tritone, "interval-tritone"),
+            (Interval::PerfectFifth, "interval-perfect-fifth"),
+            (Interval::MinorSixth, "interval-minor-sixth"),
+            (Interval::MajorSixth, "interval-major-sixth"),
+            (Interval::MinorSeventh, "interval-minor-seventh"),
+            (Interval::MajorSeventh, "interval-major-seventh"),
+            (Interval::Octave, "interval-octave"),
         ];
         for (interval, name) in expected {
             assert_eq!(

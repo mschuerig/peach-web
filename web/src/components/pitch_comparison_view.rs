@@ -10,6 +10,8 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
 
+use leptos_fluent::{I18n, move_tr, tr};
+
 use crate::app::base_href;
 use web_sys::KeyboardEvent;
 
@@ -153,8 +155,14 @@ pub fn PitchComparisonView() -> impl IntoView {
     let buttons_enabled = RwSignal::new(false);
     let sr_announcement = RwSignal::new(String::new());
 
-    // Sync all UI signals from session state — extracted for readability
+    // Capture I18n context for use in async tasks and closures
+    let i18n: I18n = expect_context();
+
+    // Sync all UI signals from session state — extracted for readability.
+    // Wrapped in `untrack` because this is called from async tasks where
+    // reactive tracking context is not available.
     fn sync_session_to_signals(
+        i18n: &I18n,
         session: &RefCell<PitchComparisonSession>,
         show_feedback: RwSignal<bool>,
         is_last_correct: RwSignal<bool>,
@@ -163,38 +171,41 @@ pub fn PitchComparisonView() -> impl IntoView {
         interval_label_text: RwSignal<String>,
         is_interval_mode: bool,
     ) {
-        let s = session.borrow();
-        show_feedback.set(s.show_feedback());
-        is_last_correct.set(s.is_last_answer_correct());
-        let state = s.state();
-        buttons_enabled.set(
-            state == PitchComparisonSessionState::PlayingTargetNote
-                || state == PitchComparisonSessionState::AwaitingAnswer,
-        );
-        if s.show_feedback() {
-            sr_announcement.set(if s.is_last_answer_correct() {
-                "Correct".into()
+        untrack(|| {
+            let s = session.borrow();
+            show_feedback.set(s.show_feedback());
+            is_last_correct.set(s.is_last_answer_correct());
+            let state = s.state();
+            buttons_enabled.set(
+                state == PitchComparisonSessionState::PlayingTargetNote
+                    || state == PitchComparisonSessionState::AwaitingAnswer,
+            );
+            if s.show_feedback() {
+                sr_announcement.set(if s.is_last_answer_correct() {
+                    i18n.tr("correct")
+                } else {
+                    i18n.tr("incorrect")
+                });
             } else {
-                "Incorrect".into()
-            });
-        } else {
-            sr_announcement.set(String::new());
-        }
-        if is_interval_mode && let Some(di) = s.current_interval() {
-            if di.interval != Interval::Prime {
-                let label = interval_label(di.interval, di.direction);
-                sr_announcement.set(label.clone());
-                interval_label_text.set(label);
-            } else {
-                interval_label_text.set(String::new());
+                sr_announcement.set(String::new());
             }
-        }
+            if is_interval_mode && let Some(di) = s.current_interval() {
+                if di.interval != Interval::Prime {
+                    let label = interval_label(i18n, di.interval, di.direction);
+                    sr_announcement.set(label.clone());
+                    interval_label_text.set(label);
+                } else {
+                    interval_label_text.set(String::new());
+                }
+            }
+        });
     }
 
     let sync_signals = {
         let session = Rc::clone(&session);
         move || {
             sync_session_to_signals(
+                &i18n,
                 &session,
                 show_feedback,
                 is_last_correct,
@@ -279,7 +290,7 @@ pub fn PitchComparisonView() -> impl IntoView {
             session.borrow_mut().stop();
             note_player.borrow().stop_all();
             sync();
-            sr_announcement.set("Training stopped".into());
+            sr_announcement.set(untrack(|| i18n.tr("training-stopped")));
         }
     };
     let on_nav_start = {
@@ -336,7 +347,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                     ev.prevent_default();
                     on_answer(true);
                 }
-                "ArrowDown" | "l" | "L" => {
+                "ArrowDown" | "l" | "L" | "t" | "T" => {
                     ev.prevent_default();
                     on_answer(false);
                 }
@@ -481,7 +492,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                 Ok(ctx) => ctx,
                 Err(e) => {
                     log::error!("AudioContext failed: {e}");
-                    audio_error.set(Some("Audio engine failed to start".into()));
+                    audio_error.set(Some(untrack(|| i18n.tr("audio-engine-failed"))));
                     return;
                 }
             };
@@ -538,7 +549,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                     .start(intervals_from_query.clone(), &settings);
                 cancelled.set(false);
                 sync();
-                sr_announcement.set("Training started".into());
+                sr_announcement.set(untrack(|| i18n.tr("training-started")));
 
                 'training: loop {
                     if cancelled.get() {
@@ -561,7 +572,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                         AmplitudeDB::new(0.0),
                     ) {
                         log::error!("Reference note playback failed: {e}");
-                        audio_error.set(Some("Audio playback failed".into()));
+                        audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
                     }
                     // Wait for reference note duration with responsive cancellation
                     let mut elapsed = 0u32;
@@ -588,7 +599,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                         data.target_amplitude_db,
                     ) {
                         log::error!("Target note playback failed: {e}");
-                        audio_error.set(Some("Audio playback failed".into()));
+                        audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
                     }
                     // Wait for target note duration OR early answer
                     elapsed = 0;
@@ -668,16 +679,18 @@ pub fn PitchComparisonView() -> impl IntoView {
         });
     }
 
-    let comparison_title = "Hear & Compare";
-    let tuning_label = if is_interval_mode {
-        let ts = LocalStorageSettings.tuning_system();
-        match ts {
-            domain::TuningSystem::EqualTemperament => "Equal Temperament",
-            domain::TuningSystem::JustIntonation => "Just Intonation",
+    let comparison_title = move_tr!("comparison-title");
+    let tuning_label = Signal::derive(move || {
+        if is_interval_mode {
+            let ts = LocalStorageSettings.tuning_system();
+            match ts {
+                domain::TuningSystem::EqualTemperament => tr!("equal-temperament"),
+                domain::TuningSystem::JustIntonation => tr!("just-intonation"),
+            }
+        } else {
+            String::new()
         }
-    } else {
-        ""
-    };
+    });
 
     #[allow(clippy::redundant_closure)]
     let on_back_cb = {
@@ -697,7 +710,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                 <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
                 <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
             </NavBar>
-            <HelpModal title="Comparison Training" sections=COMPARISON_HELP is_open=is_help_open on_close=on_help_close />
+            <HelpModal title=move_tr!("comparison-help-title") sections=COMPARISON_HELP is_open=is_help_open on_close=on_help_close />
 
             <AudioGateOverlay />
 
@@ -725,7 +738,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                     view! {
                         <div class="text-center mt-4 mb-2">
                             <p class="text-lg text-indigo-600 dark:text-indigo-400 font-medium">{label}</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{tuning_label}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{tuning_label.get()}</p>
                         </div>
                     }.into_any()
                 } else {
@@ -772,19 +785,19 @@ pub fn PitchComparisonView() -> impl IntoView {
                             on:click=on_answer_higher
                             disabled=move || !buttons_enabled.get()
                             class=move || if buttons_enabled.get() { btn_enabled } else { btn_disabled }
-                            aria-label="Higher"
+                            aria-label=move || tr!("higher")
                         >
                             <span class="flex items-center justify-center w-16 h-16 rounded-full bg-white/30 text-white text-3xl" aria-hidden="true">{"\u{2191}"}</span>
-                            "Higher"
+                            {move || tr!("higher")}
                         </button>
                         <button
                             on:click=on_answer_lower
                             disabled=move || !buttons_enabled.get()
                             class=move || if buttons_enabled.get() { btn_enabled } else { btn_disabled }
-                            aria-label="Lower"
+                            aria-label=move || tr!("lower")
                         >
                             <span class="flex items-center justify-center w-16 h-16 rounded-full bg-white/30 text-white text-3xl" aria-hidden="true">{"\u{2193}"}</span>
-                            "Lower"
+                            {move || tr!("lower")}
                         </button>
                     </div>
                 }

@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos_fluent::tr;
 use wasm_bindgen::JsCast;
 
 const FINE_STEP: f64 = 0.05;
@@ -138,7 +139,7 @@ pub fn VerticalPitchSlider(
                 }
             }
             role="slider"
-            aria-label="Pitch adjustment"
+            aria-label=move || tr!("pitch-adjustment")
             aria-orientation="vertical"
             aria-valuemin="-1"
             aria-valuemax="1"

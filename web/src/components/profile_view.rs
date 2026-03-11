@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use leptos::prelude::*;
+use leptos_fluent::move_tr;
 use send_wrapper::SendWrapper;
 
 use crate::app::base_href;
@@ -22,13 +23,13 @@ pub fn ProfileView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title="Profile" back_href=base_href("/")>
+            <NavBar title=move_tr!("profile-title") back_href=base_href("/")>
             </NavBar>
 
             {move || {
                 if !is_profile_loaded.get() {
                     return view! {
-                        <p class="mt-6 text-gray-500 dark:text-gray-400">"Loading\u{2026}"</p>
+                        <p class="mt-6 text-gray-500 dark:text-gray-400">{move_tr!("loading")}</p>
                     }
                     .into_any();
                 }
@@ -42,7 +43,7 @@ pub fn ProfileView() -> impl IntoView {
                 if !any_active {
                     return view! {
                         <p class="mt-6 text-gray-500 dark:text-gray-400">
-                            "No training data yet. Start a training session to see your progress."
+                            {move_tr!("no-training-data")}
                         </p>
                     }
                     .into_any();

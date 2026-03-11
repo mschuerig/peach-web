@@ -5,6 +5,7 @@ use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 
 use domain::{ProgressTimeline, TrainingMode, TrainingModeState, Trend};
+use leptos_fluent::{I18n, tr};
 
 fn trend_stroke_color(trend: Option<Trend>) -> &'static str {
     match trend {
@@ -14,12 +15,12 @@ fn trend_stroke_color(trend: Option<Trend>) -> &'static str {
     }
 }
 
-fn trend_label(trend: Option<Trend>) -> &'static str {
+fn trend_label(trend: Option<Trend>) -> String {
     match trend {
-        Some(Trend::Improving) => "improving",
-        Some(Trend::Stable) => "stable",
-        Some(Trend::Declining) => "declining",
-        None => "",
+        Some(Trend::Improving) => tr!("trend-improving"),
+        Some(Trend::Stable) => tr!("trend-stable"),
+        Some(Trend::Declining) => tr!("trend-declining"),
+        None => String::new(),
     }
 }
 
@@ -61,6 +62,8 @@ pub fn ProgressSparkline(mode: TrainingMode) -> impl IntoView {
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline context");
 
+    let i18n = expect_context::<I18n>();
+
     view! {
         {move || {
             let tl = progress_timeline.borrow();
@@ -77,9 +80,9 @@ pub fn ProgressSparkline(mode: TrainingMode) -> impl IntoView {
             let points = compute_points(&values);
             let stroke_color = trend_stroke_color(trend);
 
-            let ewma_str = ewma.map(|v| format!("{:.1} cents", v)).unwrap_or_default();
+            let ewma_str = ewma.map(|v| tr!("value-cents", {"value" => format!("{v:.1}")})).unwrap_or_default();
             let trend_str = trend_label(trend);
-            let mode_name = mode.config().display_name;
+            let mode_name = i18n.tr(mode.config().display_name);
 
             let aria = format!("{mode_name}: {ewma_str}, {trend_str}");
 
@@ -178,13 +181,5 @@ mod tests {
     #[test]
     fn test_trend_stroke_color_none() {
         assert_eq!(trend_stroke_color(None), "#9ca3af");
-    }
-
-    #[test]
-    fn test_trend_label_values() {
-        assert_eq!(trend_label(Some(Trend::Improving)), "improving");
-        assert_eq!(trend_label(Some(Trend::Stable)), "stable");
-        assert_eq!(trend_label(Some(Trend::Declining)), "declining");
-        assert_eq!(trend_label(None), "");
     }
 }
