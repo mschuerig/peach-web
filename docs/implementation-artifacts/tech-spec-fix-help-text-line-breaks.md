@@ -2,7 +2,7 @@
 title: 'Fix help text line breaks using Fluent multiline syntax'
 slug: 'fix-help-text-line-breaks'
 created: '2026-03-11'
-status: 'ready-for-dev'
+status: 'completed'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['Rust', 'Leptos 0.8', 'Project Fluent FTL (i18n)', 'leptos_fluent']
 files_to_modify:
@@ -59,15 +59,16 @@ Replace the `{"\\n\\n"}` hacks in FTL files with proper Fluent multiline block s
 
 ### Technical Decisions
 
-- Use Fluent's native multiline block syntax instead of `{"\\n\\n"}` escape hacks
-- Fluent multiline: start value on new line, indent all continuation lines by at least one space. Blank lines between content are preserved as real `\n\n` in the output ([Fluent Multiline Guide](https://projectfluent.org/fluent/guide/multiline.html))
-- `process_markdown()` remains unchanged — its `\n\n` → `<br><br>` replacement now actually works since Fluent multiline delivers real newline characters (previously it never matched the literal `\n\n` text)
+- Use Fluent unicode escape `{"\u000A\u000A"}` instead of `{"\\n\\n"}` escape hacks
+- `\u000A` is the Fluent unicode escape for the newline character (U+000A). Two of them produce real `\n\n` in the output.
+- Note: Fluent multiline block syntax was attempted first but the `fluent-bundle` parser used by `leptos_fluent` did not reliably preserve blank lines between indented continuation lines — it produced parser errors (`ExpectedCharRange`, `ExpectedMessageField`). The unicode escape approach is explicit and runtime-independent.
+- `process_markdown()` remains unchanged — its `\n\n` → `<br><br>` replacement now actually works since Fluent unicode escapes deliver real newline characters (previously `{"\\n\\n"}` produced the literal 4-character string `\n\n`)
 
 ## Implementation Plan
 
 ### Tasks
 
-- [ ] Task 1: Convert `help-sound-body` in `web/locales/en/main.ftl`
+- [x] Task 1: Convert `help-sound-body` in `web/locales/en/main.ftl`
   - File: `web/locales/en/main.ftl` (line 146)
   - Action: Replace the single-line value containing `{"\\n\\n"}` with a Fluent multiline block. Start value on next line, indent each paragraph by 4 spaces, separate paragraphs with a blank line.
   - Before: `help-sound-body = Pick the **sound**...{"\\n\\n"}**Duration** controls...{"\\n\\n"}**Concert Pitch**...{"\\n\\n"}**Tuning System**...`
@@ -83,27 +84,27 @@ Replace the `{"\\n\\n"}` hacks in FTL files with proper Fluent multiline block s
         **Tuning System** determines how intervals are calculated. Equal Temperament divides the octave into 12 equal steps and is standard for most Western music. Just Intonation uses pure frequency ratios and sounds smoother for some intervals.
     ```
 
-- [ ] Task 2: Convert `help-data-body` in `web/locales/en/main.ftl`
+- [x] Task 2: Convert `help-data-body` in `web/locales/en/main.ftl`
   - File: `web/locales/en/main.ftl` (line 150)
   - Action: Same multiline conversion. 3 paragraphs (Export, Import, Reset).
 
-- [ ] Task 3: Convert `help-info-modes-body` in `web/locales/en/main.ftl`
+- [x] Task 3: Convert `help-info-modes-body` in `web/locales/en/main.ftl`
   - File: `web/locales/en/main.ftl` (line 178)
   - Action: Same multiline conversion. 4 paragraphs (one per training mode).
 
-- [ ] Task 4: Convert `help-sound-body` in `web/locales/de/main.ftl`
+- [x] Task 4: Convert `help-sound-body` in `web/locales/de/main.ftl`
   - File: `web/locales/de/main.ftl` (line 146)
   - Action: Same multiline conversion as Task 1, German text.
 
-- [ ] Task 5: Convert `help-data-body` in `web/locales/de/main.ftl`
+- [x] Task 5: Convert `help-data-body` in `web/locales/de/main.ftl`
   - File: `web/locales/de/main.ftl` (line 150)
   - Action: Same multiline conversion as Task 2, German text.
 
-- [ ] Task 6: Convert `help-info-modes-body` in `web/locales/de/main.ftl`
+- [x] Task 6: Convert `help-info-modes-body` in `web/locales/de/main.ftl`
   - File: `web/locales/de/main.ftl` (line 178)
   - Action: Same multiline conversion as Task 3, German text.
 
-- [ ] Task 7: Verify build and tests
+- [x] Task 7: Verify build and tests
   - Run: `cargo clippy --workspace` and `cargo test -p web`
   - Confirm no regressions.
 

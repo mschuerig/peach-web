@@ -143,11 +143,11 @@ help-training-range-body = Set the **lowest** and **highest note** for your trai
 help-intervals-title = Intervals
 help-intervals-body = Intervals are the distance between two notes. Choose which intervals you want to practice. Start with a few and add more as you gain confidence.
 help-sound-title = Sound
-help-sound-body = Pick the **sound** you want to train with — each instrument has a different character.{"\\n\\n"}**Duration** controls how long each note plays.{"\\n\\n"}**Concert Pitch** sets the reference tuning. Most musicians use 440 Hz. Some orchestras tune to 442 Hz.{"\\n\\n"}**Tuning System** determines how intervals are calculated. Equal Temperament divides the octave into 12 equal steps and is standard for most Western music. Just Intonation uses pure frequency ratios and sounds smoother for some intervals.
+help-sound-body = Pick the **sound** you want to train with — each instrument has a different character.{"\u000A\u000A"}**Duration** controls how long each note plays.{"\u000A\u000A"}**Concert Pitch** sets the reference tuning. Most musicians use 440 Hz. Some orchestras tune to 442 Hz.{"\u000A\u000A"}**Tuning System** determines how intervals are calculated. Equal Temperament divides the octave into 12 equal steps and is standard for most Western music. Just Intonation uses pure frequency ratios and sounds smoother for some intervals.
 help-difficulty-title = Difficulty
 help-difficulty-body = **Vary Loudness** changes the volume of notes randomly. This makes training harder but more realistic — in real music, notes are rarely played at the same volume.
 help-data-title = Data
-help-data-body = **Export** saves your training data as a file you can keep as a backup or transfer to another device.{"\\n\\n"}**Import** loads training data from a file. You can replace your current data or merge it with existing records.{"\\n\\n"}**Reset** permanently deletes all training data and resets your profile. This cannot be undone.
+help-data-body = **Export** saves your training data as a file you can keep as a backup or transfer to another device.{"\u000A\u000A"}**Import** loads training data from a file. You can replace your current data or merge it with existing records.{"\u000A\u000A"}**Reset** permanently deletes all training data and resets your profile. This cannot be undone.
 
 ## Help - Comparison
 help-comparison-goal-title = Goal
@@ -175,7 +175,7 @@ help-matching-intervals-body = In interval mode, your target pitch is a specific
 help-info-what-title = What is Peach?
 help-info-what-body = Peach helps you train your ear for music. Practice hearing the difference between notes and learn to match pitches accurately.
 help-info-modes-title = Training Modes
-help-info-modes-body = **Hear & Compare — Single Notes** — Listen to two notes and decide which one is higher.{"\\n\\n"}**Hear & Compare — Intervals** — The same idea, but with musical intervals between notes.{"\\n\\n"}**Tune & Match — Single Notes** — Hear a note and slide to match its pitch.{"\\n\\n"}**Tune & Match — Intervals** — Match pitches using musical intervals.
+help-info-modes-body = **Hear & Compare — Single Notes** — Listen to two notes and decide which one is higher.{"\u000A\u000A"}**Hear & Compare — Intervals** — The same idea, but with musical intervals between notes.{"\u000A\u000A"}**Tune & Match — Single Notes** — Hear a note and slide to match its pitch.{"\u000A\u000A"}**Tune & Match — Intervals** — Match pitches using musical intervals.
 help-info-start-title = Getting Started
 help-info-start-body = Just pick any training mode on the home screen and start practicing. Peach adapts to your skill level automatically.
 

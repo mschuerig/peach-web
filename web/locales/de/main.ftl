@@ -143,11 +143,11 @@ help-training-range-body = Lege die **tiefste** und **höchste Note** für dein 
 help-intervals-title = Intervalle
 help-intervals-body = Intervalle sind der Abstand zwischen zwei Tönen. Wähle aus, welche Intervalle du üben möchtest. Beginne mit wenigen und füge weitere hinzu, wenn du sicherer wirst.
 help-sound-title = Klang
-help-sound-body = Wähle den **Klang**, mit dem du trainieren möchtest — jedes Instrument hat einen eigenen Charakter.{"\\n\\n"}**Dauer** bestimmt, wie lange jeder Ton gespielt wird.{"\\n\\n"}**Kammerton** legt die Referenzstimmung fest. Die meisten Musiker verwenden 440 Hz. Manche Orchester stimmen auf 442 Hz.{"\\n\\n"}**Stimmung** bestimmt, wie Intervalle berechnet werden. Die gleichstufige Stimmung teilt die Oktave in 12 gleiche Schritte und ist Standard in der westlichen Musik. Die reine Stimmung verwendet ganzzahlige Frequenzverhältnisse und klingt bei manchen Intervallen harmonischer.
+help-sound-body = Wähle den **Klang**, mit dem du trainieren möchtest — jedes Instrument hat einen eigenen Charakter.{"\u000A\u000A"}**Dauer** bestimmt, wie lange jeder Ton gespielt wird.{"\u000A\u000A"}**Kammerton** legt die Referenzstimmung fest. Die meisten Musiker verwenden 440 Hz. Manche Orchester stimmen auf 442 Hz.{"\u000A\u000A"}**Stimmung** bestimmt, wie Intervalle berechnet werden. Die gleichstufige Stimmung teilt die Oktave in 12 gleiche Schritte und ist Standard in der westlichen Musik. Die reine Stimmung verwendet ganzzahlige Frequenzverhältnisse und klingt bei manchen Intervallen harmonischer.
 help-difficulty-title = Schwierigkeit
 help-difficulty-body = **Lautstärke variieren** verändert die Lautstärke der Töne zufällig. Das macht das Training schwieriger, aber realistischer — in echter Musik werden Töne selten gleich laut gespielt.
 help-data-title = Daten
-help-data-body = **Exportieren** speichert deine Trainingsdaten als Datei, die du als Backup aufbewahren oder auf ein anderes Gerät übertragen kannst.{"\\n\\n"}**Importieren** lädt Trainingsdaten aus einer Datei. Du kannst deine aktuellen Daten ersetzen oder mit bestehenden Einträgen zusammenführen.{"\\n\\n"}**Zurücksetzen** löscht alle Trainingsdaten unwiderruflich und setzt dein Profil zurück. Dies kann nicht rückgängig gemacht werden.
+help-data-body = **Exportieren** speichert deine Trainingsdaten als Datei, die du als Backup aufbewahren oder auf ein anderes Gerät übertragen kannst.{"\u000A\u000A"}**Importieren** lädt Trainingsdaten aus einer Datei. Du kannst deine aktuellen Daten ersetzen oder mit bestehenden Einträgen zusammenführen.{"\u000A\u000A"}**Zurücksetzen** löscht alle Trainingsdaten unwiderruflich und setzt dein Profil zurück. Dies kann nicht rückgängig gemacht werden.
 
 ## Help - Comparison
 help-comparison-goal-title = Ziel
@@ -175,7 +175,7 @@ help-matching-intervals-body = Im Intervallmodus liegt deine Zieltonhöhe ein be
 help-info-what-title = Was ist Peach?
 help-info-what-body = Peach hilft dir, dein Gehör für Musik zu trainieren. Übe, Unterschiede zwischen Tönen zu hören und Tonhöhen genau zu treffen.
 help-info-modes-title = Trainingsmodi
-help-info-modes-body = **Hören & Vergleichen — Einzeltöne** — Höre zwei Töne und entscheide, welcher höher ist.{"\\n\\n"}**Hören & Vergleichen — Intervalle** — Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\\n\\n"}**Stimmen & Treffen — Einzeltöne** — Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\\n\\n"}**Stimmen & Treffen — Intervalle** — Gleiche Tonhöhen mit musikalischen Intervallen an.
+help-info-modes-body = **Hören & Vergleichen — Einzeltöne** — Höre zwei Töne und entscheide, welcher höher ist.{"\u000A\u000A"}**Hören & Vergleichen — Intervalle** — Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\u000A\u000A"}**Stimmen & Treffen — Einzeltöne** — Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\u000A\u000A"}**Stimmen & Treffen — Intervalle** — Gleiche Tonhöhen mit musikalischen Intervallen an.
 help-info-start-title = Erste Schritte
 help-info-start-body = Wähle einfach einen Trainingsmodus auf dem Startbildschirm und leg los. Peach passt sich automatisch deinem Niveau an.
 
