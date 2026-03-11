@@ -109,7 +109,7 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                 let target_name = MIDINote::new(r.target_note).name();
                 let ts = truncate_timestamp_to_second(&r.timestamp);
                 csv.push_str(&format!(
-                    "comparison,{},{},{},{},{},{},{},{},{},,\n",
+                    "pitchComparison,{},{},{},{},{},{},{},{},{},,\n",
                     ts,
                     r.reference_note,
                     ref_name,
@@ -242,7 +242,7 @@ fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
 
         let training_type = fields[0];
         match training_type {
-            "comparison" => match parse_comparison_row(&fields, row_num) {
+            "pitchComparison" => match parse_comparison_row(&fields, row_num) {
                 Ok(record) => pitch_comparisons.push(record),
                 Err(msg) => warnings.push(msg),
             },
@@ -556,7 +556,7 @@ mod tests {
 
     #[test]
     fn test_import_valid_v1_comparison() {
-        let csv = make_csv(&["comparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
+        let csv = make_csv(&["pitchComparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
         let result = parse_import_file(&csv).unwrap();
         assert_eq!(result.pitch_comparisons.len(), 1);
         assert_eq!(result.pitch_matchings.len(), 0);
@@ -629,7 +629,7 @@ mod tests {
     #[test]
     fn test_import_crlf_line_endings() {
         let csv = format!(
-            "{METADATA_LINE}\r\n{CSV_HEADER}\r\ncomparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,\r\n"
+            "{METADATA_LINE}\r\n{CSV_HEADER}\r\npitchComparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,\r\n"
         );
         let result = parse_import_file(&csv).unwrap();
         assert_eq!(result.pitch_comparisons.len(), 1);
@@ -642,5 +642,58 @@ mod tests {
         let result = parse_import_file(&csv);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("No records found"));
+    }
+
+    #[test]
+    fn test_import_unknown_training_type_produces_warning() {
+        let csv = make_csv(&["unknownType,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.pitch_matchings.len(), 0);
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].contains("unknown trainingType 'unknownType'"));
+    }
+
+    #[test]
+    fn test_import_mixed_valid_and_invalid_rows() {
+        let csv = make_csv(&[
+            "pitchComparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,",
+            "pitchMatching,2026-03-04T14:31:00Z,60,C4,67,G4,P5,equal,,,25.5,3.2",
+            "badType,2026-03-04T14:32:00Z,60,C4,64,E4,M3,equal,0,true,,",
+        ]);
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 1);
+        assert_eq!(result.pitch_matchings.len(), 1);
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].contains("unknown trainingType 'badType'"));
+    }
+
+    #[test]
+    fn test_import_malformed_comparison_fields() {
+        let csv = make_csv(&[
+            "pitchComparison,2026-03-04T14:30:00Z,notanumber,C4,64,E4,M3,equal,0,true,,",
+        ]);
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].contains("invalid referenceNote"));
+    }
+
+    #[test]
+    fn test_import_too_few_columns_produces_warning() {
+        let csv = make_csv(&["pitchComparison,2026-03-04T14:30:00Z,60,C4,64"]);
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].contains("too few columns"));
+    }
+
+    #[test]
+    fn test_import_rejects_old_comparison_type() {
+        let csv = make_csv(&["comparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].contains("unknown trainingType 'comparison'"));
     }
 }

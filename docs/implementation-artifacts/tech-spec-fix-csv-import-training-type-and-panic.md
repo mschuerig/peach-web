@@ -2,7 +2,7 @@
 title: 'Fix CSV Import/Export Training Type and Import Panic'
 slug: 'fix-csv-import-training-type-and-panic'
 created: '2026-03-11'
-status: 'ready-for-dev'
+status: 'completed'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: [Rust, Leptos 0.8, wasm-bindgen, leptos-fluent, wasm-bindgen-futures]
 files_to_modify: [web/src/adapters/csv_export_import.rs, web/src/components/settings_view.rs]
@@ -78,17 +78,17 @@ Two bugs in CSV data import/export:
 
 ### Tasks
 
-- [ ] Task 1: Rename export training type string
+- [x] Task 1: Rename export training type string
   - File: `web/src/adapters/csv_export_import.rs`
   - Action: Change line 112 from `"comparison,{},..."` to `"pitchComparison,{},..."` in the `Record::Comparison` export arm
   - Notes: Only the first field of the CSV row changes. `"pitchMatching"` remains unchanged.
 
-- [ ] Task 2: Update import parser to accept both training type strings
+- [x] Task 2: Update import parser to accept both training type strings
   - File: `web/src/adapters/csv_export_import.rs`
   - Action: In `parse_v1()` at lines 243-258, change the match arm from `"comparison"` to `"pitchComparison"`
   - Notes: No backward compatibility needed — no installed base with `"comparison"` exports.
 
-- [ ] Task 3: Fix I18n panic in export `spawn_local` block
+- [x] Task 3: Fix I18n panic in export `spawn_local` block
   - File: `web/src/components/settings_view.rs`
   - Action: In the export handler (around lines 625-655), pre-capture translated strings before the `spawn_local` block:
     ```rust
@@ -101,7 +101,7 @@ Two bugs in CSV data import/export:
     ```
   - Notes: The `tr!("export-failed", {"error" => e})` call has a dynamic parameter. Options: (a) use `format!()` with the pre-captured base string and the error, or (b) construct the message without i18n in the error path. Preferred: pre-capture a closure or use simple `format!("Export failed: {e}")` as fallback — but check if `leptos_fluent` supports capturing the i18n signal for later use.
 
-- [ ] Task 4: Fix I18n panic in file-read/parse `spawn_local` block
+- [x] Task 4: Fix I18n panic in file-read/parse `spawn_local` block
   - File: `web/src/components/settings_view.rs`
   - Action: In the file input handler (around lines 689-718), pre-capture translated strings before the `spawn_local` block:
     ```rust
@@ -114,7 +114,7 @@ Two bugs in CSV data import/export:
     ```
   - Notes: The `tr!("import-failed", {"error" => e})` at line 710 has a dynamic error parameter. Same approach as Task 3.
 
-- [ ] Task 5: Fix I18n panic in `handle_import_replace` `spawn_local` block
+- [x] Task 5: Fix I18n panic in `handle_import_replace` `spawn_local` block
   - File: `web/src/components/settings_view.rs`
   - Action: In `handle_import_replace` (lines 722-753), pre-capture all translated strings before the `spawn_local`:
     ```rust
@@ -127,7 +127,7 @@ Two bugs in CSV data import/export:
     ```
   - Notes: This is where the user's panic occurred (line 737). Three `tr!()` calls to fix: lines 733, 737, 744.
 
-- [ ] Task 6: Fix I18n panic in `handle_import_merge` `spawn_local` block
+- [x] Task 6: Fix I18n panic in `handle_import_merge` `spawn_local` block
   - File: `web/src/components/settings_view.rs`
   - Action: In `handle_import_merge` (lines 755-792), same pattern as Task 5. Pre-capture all translated strings before the `spawn_local`:
     - `tr!("database-not-available")` at line 766
@@ -135,12 +135,12 @@ Two bugs in CSV data import/export:
     - `tr!("import-failed", ...)` at line 779
   - Notes: Three `tr!()` calls to fix, same approach.
 
-- [ ] Task 7: Update existing tests to use `"pitchComparison"`
+- [x] Task 7: Update existing tests to use `"pitchComparison"`
   - File: `web/src/adapters/csv_export_import.rs`
   - Action: Update `test_import_valid_v1_comparison` (line 558) to use `"pitchComparison"` instead of `"comparison"` in the CSV row. Update `test_import_crlf_line_endings` (line 630) similarly. Update any other tests using `"comparison"` as training type.
   - Notes: These tests should now use the canonical new string.
 
-- [ ] Task 8: Add new tests for backward compatibility and error handling
+- [x] Task 8: Add new tests for backward compatibility and error handling
   - File: `web/src/adapters/csv_export_import.rs`
   - Action: Add the following tests:
     1. `test_import_unknown_training_type_produces_warning` — import with `"unknownType"` produces a warning in `parsed.warnings`, does not error
@@ -150,18 +150,18 @@ Two bugs in CSV data import/export:
     6. `test_export_writes_pitch_comparison_type` — cannot test full export (needs IndexedDB), but verify via a roundtrip: export format string contains `"pitchComparison,"`, not `"comparison,"`
   - Notes: Follow existing test patterns using `make_csv()` helper and `parse_import_file()`.
 
-- [ ] Task 9: Run `cargo test -p web` and `cargo clippy --workspace`
+- [x] Task 9: Run `cargo test -p web` and `cargo clippy --workspace`
   - Action: Verify all tests pass and no clippy warnings
   - Notes: The web crate tests should run natively for the CSV parsing logic (no browser needed). Run `cargo fmt` before committing.
 
 ### Acceptance Criteria
 
-- [ ] AC 1: Given a CSV file with `"pitchComparison"` training type rows, when imported, then the rows are parsed as `PitchComparisonRecord` entries with no warnings.
-- [ ] AC 2: Given a CSV file with unknown training type rows (e.g. `"foo"`), when imported, then a warning is produced for each unknown row and the import completes without panic.
-- [ ] AC 3: Given a CSV file with malformed field values (e.g. non-numeric referenceNote), when imported, then a warning is produced for the malformed row and the import completes without panic.
-- [ ] AC 4: Given training data is exported, when the CSV output is inspected, then pitch comparison rows use `"pitchComparison"` as the training type field (not `"comparison"`).
-- [ ] AC 5: Given any import or export operation completes (success or failure), when the result is displayed, then no panic occurs from missing I18n context — all user-facing messages display correctly.
-- [ ] AC 6: Given the full test suite is run (`cargo test -p web`), when all tests execute, then all tests pass including the new error-handling tests.
+- [x] AC 1: Given a CSV file with `"pitchComparison"` training type rows, when imported, then the rows are parsed as `PitchComparisonRecord` entries with no warnings.
+- [x] AC 2: Given a CSV file with unknown training type rows (e.g. `"foo"`), when imported, then a warning is produced for each unknown row and the import completes without panic.
+- [x] AC 3: Given a CSV file with malformed field values (e.g. non-numeric referenceNote), when imported, then a warning is produced for the malformed row and the import completes without panic.
+- [x] AC 4: Given training data is exported, when the CSV output is inspected, then pitch comparison rows use `"pitchComparison"` as the training type field (not `"comparison"`).
+- [x] AC 5: Given any import or export operation completes (success or failure), when the result is displayed, then no panic occurs from missing I18n context — all user-facing messages display correctly.
+- [x] AC 6: Given the full test suite is run (`cargo test -p web`), when all tests execute, then all tests pass including the new error-handling tests.
 
 ## Additional Context
 

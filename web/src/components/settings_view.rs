@@ -629,24 +629,43 @@ pub fn SettingsView() -> impl IntoView {
                     let import_data_signal: RwSignal<Option<csv_export_import::ParsedImportData>> = RwSignal::new(None);
                     let file_input_ref = NodeRef::<leptos::html::Input>::new();
 
+                    // Pre-capture i18n strings for use inside spawn_local blocks.
+                    // wasm_bindgen_futures::spawn_local does not preserve the Leptos
+                    // reactive owner, so tr!() would panic if called after the async
+                    // boundary. We render templates here with sentinel placeholders
+                    // and substitute runtime values via String::replace later.
+                    const PH1: &str = "\x00";
+                    const PH2: &str = "\x01";
+                    let msg_db_unavailable = tr!("database-not-available");
+                    let msg_exported = tr!("data-exported");
+                    let msg_export_failed_tpl = tr!("export-failed", {"error" => PH1});
+                    let msg_import_failed_tpl = tr!("import-failed", {"error" => PH1});
+                    let msg_records_imported_tpl = tr!("records-imported", {"count" => PH1});
+                    let msg_records_merged_tpl = tr!("records-merged", {"imported" => PH1, "skipped" => PH2});
+
                     let handle_export = {
+                        let msg_db_unavailable = msg_db_unavailable.clone();
+                        let msg_export_failed_tpl = msg_export_failed_tpl.clone();
                         move |_| {
+                            let msg_db_unavailable = msg_db_unavailable.clone();
+                            let msg_exported = msg_exported.clone();
+                            let msg_export_failed_tpl = msg_export_failed_tpl.clone();
                             ie_status.set(ImportExportStatus::Exporting);
                             spawn_local(async move {
                                 let result = if let Some(store) = db_store.get_untracked() {
                                     csv_export_import::export_all_data(&store).await
                                 } else {
-                                    Err(tr!("database-not-available"))
+                                    Err(msg_db_unavailable)
                                 };
                                 match result {
                                     Ok(()) => {
                                         ie_status.set(ImportExportStatus::ExportSuccess);
-                                        sr_announcement.set(tr!("data-exported"));
+                                        sr_announcement.set(msg_exported);
                                         TimeoutFuture::new(2000).await;
                                         ie_status.set(ImportExportStatus::Idle);
                                     }
                                     Err(e) => {
-                                        let msg = tr!("export-failed", {"error" => e});
+                                        let msg = msg_export_failed_tpl.replace(PH1, &e);
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::Error(msg));
                                         TimeoutFuture::new(3000).await;
@@ -663,128 +682,147 @@ pub fn SettingsView() -> impl IntoView {
                         }
                     };
 
-                    let handle_file_selected = move |_| {
-                        let input = match file_input_ref.get() {
-                            Some(i) => i,
-                            None => return,
-                        };
-                        let file = match input.files().and_then(|fl| fl.get(0)) {
-                            Some(f) => f,
-                            None => return,
-                        };
-
-                        if file.size() > 10_000_000.0 {
-                            let msg = tr!("file-too-large");
-                            sr_announcement.set(msg.clone());
-                            ie_status.set(ImportExportStatus::Error(msg));
-                            spawn_local(async move {
-                                TimeoutFuture::new(3000).await;
-                                ie_status.set(ImportExportStatus::Idle);
-                            });
-                            input.set_value("");
-                            return;
-                        }
-
-                        input.set_value("");
-                        spawn_local(async move {
-                            let content = match csv_export_import::read_file_as_text(file).await {
-                                Ok(c) => c,
-                                Err(msg) => {
-                                    sr_announcement.set(msg.clone());
-                                    ie_status.set(ImportExportStatus::Error(msg));
-                                    return;
-                                }
+                    let handle_file_selected = {
+                        let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                        move |_| {
+                            let input = match file_input_ref.get() {
+                                Some(i) => i,
+                                None => return,
+                            };
+                            let file = match input.files().and_then(|fl| fl.get(0)) {
+                                Some(f) => f,
+                                None => return,
                             };
 
-                            match csv_export_import::parse_import_file(&content) {
-                                Ok(parsed) => {
-                                    for warning in &parsed.warnings {
-                                        web_sys::console::warn_1(&warning.into());
-                                    }
-                                    import_data_signal.set(Some(parsed));
-                                    if let Some(dialog) = import_dialog_ref.get() {
-                                        let _ = dialog.show_modal();
-                                    }
-                                }
-                                Err(e) => {
-                                    let msg = tr!("import-failed", {"error" => e});
-                                    sr_announcement.set(msg.clone());
-                                    ie_status.set(ImportExportStatus::Error(msg));
-                                    spawn_local(async move {
-                                        TimeoutFuture::new(3000).await;
-                                        ie_status.set(ImportExportStatus::Idle);
-                                    });
-                                }
+                            if file.size() > 10_000_000.0 {
+                                let msg = tr!("file-too-large");
+                                sr_announcement.set(msg.clone());
+                                ie_status.set(ImportExportStatus::Error(msg));
+                                spawn_local(async move {
+                                    TimeoutFuture::new(3000).await;
+                                    ie_status.set(ImportExportStatus::Idle);
+                                });
+                                input.set_value("");
+                                return;
                             }
-                        });
-                    };
 
-                    let handle_import_replace = move |_| {
-                        ie_status.set(ImportExportStatus::Importing);
-                        if let Some(dialog) = import_dialog_ref.get() {
-                            dialog.close();
-                        }
-                        let data = import_data_signal.get_untracked();
-                        spawn_local(async move {
-                            if let Some(data) = data.as_ref() {
-                                let result = if let Some(store) = db_store.get_untracked() {
-                                    csv_export_import::import_replace(&store, data).await
-                                } else {
-                                    Err(tr!("database-not-available"))
-                                };
-                                match result {
-                                    Ok(count) => {
-                                        let msg = tr!("records-imported", {"count" => count.to_string()});
-                                        sr_announcement.set(msg.clone());
-                                        ie_status.set(ImportExportStatus::ImportSuccess(msg));
-                                        TimeoutFuture::new(1500).await;
-                                        csv_export_import::reload_page();
-                                    }
-                                    Err(e) => {
-                                        let msg = tr!("import-failed", {"error" => e});
+                            let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                            input.set_value("");
+                            spawn_local(async move {
+                                let content = match csv_export_import::read_file_as_text(file).await {
+                                    Ok(c) => c,
+                                    Err(msg) => {
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::Error(msg));
-                                        TimeoutFuture::new(3000).await;
-                                        ie_status.set(ImportExportStatus::Idle);
+                                        return;
                                     }
-                                }
-                            }
-                        });
-                    };
-
-                    let handle_import_merge = move |_| {
-                        ie_status.set(ImportExportStatus::Importing);
-                        if let Some(dialog) = import_dialog_ref.get() {
-                            dialog.close();
-                        }
-                        let data = import_data_signal.get_untracked();
-                        spawn_local(async move {
-                            if let Some(data) = data.as_ref() {
-                                let result = if let Some(store) = db_store.get_untracked() {
-                                    csv_export_import::import_merge(&store, data).await
-                                } else {
-                                    Err(tr!("database-not-available"))
                                 };
-                                match result {
-                                    Ok(r) => {
-                                        let imported = r.comparison_imported + r.pitch_matching_imported;
-                                        let skipped = r.comparison_skipped + r.pitch_matching_skipped;
-                                        let msg = tr!("records-merged", {"imported" => imported.to_string(), "skipped" => skipped.to_string()});
-                                        sr_announcement.set(msg.clone());
-                                        ie_status.set(ImportExportStatus::ImportSuccess(msg));
-                                        TimeoutFuture::new(1500).await;
-                                        csv_export_import::reload_page();
+
+                                match csv_export_import::parse_import_file(&content) {
+                                    Ok(parsed) => {
+                                        for warning in &parsed.warnings {
+                                            web_sys::console::warn_1(&warning.into());
+                                        }
+                                        import_data_signal.set(Some(parsed));
+                                        if let Some(dialog) = import_dialog_ref.get() {
+                                            let _ = dialog.show_modal();
+                                        }
                                     }
                                     Err(e) => {
-                                        let msg = tr!("import-failed", {"error" => e});
+                                        let msg = msg_import_failed_tpl.replace(PH1, &e);
                                         sr_announcement.set(msg.clone());
                                         ie_status.set(ImportExportStatus::Error(msg));
-                                        TimeoutFuture::new(3000).await;
-                                        ie_status.set(ImportExportStatus::Idle);
+                                        spawn_local(async move {
+                                            TimeoutFuture::new(3000).await;
+                                            ie_status.set(ImportExportStatus::Idle);
+                                        });
                                     }
                                 }
+                            });
+                        }
+                    };
+
+                    let handle_import_replace = {
+                        let msg_db_unavailable = msg_db_unavailable.clone();
+                        let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                        let msg_records_imported_tpl = msg_records_imported_tpl.clone();
+                        move |_| {
+                            let msg_db_unavailable = msg_db_unavailable.clone();
+                            let msg_records_imported_tpl = msg_records_imported_tpl.clone();
+                            let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                            ie_status.set(ImportExportStatus::Importing);
+                            if let Some(dialog) = import_dialog_ref.get() {
+                                dialog.close();
                             }
-                        });
+                            let data = import_data_signal.get_untracked();
+                            spawn_local(async move {
+                                if let Some(data) = data.as_ref() {
+                                    let result = if let Some(store) = db_store.get_untracked() {
+                                        csv_export_import::import_replace(&store, data).await
+                                    } else {
+                                        Err(msg_db_unavailable)
+                                    };
+                                    match result {
+                                        Ok(count) => {
+                                            let msg = msg_records_imported_tpl.replace(PH1, &count.to_string());
+                                            sr_announcement.set(msg.clone());
+                                            ie_status.set(ImportExportStatus::ImportSuccess(msg));
+                                            TimeoutFuture::new(1500).await;
+                                            csv_export_import::reload_page();
+                                        }
+                                        Err(e) => {
+                                            let msg = msg_import_failed_tpl.replace(PH1, &e);
+                                            sr_announcement.set(msg.clone());
+                                            ie_status.set(ImportExportStatus::Error(msg));
+                                            TimeoutFuture::new(3000).await;
+                                            ie_status.set(ImportExportStatus::Idle);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    };
+
+                    let handle_import_merge = {
+                        move |_| {
+                            let msg_db_unavailable = msg_db_unavailable.clone();
+                            let msg_records_merged_tpl = msg_records_merged_tpl.clone();
+                            let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                            ie_status.set(ImportExportStatus::Importing);
+                            if let Some(dialog) = import_dialog_ref.get() {
+                                dialog.close();
+                            }
+                            let data = import_data_signal.get_untracked();
+                            spawn_local(async move {
+                                if let Some(data) = data.as_ref() {
+                                    let result = if let Some(store) = db_store.get_untracked() {
+                                        csv_export_import::import_merge(&store, data).await
+                                    } else {
+                                        Err(msg_db_unavailable)
+                                    };
+                                    match result {
+                                        Ok(r) => {
+                                            let imported = r.comparison_imported + r.pitch_matching_imported;
+                                            let skipped = r.comparison_skipped + r.pitch_matching_skipped;
+                                            let msg = msg_records_merged_tpl
+                                                .replace(PH1, &imported.to_string())
+                                                .replace(PH2, &skipped.to_string());
+                                            sr_announcement.set(msg.clone());
+                                            ie_status.set(ImportExportStatus::ImportSuccess(msg));
+                                            TimeoutFuture::new(1500).await;
+                                            csv_export_import::reload_page();
+                                        }
+                                        Err(e) => {
+                                            let msg = msg_import_failed_tpl.replace(PH1, &e);
+                                            sr_announcement.set(msg.clone());
+                                            ie_status.set(ImportExportStatus::Error(msg));
+                                            TimeoutFuture::new(3000).await;
+                                            ie_status.set(ImportExportStatus::Idle);
+                                        }
+                                    }
+                                }
+                            });
+                        }
                     };
 
                     let handle_import_cancel = move |_| {
