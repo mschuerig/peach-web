@@ -255,6 +255,21 @@ User can train comparison and pitch matching with musical intervals (minor secon
 App works fully offline after initial load via Service Worker. Complete screen reader support for all feedback events. Info view. User can export and import training data in JSON format.
 **FRs covered:** FR39, FR40, FR46, FR47
 
+### Epic 7: iOS Parity — Profile & UI Refresh
+Redesigned start screen, profile progress charts with EWMA adaptive bucketing, training stats with trend arrows, sparklines on start page, and help content for all views.
+
+### Epic 8: Fixes & Improvements
+Audio playback reliability, SoundFont loading UX, iOS UI alignment across settings and training pages, feedback icons, settings view logic extraction, keyboard interaction fixes, and sound source preview.
+
+### Epic 9: Mobile Compatibility
+Fix SoundFont playback on mobile Safari and other mobile browsers where AudioWorklet behavior differs.
+
+### Epic 10: CI/CD Pipeline & GitHub Pages Deployment
+Automated quality checks (fmt, clippy, tests) and deployment to GitHub Pages on every push to `main`.
+
+### Epic 11: UI Polish & Sound Level
+Visual polish to match iOS app: audio volume alignment, consistent headline layouts with true title centering, modal behavior standardization, and icon consistency across all pages.
+
 ## Epic 1: Core Comparison Training
 
 User can open Peach, click "Comparison," hear two notes via oscillator, answer higher/lower via click or keyboard, see feedback, and keep training. Data persists across sessions. The adaptive algorithm targets weak spots from the start.
@@ -1610,3 +1625,35 @@ Automated quality checks and deployment to GitHub Pages on every push to `main`.
 6. The GitHub repository is configured with GitHub Pages source set to GitHub Actions
 7. The app is accessible and functional at `https://<username>.github.io/peach-web/`
 8. Cargo registry, build artifacts, and SoundFont caches are shared between the quality gate and build jobs where possible
+
+## Epic 11: UI Polish & Sound Level
+
+Visual polish to match iOS app: audio volume alignment, consistent headline layouts with true title centering, modal behavior standardization, and icon consistency across all pages.
+
+### Story 11.1: UI Consistency and Sound Level Fixes
+
+**As a** user,
+**I want** the web app to match the iOS app's visual layout and sound level,
+**So that** the experience is consistent across platforms.
+
+**Acceptance Criteria:**
+1. Audio playback is approximately 12 dB louder than current levels, matching the perceived volume of the iOS app
+2. Training mode names on the start page cards match the names used on the training pages and in help sections
+3. The help icon on training pages uses a circled question mark character (matching the circled info icon on the start page)
+4. Start page header layout matches the iOS reference screenshot: info icon (left) has a visible circle background, chart and settings icons (right) are grouped in a pill-shaped container
+5. Section titles ("Single Notes", "Intervals") on the start page are centered
+6. Training cards on the start page have a fixed height regardless of whether a sparkline is present
+7. Training page header layout matches the iOS reference screenshot: title is left-aligned (after the back button), right side groups Help, Settings, and Chart icons in a pill-shaped container
+8. In the info/acknowledgements section, "GeneralUser GS by S. Christian Collins" is a hyperlink to the author's page
+
+### Story 11.2: Headline Layout and Modal Consistency
+
+**As a** user,
+**I want** consistent headline layouts and modal behavior across all pages,
+**So that** the app feels polished and predictable.
+
+**Acceptance Criteria:**
+1. On all pages (start page, training pages, settings, profile, info), the headline layout follows this structure: left pill flush left, title centered in the remaining space, right pill flush right
+2. The help modal is closed by a "Done" button (no decoration) rendered inside a pill in the top left corner of the modal, replacing the current top-right "Done" button
+3. The info view is closed by a "Done" button (no decoration) rendered inside a pill in the top left corner, replacing the current back-arrow pill
+4. Help modals display without a grey backdrop overlay — matching the info view's no-overlay appearance

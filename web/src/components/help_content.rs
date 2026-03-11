@@ -132,7 +132,7 @@ pub fn HelpModal(
                     <div class="flex-1 flex items-center">
                         <button
                             on:click=handle_close
-                            class="min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
+                            class="min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
                             aria-label="Done"
                         >
                             "Done"

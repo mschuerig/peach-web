@@ -1,6 +1,6 @@
 # Story 11.2: Headline Layout and Modal Consistency
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -133,10 +133,11 @@ None — clean implementation, no debugging needed.
 
 - 2026-03-08: Implemented all tasks — NavBar grid layout, help modal pill/no-overlay, info view Done pill.
 - 2026-03-10: Code review fixes — replaced absolute-positioning layout with iOS-style flex centering (flex-1 equal sides, shift-then-truncate), corrected completion notes, added settings_view.rs to File List, fixed HelpModal dark mode pill color (gray-700→gray-800), added aria-label to HelpModal Done button, applied same flex centering to HelpModal header.
+- 2026-03-11: Second code review fixes — reverted HelpModal Done pill dark mode from gray-800 to gray-700 (was invisible against dialog bg-gray-800), fixed sprint-status.yaml key to match story filename, corrected File List description (grid→flex centering), added Epic 11 to epics.md.
 
 ### File List
 
-- web/src/components/nav_bar.rs (modified — flexbox→grid layout, removed title_left prop)
+- web/src/components/nav_bar.rs (modified — flexbox→flex centering with equal flex-1 sides, removed title_left prop)
 - web/src/components/help_content.rs (modified — Done pill top-left, transparent backdrop)
 - web/src/components/info_view.rs (modified — Done pill replaces back arrow, removed base_href import)
 - web/src/components/pitch_comparison_view.rs (modified — removed title_left=true)
