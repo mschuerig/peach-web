@@ -405,7 +405,7 @@ pub fn SettingsView() -> impl IntoView {
                                                         set.len() == 1 && set.contains(&di)
                                                     }
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
-                                                    aria-label=format!("{} {}", interval.short_label(), tr!("ascending"))
+                                                    aria-label=move || format!("{} {}", interval.short_label(), tr!("ascending"))
                                                     class=move || {
                                                         if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
@@ -445,7 +445,7 @@ pub fn SettingsView() -> impl IntoView {
                                                         set.len() == 1 && set.contains(&di)
                                                     }
                                                     aria-pressed=move || selected_intervals.get().contains(&di).to_string()
-                                                    aria-label=format!("{} {}", interval.short_label(), tr!("descending"))
+                                                    aria-label=move || format!("{} {}", interval.short_label(), tr!("descending"))
                                                     class=move || {
                                                         if selected_intervals.get().contains(&di) { TOGGLE_ACTIVE } else { TOGGLE_INACTIVE }
                                                     }
@@ -581,8 +581,8 @@ pub fn SettingsView() -> impl IntoView {
                             tuning_system.set(val);
                         }
                     >
-                        <option value="equalTemperament">{tr!("equal-temperament")}</option>
-                        <option value="justIntonation">{tr!("just-intonation")}</option>
+                        <option value="equalTemperament">{move_tr!("equal-temperament")}</option>
+                        <option value="justIntonation">{move_tr!("just-intonation")}</option>
                     </select>
                     <span class="ml-1 text-gray-400 dark:text-gray-500 text-sm">{"\u{203A}"}</span>
                 </SettingsRow>
@@ -598,7 +598,7 @@ pub fn SettingsView() -> impl IntoView {
                         <span class="text-sm text-gray-900 dark:text-gray-100">{move_tr!("loudness-variation")}</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-400 dark:text-gray-500">{tr!("off")}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">{move_tr!("off")}</span>
                         <input
                             type="range"
                             min="0"
@@ -613,9 +613,9 @@ pub fn SettingsView() -> impl IntoView {
                                     LocalStorageSettings::set("peach.vary_loudness", &float_val.to_string());
                                 }
                             }
-                            aria-label=tr!("loudness-variation-aria")
+                            aria-label=move || tr!("loudness-variation-aria")
                         />
-                        <span class="text-xs text-gray-400 dark:text-gray-500">{tr!("max")}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">{move_tr!("max")}</span>
                     </div>
                 </div>
             </SettingsSection>
@@ -629,27 +629,19 @@ pub fn SettingsView() -> impl IntoView {
                     let import_data_signal: RwSignal<Option<csv_export_import::ParsedImportData>> = RwSignal::new(None);
                     let file_input_ref = NodeRef::<leptos::html::Input>::new();
 
-                    // Pre-capture i18n strings for use inside spawn_local blocks.
-                    // wasm_bindgen_futures::spawn_local does not preserve the Leptos
-                    // reactive owner, so tr!() would panic if called after the async
-                    // boundary. We render templates here with sentinel placeholders
-                    // and substitute runtime values via String::replace later.
+                    // Sentinel placeholders for i18n template strings.
+                    // tr!() is called inside each event handler (before spawn_local)
+                    // so it reads the current language. spawn_local does not preserve
+                    // the Leptos reactive owner, so tr!() must not be called after
+                    // the async boundary.
                     const PH1: &str = "\x00";
                     const PH2: &str = "\x01";
-                    let msg_db_unavailable = tr!("database-not-available");
-                    let msg_exported = tr!("data-exported");
-                    let msg_export_failed_tpl = tr!("export-failed", {"error" => PH1});
-                    let msg_import_failed_tpl = tr!("import-failed", {"error" => PH1});
-                    let msg_records_imported_tpl = tr!("records-imported", {"count" => PH1});
-                    let msg_records_merged_tpl = tr!("records-merged", {"imported" => PH1, "skipped" => PH2});
 
                     let handle_export = {
-                        let msg_db_unavailable = msg_db_unavailable.clone();
-                        let msg_export_failed_tpl = msg_export_failed_tpl.clone();
                         move |_| {
-                            let msg_db_unavailable = msg_db_unavailable.clone();
-                            let msg_exported = msg_exported.clone();
-                            let msg_export_failed_tpl = msg_export_failed_tpl.clone();
+                            let msg_db_unavailable = tr!("database-not-available");
+                            let msg_exported = tr!("data-exported");
+                            let msg_export_failed_tpl = tr!("export-failed", {"error" => PH1});
                             ie_status.set(ImportExportStatus::Exporting);
                             spawn_local(async move {
                                 let result = if let Some(store) = db_store.get_untracked() {
@@ -683,7 +675,6 @@ pub fn SettingsView() -> impl IntoView {
                     };
 
                     let handle_file_selected = {
-                        let msg_import_failed_tpl = msg_import_failed_tpl.clone();
                         move |_| {
                             let input = match file_input_ref.get() {
                                 Some(i) => i,
@@ -706,7 +697,7 @@ pub fn SettingsView() -> impl IntoView {
                                 return;
                             }
 
-                            let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                            let msg_import_failed_tpl = tr!("import-failed", {"error" => PH1});
                             input.set_value("");
                             spawn_local(async move {
                                 let content = match csv_export_import::read_file_as_text(file).await {
@@ -743,13 +734,10 @@ pub fn SettingsView() -> impl IntoView {
                     };
 
                     let handle_import_replace = {
-                        let msg_db_unavailable = msg_db_unavailable.clone();
-                        let msg_import_failed_tpl = msg_import_failed_tpl.clone();
-                        let msg_records_imported_tpl = msg_records_imported_tpl.clone();
                         move |_| {
-                            let msg_db_unavailable = msg_db_unavailable.clone();
-                            let msg_records_imported_tpl = msg_records_imported_tpl.clone();
-                            let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                            let msg_db_unavailable = tr!("database-not-available");
+                            let msg_records_imported_tpl = tr!("records-imported", {"count" => PH1});
+                            let msg_import_failed_tpl = tr!("import-failed", {"error" => PH1});
                             ie_status.set(ImportExportStatus::Importing);
                             if let Some(dialog) = import_dialog_ref.get() {
                                 dialog.close();
@@ -785,9 +773,9 @@ pub fn SettingsView() -> impl IntoView {
 
                     let handle_import_merge = {
                         move |_| {
-                            let msg_db_unavailable = msg_db_unavailable.clone();
-                            let msg_records_merged_tpl = msg_records_merged_tpl.clone();
-                            let msg_import_failed_tpl = msg_import_failed_tpl.clone();
+                            let msg_db_unavailable = tr!("database-not-available");
+                            let msg_records_merged_tpl = tr!("records-merged", {"imported" => PH1, "skipped" => PH2});
+                            let msg_import_failed_tpl = tr!("import-failed", {"error" => PH1});
                             ie_status.set(ImportExportStatus::Importing);
                             if let Some(dialog) = import_dialog_ref.get() {
                                 dialog.close();
@@ -878,7 +866,7 @@ pub fn SettingsView() -> impl IntoView {
                             accept=".csv"
                             on:change=handle_file_selected
                             class="sr-only"
-                            aria-label=tr!("select-csv")
+                            aria-label=move || tr!("select-csv")
                         />
 
                         // Status message
@@ -905,7 +893,7 @@ pub fn SettingsView() -> impl IntoView {
                             aria-labelledby="import-dialog-title"
                             class="rounded-lg p-6 max-w-md mx-auto bg-white text-gray-900 backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
                         >
-                            <h2 id="import-dialog-title" class="text-lg font-bold">{tr!("import-dialog-title")}</h2>
+                            <h2 id="import-dialog-title" class="text-lg font-bold">{move_tr!("import-dialog-title")}</h2>
                             <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
                                 {move || {
                                     if let Some(ref data) = import_data_signal.get() {
@@ -929,19 +917,19 @@ pub fn SettingsView() -> impl IntoView {
                                     on:click=handle_import_replace
                                     class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-800 dark:ring-offset-gray-900"
                                 >
-                                    {tr!("replace-all-data")}
+                                    {move_tr!("replace-all-data")}
                                 </button>
                                 <button
                                     on:click=handle_import_merge
                                     class="min-h-[44px] rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:bg-indigo-700 dark:hover:bg-indigo-800 dark:ring-offset-gray-900"
                                 >
-                                    {tr!("merge-with-existing")}
+                                    {move_tr!("merge-with-existing")}
                                 </button>
                                 <button
                                     on:click=handle_import_cancel
                                     class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:ring-offset-gray-900"
                                 >
-                                    {tr!("cancel")}
+                                    {move_tr!("cancel")}
                                 </button>
                             </div>
                         </dialog>
@@ -955,9 +943,9 @@ pub fn SettingsView() -> impl IntoView {
                 aria-labelledby="reset-dialog-title"
                 class="rounded-lg p-6 max-w-md mx-auto bg-white text-gray-900 backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
             >
-                <h2 id="reset-dialog-title" class="text-lg font-bold">{tr!("reset-dialog-title")}</h2>
+                <h2 id="reset-dialog-title" class="text-lg font-bold">{move_tr!("reset-dialog-title")}</h2>
                 <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                    {tr!("reset-dialog-message")}
+                    {move_tr!("reset-dialog-message")}
                 </p>
                 <div class="mt-6 flex gap-3 justify-end">
                     <button
@@ -965,14 +953,14 @@ pub fn SettingsView() -> impl IntoView {
                         disabled=move || reset_status.get() == ResetStatus::Resetting
                         class="min-h-[44px] rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:ring-offset-gray-900 disabled:opacity-50"
                     >
-                        {tr!("cancel")}
+                        {move_tr!("cancel")}
                     </button>
                     <button
                         on:click=handle_confirm
                         disabled=move || reset_status.get() == ResetStatus::Resetting
                         class="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:bg-red-700 dark:hover:bg-red-800 dark:ring-offset-gray-900 disabled:opacity-50"
                     >
-                        {tr!("delete-all-data")}
+                        {move_tr!("delete-all-data")}
                     </button>
                 </div>
             </dialog>

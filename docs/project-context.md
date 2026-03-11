@@ -231,6 +231,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - DO NOT add onboarding, tutorials, or "welcome back" messages — the UX is intentionally sparse
 - DO NOT put business logic in view components — views are pure presentation. Constants, data transformations, persistence calls, encoding/decoding, and orchestration belong in domain types or adapter modules. Views only declare signals, wire event handlers, and render DOM.
 - DO NOT use `gloo_timers::callback::Timeout` with `.forget()` inside Leptos components — the timer outlives the component and causes disposed-signal panics on navigation. Use `leptos::task::spawn_local_scoped_with_cancellation` + `TimeoutFuture::new(ms).await` instead — it registers an `on_cleanup` abort handle so the task is cancelled when the reactive owner disposes. Note: plain `spawn_local` (from `wasm_bindgen_futures`) does NOT cancel on disposal.
+- DO NOT use bare `tr!()` in view construction or component body code outside a `move || {}` closure — `tr!()` calls `i18n.language.get()` which fires a reactive tracking warning and the text won't update on language switch. Use `move_tr!()` for text content, `move || tr!(...)` for attributes, or `Signal::derive(move || tr!(...))` for parameterized translations. For intentional one-time captures (e.g. before `spawn_local`), use `untrack(|| tr!(...))`.
 
 **Observer Contract:**
 
@@ -288,6 +289,7 @@ These patterns caused repeated failures. Check this section before implementing 
 | No `404.html` for GitHub Pages SPA | Direct navigation to deep routes (e.g. `/peach-web/profile`) returns GitHub's 404 | Copy `index.html` to `404.html` in build output |
 | `<A href="/path">` ignores router base | Leptos Router 0.8 returns `/`-prefixed paths as-is without prepending base | Use `base_href("/path")` for `<A>` hrefs, but NOT for `navigate()` which resolves internally |
 | `addModule()` ignores `<base href>` | AudioWorklet module URL resolves against document URL, not `<base>` | Resolve to absolute URL via `document.base_uri()` before calling `addModule()` |
+| Bare `tr!()` outside reactive context | Console floods with "outside reactive tracking context" warnings; text won't update on language switch | Use `move_tr!()` for text, `move \|\| tr!(...)` for attributes. For one-time captures use `untrack(\|\| tr!(...))`. Bare `tr!()` is only safe inside `move \|\|` closures or `Signal::derive`. |
 
 ## Implementation Edge-Case Checklist
 

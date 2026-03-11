@@ -2,7 +2,7 @@
 title: 'Fix i18n reactive tracking warnings on settings page'
 slug: 'fix-settings-i18n-reactive-tracking'
 created: '2026-03-11'
-status: 'ready-for-dev'
+status: 'dev-complete'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['leptos-fluent 0.3.1', 'leptos 0.8.17', 'reactive_graph 0.2.13']
 files_to_modify: ['web/src/components/settings_view.rs', 'docs/project-context.md']
@@ -111,7 +111,7 @@ let msg_exported = tr!("data-exported");
 
 ### Tasks
 
-- [ ] **Task 1:** Replace bare `tr!()` with `move_tr!()` for view text content
+- [x] **Task 1:** Replace bare `tr!()` with `move_tr!()` for view text content
   - File: `web/src/components/settings_view.rs`
   - Action: For each line below, replace `tr!(` with `move_tr!(`:
     - Line 584: `{tr!("equal-temperament")}` → `{move_tr!("equal-temperament")}`
@@ -128,7 +128,7 @@ let msg_exported = tr!("data-exported");
     - Line 975: `{tr!("delete-all-data")}` → `{move_tr!("delete-all-data")}`
   - Notes: `move_tr!("key")` expands to `Signal::derive(move || tr!("key"))`, providing both reactive tracking and language-switch reactivity.
 
-- [ ] **Task 2:** Wrap bare `tr!()` in attributes with `move ||` closures
+- [x] **Task 2:** Wrap bare `tr!()` in attributes with `move ||` closures
   - File: `web/src/components/settings_view.rs`
   - Action: For each line below, wrap the attribute value in `move ||`:
     - Line 408: `aria-label=format!("{} {}", interval.short_label(), tr!("ascending"))` → `aria-label=move || format!("{} {}", interval.short_label(), tr!("ascending"))`
@@ -137,23 +137,16 @@ let msg_exported = tr!("data-exported");
     - Line 881: `aria-label=tr!("select-csv")` → `aria-label=move || tr!("select-csv")`
   - Notes: `move ||` creates a reactive closure. Leptos evaluates it in a tracking context, fixing the warning and making the attribute reactive to language changes.
 
-- [ ] **Task 3:** Wrap pre-captured i18n strings in `untrack(||)`
+- [x] **Task 3:** Move i18n strings from pre-capture into event handlers
   - File: `web/src/components/settings_view.rs`
-  - Action: Wrap each pre-capture `tr!()` call in `untrack(|| ...)`:
-    - Line 639: `let msg_db_unavailable = tr!(...)` → `let msg_db_unavailable = untrack(|| tr!(...))`
-    - Line 640: `let msg_exported = tr!(...)` → `let msg_exported = untrack(|| tr!(...))`
-    - Line 641: `let msg_export_failed_tpl = tr!(...)` → `let msg_export_failed_tpl = untrack(|| tr!(...))`
-    - Line 642: `let msg_import_failed_tpl = tr!(...)` → `let msg_import_failed_tpl = untrack(|| tr!(...))`
-    - Line 643: `let msg_records_imported_tpl = tr!(...)` → `let msg_records_imported_tpl = untrack(|| tr!(...))`
-    - Line 644: `let msg_records_merged_tpl = tr!(...)` → `let msg_records_merged_tpl = untrack(|| tr!(...))`
-    - Line 698: `let msg = tr!("file-too-large")` → `let msg = untrack(|| tr!("file-too-large"))`
-  - Notes: `untrack` is already available via `use leptos::prelude::*` (re-exported from `reactive_graph::graph`). These strings are intentionally captured once before `spawn_local` — they don't need reactivity, just the current value without a tracking warning.
+  - Action: Removed 6 pre-captured `untrack(|| tr!(...))` variables from component body. Moved `tr!()` calls into each event handler body (before `spawn_local`), where they run in a valid context and read the current language. Eliminated clone chains.
+  - Notes: Event handlers run synchronously with a valid reactive owner. `tr!()` is safe there and reads the current language at invocation time. Only `spawn_local` crosses the async boundary where `tr!()` would panic.
 
-- [ ] **Task 4:** Verify compilation and linting
+- [x] **Task 4:** Verify compilation and linting
   - Action: Run `cargo clippy --workspace` and `cargo fmt --check`
   - Notes: No new warnings expected. `untrack` and `move_tr!` are standard Leptos APIs.
 
-- [ ] **Task 5:** Add prevention rules to project-context.md
+- [x] **Task 5:** Add prevention rules to project-context.md
   - File: `docs/project-context.md`
   - Action 1: Add to the **Anti-Patterns** section (after the existing `DO NOT` list items around line 233):
     ```
