@@ -27,7 +27,11 @@ fn trend_arrow(trend: Trend) -> (&'static str, &'static str, String) {
             "text-green-600 dark:text-green-400",
             tr!("trend-improving"),
         ),
-        Trend::Stable => ("\u{2192}", "text-gray-500 dark:text-gray-400", tr!("trend-stable")),
+        Trend::Stable => (
+            "\u{2192}",
+            "text-gray-500 dark:text-gray-400",
+            tr!("trend-stable"),
+        ),
         Trend::Declining => (
             "\u{2197}",
             "text-orange-500 dark:text-orange-400",

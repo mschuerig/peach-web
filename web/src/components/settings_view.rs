@@ -265,10 +265,12 @@ pub fn SettingsView() -> impl IntoView {
     let max_label = Signal::derive(move || tr!("highest-note", {"note" => max_note_name.get()}));
 
     // Derived signals for sound settings display
-    let duration_label = Signal::derive(move || tr!("duration-label", {"value" => format!("{:.1}", note_duration.get())}));
-    let pitch_label = Signal::derive(move || {
-        tr!("concert-pitch-label", {"value" => (reference_pitch.get().round() as i32).to_string()})
-    });
+    let duration_label = Signal::derive(
+        move || tr!("duration-label", {"value" => format!("{:.1}", note_duration.get())}),
+    );
+    let pitch_label = Signal::derive(
+        move || tr!("concert-pitch-label", {"value" => (reference_pitch.get().round() as i32).to_string()}),
+    );
 
     view! {
         <div class="pt-4 pb-12">
