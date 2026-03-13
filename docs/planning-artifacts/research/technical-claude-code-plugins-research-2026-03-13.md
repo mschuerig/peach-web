@@ -24,7 +24,7 @@ source_verification: true
 
 This research investigated the Claude Code skills and plugin ecosystem to identify tools that could provide up-to-date platform knowledge for the peach-web project's Rust/Leptos/WASM stack. The core problem: repeated implementation errors caused by stale or incorrect API assumptions about Leptos 0.8, web-sys, wasm-bindgen, and Trunk — documented in 11 entries in the project's Common Pitfalls table.
 
-The research found that while the Claude Code skills ecosystem is mature (334+ official skills, 400K+ community-indexed) and cross-platform (18 AI agents), it is heavily JS-ecosystem focused. **No pre-built skills exist for Leptos, web-sys, wasm-bindgen, or Trunk.** However, the tooling to generate custom skills from documentation is available and practical — Skill_Seekers can convert any documentation website into a Claude skill in 20-40 minutes using the existing Claude Code Max subscription. Combined with the Rust LSP plugin (rust-analyzer) for real-time compiler feedback and auto-activation hooks for reliable skill triggering, a layered knowledge architecture can address 8 of 11 documented pitfalls.
+The research found that while the Claude Code skills ecosystem is mature (334+ official skills, 400K+ community-indexed) and cross-platform (18 AI agents), it is heavily JS-ecosystem focused. **No pre-built skills exist for Leptos, web-sys, wasm-bindgen, or Trunk.** However, the tooling to generate custom skills from documentation is available and practical — Skill_Seekers can convert any documentation website into a Claude skill in 20-40 minutes using the existing Claude Code Max subscription. Combined with auto-activation hooks for reliable skill triggering, a layered knowledge architecture can address 8 of 11 documented pitfalls. (Note: The Rust LSP plugin for Claude Code was initially recommended but deeper investigation revealed it is **not yet production-ready** — see the LSP Status Correction section below.)
 
 See the Executive Summary below for key findings and the Implementation Plan section for the concrete 4-phase adoption roadmap.
 
@@ -75,21 +75,22 @@ _Sources: [Claude Code Skills Docs](https://code.claude.com/docs/en/skills), [an
 
 ### Skills & Plugins Relevant to Platform Knowledge
 
-#### 1. Piebald-AI/claude-code-lsps — LSP Servers (incl. Rust)
+#### 1. ~~Piebald-AI/claude-code-lsps — LSP Servers (incl. Rust)~~ — NOT RECOMMENDED (see correction below)
 
-**What:** A plugin marketplace providing Language Server Protocol integrations for 20+ languages including **Rust (rust-analyzer)**. Gives Claude Code real-time type checking, go-to-definition, find-references, and diagnostic errors — the same intelligence VS Code uses.
+**What:** A plugin marketplace providing Language Server Protocol integrations for 20+ languages including **Rust (rust-analyzer)**.
 
-**Relevance:** HIGH. Many of our Common Pitfalls (Send+Sync errors, web-sys feature flags, type mismatches) would be caught immediately by rust-analyzer running in Claude's context. Instead of guessing at API signatures, Claude gets compiler-level feedback.
+**Relevance:** Was rated HIGH, but **downgraded to NOT RECOMMENDED** after deeper investigation.
 
-**Maturity:** Requires Claude Code 2.1.50+. Active development, some open issues with marketplace.json configs.
+**Status: BROKEN as of March 2026.** Claude Code's LSP plugin ecosystem has fundamental issues:
+- All 11 official marketplace LSP plugins (including rust-analyzer-lsp) only contain a README.md — no actual LSP configuration ([Issue #15235](https://github.com/anthropics/claude-code/issues/15235), [Issue #379](https://github.com/anthropics/claude-plugins-official/issues/379))
+- Race condition: LSP Manager initializes before plugins load, resulting in 0 servers ([Issue #13952](https://github.com/anthropics/claude-code/issues/13952))
+- Piebald-AI's workaround **requires patching Claude Code** via `npx tweakcc --apply` — not a clean plugin install
+- LSP servers don't restart after session resume ([Issue #24171](https://github.com/anthropics/claude-code/issues/24171))
+- Ongoing "No LSP server available" reports through March 2026 ([Issues #14803](https://github.com/anthropics/claude-code/issues/14803), [#16084](https://github.com/anthropics/claude-code/issues/16084), [#16214](https://github.com/anthropics/claude-code/issues/16214))
 
-**Installation:**
-```
-claude /plugin marketplace add Piebald-AI/claude-code-lsps
-# Then /plugins → Marketplaces → enable rust-analyzer
-```
+**Recommendation:** Do not invest time in LSP integration until Anthropic fixes the underlying plugin infrastructure. Monitor [Issue #15235](https://github.com/anthropics/claude-code/issues/15235) for resolution. The skills-based approach (Layers 1 and 2) is the reliable path.
 
-_Source: [Piebald-AI/claude-code-lsps](https://github.com/Piebald-AI/claude-code-lsps)_
+_Sources: [Piebald-AI/claude-code-lsps](https://github.com/Piebald-AI/claude-code-lsps), [anthropics/claude-code Issues](https://github.com/anthropics/claude-code/issues)_
 
 #### 2. Skill_Seekers — Documentation-to-Skill Converter
 
@@ -164,7 +165,7 @@ _Source: [upstash/context7](https://github.com/upstash/context7), [Context7 API 
 
 **Documentation-to-skill conversion is emerging:** Tools like Skill_Seekers represent a new pattern — automated generation of AI context from existing documentation. This is still early but directly addresses the platform knowledge gap.
 
-**LSP integration is maturing:** Claude Code's built-in LSP tool combined with plugin marketplaces like Piebald-AI means Claude can get real-time compiler feedback, reducing API guessing. This is one of the most impactful developments for our use case.
+**LSP integration is aspirational but broken:** Claude Code added LSP support in v2.0.74, but as of March 2026 the official LSP plugins are non-functional (missing configuration files), community workarounds require patching Claude Code, and multiple open issues report "No LSP server available." This technology is not yet ready for production use.
 
 **No Rust/WASM-specific skill ecosystem yet:** The JS ecosystem (React, Next.js, Tailwind, Node.js) has extensive skill coverage. The Rust/WASM/Leptos ecosystem has essentially zero pre-built skills. We would need to generate our own.
 
@@ -251,40 +252,21 @@ cp -r output/web-sys/ .claude/skills/web-sys/
 
 _Source: [Skill_Seekers GitHub](https://github.com/yusufkaraaslan/Skill_Seekers), [Skill Seekers Docs](https://skillseekersweb.com/)_
 
-### Integration Pattern: LSP for Real-Time Compiler Feedback
+### ~~Integration Pattern: LSP for Real-Time Compiler Feedback~~ — NOT VIABLE (March 2026)
 
-#### Rust-Analyzer Plugin Setup
+**CORRECTION (post-publication review):** Deeper investigation revealed that Claude Code's LSP plugin infrastructure is **not production-ready** as of March 2026:
 
-The LSP plugin gives Claude Code access to rust-analyzer, providing the same code intelligence as VS Code:
-- Real-time diagnostics (type errors, borrow checker, Send+Sync violations)
-- Go-to-definition and find-references
-- Clippy lints as you edit
+- **Official plugins are empty:** All LSP plugins in `anthropics/claude-plugins-official` contain only a README.md — no `.lsp.json`, no `plugin.json`, no LSP config. Installing them does nothing. ([Issue #15235](https://github.com/anthropics/claude-code/issues/15235), [Issue #15359](https://github.com/anthropics/claude-code/issues/15359))
+- **Race condition:** LSP Manager initializes before plugins finish loading → 0 servers registered ([Issue #13952](https://github.com/anthropics/claude-code/issues/13952))
+- **Piebald-AI requires patching:** The community workaround at Piebald-AI/claude-code-lsps uses `npx tweakcc --apply` to patch Claude Code internals. This is not a clean plugin install — it modifies Claude Code's code.
+- **Session resume breaks LSP:** LSP servers receive shutdown on session resume but are never restarted ([Issue #24171](https://github.com/anthropics/claude-code/issues/24171))
+- **rust-analyzer + web-sys:** Even if LSP worked, rust-analyzer has upstream issues with web-sys on wasm32 targets ([rust-analyzer#3592](https://github.com/rust-lang/rust-analyzer/issues/3592))
 
-**Configuration (`.lsp.json`):**
-```json
-{
-  "rust": {
-    "command": "rust-analyzer",
-    "args": [],
-    "extensionToLanguage": {
-      ".rs": "rust"
-    },
-    "transport": "stdio"
-  }
-}
-```
+**Recommendation:** Skip LSP integration entirely for now. The skills-based approach (generating platform knowledge from documentation) is the reliable path. Revisit LSP when Anthropic resolves the underlying infrastructure issues.
 
-**WASM target consideration:** rust-analyzer supports `wasm32-unknown-unknown` targets. It reads `Cargo.toml` and `.cargo/config.toml` to determine the build target. Our project already has the WASM target configured, so rust-analyzer should provide correct diagnostics for web-sys and wasm-bindgen code.
+**Monitor:** [Issue #15235](https://github.com/anthropics/claude-code/issues/15235) (official plugins empty), [Issue #13952](https://github.com/anthropics/claude-code/issues/13952) (race condition)
 
-**Prerequisite:** `rust-analyzer` must be in PATH. If you have VS Code + rust-analyzer extension, it's likely already installed. Otherwise: `rustup component add rust-analyzer`.
-
-**Installation:**
-```
-claude /plugin marketplace add Piebald-AI/claude-code-lsps
-# Then enable rust-analyzer from the marketplace browser
-```
-
-_Sources: [Piebald-AI/claude-code-lsps](https://github.com/Piebald-AI/claude-code-lsps), [zircote/rust-lsp](https://github.com/zircote/rust-lsp), [Claude Code LSP Issue #741](https://github.com/anthropics/claude-code/issues/741)_
+_Sources: [anthropics/claude-code Issues](https://github.com/anthropics/claude-code/issues), [Piebald-AI/claude-code-lsps](https://github.com/Piebald-AI/claude-code-lsps), [rust-analyzer#3592](https://github.com/rust-lang/rust-analyzer/issues/3592)_
 
 ### Integration with BMAD Workflow
 
@@ -338,7 +320,7 @@ The table below maps our documented Common Pitfalls (from `project-context.md`) 
 | `<A href="/path">` ignores router base | Leptos Router 0.8 specific behavior | **Leptos Router skill** | HIGH |
 | `addModule()` ignores `<base href>` | Browser AudioWorklet spec behavior | **Web Audio skill** (manual, from MDN/spec) | MEDIUM |
 | Bare `tr!()` outside reactive context | leptos-i18n reactive tracking rules | **leptos-i18n skill** (from crate docs) | MEDIUM |
-| web-sys feature flags guessing | API surface opt-in not documented in training data | **web-sys skill** (from docs.rs/web-sys) + **rust-analyzer LSP** | HIGH |
+| web-sys feature flags guessing | API surface opt-in not documented in training data | **web-sys skill** (from docs.rs/web-sys) | HIGH |
 | wasm-bindgen API signature guessing | Stale training data | **wasm-bindgen skill** (from rustwasm.github.io) | HIGH |
 
 **Summary:** 8 of 11 pitfalls are directly addressable. The 3 remaining are either general browser knowledge or highly specific edge cases that would need to be captured as project-specific rules (already in `project-context.md`).
@@ -355,15 +337,15 @@ The table below maps our documented Common Pitfalls (from `project-context.md`) 
 │  Layer 2: Auto-triggered platform skills        │  ← Loaded on context match
 │  (leptos, web-sys, wasm-bindgen, trunk, etc.)   │
 ├─────────────────────────────────────────────────┤
-│  Layer 3: LSP diagnostics (rust-analyzer)       │  ← Real-time compiler feedback
-│  (type errors, borrow check, Send+Sync)         │
-├─────────────────────────────────────────────────┤
-│  Layer 4: BMAD workflow skills                  │  ← User-invoked on demand
+│  Layer 3: BMAD workflow skills                  │  ← User-invoked on demand
 │  (/dev-story, /code-review, /sprint-status)     │
+├─────────────────────────────────────────────────┤
+│  Layer 4 (FUTURE): LSP diagnostics             │  ← NOT VIABLE as of March 2026
+│  (blocked by broken plugin infrastructure)      │
 └─────────────────────────────────────────────────┘
 ```
 
-**Layer 1** (project-specific rules) catches patterns unique to peach-web. **Layer 2** (platform skills) provides current API knowledge that training data gets wrong. **Layer 3** (LSP) catches type errors in real-time. **Layer 4** (BMAD) orchestrates the development process. Each layer addresses a different failure mode.
+**Layer 1** (project-specific rules) catches patterns unique to peach-web. **Layer 2** (platform skills) provides current API knowledge that training data gets wrong. **Layer 3** (BMAD) orchestrates the development process. **Layer 4** (LSP) would catch type errors in real-time but is not viable until Anthropic fixes the plugin infrastructure. Layers 1 and 2 are the actionable investment.
 
 ### Context Window Budget Considerations
 
@@ -372,8 +354,6 @@ Skills consume context window tokens. With Opus 4.6's 200K token window (or 1M o
 - **Skill descriptions** (loaded at startup to enable auto-triggering): 15K character limit per skill. With ~6 platform skills, this adds ~5-10K tokens overhead.
 - **Skill content** (loaded on demand): Only the triggered skill's SKILL.md is loaded. A well-structured Leptos skill might be 10-20K tokens.
 - **Supporting files**: Loaded only when referenced. Large API reference sections should be split into separate files by topic.
-- **LSP diagnostics**: Minimal token cost — structured diagnostic output.
-
 **Design principle:** Keep SKILL.md files focused and concise. Put detailed API reference in supporting files. Use progressive disclosure — only load what's needed for the current task.
 
 **Risk:** If multiple skills trigger simultaneously (editing a Leptos component that uses web-sys, wasm-bindgen, and Tailwind), total context injection could be 40-60K tokens. Mitigate by:
@@ -381,29 +361,15 @@ Skills consume context window tokens. With Opus 4.6's 200K token window (or 1M o
 2. Splitting large skills into focused sub-skills
 3. Using the `description` field precisely so only truly relevant skills trigger
 
-### Rust-Analyzer LSP: Known Limitations for WASM
+### Rust-Analyzer LSP: Not Viable (March 2026)
 
-**Critical finding:** rust-analyzer has documented issues with `wasm32-unknown-unknown` targets and `web-sys`:
-- `cargo check` must be configured with `--target wasm32-unknown-unknown` for correct diagnostics
-- web-sys features can cause rust-analyzer to report false errors if the target is not set correctly
-- Configuration requires `.cargo/config.toml` or rust-analyzer workspace settings
+**Status:** Claude Code's LSP plugin infrastructure is broken as of March 2026. Even if it worked, rust-analyzer has upstream issues with web-sys on wasm32 targets ([rust-analyzer#3592](https://github.com/rust-lang/rust-analyzer/issues/3592), [wasm-bindgen#4448](https://github.com/wasm-bindgen/wasm-bindgen/issues/4448)).
 
-**Mitigation:** Configure rust-analyzer with the correct target in the project:
+**Two layers of problems:**
+1. **Claude Code layer:** Official LSP plugins are empty (README-only), race condition on plugin loading, session resume kills LSP servers. The Piebald-AI workaround requires patching Claude Code via `npx tweakcc --apply`.
+2. **rust-analyzer layer:** Even with a working LSP integration, `cargo check` must target `wasm32-unknown-unknown` for correct diagnostics, and web-sys features can cause false errors.
 
-```toml
-# .cargo/config.toml (already exists in peach-web)
-[build]
-target = "wasm32-unknown-unknown"
-```
-
-Or via rust-analyzer settings:
-```json
-{
-  "rust-analyzer.cargo.target": "wasm32-unknown-unknown"
-}
-```
-
-**Confidence:** MEDIUM. The LSP plugin will provide value for general Rust diagnostics, but web-sys-specific diagnostics may be unreliable. This is a known upstream issue ([rust-analyzer#3592](https://github.com/rust-lang/rust-analyzer/issues/3592), [wasm-bindgen#4448](https://github.com/wasm-bindgen/wasm-bindgen/issues/4448)).
+**Recommendation:** Do not invest time here. Monitor for fixes and revisit when the Claude Code plugin infrastructure matures. Skills-based platform knowledge (Layer 2) is the reliable alternative.
 
 ### Skills That Don't Exist Yet (Must Be Generated)
 
@@ -421,7 +387,7 @@ Or via rust-analyzer settings:
 | Skill | Source | Priority | Rationale |
 |---|---|---|---|
 | Tailwind CSS v4 | blencorp/claude-code-kit | P1 | Utility classes, theme config |
-| Rust LSP (rust-analyzer) | Piebald-AI/claude-code-lsps | P1 | Real-time diagnostics (with WASM caveats) |
+| ~~Rust LSP (rust-analyzer)~~ | ~~Piebald-AI/claude-code-lsps~~ | ~~P1~~ | **NOT VIABLE** — requires patching Claude Code, broken plugin infrastructure |
 
 _Sources: [rust-analyzer#3592](https://github.com/rust-lang/rust-analyzer/issues/3592), [wasm-bindgen#4448](https://github.com/wasm-bindgen/wasm-bindgen/issues/4448), [Context Windows Docs](https://platform.claude.com/docs/en/build-with-claude/context-windows), [Claude Code Context Guide](https://www.eesel.ai/blog/claude-code-context-window-size), [Leptos Releases](https://github.com/leptos-rs/leptos/releases)_
 
@@ -429,27 +395,15 @@ _Sources: [rust-analyzer#3592](https://github.com/rust-lang/rust-analyzer/issues
 
 ### Phase 1: Quick Wins (Same Day)
 
-These require no generation — install existing tools:
-
-**1a. Install Rust LSP plugin**
-```bash
-# Prerequisite: rust-analyzer in PATH
-rustup component add rust-analyzer
-
-# Add marketplace and enable plugin
-claude /plugin marketplace add Piebald-AI/claude-code-lsps
-# Then: /plugins → Marketplaces → enable rust-analyzer
-```
-
-**1b. Install Tailwind CSS v4 skill**
+**1a. Install Tailwind CSS v4 skill**
 ```bash
 npx claude-code-kit install tailwindcss
 # Auto-detects Tailwind in project, activates on styling tasks
 ```
 
-**Verification:** Start a Claude Code session, edit a `.rs` file with a deliberate type error. Confirm rust-analyzer flags it. Edit a Tailwind class — confirm the skill context appears.
+**Verification:** Start a Claude Code session, edit a Tailwind class — confirm the skill context appears.
 
-**Risk:** rust-analyzer may produce false positives on web-sys types (see WASM caveats above). Monitor and configure `rust-analyzer.cargo.target` if needed.
+**~~1b. Install Rust LSP plugin~~** — **REMOVED.** Deeper investigation revealed Claude Code's LSP plugin infrastructure is broken as of March 2026. Official plugins are empty (README-only), and the Piebald-AI workaround requires patching Claude Code via `npx tweakcc --apply`. Not recommended. See the LSP correction section above for details.
 
 ### Phase 2: Generate Platform Skills (1-2 Hours)
 
@@ -568,7 +522,7 @@ _Sources: [Improving Skill-Creator](https://claude.com/blog/improving-skill-crea
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | docs.rs scraping fails (JS rendering) | MEDIUM | HIGH | Start with book.leptos.dev (static HTML). For docs.rs, try `--renderer` options or use GitHub source docs directly |
-| rust-analyzer false positives on web-sys | MEDIUM | MEDIUM | Configure cargo target; disable specific diagnostics if noisy |
+| ~~rust-analyzer false positives on web-sys~~ | N/A | N/A | **REMOVED** — LSP not viable; skip entirely until Anthropic fixes plugin infra |
 | Skills inject too much context | LOW | MEDIUM | Keep each skill <15K tokens; use progressive disclosure with supporting files |
 | Skills become stale after framework updates | MEDIUM | HIGH | Schedule quarterly re-scrape; subscribe to Leptos release notifications |
 | Auto-activation hook triggers wrong skill | LOW | LOW | Test with diverse prompts; refine keyword/pattern matching |
@@ -578,7 +532,7 @@ _Sources: [Improving Skill-Creator](https://claude.com/blog/improving-skill-crea
 | Item | Cost | Notes |
 |---|---|---|
 | Skill_Seekers | Free (open source) | `--enhance-local` uses Claude Code Max subscription |
-| Piebald-AI LSP plugins | Free (open source) | rust-analyzer already available via rustup |
+| ~~Piebald-AI LSP plugins~~ | N/A | **NOT VIABLE** — requires patching Claude Code |
 | blencorp/claude-code-kit | Free (open source) | Tailwind kit only |
 | Context window overhead | ~5-15K tokens per session | From skill descriptions + triggered skill content |
 | Maintenance time | ~1-2 hours quarterly | Re-scrape documentation on major releases |
@@ -587,8 +541,7 @@ _Sources: [Improving Skill-Creator](https://claude.com/blog/improving-skill-crea
 
 1. **Reduction in platform-knowledge pitfalls:** Track Common Pitfalls table entries caused by stale API knowledge in code reviews. Target: 50% reduction in first quarter.
 2. **Skill activation rate:** Monitor how often platform skills auto-trigger during dev-story workflows. Target: >80% of web crate editing sessions.
-3. **Build error reduction:** Track first-attempt compilation success rate before/after LSP plugin. Target: measurable improvement.
-4. **Eval pass rate:** Maintain >90% pass rate on skill evals across Claude model updates.
+3. **Eval pass rate:** Maintain >90% pass rate on skill evals across Claude model updates.
 
 ## Research Synthesis
 
@@ -598,7 +551,7 @@ The Claude Code skills ecosystem as of March 2026 is large (334+ official skills
 
 This gap is bridgeable. The research identified a practical 4-phase approach:
 
-1. **Install existing tools** (same day): Rust LSP plugin for real-time compiler diagnostics, Tailwind v4 skill for styling context
+1. **Install existing tools** (same day): Tailwind v4 skill for styling context
 2. **Generate custom skills** (1-2 hours): Use Skill_Seekers to convert Leptos, web-sys, wasm-bindgen, and Trunk documentation into auto-triggered skills
 3. **Wire auto-activation** (30 min): Hooks + skill-rules.json ensure skills trigger reliably when editing relevant code
 4. **Validate and maintain** (ongoing): Eval-based testing, quarterly re-scrape on framework releases
@@ -606,18 +559,18 @@ This gap is bridgeable. The research identified a practical 4-phase approach:
 **Key Findings:**
 
 - 8 of 11 documented Common Pitfalls are directly addressable by platform knowledge skills
-- rust-analyzer LSP works for general Rust diagnostics but has known upstream issues with web-sys on wasm32 targets — set expectations accordingly
+- **Claude Code's LSP plugin infrastructure is broken as of March 2026** — official plugins are empty, community workarounds require patching Claude Code, and multiple open issues remain unresolved. Do not invest time here until Anthropic fixes the underlying issues.
 - Skills consume context window tokens; design for progressive disclosure (main SKILL.md <15K tokens, details in supporting files)
 - All recommended tools are free and open source; `--enhance-local` uses existing Claude Code Max subscription
-- The layered architecture (project rules → platform skills → LSP → BMAD workflows) addresses different failure modes without overlap
+- The layered architecture (project rules → platform skills → BMAD workflows) addresses different failure modes without overlap
 
 **Top Recommendations:**
 
 1. Generate Leptos and Leptos Router skills first (P0) — these cover the most frequent pitfall categories
-2. Install rust-analyzer LSP plugin with `wasm32-unknown-unknown` target configured
-3. Set up auto-activation hooks early — skills that don't trigger are useless
-4. Keep skills focused and small; split large doc sets into topic-specific sub-skills
-5. Re-evaluate skill content quarterly as Leptos continues active development (currently at 0.8.17)
+2. Set up auto-activation hooks early — skills that don't trigger are useless
+3. Keep skills focused and small; split large doc sets into topic-specific sub-skills
+4. Re-evaluate skill content quarterly as Leptos continues active development (currently at 0.8.17)
+5. Monitor Claude Code LSP issues ([#15235](https://github.com/anthropics/claude-code/issues/15235), [#13952](https://github.com/anthropics/claude-code/issues/13952)) — revisit when fixed
 
 ### Table of Contents
 
@@ -681,7 +634,15 @@ This gap is bridgeable. The research identified a practical 4-phase approach:
 - [wasm-bindgen Guide](https://rustwasm.github.io/wasm-bindgen/) — JS interop
 - [Trunk Guide](https://trunkrs.dev/) — WASM bundler
 
-**Known Issues:**
+**Known Issues (Claude Code LSP — all blocking):**
+- [claude-code#15235](https://github.com/anthropics/claude-code/issues/15235) — All official LSP plugins contain only README.md, no config
+- [claude-code#15359](https://github.com/anthropics/claude-code/issues/15359) — Official LSP plugins missing implementation code
+- [claude-code#13952](https://github.com/anthropics/claude-code/issues/13952) — Race condition: LSP Manager loads before plugins
+- [claude-code#24171](https://github.com/anthropics/claude-code/issues/24171) — LSP servers not restarted after session resume
+- [claude-code#14803](https://github.com/anthropics/claude-code/issues/14803) — "No LSP server available" despite correct config
+- [claude-plugins-official#379](https://github.com/anthropics/claude-plugins-official/issues/379) — All LSP plugins missing .lsp.json
+
+**Known Issues (rust-analyzer + WASM — secondary, blocked by above):**
 - [rust-analyzer#3592](https://github.com/rust-lang/rust-analyzer/issues/3592) — cargo check fails with web-sys on wasm32
 - [wasm-bindgen#4448](https://github.com/wasm-bindgen/wasm-bindgen/issues/4448) — rust-analyzer fails on web-sys
 
@@ -690,9 +651,11 @@ This gap is bridgeable. The research identified a practical 4-phase approach:
 **Confidence levels:**
 - Skills ecosystem structure and installation: HIGH (verified against official docs)
 - Skill_Seekers capability and workflow: HIGH (PyPI package, active releases, documentation site)
-- rust-analyzer LSP effectiveness for WASM: MEDIUM (known upstream issues with web-sys)
+- Claude Code LSP plugin infrastructure: **BROKEN** (verified via multiple open GitHub issues — official plugins are empty, race conditions, session resume failures)
 - Auto-activation hook reliability: MEDIUM (community-driven pattern, not officially supported)
 - Pitfall coverage estimate (8/11): HIGH (each mapping verified against specific skill content)
+
+**Post-publication correction:** The initial research overstated the viability of LSP integration. Blog posts and marketing materials present LSP as a working feature, but GitHub issues reveal the official plugins are non-functional and the community workaround (Piebald-AI) requires patching Claude Code. This was caught during user review and corrected throughout the document.
 
 **Limitations:**
 - No hands-on testing was performed — all findings are from documentation and web research
@@ -705,4 +668,4 @@ This gap is bridgeable. The research identified a practical 4-phase approach:
 **Technical Research Completion Date:** 2026-03-13
 **Research Type:** Technical — Claude Code Skills & AI Tooling for Platform Knowledge
 **Source Verification:** All claims cited with current (2026) sources
-**Confidence Level:** HIGH for core findings, MEDIUM for WASM-specific LSP diagnostics
+**Confidence Level:** HIGH for skills-based findings, BROKEN for LSP integration (corrected post-review)
