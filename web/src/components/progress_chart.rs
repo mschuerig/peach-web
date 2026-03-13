@@ -212,6 +212,7 @@ pub fn ProgressChart(
     buckets: Vec<TimeBucket>,
     optimal_baseline: f64,
     unit_label: &'static str,
+    #[prop(into)] chart_label: String,
 ) -> impl IntoView {
     if buckets.len() <= 1 {
         return view! { <div /> }.into_any();
@@ -235,7 +236,7 @@ pub fn ProgressChart(
     if is_scrollable {
         Effect::new(move |_| {
             if container_ref.get().is_some() {
-                wasm_bindgen_futures::spawn_local(async move {
+                leptos::task::spawn_local_scoped_with_cancellation(async move {
                     gloo_timers::future::TimeoutFuture::new(0).await;
                     if let Some(el) = container_ref.get() {
                         let element: &web_sys::Element = el.as_ref();
@@ -257,11 +258,21 @@ pub fn ProgressChart(
                     wasm_bindgen::closure::Closure::<dyn Fn()>::new(move || {
                         selected_bucket.set(None);
                     });
+                let scroll_fn: JsValue = closure.as_ref().clone();
                 let _ = target.add_event_listener_with_callback(
                     "scroll",
-                    closure.as_ref().unchecked_ref(),
+                    scroll_fn.unchecked_ref(),
                 );
-                closure.forget();
+                // Keep closure alive for component lifetime
+                let _scroll_closure = StoredValue::new_local(closure);
+                // Clean up listener on component unmount
+                let target_owned: web_sys::EventTarget = target.clone();
+                on_cleanup(move || {
+                    let _ = target_owned.remove_event_listener_with_callback(
+                        "scroll",
+                        scroll_fn.unchecked_ref(),
+                    );
+                });
             }
         });
     }
@@ -667,9 +678,9 @@ pub fn ProgressChart(
     let bucket_x_positions: Vec<f64> = (0..bucket_count).map(|i| x(i as f64)).collect();
     let buckets_for_annotation = buckets.clone();
 
-    // Popover dimensions in SVG viewBox units
-    let popover_w = 60.0_f64;
-    let popover_h = 52.0_f64;
+    // Popover dimensions in SVG viewBox units (sized for longer locale text, e.g. German)
+    let popover_w = 72.0_f64;
+    let popover_h = 56.0_f64;
 
     let selection_line_and_popover = move || {
         selected_bucket.get().map(|idx| {
@@ -680,11 +691,12 @@ pub fn ProgressChart(
             let line_y1 = format!("{MARGIN_TOP:.1}");
             let line_y2 = format!("{:.1}", MARGIN_TOP + inner_h);
 
-            // Popover position with overflow resolution (Task 6)
+            // Popover position with overflow resolution (Task 6) — both axes
             let fo_x = (bx - popover_w / 2.0)
                 .max(MARGIN_LEFT)
                 .min(MARGIN_LEFT + inner_w - popover_w);
-            let fo_y = MARGIN_TOP + 2.0;
+            let fo_y = (MARGIN_TOP + 2.0)
+                .min(MARGIN_TOP + inner_h - popover_h);
 
             // Date formatting (Task 5)
             let date_str = format_annotation_date(bucket);
@@ -763,7 +775,7 @@ pub fn ProgressChart(
             width=svg_width
             height="100%"
             role="img"
-            aria-label=unit_label
+            aria-label=chart_label.clone()
             preserveAspectRatio="none"
             on:click=on_chart_click
         >

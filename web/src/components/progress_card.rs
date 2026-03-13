@@ -105,6 +105,7 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
                         buckets=buckets
                         optimal_baseline=config.optimal_baseline
                         unit_label=config.unit_label
+                        chart_label=card_aria.clone()
                     />
                 </div>
             }

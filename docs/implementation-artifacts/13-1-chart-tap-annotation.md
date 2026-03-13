@@ -1,6 +1,6 @@
 # Story 13.1: Chart Tap Annotation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -204,7 +204,7 @@ Claude Opus 4.6
 - Selection line rendered as dashed vertical line at 50% opacity (80% in increased contrast mode)
 - Popover uses `<foreignObject>` for HTML-in-SVG with frosted glass styling matching existing card pattern
 - Zone-specific date formatting: monthly (MMM yyyy), daily (E MMM d), session (HH:mm)
-- Horizontal overflow resolution clamps popover within chart bounds
+- Overflow resolution clamps popover within chart bounds on both axes
 - Scroll event listener dismisses annotation on scrollable charts
 - Added `format_decimal_1_chart()` local to progress_chart.rs (mirrors `format_decimal_1()` in progress_card.rs)
 - SVG element changed from `aria-hidden="true"` to `role="img"` with `aria-label` per AC #11
@@ -213,6 +213,7 @@ Claude Opus 4.6
 ### File List
 
 - web/src/components/progress_chart.rs (modified)
+- web/src/components/progress_card.rs (modified)
 - input.css (modified)
 - web/locales/en/main.ftl (modified)
 - web/locales/de/main.ftl (modified)
@@ -222,3 +223,4 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-13: Implemented story 13.1 — Chart Tap Annotation (all 10 tasks)
+- 2026-03-13: Code review fixes — scroll listener memory leak (H1), spawn_local lifecycle (H2), popover dimensions for i18n (M1), vertical overflow clamping (M2), descriptive aria-label via chart_label prop (M3)
