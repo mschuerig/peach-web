@@ -133,3 +133,11 @@ development_status:
   11-1-ui-consistency-and-sound-level: done
   11-2-headline-layout-and-modal-consistency: done
   epic-11-retrospective: optional
+
+  # Epic 12: Profile Progress Charts
+  epic-12: in-progress
+  12-1-progress-data-pipeline: ready-for-dev
+  12-2-profile-screen-layout-and-chart-cards: backlog
+  12-3-chart-rendering: backlog
+  12-4-chart-scrolling: backlog
+  epic-12-retrospective: optional
