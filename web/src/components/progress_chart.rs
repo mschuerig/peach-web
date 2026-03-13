@@ -621,7 +621,7 @@ pub fn ProgressChart(
                     x="4"
                     y=format!("{:.1}", ty + 3.0)
                     text-anchor="start"
-                    font-size="9"
+                    font-size="13"
                     fill="currentColor"
                     opacity="0.6"
                 >
@@ -823,7 +823,7 @@ pub fn ProgressChart(
                             x=format!("{lx:.1}")
                             y=ly
                             text-anchor="middle"
-                            font-size="9"
+                            font-size="13"
                             fill="currentColor"
                             opacity="0.6"
                         >
@@ -842,7 +842,7 @@ pub fn ProgressChart(
                             x=format!("{lx:.1}")
                             y=ly
                             text-anchor="middle"
-                            font-size="9"
+                            font-size="13"
                             fill="currentColor"
                             opacity="0.5"
                         >
