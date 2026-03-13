@@ -243,7 +243,7 @@ pub fn ProgressChart(
                     // Suppress if within 1 index of a zone transition
                     let near_transition = zone_transition_indices
                         .iter()
-                        .any(|&t| (boundary_idx - t as f64).abs() <= 1.0);
+                        .any(|&t| i.abs_diff(t) <= 1);
                     if !near_transition {
                         divider_xs.push(boundary_idx);
                     }
@@ -442,8 +442,7 @@ pub fn ProgressChart(
                 view! {
                     <path
                         d=d
-                        class="chart-stddev-band"
-                        fill="rgb(96, 165, 250)"
+                        class="chart-stddev-band fill-blue-500 dark:fill-blue-400"
                         opacity="0.15"
                     />
                 }

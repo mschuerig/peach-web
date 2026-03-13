@@ -18,6 +18,17 @@
     }
 }
 
+/* Daily zone uses secondary background tint (gray instead of currentColor) */
+.chart-zone-bg-secondary {
+    fill: rgb(107, 114, 128);
+}
+
+@media (prefers-color-scheme: dark) {
+    .chart-zone-bg-secondary {
+        fill: rgb(156, 163, 175);
+    }
+}
+
 /* Chart increased contrast overrides */
 @media (prefers-contrast: more) {
     .chart-zone-bg { opacity: 0.12; }

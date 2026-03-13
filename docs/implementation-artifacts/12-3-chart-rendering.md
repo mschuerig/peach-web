@@ -1,6 +1,6 @@
 # Story 12.3: Chart Rendering
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -450,3 +450,4 @@ None — clean implementation with zero compilation issues.
 ### Change Log
 
 - 2026-03-13: Implemented all 13 tasks for Story 12.3 Chart Rendering. Full SVG chart overhaul with 6 rendering layers, zone detection, session bridge, locale-aware labels, year labels, and increased contrast CSS.
+- 2026-03-13: Code review fixes — (H1) Fixed year boundary suppression off-by-half comparing mixed coordinate spaces, now uses `i.abs_diff(t) <= 1`. (M1) Added CSS rules for `.chart-zone-bg-secondary` to differentiate daily zone background. (M2) Fixed stddev band fill color: was hardcoded dark-mode blue, now uses Tailwind `fill-blue-500 dark:fill-blue-400`.
