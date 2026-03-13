@@ -132,7 +132,7 @@ pub fn HelpModal(
             on:close=on_dialog_close
             class="rounded-lg p-0 max-w-lg w-full mx-auto bg-white text-gray-900 backdrop:bg-transparent dark:bg-gray-800 dark:text-gray-100 max-h-[85vh]"
         >
-            <div class="flex flex-col h-full p-6">
+            <div class="flex flex-col max-h-[85vh] p-6">
                 <div class="flex items-center gap-2 mb-4">
                     <div class="flex-1 flex items-center">
                         <button
@@ -146,7 +146,7 @@ pub fn HelpModal(
                     <h2 class="shrink min-w-0 text-center text-xl font-bold truncate">{move || title.get()}</h2>
                     <div class="flex-1"></div>
                 </div>
-                <div class="overflow-y-auto flex-1">
+                <div class="overflow-y-auto flex-1 min-h-0">
                     <HelpContent sections=sections />
                 </div>
             </div>
