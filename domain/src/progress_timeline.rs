@@ -115,8 +115,7 @@ impl ModeState {
         let mut ewma = self.ewma_buckets[0].mean;
 
         for i in 1..self.ewma_buckets.len() {
-            let dt =
-                self.ewma_buckets[i].period_start - self.ewma_buckets[i - 1].period_start;
+            let dt = self.ewma_buckets[i].period_start - self.ewma_buckets[i - 1].period_start;
             let alpha = 1.0 - (-f64::ln(2.0) * dt / halflife).exp();
             ewma = alpha * self.ewma_buckets[i].mean + (1.0 - alpha) * ewma;
         }
@@ -358,11 +357,7 @@ impl ProgressTimeline {
     }
 
     /// Incrementally update from a new comparison record.
-    pub fn add_comparison(
-        &mut self,
-        record: &PitchComparisonRecord,
-        start_of_today: f64,
-    ) {
+    pub fn add_comparison(&mut self, record: &PitchComparisonRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
         for mode in TrainingMode::ALL {
             if let Some(metric) = mode.extract_comparison_metric(record)
@@ -374,11 +369,7 @@ impl ProgressTimeline {
     }
 
     /// Incrementally update from a new pitch matching record.
-    pub fn add_matching(
-        &mut self,
-        record: &PitchMatchingRecord,
-        start_of_today: f64,
-    ) {
+    pub fn add_matching(&mut self, record: &PitchMatchingRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
         for mode in TrainingMode::ALL {
             if let Some(metric) = mode.extract_matching_metric(record)
@@ -503,10 +494,7 @@ fn build_display_buckets(
 
 /// Build EWMA session buckets from sorted (timestamp, metric) pairs.
 /// Pure 30-min gap grouping with NO zone logic.
-fn build_ewma_session_buckets(
-    points: &[(f64, f64)],
-    session_gap_secs: f64,
-) -> Vec<TimeBucket> {
+fn build_ewma_session_buckets(points: &[(f64, f64)], session_gap_secs: f64) -> Vec<TimeBucket> {
     if points.is_empty() {
         return Vec::new();
     }
@@ -929,10 +917,7 @@ mod tests {
         let ts1 = "2026-01-10T12:00:00Z";
         let ts2 = "2026-01-20T15:00:00Z";
 
-        let records = vec![
-            make_comparison(0, 30.0, ts1),
-            make_comparison(0, 20.0, ts2),
-        ];
+        let records = vec![make_comparison(0, 30.0, ts1), make_comparison(0, 20.0, ts2)];
         tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
@@ -954,10 +939,7 @@ mod tests {
         let ts1 = "2026-01-15T12:00:00Z";
         let ts2 = "2026-02-15T12:00:00Z";
 
-        let records = vec![
-            make_comparison(0, 30.0, ts1),
-            make_comparison(0, 20.0, ts2),
-        ];
+        let records = vec![make_comparison(0, 30.0, ts1), make_comparison(0, 20.0, ts2)];
         tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
@@ -1311,11 +1293,7 @@ mod tests {
             incr_buckets.len()
         );
         for (i, (rb, ib)) in rebuild_buckets.iter().zip(incr_buckets.iter()).enumerate() {
-            assert_eq!(
-                rb.bucket_size, ib.bucket_size,
-                "bucket {} size mismatch",
-                i
-            );
+            assert_eq!(rb.bucket_size, ib.bucket_size, "bucket {} size mismatch", i);
             assert!(
                 (rb.mean - ib.mean).abs() < 1e-10,
                 "bucket {} mean mismatch: rebuild={}, incremental={}",

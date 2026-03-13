@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use leptos::prelude::*;
-use leptos_fluent::{move_tr, tr, I18n};
+use leptos_fluent::{I18n, move_tr, tr};
 use send_wrapper::SendWrapper;
 
 use crate::app::base_href;

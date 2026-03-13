@@ -186,9 +186,7 @@ impl PitchComparisonObserver for ProgressTimelineObserver {
     fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
         let record = PitchComparisonRecord::from_completed(completed);
         let start_of_today = compute_start_of_today();
-        self.0
-            .borrow_mut()
-            .add_comparison(&record, start_of_today);
+        self.0.borrow_mut().add_comparison(&record, start_of_today);
     }
 }
 
@@ -196,8 +194,6 @@ impl PitchMatchingObserver for ProgressTimelineObserver {
     fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
         let record = PitchMatchingRecord::from_completed(completed);
         let start_of_today = compute_start_of_today();
-        self.0
-            .borrow_mut()
-            .add_matching(&record, start_of_today);
+        self.0.borrow_mut().add_matching(&record, start_of_today);
     }
 }

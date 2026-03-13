@@ -240,8 +240,7 @@ pub fn ProgressChart(
                     gloo_timers::future::TimeoutFuture::new(0).await;
                     if let Some(el) = container_ref.get() {
                         let element: &web_sys::Element = el.as_ref();
-                        element
-                            .set_scroll_left(element.scroll_width() - element.client_width());
+                        element.set_scroll_left(element.scroll_width() - element.client_width());
                     }
                 });
             }
@@ -254,24 +253,19 @@ pub fn ProgressChart(
             if let Some(el) = container_ref.get() {
                 let element: &web_sys::Element = el.as_ref();
                 let target: &web_sys::EventTarget = element.as_ref();
-                let closure =
-                    wasm_bindgen::closure::Closure::<dyn Fn()>::new(move || {
-                        selected_bucket.set(None);
-                    });
+                let closure = wasm_bindgen::closure::Closure::<dyn Fn()>::new(move || {
+                    selected_bucket.set(None);
+                });
                 let scroll_fn: JsValue = closure.as_ref().clone();
-                let _ = target.add_event_listener_with_callback(
-                    "scroll",
-                    scroll_fn.unchecked_ref(),
-                );
+                let _ =
+                    target.add_event_listener_with_callback("scroll", scroll_fn.unchecked_ref());
                 // Keep closure alive for component lifetime
                 let _scroll_closure = StoredValue::new_local(closure);
                 // Clean up listener on component unmount
                 let target_owned: web_sys::EventTarget = target.clone();
                 on_cleanup(move || {
-                    let _ = target_owned.remove_event_listener_with_callback(
-                        "scroll",
-                        scroll_fn.unchecked_ref(),
-                    );
+                    let _ = target_owned
+                        .remove_event_listener_with_callback("scroll", scroll_fn.unchecked_ref());
                 });
             }
         });
@@ -315,18 +309,14 @@ pub fn ProgressChart(
         .max(1.0);
 
     // Index-based X mapping — AC 1
-    let x = |index: f64| -> f64 {
-        MARGIN_LEFT + (index + 0.5) / bucket_count as f64 * inner_w
-    };
+    let x = |index: f64| -> f64 { MARGIN_LEFT + (index + 0.5) / bucket_count as f64 * inner_w };
     let y = |value: f64| -> f64 { MARGIN_TOP + inner_h - (value / y_max) * inner_h };
 
     // Session detection
     let first_session_index = buckets
         .iter()
         .position(|b| b.bucket_size == BucketSize::Session);
-    let has_non_session = buckets
-        .iter()
-        .any(|b| b.bucket_size != BucketSize::Session);
+    let has_non_session = buckets.iter().any(|b| b.bucket_size != BucketSize::Session);
     let session_only = first_session_index == Some(0) && !has_non_session;
 
     // Session bridge — AC 6
@@ -398,9 +388,8 @@ pub fn ProgressChart(
                 if curr_year != prev_year {
                     let boundary_idx = i as f64 - 0.5;
                     // Suppress if within 1 index of a zone transition
-                    let near_transition = zone_transition_indices
-                        .iter()
-                        .any(|&t| i.abs_diff(t) <= 1);
+                    let near_transition =
+                        zone_transition_indices.iter().any(|&t| i.abs_diff(t) <= 1);
                     if !near_transition {
                         divider_xs.push(boundary_idx);
                     }
@@ -531,11 +520,7 @@ pub fn ProgressChart(
             if label.is_empty() {
                 continue;
             }
-            if deduped
-                .last()
-                .map(|(_, l)| l != &label)
-                .unwrap_or(true)
-            {
+            if deduped.last().map(|(_, l)| l != &label).unwrap_or(true) {
                 deduped.push((xpos, label));
             }
         }
@@ -745,21 +730,24 @@ pub fn ProgressChart(
     // Task 10: Accessibility — live region content
     let buckets_for_a11y = buckets.clone();
     let live_region_text = move || {
-        selected_bucket.get().map(|idx| {
-            let bucket = &buckets_for_a11y[idx];
-            let date_str = format_annotation_date(bucket);
-            let mean_str = format_decimal_1_chart(bucket.mean);
-            let stddev_str = format_decimal_1_chart(bucket.stddev);
-            untrack(|| {
-                leptos_fluent::tr!("chart-annotation-summary", {
-                    "date" => date_str,
-                    "mean" => mean_str,
-                    "unit" => unit_label,
-                    "stddev" => stddev_str,
-                    "count" => bucket.record_count
+        selected_bucket
+            .get()
+            .map(|idx| {
+                let bucket = &buckets_for_a11y[idx];
+                let date_str = format_annotation_date(bucket);
+                let mean_str = format_decimal_1_chart(bucket.mean);
+                let stddev_str = format_decimal_1_chart(bucket.stddev);
+                untrack(|| {
+                    leptos_fluent::tr!("chart-annotation-summary", {
+                        "date" => date_str,
+                        "mean" => mean_str,
+                        "unit" => unit_label,
+                        "stddev" => stddev_str,
+                        "count" => bucket.record_count
+                    })
                 })
             })
-        }).unwrap_or_default()
+            .unwrap_or_default()
     };
 
     view! {
