@@ -2,3 +2,18 @@
 
 @source "./web/src/**/*.rs";
 @source "./domain/src/**/*.rs";
+
+/* High contrast: increase frosted glass card background opacity */
+@media (prefers-contrast: more) {
+    .progress-card {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border-color: rgba(0, 0, 0, 0.3) !important;
+    }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+    .progress-card {
+        background: rgba(17, 24, 39, 0.9) !important;
+        border-color: rgba(156, 163, 175, 0.5) !important;
+    }
+}

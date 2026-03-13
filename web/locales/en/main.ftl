@@ -117,7 +117,11 @@ matching-help-title = Pitch Matching Training
 ## Profile
 profile-title = Profile
 no-training-data = No training data yet. Start a training session to see your progress.
+profile-no-data-aria = Profile. No training data available.
+profile-showing-progress = Profile showing progress for: { $modes }
 progress-for = Progress for { $name }: { $ewma } cents, { $trend }
+progress-chart-for = Progress chart for { $name }
+current-trend = Current: { $ewma } cents, trend: { $trend }
 value-trend = { $ewma } cents, trend { $trend }
 
 ## Info

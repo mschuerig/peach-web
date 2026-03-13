@@ -117,7 +117,11 @@ matching-help-title = Tonhöhen-Training
 ## Profile
 profile-title = Profil
 no-training-data = Noch keine Trainingsdaten. Starte ein Training, um deinen Fortschritt zu sehen.
+profile-no-data-aria = Profil. Keine Trainingsdaten vorhanden.
+profile-showing-progress = Profil mit Fortschritt für: { $modes }
 progress-for = Fortschritt für { $name }: { $ewma } Cent, { $trend }
+progress-chart-for = Fortschrittsdiagramm für { $name }
+current-trend = Aktuell: { $ewma } Cent, Trend: { $trend }
 value-trend = { $ewma } Cent, Trend { $trend }
 
 ## Info

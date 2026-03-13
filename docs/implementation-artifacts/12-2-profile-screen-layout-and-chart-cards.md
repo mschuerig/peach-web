@@ -1,6 +1,6 @@
 # Story 12.2: Profile Screen Layout & Chart Cards
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -34,41 +34,41 @@ So that I can quickly see how I'm doing in each mode.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Refactor ProfileView to frosted-glass card layout (AC: 1, 2, 3)
-  - [ ] 1.1 Replace current `bg-gray-100 dark:bg-gray-800 rounded-xl` card style with frosted glass: `backdrop-blur-md bg-white/60 dark:bg-gray-900/60 rounded-xl` (CSS `backdrop-filter: blur(12px)`)
-  - [ ] 1.2 Ensure 16px gap between cards (`gap-4` or `space-y-4` in Tailwind)
-  - [ ] 1.3 Verify empty state: nav bar + help button visible, no cards when zero modes have data
-  - [ ] 1.4 Verify card ordering matches `TrainingMode::ALL` (unison comparison first, interval matching last)
+- [x] Task 1: Refactor ProfileView to frosted-glass card layout (AC: 1, 2, 3)
+  - [x] 1.1 Replace current `bg-gray-100 dark:bg-gray-800 rounded-xl` card style with frosted glass: `backdrop-blur-md bg-white/60 dark:bg-gray-900/60 rounded-xl` (CSS `backdrop-filter: blur(12px)`)
+  - [x] 1.2 Ensure 16px gap between cards (`gap-4` or `space-y-4` in Tailwind)
+  - [x] 1.3 Verify empty state: nav bar + help button visible, no cards when zero modes have data
+  - [x] 1.4 Verify card ordering matches `TrainingMode::ALL` (unison comparison first, interval matching last)
 
-- [ ] Task 2: Implement locale-aware number formatting (AC: 6)
-  - [ ] 2.1 Create a `format_decimal_1` helper in `web/src/` (e.g. in a utils module or inline in progress_card.rs) that calls `Intl.NumberFormat` via `js_sys`/`web_sys` with `{minimumFractionDigits: 1, maximumFractionDigits: 1}` using the browser's current locale
-  - [ ] 2.2 Use this helper for EWMA and stddev display values in the headline
+- [x] Task 2: Implement locale-aware number formatting (AC: 6)
+  - [x] 2.1 Create a `format_decimal_1` helper in `web/src/` (e.g. in a utils module or inline in progress_card.rs) that calls `Intl.NumberFormat` via `js_sys`/`web_sys` with `{minimumFractionDigits: 1, maximumFractionDigits: 1}` using the browser's current locale
+  - [x] 2.2 Use this helper for EWMA and stddev display values in the headline
 
-- [ ] Task 3: Update ProgressCard headline row (AC: 4, 5, 10)
-  - [ ] 3.1 Left side: mode display name using `move_tr!()` with the i18n key from `mode.config().display_name`; use headline-appropriate Tailwind class (`text-base font-semibold` or similar with `rem` units)
-  - [ ] 3.2 Right side: EWMA value formatted via `format_decimal_1`, styled as title 2 bold (`text-xl font-bold`)
-  - [ ] 3.3 Right side: stddev of most recent bucket via `timeline.latest_bucket_stddev(mode)`, formatted as "±{value}" in caption secondary color (`text-xs text-gray-500 dark:text-gray-400`)
-  - [ ] 3.4 Right side: trend arrow — use existing unicode arrows (↘ improving green, → stable gray, ↗ declining orange) with color classes; hide arrow entirely when `timeline.trend(mode)` returns `None`
-  - [ ] 3.5 Ensure all font sizes use rem/em, no hardcoded px for text
+- [x] Task 3: Update ProgressCard headline row (AC: 4, 5, 10)
+  - [x] 3.1 Left side: mode display name using `move_tr!()` with the i18n key from `mode.config().display_name`; use headline-appropriate Tailwind class (`text-base font-semibold` or similar with `rem` units)
+  - [x] 3.2 Right side: EWMA value formatted via `format_decimal_1`, styled as title 2 bold (`text-xl font-bold`)
+  - [x] 3.3 Right side: stddev of most recent bucket via `timeline.latest_bucket_stddev(mode)`, formatted as "±{value}" in caption secondary color (`text-xs text-gray-500 dark:text-gray-400`)
+  - [x] 3.4 Right side: trend arrow — use existing unicode arrows (↘ improving green, → stable gray, ↗ declining orange) with color classes; hide arrow entirely when `timeline.trend(mode)` returns `None`
+  - [x] 3.5 Ensure all font sizes use rem/em, no hardcoded px for text
 
-- [ ] Task 4: Add chart placeholder area (AC: 7)
-  - [ ] 4.1 Below the headline row, add a placeholder `<div>` with responsive height: `h-[180px] md:h-[240px]`
-  - [ ] 4.2 Style placeholder with subtle background to indicate chart area (e.g. `bg-gray-200/30 dark:bg-gray-700/30 rounded-lg`)
-  - [ ] 4.3 12px spacing between headline row and chart area (`mt-3` or equivalent)
+- [x] Task 4: Add chart placeholder area (AC: 7)
+  - [x] 4.1 Below the headline row, add a placeholder `<div>` with responsive height: `h-[180px] md:h-[240px]`
+  - [x] 4.2 Style placeholder with subtle background to indicate chart area (e.g. `bg-gray-200/30 dark:bg-gray-700/30 rounded-lg`)
+  - [x] 4.3 12px spacing between headline row and chart area (`mt-3` or equivalent)
 
-- [ ] Task 5: Add accessibility attributes (AC: 8, 9)
-  - [ ] 5.1 Scroll view container: compute `aria-label` dynamically based on which modes have `Active` state — format: "Profile showing progress for: {comma-separated mode display names}"
-  - [ ] 5.2 Each card: `role="group"` and `aria-label="Progress chart for {mode display name}"`
-  - [ ] 5.3 Each card: `aria-valuenow` or `aria-description` conveying "Current: {EWMA} cents, trend: {trend label}"
-  - [ ] 5.4 Empty state: aria-label "Profile. No training data available."
+- [x] Task 5: Add accessibility attributes (AC: 8, 9)
+  - [x] 5.1 Scroll view container: compute `aria-label` dynamically based on which modes have `Active` state — format: "Profile showing progress for: {comma-separated mode display names}"
+  - [x] 5.2 Each card: `role="group"` and `aria-label="Progress chart for {mode display name}"`
+  - [x] 5.3 Each card: `aria-valuenow` or `aria-description` conveying "Current: {EWMA} cents, trend: {trend label}"
+  - [x] 5.4 Empty state: aria-label "Profile. No training data available."
 
-- [ ] Task 6: Increased contrast support (AC: 3, derived from PNFR3)
-  - [ ] 6.1 Add CSS for `@media (prefers-contrast: more)` that doubles frosted glass background opacity (e.g. `bg-white/60` → `bg-white/90` under high contrast)
-  - [ ] 6.2 Verify card borders/outlines remain visible under high contrast
+- [x] Task 6: Increased contrast support (AC: 3, derived from PNFR3)
+  - [x] 6.1 Add CSS for `@media (prefers-contrast: more)` that doubles frosted glass background opacity (e.g. `bg-white/60` → `bg-white/90` under high contrast)
+  - [x] 6.2 Verify card borders/outlines remain visible under high contrast
 
-- [ ] Task 7: Verify and test (AC: 1-10)
-  - [ ] 7.1 `cargo clippy --workspace` — zero warnings
-  - [ ] 7.2 `cargo test -p domain` — all tests pass (no domain changes expected, but verify)
+- [x] Task 7: Verify and test (AC: 1-10)
+  - [x] 7.1 `cargo clippy --workspace` — zero warnings
+  - [x] 7.2 `cargo test -p domain` — all tests pass (no domain changes expected, but verify)
   - [ ] 7.3 UNCHECKED — Manual browser test: verify frosted glass rendering, card layout, responsive height, locale formatting (deferred to user — agent cannot verify in browser)
   - [ ] 7.4 UNCHECKED — Manual browser test: verify screen reader announces correct aria-labels (deferred to user)
 
@@ -230,10 +230,36 @@ Recent commits (all in Epic 12 scope):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None — clean implementation with no debugging needed.
+
 ### Completion Notes List
 
+- Replaced solid card backgrounds with frosted glass styling using `backdrop-blur-md bg-white/60 dark:bg-gray-900/60` plus subtle border
+- Implemented `format_decimal_1()` using `js_sys::Intl::NumberFormat` for locale-aware number formatting (respects browser locale — comma in German, period in English)
+- Updated headline row: left side uses `text-base font-semibold` (rem-based), right side keeps `text-xl font-bold` for EWMA, `text-xs` for stddev, existing unicode trend arrows
+- Replaced `ProgressChart` SVG component with a chart placeholder div at responsive height `h-[180px] md:h-[240px]` — Story 12.3 will reconnect the real chart
+- Added `role="group"`, `aria-label` (localized "Progress chart for {name}"), and `aria-description` (localized "Current: {ewma} cents, trend: {trend}") to each card
+- Added dynamic `aria-label` on scroll view container listing active mode names
+- Added empty state `aria-label` "Profile. No training data available."
+- Added `@media (prefers-contrast: more)` CSS rules in `input.css` for increased background opacity (0.9) in both light and dark modes
+- Suppressed dead_code warnings on `progress_chart` module (temporarily unused until Story 12.3)
+- Added 4 new i18n keys to both en and de locale files
+- `cargo clippy --workspace` — zero warnings; `cargo test -p domain` — all 359 tests pass
+
+### Change Log
+
+- 2026-03-13: Story 12.2 implementation — frosted glass cards, locale formatting, chart placeholder, accessibility, high contrast support
+
 ### File List
+
+- web/src/components/progress_card.rs (modified — frosted glass, locale formatting, chart placeholder, accessibility)
+- web/src/components/profile_view.rs (modified — scroll view and empty state aria-labels)
+- web/src/components/mod.rs (modified — #[allow(dead_code)] on progress_chart module)
+- input.css (modified — high contrast media queries for frosted glass cards)
+- web/locales/en/main.ftl (modified — 4 new i18n keys)
+- web/locales/de/main.ftl (modified — 4 new i18n keys)
+- docs/implementation-artifacts/sprint-status.yaml (modified — status update)

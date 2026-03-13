@@ -3,14 +3,22 @@ use std::rc::Rc;
 
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
+use wasm_bindgen::JsValue;
 
 use domain::{ProgressTimeline, TrainingMode, TrainingModeState, Trend};
 use leptos_fluent::{I18n, tr};
 
-use super::progress_chart::ProgressChart;
-
-fn format_ewma(value: f64) -> String {
-    format!("{value:.1}")
+fn format_decimal_1(value: f64) -> String {
+    let options = js_sys::Object::new();
+    js_sys::Reflect::set(&options, &"minimumFractionDigits".into(), &1.into()).unwrap();
+    js_sys::Reflect::set(&options, &"maximumFractionDigits".into(), &1.into()).unwrap();
+    let formatter = js_sys::Intl::NumberFormat::new(&js_sys::Array::new(), &options);
+    formatter
+        .format()
+        .call1(&JsValue::NULL, &JsValue::from_f64(value))
+        .ok()
+        .and_then(|v| v.as_string())
+        .unwrap_or_else(|| format!("{value:.1}"))
 }
 
 fn format_stddev(buckets: &[domain::TimeBucket]) -> String {
@@ -18,7 +26,7 @@ fn format_stddev(buckets: &[domain::TimeBucket]) -> String {
         return String::new();
     }
     let last_stddev = buckets.last().map(|b| b.stddev).unwrap_or(0.0);
-    format!("\u{00B1}{last_stddev:.1}")
+    format!("\u{00B1}{}", format_decimal_1(last_stddev))
 }
 
 fn trend_arrow(trend: Option<Trend>) -> (&'static str, &'static str) {
@@ -48,8 +56,6 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
     let config = mode.config();
     let i18n = expect_context::<I18n>();
 
-    // Note: this component is only rendered by ProfileView after is_profile_loaded is true,
-    // so no additional loading guard is needed here.
     view! {
         {move || {
             let tl = ptl.borrow();
@@ -62,47 +68,40 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
             let trend = tl.trend(mode);
             drop(tl);
 
-            let ewma_str = ewma.map(format_ewma).unwrap_or_default();
+            let ewma_str = ewma.map(format_decimal_1).unwrap_or_default();
             let stddev_str = format_stddev(&buckets);
             let (arrow, arrow_color) = trend_arrow(trend);
             let trend_label = trend_text(trend);
             let display_name = i18n.tr(config.display_name);
 
-            let card_aria = tr!("progress-for", {
-                "name" => display_name.clone(),
-                "ewma" => ewma_str.clone(),
-                "trend" => trend_label.clone()
+            let card_aria = tr!("progress-chart-for", {
+                "name" => display_name.clone()
             });
-            let value_aria = tr!("value-trend", {
+            let value_aria = tr!("current-trend", {
                 "ewma" => ewma_str.clone(),
                 "trend" => trend_label
             });
 
             view! {
                 <div
-                    class="rounded-xl bg-gray-100 p-4 dark:bg-gray-800"
+                    class="progress-card rounded-xl backdrop-blur-md bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 p-4"
+                    role="group"
                     aria-label=card_aria
+                    aria-description=value_aria
                 >
                     // Headline row
                     <div class="flex items-baseline justify-between">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span class="text-base font-semibold text-gray-700 dark:text-gray-300">
                             {display_name}
                         </span>
-                        <span
-                            class="flex items-baseline gap-1.5"
-                            aria-label=value_aria
-                        >
+                        <span class="flex items-baseline gap-1.5">
                             <span class="text-xl font-bold dark:text-white">{ewma_str}</span>
                             <span class="text-xs text-gray-500 dark:text-gray-400">{stddev_str}</span>
                             <span class=format!("text-lg {arrow_color}") aria-hidden="true">{arrow}</span>
                         </span>
                     </div>
-                    // Chart
-                    <ProgressChart
-                        buckets=buckets
-                        optimal_baseline=config.optimal_baseline
-                        unit_label=config.unit_label
-                    />
+                    // Chart placeholder (replaced by real chart in Story 12.3)
+                    <div class="mt-3 h-[180px] md:h-[240px] rounded-lg bg-gray-200/30 dark:bg-gray-700/30" />
                 </div>
             }
             .into_any()
