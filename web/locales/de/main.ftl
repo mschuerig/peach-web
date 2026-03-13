@@ -184,6 +184,10 @@ help-info-modes-body = **Hören & Vergleichen — Einzeltöne** — Höre zwei T
 help-info-start-title = Erste Schritte
 help-info-start-body = Wähle einfach einen Trainingsmodus auf dem Startbildschirm und leg los. Peach passt sich automatisch deinem Niveau an.
 
+## Chart Annotations
+chart-annotation-records = { $count } Einträge
+chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } Einträge
+
 ## Domain - Training Modes
 training-mode-hear-compare-single = Hören & Vergleichen — Einzeltöne
 training-mode-hear-compare-intervals = Hören & Vergleichen — Intervalle

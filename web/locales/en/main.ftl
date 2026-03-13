@@ -184,6 +184,10 @@ help-info-modes-body = **Hear & Compare — Single Notes** — Listen to two not
 help-info-start-title = Getting Started
 help-info-start-body = Just pick any training mode on the home screen and start practicing. Peach adapts to your skill level automatically.
 
+## Chart Annotations
+chart-annotation-records = { $count } records
+chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records
+
 ## Domain - Training Modes
 training-mode-hear-compare-single = Hear & Compare — Single Notes
 training-mode-hear-compare-intervals = Hear & Compare — Intervals

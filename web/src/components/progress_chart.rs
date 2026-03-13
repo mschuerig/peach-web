@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsValue;
+use web_sys::wasm_bindgen::JsCast;
 
 use domain::{BucketSize, TimeBucket};
 
@@ -128,6 +129,58 @@ fn format_month_label(epoch_secs: f64) -> String {
     formatted.trim_end_matches('.').to_string()
 }
 
+fn format_annotation_date_monthly(epoch_secs: f64) -> String {
+    let options = js_sys::Object::new();
+    js_sys::Reflect::set(&options, &"month".into(), &"short".into()).unwrap();
+    js_sys::Reflect::set(&options, &"year".into(), &"numeric".into()).unwrap();
+    let dtf = js_sys::Intl::DateTimeFormat::new(&js_sys::Array::new(), &options);
+    let formatted = dtf
+        .format()
+        .call1(&JsValue::NULL, &JsValue::from_f64(epoch_secs * 1000.0))
+        .ok()
+        .and_then(|v| v.as_string())
+        .unwrap_or_default();
+    formatted.trim_end_matches('.').to_string()
+}
+
+fn format_annotation_date_daily(epoch_secs: f64) -> String {
+    let options = js_sys::Object::new();
+    js_sys::Reflect::set(&options, &"weekday".into(), &"short".into()).unwrap();
+    js_sys::Reflect::set(&options, &"month".into(), &"short".into()).unwrap();
+    js_sys::Reflect::set(&options, &"day".into(), &"numeric".into()).unwrap();
+    let dtf = js_sys::Intl::DateTimeFormat::new(&js_sys::Array::new(), &options);
+    let formatted = dtf
+        .format()
+        .call1(&JsValue::NULL, &JsValue::from_f64(epoch_secs * 1000.0))
+        .ok()
+        .and_then(|v| v.as_string())
+        .unwrap_or_default();
+    formatted.trim_end_matches('.').to_string()
+}
+
+fn format_annotation_date_session(epoch_secs: f64) -> String {
+    let options = js_sys::Object::new();
+    js_sys::Reflect::set(&options, &"hour".into(), &"2-digit".into()).unwrap();
+    js_sys::Reflect::set(&options, &"minute".into(), &"2-digit".into()).unwrap();
+    js_sys::Reflect::set(&options, &"hour12".into(), &JsValue::FALSE).unwrap();
+    let dtf = js_sys::Intl::DateTimeFormat::new(&js_sys::Array::new(), &options);
+    let formatted = dtf
+        .format()
+        .call1(&JsValue::NULL, &JsValue::from_f64(epoch_secs * 1000.0))
+        .ok()
+        .and_then(|v| v.as_string())
+        .unwrap_or_default();
+    formatted.trim_end_matches('.').to_string()
+}
+
+fn format_annotation_date(bucket: &TimeBucket) -> String {
+    match bucket.bucket_size {
+        BucketSize::Month => format_annotation_date_monthly(bucket.period_start),
+        BucketSize::Day => format_annotation_date_daily(bucket.period_start),
+        BucketSize::Session => format_annotation_date_session(bucket.period_start),
+    }
+}
+
 fn format_weekday_label(epoch_secs: f64) -> String {
     let options = js_sys::Object::new();
     js_sys::Reflect::set(&options, &"weekday".into(), &"short".into()).unwrap();
@@ -141,6 +194,19 @@ fn format_weekday_label(epoch_secs: f64) -> String {
     formatted.trim_end_matches('.').to_string()
 }
 
+fn format_decimal_1_chart(value: f64) -> String {
+    let options = js_sys::Object::new();
+    js_sys::Reflect::set(&options, &"minimumFractionDigits".into(), &1.into()).unwrap();
+    js_sys::Reflect::set(&options, &"maximumFractionDigits".into(), &1.into()).unwrap();
+    let formatter = js_sys::Intl::NumberFormat::new(&js_sys::Array::new(), &options);
+    formatter
+        .format()
+        .call1(&JsValue::NULL, &JsValue::from_f64(value))
+        .ok()
+        .and_then(|v| v.as_string())
+        .unwrap_or_else(|| format!("{value:.1}"))
+}
+
 #[component]
 pub fn ProgressChart(
     buckets: Vec<TimeBucket>,
@@ -152,6 +218,9 @@ pub fn ProgressChart(
     }
 
     let bucket_count = buckets.len();
+
+    // Task 1: Selection state signal
+    let selected_bucket = RwSignal::new(None::<usize>);
 
     // Scrollable container setup
     let container_ref = NodeRef::<leptos::html::Div>::new();
@@ -174,6 +243,25 @@ pub fn ProgressChart(
                             .set_scroll_left(element.scroll_width() - element.client_width());
                     }
                 });
+            }
+        });
+    }
+
+    // Task 7: Dismiss annotation on scroll
+    if is_scrollable {
+        Effect::new(move |_| {
+            if let Some(el) = container_ref.get() {
+                let element: &web_sys::Element = el.as_ref();
+                let target: &web_sys::EventTarget = element.as_ref();
+                let closure =
+                    wasm_bindgen::closure::Closure::<dyn Fn()>::new(move || {
+                        selected_bucket.set(None);
+                    });
+                let _ = target.add_event_listener_with_callback(
+                    "scroll",
+                    closure.as_ref().unchecked_ref(),
+                );
+                closure.forget();
             }
         });
     }
@@ -547,6 +635,121 @@ pub fn ProgressChart(
         })
         .collect();
 
+    // Task 2: Click handler — convert click to bucket index
+    let on_chart_click = move |ev: web_sys::MouseEvent| {
+        let Some(target) = ev.current_target() else {
+            return;
+        };
+        let Ok(element) = target.dyn_into::<web_sys::Element>() else {
+            return;
+        };
+        let rect = element.get_bounding_client_rect();
+        let client_x = ev.client_x() as f64;
+
+        // getBoundingClientRect() on the SVG already reflects scroll position
+        // (its left edge shifts as the container scrolls), so no scroll_left adjustment needed.
+        let svg_x = (client_x - rect.left()) / rect.width() * viewbox_w;
+
+        // Invert the x() function: raw_index = (svg_x - MARGIN_LEFT) / inner_w * bucket_count - 0.5
+        let raw_index = (svg_x - MARGIN_LEFT) / inner_w * bucket_count as f64 - 0.5;
+        let clicked_index = raw_index.round().max(0.0).min((bucket_count - 1) as f64) as usize;
+
+        // Toggle logic
+        if selected_bucket.get_untracked() == Some(clicked_index) {
+            selected_bucket.set(None);
+        } else {
+            selected_bucket.set(Some(clicked_index));
+        }
+    };
+
+    // --- Layer 7: Selection line and annotation popover ---
+    // Pre-compute x positions and bucket data for reactive rendering
+    let bucket_x_positions: Vec<f64> = (0..bucket_count).map(|i| x(i as f64)).collect();
+    let buckets_for_annotation = buckets.clone();
+
+    // Popover dimensions in SVG viewBox units
+    let popover_w = 60.0_f64;
+    let popover_h = 52.0_f64;
+
+    let selection_line_and_popover = move || {
+        selected_bucket.get().map(|idx| {
+            let bx = bucket_x_positions[idx];
+            let bucket = &buckets_for_annotation[idx];
+
+            // Selection line
+            let line_y1 = format!("{MARGIN_TOP:.1}");
+            let line_y2 = format!("{:.1}", MARGIN_TOP + inner_h);
+
+            // Popover position with overflow resolution (Task 6)
+            let fo_x = (bx - popover_w / 2.0)
+                .max(MARGIN_LEFT)
+                .min(MARGIN_LEFT + inner_w - popover_w);
+            let fo_y = MARGIN_TOP + 2.0;
+
+            // Date formatting (Task 5)
+            let date_str = format_annotation_date(bucket);
+            let mean_str = format_decimal_1_chart(bucket.mean);
+            let stddev_str = format!("\u{00B1}{}", format_decimal_1_chart(bucket.stddev));
+            let records_str = untrack(|| {
+                leptos_fluent::tr!("chart-annotation-records", {
+                    "count" => bucket.record_count
+                })
+            });
+
+            view! {
+                // Selection line (Task 3)
+                <line
+                    x1=format!("{bx:.1}")
+                    y1=line_y1
+                    x2=format!("{bx:.1}")
+                    y2=line_y2
+                    class="chart-selection-line"
+                    stroke="currentColor"
+                    stroke-dasharray="5 3"
+                    stroke-width="1"
+                    vector-effect="non-scaling-stroke"
+                />
+                // Annotation popover (Task 4)
+                <foreignObject
+                    x=format!("{fo_x:.1}")
+                    y=format!("{fo_y:.1}")
+                    width=format!("{popover_w:.0}")
+                    height=format!("{popover_h:.0}")
+                >
+                    <div
+                        class="backdrop-blur-md bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 rounded-[6px] p-[6px] space-y-[2px]"
+                        style="font-size: 8px; line-height: 1.3;"
+                    >
+                        <div class="text-gray-500 dark:text-gray-400">{date_str}</div>
+                        <div class="font-bold dark:text-white">{mean_str}</div>
+                        <div class="text-gray-500 dark:text-gray-400">{stddev_str}</div>
+                        <div class="text-gray-500 dark:text-gray-400">{records_str}</div>
+                    </div>
+                </foreignObject>
+            }
+        })
+    };
+
+    // Task 10: Accessibility — live region content
+    let buckets_for_a11y = buckets.clone();
+    let live_region_text = move || {
+        selected_bucket.get().map(|idx| {
+            let bucket = &buckets_for_a11y[idx];
+            let date_str = format_annotation_date(bucket);
+            let mean_str = format_decimal_1_chart(bucket.mean);
+            let stddev_str = format_decimal_1_chart(bucket.stddev);
+            untrack(|| {
+                leptos_fluent::tr!("chart-annotation-summary", {
+                    "date" => date_str,
+                    "mean" => mean_str,
+                    "unit" => unit_label,
+                    "stddev" => stddev_str,
+                    "count" => bucket.record_count
+                })
+            })
+        }).unwrap_or_default()
+    };
+
     view! {
         <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">{unit_label}</div>
         <div class="flex h-[180px] md:h-[240px]">
@@ -559,8 +762,10 @@ pub fn ProgressChart(
             viewBox=format!("0 0 {viewbox_w} {viewbox_height}")
             width=svg_width
             height="100%"
-            aria-hidden="true"
+            role="img"
+            aria-label=unit_label
             preserveAspectRatio="none"
+            on:click=on_chart_click
         >
             // Grid lines (behind everything)
             {h_grid_lines}
@@ -646,6 +851,8 @@ pub fn ProgressChart(
                     }
                 })
                 .collect::<Vec<_>>()}
+            // Layer 7: Selection line and annotation popover
+            {selection_line_and_popover}
         </svg>
         </div>
         // Fixed Y-axis (right side, non-scrolling)
@@ -658,6 +865,10 @@ pub fn ProgressChart(
         >
             {y_axis_ticks}
         </svg>
+        </div>
+        // Task 10: Accessibility — screen reader live region
+        <div class="sr-only" role="status" aria-live="polite">
+            {live_region_text}
         </div>
     }
     .into_any()

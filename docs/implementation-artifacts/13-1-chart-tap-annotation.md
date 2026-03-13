@@ -1,6 +1,6 @@
 # Story 13.1: Chart Tap Annotation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -34,59 +34,59 @@ so that I can explore specific time periods and see exactly how I performed.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add selection state signal (AC: #1, #7)
-  - [ ] 1.1 Add `selected_bucket: RwSignal<Option<usize>>` signal in `ProgressChart`
-  - [ ] 1.2 Signal stores `Some(index)` when selected, `None` when dismissed
+- [x] Task 1: Add selection state signal (AC: #1, #7)
+  - [x] 1.1 Add `selected_bucket: RwSignal<Option<usize>>` signal in `ProgressChart`
+  - [x] 1.2 Signal stores `Some(index)` when selected, `None` when dismissed
 
-- [ ] Task 2: Implement tap/click handler (AC: #1, #7)
-  - [ ] 2.1 Add `on:click` handler to the main chart SVG element
-  - [ ] 2.2 Convert click clientX to SVG coordinate space using `getBoundingClientRect()` and viewBox scaling
-  - [ ] 2.3 Map SVG X coordinate to bucket index by inverting the `x()` coordinate function and rounding to nearest integer, clamping to `[0, bucket_count - 1]`
-  - [ ] 2.4 Toggle logic: if `selected_bucket == Some(clicked_index)` → set to `None`, else set to `Some(clicked_index)`
+- [x] Task 2: Implement tap/click handler (AC: #1, #7)
+  - [x] 2.1 Add `on:click` handler to the main chart SVG element
+  - [x] 2.2 Convert click clientX to SVG coordinate space using `getBoundingClientRect()` and viewBox scaling
+  - [x] 2.3 Map SVG X coordinate to bucket index by inverting the `x()` coordinate function and rounding to nearest integer, clamping to `[0, bucket_count - 1]`
+  - [x] 2.4 Toggle logic: if `selected_bucket == Some(clicked_index)` → set to `None`, else set to `Some(clicked_index)`
 
-- [ ] Task 3: Render selection line (AC: #2)
-  - [ ] 3.1 When `selected_bucket.get()` is `Some(idx)`, render a vertical `<line>` from `MARGIN_TOP` to `MARGIN_TOP + inner_h` at `x(idx as f64)`
-  - [ ] 3.2 Style: `stroke="currentColor"`, `stroke-dasharray="5 3"`, `stroke-width="1"`, CSS class `.chart-selection-line` with `opacity: 0.5`
-  - [ ] 3.3 Add increased contrast CSS: `.chart-selection-line { opacity: 0.8 }` under `@media (prefers-contrast: more)`
+- [x] Task 3: Render selection line (AC: #2)
+  - [x] 3.1 When `selected_bucket.get()` is `Some(idx)`, render a vertical `<line>` from `MARGIN_TOP` to `MARGIN_TOP + inner_h` at `x(idx as f64)`
+  - [x] 3.2 Style: `stroke="currentColor"`, `stroke-dasharray="5 3"`, `stroke-width="1"`, CSS class `.chart-selection-line` with `opacity: 0.5`
+  - [x] 3.3 Add increased contrast CSS: `.chart-selection-line { opacity: 0.8 }` under `@media (prefers-contrast: more)`
 
-- [ ] Task 4: Build annotation popover (AC: #3, #4, #5, #6, #9)
-  - [ ] 4.1 Create popover as an SVG `<foreignObject>` containing an HTML `<div>` with frosted glass styling
-  - [ ] 4.2 Frosted glass: `backdrop-blur-md bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 rounded-[6px]` (reuse existing pattern from `progress_card.rs`)
-  - [ ] 4.3 Inner layout: `p-[6px] space-y-[2px]` for 6px padding and 2px VStack spacing
-  - [ ] 4.4 Date label row (caption2, secondary color) — formatted per zone type (see Task 5)
-  - [ ] 4.5 Mean value row (caption, bold) — `format_decimal_1(bucket.mean)` using existing locale-aware formatter from `progress_card.rs`
-  - [ ] 4.6 Stddev row (caption2, secondary) — `±{format_decimal_1(bucket.stddev)}`
-  - [ ] 4.7 Record count row (caption2, secondary) — `"{count} records"` (i18n key)
+- [x] Task 4: Build annotation popover (AC: #3, #4, #5, #6, #9)
+  - [x] 4.1 Create popover as an SVG `<foreignObject>` containing an HTML `<div>` with frosted glass styling
+  - [x] 4.2 Frosted glass: `backdrop-blur-md bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 rounded-[6px]` (reuse existing pattern from `progress_card.rs`)
+  - [x] 4.3 Inner layout: `p-[6px] space-y-[2px]` for 6px padding and 2px VStack spacing
+  - [x] 4.4 Date label row (caption2, secondary color) — formatted per zone type (see Task 5)
+  - [x] 4.5 Mean value row (caption, bold) — `format_decimal_1(bucket.mean)` using existing locale-aware formatter from `progress_card.rs`
+  - [x] 4.6 Stddev row (caption2, secondary) — `±{format_decimal_1(bucket.stddev)}`
+  - [x] 4.7 Record count row (caption2, secondary) — `"{count} records"` (i18n key)
 
-- [ ] Task 5: Zone-specific date formatting (AC: #3, #4, #5)
-  - [ ] 5.1 Monthly zone: format `period_start` as "MMM yyyy" using `Intl.DateTimeFormat` with `{month: "short", year: "numeric"}`
-  - [ ] 5.2 Daily zone: format `period_start` as "E MMM d" using `Intl.DateTimeFormat` with `{weekday: "short", month: "short", day: "numeric"}`
-  - [ ] 5.3 Session zone: format `period_start` as "HH:mm" using `Intl.DateTimeFormat` with `{hour: "2-digit", minute: "2-digit", hour12: false}`
-  - [ ] 5.4 Strip trailing dots from abbreviated names (reuse existing pattern from `format_month_label`)
+- [x] Task 5: Zone-specific date formatting (AC: #3, #4, #5)
+  - [x] 5.1 Monthly zone: format `period_start` as "MMM yyyy" using `Intl.DateTimeFormat` with `{month: "short", year: "numeric"}`
+  - [x] 5.2 Daily zone: format `period_start` as "E MMM d" using `Intl.DateTimeFormat` with `{weekday: "short", month: "short", day: "numeric"}`
+  - [x] 5.3 Session zone: format `period_start` as "HH:mm" using `Intl.DateTimeFormat` with `{hour: "2-digit", minute: "2-digit", hour12: false}`
+  - [x] 5.4 Strip trailing dots from abbreviated names (reuse existing pattern from `format_month_label`)
 
-- [ ] Task 6: Popover overflow resolution (AC: #6)
-  - [ ] 6.1 Default position: popover anchored horizontally at the selection line X, vertically at the top of the chart area (just below `MARGIN_TOP`)
-  - [ ] 6.2 Horizontal overflow: if popover right edge exceeds `MARGIN_LEFT + inner_w`, shift left; if popover left edge goes below `MARGIN_LEFT`, shift right
-  - [ ] 6.3 Vertical overflow: if popover bottom edge exceeds `MARGIN_TOP + inner_h`, shift upward (unlikely for top-anchored positioning)
+- [x] Task 6: Popover overflow resolution (AC: #6)
+  - [x] 6.1 Default position: popover anchored horizontally at the selection line X, vertically at the top of the chart area (just below `MARGIN_TOP`)
+  - [x] 6.2 Horizontal overflow: if popover right edge exceeds `MARGIN_LEFT + inner_w`, shift left; if popover left edge goes below `MARGIN_LEFT`, shift right
+  - [x] 6.3 Vertical overflow: if popover bottom edge exceeds `MARGIN_TOP + inner_h`, shift upward (unlikely for top-anchored positioning)
 
-- [ ] Task 7: Dismiss on scroll (AC: #8)
-  - [ ] 7.1 Add `scroll` event listener on the `.chart-scroll-container` div (the scrollable container)
-  - [ ] 7.2 On scroll event, set `selected_bucket` to `None`
+- [x] Task 7: Dismiss on scroll (AC: #8)
+  - [x] 7.1 Add `scroll` event listener on the `.chart-scroll-container` div (the scrollable container)
+  - [x] 7.2 On scroll event, set `selected_bucket` to `None`
 
-- [ ] Task 8: i18n keys (AC: #3, #4, #5, #10)
-  - [ ] 8.1 Add `chart-annotation-records = { $count } records` to `web/locales/en/main.ftl`
-  - [ ] 8.2 Add `chart-annotation-records = { $count } Einträge` to `web/locales/de/main.ftl`
-  - [ ] 8.3 Add `chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records` to EN
-  - [ ] 8.4 Add `chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } Einträge` to DE
+- [x] Task 8: i18n keys (AC: #3, #4, #5, #10)
+  - [x] 8.1 Add `chart-annotation-records = { $count } records` to `web/locales/en/main.ftl`
+  - [x] 8.2 Add `chart-annotation-records = { $count } Einträge` to `web/locales/de/main.ftl`
+  - [x] 8.3 Add `chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records` to EN
+  - [x] 8.4 Add `chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } Einträge` to DE
 
-- [ ] Task 9: Increased contrast support (AC: #2)
-  - [ ] 9.1 Add `.chart-selection-line` increased contrast rule in `input.css`
+- [x] Task 9: Increased contrast support (AC: #2)
+  - [x] 9.1 Add `.chart-selection-line` increased contrast rule in `input.css`
 
-- [ ] Task 10: Accessibility (AC: #10, #11)
-  - [ ] 10.1 Add a hidden `<div>` with `role="status"` and `aria-live="polite"` outside the SVG (sibling to the chart container) that mirrors the popover content as text
-  - [ ] 10.2 When `selected_bucket` changes to `Some(idx)`, update the live region text to: "{date} — {mean} {unit}, ±{stddev}, {count} records" (plain text summary)
-  - [ ] 10.3 When `selected_bucket` changes to `None`, clear the live region text
-  - [ ] 10.4 Add i18n key for the screen reader summary template
+- [x] Task 10: Accessibility (AC: #10, #11)
+  - [x] 10.1 Add a hidden `<div>` with `role="status"` and `aria-live="polite"` outside the SVG (sibling to the chart container) that mirrors the popover content as text
+  - [x] 10.2 When `selected_bucket` changes to `Some(idx)`, update the live region text to: "{date} — {mean} {unit}, ±{stddev}, {count} records" (plain text summary)
+  - [x] 10.3 When `selected_bucket` changes to `None`, clear the live region text
+  - [x] 10.4 Add i18n key for the screen reader summary template
 
 ## Dev Notes
 
@@ -190,8 +190,35 @@ The popover dimensions in SVG viewBox units: estimate ~60 units wide, ~50 units 
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- Fixed compilation: removed `xmlns` attribute on `<div>` inside `<foreignObject>` (not supported in Leptos html view macro, not needed for browser rendering)
+- Fixed compilation: used `ev.current_target()` + `dyn_into` instead of `NodeRef` for SVG element access in click handler (Leptos custom element NodeRef doesn't have direct `as_ref()` to `web_sys::Element`)
 
 ### Completion Notes List
 
+- Implemented chart tap annotation with selection line, frosted glass popover, and screen reader live region
+- Click handler converts client coordinates to SVG coordinate space, accounting for scroll offset in scrollable charts
+- Selection line rendered as dashed vertical line at 50% opacity (80% in increased contrast mode)
+- Popover uses `<foreignObject>` for HTML-in-SVG with frosted glass styling matching existing card pattern
+- Zone-specific date formatting: monthly (MMM yyyy), daily (E MMM d), session (HH:mm)
+- Horizontal overflow resolution clamps popover within chart bounds
+- Scroll event listener dismisses annotation on scrollable charts
+- Added `format_decimal_1_chart()` local to progress_chart.rs (mirrors `format_decimal_1()` in progress_card.rs)
+- SVG element changed from `aria-hidden="true"` to `role="img"` with `aria-label` per AC #11
+- i18n keys added for EN and DE
+
 ### File List
+
+- web/src/components/progress_chart.rs (modified)
+- input.css (modified)
+- web/locales/en/main.ftl (modified)
+- web/locales/de/main.ftl (modified)
+- docs/implementation-artifacts/13-1-chart-tap-annotation.md (modified)
+- docs/implementation-artifacts/sprint-status.yaml (modified)
+
+### Change Log
+
+- 2026-03-13: Implemented story 13.1 — Chart Tap Annotation (all 10 tasks)
