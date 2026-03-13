@@ -121,6 +121,7 @@ profile-no-data-aria = Profile. No training data available.
 profile-showing-progress = Profile showing progress for: { $modes }
 progress-for = Progress for { $name }: { $ewma } cents, { $trend }
 progress-chart-for = Progress chart for { $name }
+chart-today = Today
 current-trend = Current: { $ewma } cents, trend: { $trend }
 value-trend = { $ewma } cents, trend { $trend }
 

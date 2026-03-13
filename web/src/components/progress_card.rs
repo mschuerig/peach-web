@@ -100,8 +100,12 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
                             <span class=format!("text-lg {arrow_color}") aria-hidden="true">{arrow}</span>
                         </span>
                     </div>
-                    // Chart placeholder (replaced by real chart in Story 12.3)
-                    <div class="mt-3 h-[180px] md:h-[240px] rounded-lg bg-gray-200/30 dark:bg-gray-700/30" />
+                    // Progress chart
+                    <super::progress_chart::ProgressChart
+                        buckets=buckets
+                        optimal_baseline=config.optimal_baseline
+                        unit_label=config.unit_label
+                    />
                 </div>
             }
             .into_any()

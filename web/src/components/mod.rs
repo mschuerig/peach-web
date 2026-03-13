@@ -7,7 +7,6 @@ mod pitch_matching_view;
 mod pitch_slider;
 mod profile_view;
 mod progress_card;
-#[allow(dead_code)] // Temporarily unused; Story 12.3 reconnects ProgressChart
 mod progress_chart;
 mod progress_sparkline;
 mod settings_view;

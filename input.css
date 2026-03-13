@@ -17,3 +17,11 @@
         border-color: rgba(156, 163, 175, 0.5) !important;
     }
 }
+
+/* Chart increased contrast overrides */
+@media (prefers-contrast: more) {
+    .chart-zone-bg { opacity: 0.12; }
+    .chart-stddev-band { opacity: 0.30; }
+    .chart-baseline { opacity: 0.90; }
+    .chart-zone-divider { stroke: currentColor; opacity: 0.6; }
+}
