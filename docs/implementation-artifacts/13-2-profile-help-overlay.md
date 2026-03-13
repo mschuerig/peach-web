@@ -1,6 +1,6 @@
 # Story 13.2: Profile Help Overlay
 
-Status: review
+Status: done
 
 ## Story
 
