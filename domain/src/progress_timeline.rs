@@ -57,6 +57,8 @@ impl ModeState {
         *self = Self::new(mode);
     }
 
+    /// Note: if `start_of_today` changes between calls (midnight crossover), previously
+    /// added records retain their original zone assignment. Call `rebuild()` to recategorize.
     fn add_point(&mut self, timestamp: f64, metric: f64, start_of_today: f64) {
         self.record_count += 1;
 
@@ -171,7 +173,7 @@ fn update_session_bucket(
 ) {
     if let Some(last) = buckets.last_mut()
         && last.bucket_size == BucketSize::Session
-        && (timestamp - last.period_end).abs() < session_gap
+        && timestamp - last.period_end < session_gap
     {
         welford_update_bucket(last, timestamp, metric);
         return;
@@ -255,7 +257,6 @@ impl ProgressTimeline {
         &mut self,
         comparison_records: &[PitchComparisonRecord],
         matching_records: &[PitchMatchingRecord],
-        _now: f64,
         start_of_today: f64,
     ) {
         // Reset all modes
@@ -360,7 +361,6 @@ impl ProgressTimeline {
     pub fn add_comparison(
         &mut self,
         record: &PitchComparisonRecord,
-        _now: f64,
         start_of_today: f64,
     ) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
@@ -377,7 +377,6 @@ impl ProgressTimeline {
     pub fn add_matching(
         &mut self,
         record: &PitchMatchingRecord,
-        _now: f64,
         start_of_today: f64,
     ) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
@@ -757,7 +756,7 @@ mod tests {
     #[test]
     fn test_rebuild_with_empty_records() {
         let mut tl = ProgressTimeline::new();
-        tl.rebuild(&[], &[], now_epoch(), today_epoch());
+        tl.rebuild(&[], &[], today_epoch());
         for mode in TrainingMode::ALL {
             assert_eq!(tl.state(mode), TrainingModeState::NoData);
         }
@@ -770,7 +769,7 @@ mod tests {
             make_comparison(0, 15.0, "2026-03-06T11:00:00Z"),
             make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
-        tl.rebuild(&records, &[], now_epoch(), today_epoch());
+        tl.rebuild(&records, &[], today_epoch());
 
         assert_eq!(
             tl.state(TrainingMode::UnisonPitchComparison),
@@ -794,7 +793,7 @@ mod tests {
     fn test_rebuild_matching_interval_active() {
         let mut tl = ProgressTimeline::new();
         let records = vec![make_matching(7, 5.0, "2026-03-06T11:00:00Z")];
-        tl.rebuild(&[], &records, now_epoch(), today_epoch());
+        tl.rebuild(&[], &records, today_epoch());
 
         assert_eq!(
             tl.state(TrainingMode::IntervalMatching),
@@ -811,14 +810,13 @@ mod tests {
     #[test]
     fn test_session_gap_grouping() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
         // Two records 5 min apart (< 1800s gap) -> same session bucket
         let records = vec![
             make_comparison(0, 20.0, "2026-03-06T11:00:00Z"),
             make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 1);
@@ -830,14 +828,13 @@ mod tests {
     #[test]
     fn test_session_gap_splits_sessions() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
         // Two records 2 hours apart (> 1800s gap) -> two session buckets
         let records = vec![
             make_comparison(0, 20.0, "2026-03-06T09:00:00Z"),
             make_comparison(0, 10.0, "2026-03-06T11:30:00Z"),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 2);
@@ -850,7 +847,6 @@ mod tests {
     #[test]
     fn test_three_zone_bucketing() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch(); // 2026-03-06T12:00:00Z
         let today = today_epoch(); // 2026-03-06T00:00:00Z
 
         // Month zone: 2+ months ago
@@ -869,7 +865,7 @@ mod tests {
             make_comparison(0, 20.0, &ts_day),
             make_comparison(0, 10.0, ts_session),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 3);
@@ -881,7 +877,6 @@ mod tests {
     #[test]
     fn test_day_zone_calendar_day_snapping() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch(); // 2026-03-06T00:00:00Z
 
         // Two records on the same day (3 days ago), different times
@@ -894,7 +889,7 @@ mod tests {
             make_comparison(0, 20.0, &ts1),
             make_comparison(0, 10.0, &ts2),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 1);
@@ -905,7 +900,6 @@ mod tests {
     #[test]
     fn test_day_zone_different_days() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         // Records on two different days within the day zone
@@ -918,7 +912,7 @@ mod tests {
             make_comparison(0, 20.0, &ts1),
             make_comparison(0, 10.0, &ts2),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 2);
@@ -929,7 +923,6 @@ mod tests {
     #[test]
     fn test_month_zone_calendar_month_grouping() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         // Two records in January 2026 (well in the month zone)
@@ -940,7 +933,7 @@ mod tests {
             make_comparison(0, 30.0, ts1),
             make_comparison(0, 20.0, ts2),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 1);
@@ -955,7 +948,6 @@ mod tests {
     #[test]
     fn test_month_zone_different_months() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         // Records in Jan and Feb (both in month zone)
@@ -966,7 +958,7 @@ mod tests {
             make_comparison(0, 30.0, ts1),
             make_comparison(0, 20.0, ts2),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 2);
@@ -977,7 +969,6 @@ mod tests {
     #[test]
     fn test_monthly_bucket_end_truncated_to_day_zone_boundary() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch(); // 2026-03-06T00:00:00Z
         let day_zone_start = today - 7.0 * SECS_PER_DAY; // 2026-02-27T00:00:00Z
 
@@ -985,7 +976,7 @@ mod tests {
         let ts = "2026-02-25T12:00:00Z"; // before day_zone_start
 
         let records = vec![make_comparison(0, 20.0, ts)];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 1);
@@ -1004,7 +995,6 @@ mod tests {
     #[test]
     fn test_population_stddev_in_display_buckets() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         // Three values: 10, 20, 30 -> mean=20, pop_stddev = sqrt(((10-20)^2+(20-20)^2+(30-20)^2)/3) = sqrt(200/3) ≈ 8.165
@@ -1013,7 +1003,7 @@ mod tests {
             make_comparison(0, 20.0, "2026-03-06T11:05:00Z"),
             make_comparison(0, 30.0, "2026-03-06T11:10:00Z"),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets.len(), 1);
@@ -1029,11 +1019,10 @@ mod tests {
     #[test]
     fn test_single_record_stddev_is_zero() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         let records = vec![make_comparison(0, 20.0, "2026-03-06T11:00:00Z")];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert_eq!(buckets[0].stddev, 0.0);
@@ -1044,7 +1033,6 @@ mod tests {
     #[test]
     fn test_ewma_uses_session_pipeline_not_display() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         // Records spread across zones — EWMA should use session-gap buckets across all
@@ -1059,7 +1047,7 @@ mod tests {
             make_comparison(0, 30.0, &ts1),
             make_comparison(0, 10.0, &ts2),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         // Display buckets should have 2 buckets (one Day, one Session)
         let display = tl.display_buckets(TrainingMode::UnisonPitchComparison);
@@ -1084,7 +1072,7 @@ mod tests {
             make_comparison(0, 30.0, &epoch_to_iso8601(now - 4.0 * 3600.0)),
             make_comparison(0, 10.0, &epoch_to_iso8601(now - 1.0 * 3600.0)),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let ewma = tl.current_ewma(TrainingMode::UnisonPitchComparison);
         assert!(ewma.is_some());
@@ -1096,10 +1084,9 @@ mod tests {
     #[test]
     fn test_ewma_single_bucket() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
         let records = vec![make_comparison(0, 20.0, "2026-03-06T11:00:00Z")];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let ewma = tl.current_ewma(TrainingMode::UnisonPitchComparison);
         assert_eq!(ewma, Some(20.0));
@@ -1110,10 +1097,9 @@ mod tests {
     #[test]
     fn test_trend_none_with_less_than_2_records() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
         let records = vec![make_comparison(0, 20.0, "2026-03-06T11:00:00Z")];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
         assert_eq!(tl.trend(TrainingMode::UnisonPitchComparison), None);
     }
 
@@ -1132,7 +1118,7 @@ mod tests {
             let ts = epoch_to_iso8601(now - (20 - i) as f64 * 3600.0);
             records.push(make_comparison(0, 10.0, &ts));
         }
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
         // Latest bucket mean (10.0) < ewma -> Improving
         let trend = tl.trend(TrainingMode::UnisonPitchComparison);
         assert_eq!(trend, Some(Trend::Improving));
@@ -1152,7 +1138,7 @@ mod tests {
         // Recent session with very high values
         let ts = epoch_to_iso8601(now - 300.0);
         records.push(make_comparison(0, 100.0, &ts));
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
         let trend = tl.trend(TrainingMode::UnisonPitchComparison);
         assert_eq!(trend, Some(Trend::Declining));
     }
@@ -1173,7 +1159,7 @@ mod tests {
             make_comparison(0, 10.0, &epoch_to_iso8601(now - 4.0 * 3600.0)),
             make_comparison(0, 20.0, &epoch_to_iso8601(now - 1.0 * 3600.0)),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
         let trend = tl.trend(TrainingMode::UnisonPitchComparison);
         assert_eq!(trend, Some(Trend::Stable));
     }
@@ -1209,11 +1195,10 @@ mod tests {
     #[test]
     fn test_add_comparison_updates_correct_mode() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         let record = make_comparison(0, 15.0, "2026-03-06T11:55:00Z");
-        tl.add_comparison(&record, now, today);
+        tl.add_comparison(&record, today);
 
         assert_eq!(
             tl.state(TrainingMode::UnisonPitchComparison),
@@ -1234,11 +1219,10 @@ mod tests {
     #[test]
     fn test_add_matching_updates_correct_mode() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         let record = make_matching(0, 5.0, "2026-03-06T11:55:00Z");
-        tl.add_matching(&record, now, today);
+        tl.add_matching(&record, today);
 
         assert_eq!(
             tl.state(TrainingMode::UnisonMatching),
@@ -1253,7 +1237,6 @@ mod tests {
     #[test]
     fn test_incremental_session_stddev_matches_rebuild() {
         // Verify that incremental add_comparison produces the same bucket stddev as rebuild
-        let now = now_epoch();
         let today = today_epoch();
         let ts1 = "2026-03-06T11:00:00Z";
         let ts2 = "2026-03-06T11:05:00Z";
@@ -1266,13 +1249,13 @@ mod tests {
             make_comparison(0, 20.0, ts2),
             make_comparison(0, 30.0, ts3),
         ];
-        tl_rebuild.rebuild(&records, &[], now, today);
+        tl_rebuild.rebuild(&records, &[], today);
 
         // Incremental path
         let mut tl_incr = ProgressTimeline::new();
-        tl_incr.add_comparison(&make_comparison(0, 10.0, ts1), now, today);
-        tl_incr.add_comparison(&make_comparison(0, 20.0, ts2), now, today);
-        tl_incr.add_comparison(&make_comparison(0, 30.0, ts3), now, today);
+        tl_incr.add_comparison(&make_comparison(0, 10.0, ts1), today);
+        tl_incr.add_comparison(&make_comparison(0, 20.0, ts2), today);
+        tl_incr.add_comparison(&make_comparison(0, 30.0, ts3), today);
 
         let rebuild_buckets = tl_rebuild.display_buckets(TrainingMode::UnisonPitchComparison);
         let incr_buckets = tl_incr.display_buckets(TrainingMode::UnisonPitchComparison);
@@ -1289,19 +1272,89 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_incremental_cross_zone_matches_rebuild() {
+        // Records spanning month, day, and session zones
+        let today = today_epoch(); // 2026-03-06T00:00:00Z
+
+        // Month zone: January
+        let ts_month = "2026-01-15T12:00:00Z";
+        // Day zone: 3 days ago
+        let three_days_ago = today - 3.0 * SECS_PER_DAY + 3600.0;
+        let ts_day = epoch_to_iso8601(three_days_ago);
+        // Session zone: today
+        let ts_session = "2026-03-06T11:00:00Z";
+
+        // Rebuild path
+        let mut tl_rebuild = ProgressTimeline::new();
+        let records = vec![
+            make_comparison(0, 30.0, ts_month),
+            make_comparison(0, 20.0, &ts_day),
+            make_comparison(0, 10.0, ts_session),
+        ];
+        tl_rebuild.rebuild(&records, &[], today);
+
+        // Incremental path
+        let mut tl_incr = ProgressTimeline::new();
+        tl_incr.add_comparison(&make_comparison(0, 30.0, ts_month), today);
+        tl_incr.add_comparison(&make_comparison(0, 20.0, &ts_day), today);
+        tl_incr.add_comparison(&make_comparison(0, 10.0, ts_session), today);
+
+        let rebuild_buckets = tl_rebuild.display_buckets(TrainingMode::UnisonPitchComparison);
+        let incr_buckets = tl_incr.display_buckets(TrainingMode::UnisonPitchComparison);
+
+        assert_eq!(
+            rebuild_buckets.len(),
+            incr_buckets.len(),
+            "bucket count mismatch: rebuild={}, incremental={}",
+            rebuild_buckets.len(),
+            incr_buckets.len()
+        );
+        for (i, (rb, ib)) in rebuild_buckets.iter().zip(incr_buckets.iter()).enumerate() {
+            assert_eq!(
+                rb.bucket_size, ib.bucket_size,
+                "bucket {} size mismatch",
+                i
+            );
+            assert!(
+                (rb.mean - ib.mean).abs() < 1e-10,
+                "bucket {} mean mismatch: rebuild={}, incremental={}",
+                i,
+                rb.mean,
+                ib.mean
+            );
+            assert!(
+                (rb.stddev - ib.stddev).abs() < 1e-10,
+                "bucket {} stddev mismatch: rebuild={}, incremental={}",
+                i,
+                rb.stddev,
+                ib.stddev
+            );
+        }
+
+        // EWMA should also match
+        let rebuild_ewma = tl_rebuild.current_ewma(TrainingMode::UnisonPitchComparison);
+        let incr_ewma = tl_incr.current_ewma(TrainingMode::UnisonPitchComparison);
+        assert!(
+            (rebuild_ewma.unwrap() - incr_ewma.unwrap()).abs() < 1e-10,
+            "EWMA mismatch: rebuild={:?}, incremental={:?}",
+            rebuild_ewma,
+            incr_ewma
+        );
+    }
+
     // --- Reset ---
 
     #[test]
     fn test_reset_clears_all_data() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         let records = vec![
             make_comparison(0, 15.0, "2026-03-06T11:00:00Z"),
             make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
         assert_eq!(
             tl.state(TrainingMode::UnisonPitchComparison),
             TrainingModeState::Active
@@ -1332,7 +1385,6 @@ mod tests {
     #[test]
     fn test_empty_session_zone() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         // Only historical data, nothing today
@@ -1340,7 +1392,7 @@ mod tests {
             make_comparison(0, 20.0, "2026-01-15T12:00:00Z"),
             make_comparison(0, 15.0, "2026-02-15T12:00:00Z"),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         // Should have month buckets but no session buckets
@@ -1350,7 +1402,6 @@ mod tests {
     #[test]
     fn test_only_session_zone_data() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         // Only data from today
@@ -1358,7 +1409,7 @@ mod tests {
             make_comparison(0, 20.0, "2026-03-06T10:00:00Z"),
             make_comparison(0, 15.0, "2026-03-06T11:00:00Z"),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
         assert!(buckets.iter().all(|b| b.bucket_size == BucketSize::Session));
@@ -1369,7 +1420,6 @@ mod tests {
     #[test]
     fn test_latest_bucket_stddev() {
         let mut tl = ProgressTimeline::new();
-        let now = now_epoch();
         let today = today_epoch();
 
         let records = vec![
@@ -1377,7 +1427,7 @@ mod tests {
             make_comparison(0, 20.0, "2026-03-06T11:05:00Z"),
             make_comparison(0, 30.0, "2026-03-06T11:10:00Z"),
         ];
-        tl.rebuild(&records, &[], now, today);
+        tl.rebuild(&records, &[], today);
 
         let stddev = tl.latest_bucket_stddev(TrainingMode::UnisonPitchComparison);
         assert!(stddev.is_some());

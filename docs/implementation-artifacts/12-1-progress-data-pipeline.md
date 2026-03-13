@@ -1,6 +1,6 @@
 # Story 12.1: Progress Data Pipeline
 
-Status: review
+Status: done
 
 ## Story
 
@@ -209,6 +209,25 @@ No debug issues encountered.
 - docs/implementation-artifacts/sprint-status.yaml (modified)
 - docs/implementation-artifacts/12-1-progress-data-pipeline.md (modified)
 
+## Senior Developer Review (AI)
+
+**Reviewer:** Michael (via Claude Opus 4.6 adversarial review) | **Date:** 2026-03-13
+
+**Outcome:** Changes Requested → Fixed
+
+**Findings (4 fixed, 3 low noted):**
+
+1. **[HIGH] Cross-midnight incremental stale zones** — `add_point()` never reclassifies previously added records when `start_of_today` shifts. Added doc comment documenting limitation: call `rebuild()` to recategorize after midnight. (Documented, not a code fix — design limitation.)
+2. **[MEDIUM] Duplicate `start_of_today` computation** — `app.rs` duplicated 6-line `js_sys::Date` midnight calculation instead of calling `bridge::compute_start_of_today()`. **Fixed:** made `compute_start_of_today` `pub(crate)`, updated `app.rs` to call it.
+3. **[MEDIUM] No cross-zone incremental test** — Task 5.8 claimed incremental/rebuild parity tested, but test only covered single-zone (Session). **Fixed:** added `test_incremental_cross_zone_matches_rebuild` covering Month+Day+Session.
+4. **[MEDIUM] Dead `_now` parameter** — `rebuild()`, `add_comparison()`, `add_matching()` accepted unused `_now: f64`. **Fixed:** removed parameter from domain API and all callers.
+5. **[LOW] `.abs()` in session gap check** — `update_session_bucket` used `(timestamp - last.period_end).abs()` which could mask out-of-order records. **Fixed:** removed `.abs()`.
+6. **[LOW] UTC month grouping vs local-time zone boundaries** — Noted, no fix (no timezone library in domain crate).
+7. **[LOW] Trivial test padding** — `test_time_bucket_fields` and `test_bucket_size_variants` test language semantics. Noted.
+
+**Post-review stats:** 344 domain tests pass, zero clippy warnings.
+
 ## Change Log
 
+- 2026-03-13: Code review fixes — removed dead `_now` parameter, deduplicated `start_of_today` computation, added cross-zone incremental test, documented midnight crossover limitation
 - 2026-03-13: Story 12.1 implemented — three-zone display bucketing, separate EWMA pipeline, population stddev, BucketSize::Week removed, public API added
