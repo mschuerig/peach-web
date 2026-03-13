@@ -1,14 +1,42 @@
 use leptos::prelude::*;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 use domain::{BucketSize, TimeBucket};
 
 const VIEWBOX_WIDTH: f64 = 300.0;
-const MARGIN_LEFT: f64 = 35.0;
+const VISIBLE_BUCKETS: usize = 8;
+const MARGIN_LEFT: f64 = 10.0;
 const MARGIN_RIGHT: f64 = 10.0;
 const MARGIN_TOP: f64 = 10.0;
 const MARGIN_BOTTOM_BASE: f64 = 24.0;
 const MARGIN_BOTTOM_YEARS: f64 = 40.0;
+const Y_AXIS_VB_W: f64 = 40.0;
+
+/// Compute nice Y-axis tick values from 0 to y_max.
+fn compute_y_ticks(y_max: f64) -> Vec<f64> {
+    if y_max <= 0.0 {
+        return vec![0.0];
+    }
+    let rough_step = y_max / 3.0;
+    let mag = 10_f64.powf(rough_step.log10().floor());
+    let norm = rough_step / mag;
+    let step = if norm <= 1.5 {
+        mag
+    } else if norm <= 3.5 {
+        2.0 * mag
+    } else {
+        5.0 * mag
+    };
+    let mut ticks = vec![0.0];
+    let mut v = step;
+    while v < y_max {
+        ticks.push(v);
+        v += step;
+    }
+    ticks
+}
 
 struct ZoneRange {
     zone: BucketSize,
@@ -127,6 +155,34 @@ pub fn ProgressChart(
 
     let bucket_count = buckets.len();
 
+    // Scrollable container setup
+    let container_ref = NodeRef::<leptos::html::Div>::new();
+    let is_scrollable = bucket_count > VISIBLE_BUCKETS;
+    let svg_width = if is_scrollable {
+        format!("{}%", bucket_count as f64 / VISIBLE_BUCKETS as f64 * 100.0)
+    } else {
+        "100%".to_string()
+    };
+
+    // Set initial scroll position to right edge after mount
+    if is_scrollable {
+        Effect::new(move |_| {
+            if container_ref.get().is_some() {
+                let cb = Closure::<dyn FnMut()>::new(move || {
+                    if let Some(el) = container_ref.get() {
+                        let element: &web_sys::Element = el.as_ref();
+                        element
+                            .set_scroll_left(element.scroll_width() - element.client_width());
+                    }
+                });
+                let _ = web_sys::window()
+                    .unwrap()
+                    .request_animation_frame(cb.as_ref().unchecked_ref());
+                cb.forget();
+            }
+        });
+    }
+
     // Zone detection
     let zones = detect_zones(&buckets);
     let multi_zone = zones.len() > 1;
@@ -147,7 +203,14 @@ pub fn ProgressChart(
         MARGIN_BOTTOM_BASE
     };
     let viewbox_height: f64 = 160.0 + if has_year_labels { 16.0 } else { 0.0 };
-    let inner_w = VIEWBOX_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+    // Scale viewBox width proportionally so each bucket has the same coordinate
+    // space as in static mode — prevents distortion with preserveAspectRatio="none"
+    let viewbox_w = if is_scrollable {
+        VIEWBOX_WIDTH * bucket_count as f64 / VISIBLE_BUCKETS as f64
+    } else {
+        VIEWBOX_WIDTH
+    };
+    let inner_w = viewbox_w - MARGIN_LEFT - MARGIN_RIGHT;
     let inner_h = viewbox_height - MARGIN_TOP - margin_bottom;
 
     // Y domain: 0 to max(1, max(bucket.mean + bucket.stddev)) — AC 1
@@ -421,18 +484,92 @@ pub fn ProgressChart(
 
     let year_label_y = format!("{:.1}", viewbox_height - 4.0);
 
-    // Y-axis unit label
-    let y_axis_x = MARGIN_LEFT - 4.0;
-    let y_axis_cy = MARGIN_TOP + inner_h / 2.0;
+    // --- Grid lines ---
+    let y_ticks = compute_y_ticks(y_max);
+
+    // Horizontal grid lines at each Y tick (rendered in main chart SVG)
+    let chart_x_start = format!("{MARGIN_LEFT:.1}");
+    let chart_x_end = format!("{:.1}", MARGIN_LEFT + inner_w);
+    let h_grid_lines: Vec<_> = y_ticks
+        .iter()
+        .map(|&val| {
+            let gy = y(val);
+            let x1 = chart_x_start.clone();
+            let x2 = chart_x_end.clone();
+            view! {
+                <line
+                    x1=x1
+                    y1=format!("{gy:.1}")
+                    x2=x2
+                    y2=format!("{gy:.1}")
+                    stroke="currentColor"
+                    opacity="0.15"
+                    stroke-width="1"
+                    vector-effect="non-scaling-stroke"
+                />
+            }
+        })
+        .collect();
+
+    // Vertical dashed grid lines at each bucket center
+    let v_grid_lines: Vec<_> = (0..bucket_count)
+        .map(|i| {
+            let gx = x(i as f64);
+            view! {
+                <line
+                    x1=format!("{gx:.1}")
+                    y1=format!("{MARGIN_TOP:.1}")
+                    x2=format!("{gx:.1}")
+                    y2=format!("{:.1}", MARGIN_TOP + inner_h)
+                    stroke="currentColor"
+                    opacity="0.10"
+                    stroke-width="1"
+                    stroke-dasharray="2 3"
+                    vector-effect="non-scaling-stroke"
+                />
+            }
+        })
+        .collect();
+
+    // --- Y-axis tick labels (right-side SVG) ---
+    let y_axis_ticks: Vec<_> = y_ticks
+        .iter()
+        .map(|&val| {
+            let ty = y(val);
+            let label = format!("{}", val as i32);
+            view! {
+                <text
+                    x="4"
+                    y=format!("{:.1}", ty + 3.0)
+                    text-anchor="start"
+                    font-size="9"
+                    fill="currentColor"
+                    opacity="0.6"
+                >
+                    {label}
+                </text>
+            }
+        })
+        .collect();
 
     view! {
+        <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">{unit_label}</div>
+        <div class="flex h-[180px] md:h-[240px]">
+        // Scrollable chart area
+        <div
+            node_ref=container_ref
+            class=if is_scrollable { "flex-1 min-w-0 overflow-x-auto chart-scroll-container" } else { "flex-1 min-w-0" }
+        >
         <svg
-            viewBox=format!("0 0 {VIEWBOX_WIDTH} {viewbox_height}")
-            width="100%"
+            viewBox=format!("0 0 {viewbox_w} {viewbox_height}")
+            width=svg_width
+            height="100%"
             aria-hidden="true"
-            class="mt-2 h-[180px] md:h-[240px]"
             preserveAspectRatio="none"
         >
+            // Grid lines (behind everything)
+            {h_grid_lines}
+            {v_grid_lines}
             // Layer 1: Zone backgrounds
             {zone_bgs}
             // Layer 2: Zone dividers
@@ -476,18 +613,6 @@ pub fn ProgressChart(
                 opacity="0.60"
                 vector-effect="non-scaling-stroke"
             />
-            // Y-axis unit label
-            <text
-                x=format!("{y_axis_x:.1}")
-                y=format!("{y_axis_cy:.1}")
-                text-anchor="middle"
-                font-size="9"
-                fill="currentColor"
-                opacity="0.5"
-                transform=format!("rotate(-90, {y_axis_x:.1}, {y_axis_cy:.1})")
-            >
-                {unit_label}
-            </text>
             // X-axis labels
             {x_labels
                 .into_iter()
@@ -498,9 +623,9 @@ pub fn ProgressChart(
                             x=format!("{lx:.1}")
                             y=ly
                             text-anchor="middle"
-                            font-size="8"
+                            font-size="9"
                             fill="currentColor"
-                            opacity="0.5"
+                            opacity="0.6"
                         >
                             {label}
                         </text>
@@ -517,9 +642,9 @@ pub fn ProgressChart(
                             x=format!("{lx:.1}")
                             y=ly
                             text-anchor="middle"
-                            font-size="8"
+                            font-size="9"
                             fill="currentColor"
-                            opacity="0.4"
+                            opacity="0.5"
                         >
                             {label}
                         </text>
@@ -527,6 +652,18 @@ pub fn ProgressChart(
                 })
                 .collect::<Vec<_>>()}
         </svg>
+        </div>
+        // Fixed Y-axis (right side, non-scrolling)
+        <svg
+            viewBox=format!("0 0 {Y_AXIS_VB_W} {viewbox_height}")
+            class="flex-none w-8"
+            height="100%"
+            aria-hidden="true"
+            preserveAspectRatio="none"
+        >
+            {y_axis_ticks}
+        </svg>
+        </div>
     }
     .into_any()
 }

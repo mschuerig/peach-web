@@ -29,6 +29,19 @@
     }
 }
 
+/* Thin scrollbar for chart scroll container */
+.chart-scroll-container {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+.chart-scroll-container::-webkit-scrollbar {
+    height: 4px;
+}
+.chart-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.3);
+    border-radius: 2px;
+}
+
 /* Chart increased contrast overrides */
 @media (prefers-contrast: more) {
     .chart-zone-bg { opacity: 0.12; }
