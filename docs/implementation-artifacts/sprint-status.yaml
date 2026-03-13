@@ -145,5 +145,5 @@ development_status:
   # Epic 13: Chart Exploration & Help
   epic-13: in-progress
   13-1-chart-tap-annotation: done
-  13-2-profile-help-overlay: backlog
+  13-2-profile-help-overlay: ready-for-dev
   epic-13-retrospective: optional
