@@ -84,3 +84,26 @@ pub static INFO_ACKNOWLEDGMENTS: &[HelpSection] = &[HelpSection {
     title_key: "acknowledgments",
     body_key: "acknowledgments-body",
 }];
+
+pub static PROFILE_HELP: &[HelpSection] = &[
+    HelpSection {
+        title_key: "help-profile-chart-title",
+        body_key: "help-profile-chart-body",
+    },
+    HelpSection {
+        title_key: "help-profile-trend-title",
+        body_key: "help-profile-trend-body",
+    },
+    HelpSection {
+        title_key: "help-profile-band-title",
+        body_key: "help-profile-band-body",
+    },
+    HelpSection {
+        title_key: "help-profile-baseline-title",
+        body_key: "help-profile-baseline-body",
+    },
+    HelpSection {
+        title_key: "help-profile-zones-title",
+        body_key: "help-profile-zones-body",
+    },
+];

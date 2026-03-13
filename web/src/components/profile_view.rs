@@ -9,8 +9,11 @@ use crate::app::base_href;
 
 use domain::{ProgressTimeline, TrainingMode, TrainingModeState};
 
-use super::nav_bar::NavBar;
+use super::help_content::HelpModal;
+use super::nav_bar::{NavBar, NavIconButton};
 use super::progress_card::ProgressCard;
+
+use crate::help_sections::PROFILE_HELP;
 
 #[component]
 pub fn ProfileView() -> impl IntoView {
@@ -20,12 +23,16 @@ pub fn ProfileView() -> impl IntoView {
         use_context().expect("is_profile_loaded context");
     let i18n = expect_context::<I18n>();
 
+    let is_help_open = RwSignal::new(false);
+
     let ptl = progress_timeline.clone();
 
     view! {
         <div class="pt-4 pb-12">
             <NavBar title=move_tr!("profile-title") back_href=base_href("/")>
+                <NavIconButton label=Signal::derive(move || tr!("nav-help")) icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) circled=true />
             </NavBar>
+            <HelpModal title=move_tr!("profile-help-title") sections=PROFILE_HELP is_open=is_help_open />
 
             {move || {
                 if !is_profile_loaded.get() {

@@ -184,6 +184,19 @@ help-info-modes-body = **Hören & Vergleichen — Einzeltöne** — Höre zwei T
 help-info-start-title = Erste Schritte
 help-info-start-body = Wähle einfach einen Trainingsmodus auf dem Startbildschirm und leg los. Peach passt sich automatisch deinem Niveau an.
 
+## Help - Profile
+profile-help-title = Fortschrittsdiagramme
+help-profile-chart-title = Dein Fortschrittsdiagramm
+help-profile-chart-body = Dieses Diagramm zeigt, wie sich deine Tonwahrnehmung im Laufe der Zeit entwickelt.
+help-profile-trend-title = Trendlinie
+help-profile-trend-body = Die blaue Linie zeigt deinen geglätteten Durchschnitt — sie filtert zufällige Schwankungen heraus und zeigt deinen echten Fortschritt.
+help-profile-band-title = Variabilitätsband
+help-profile-band-body = Der schattierte Bereich um die Linie zeigt, wie konsistent du bist — ein schmaleres Band bedeutet zuverlässigere Ergebnisse.
+help-profile-baseline-title = Zielwert
+help-profile-baseline-body = Die grüne gestrichelte Linie ist dein Ziel — wenn sich die Trendlinie ihr nähert, wird dein Gehör schärfer.
+help-profile-zones-title = Zeitzonen
+help-profile-zones-body = Das Diagramm gruppiert deine Daten nach Zeit: Monate links, aktuelle Tage in der Mitte und die heutigen Sitzungen rechts.
+
 ## Chart Annotations
 chart-annotation-records = { $count } Einträge
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } Einträge

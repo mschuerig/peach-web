@@ -184,6 +184,19 @@ help-info-modes-body = **Hear & Compare — Single Notes** — Listen to two not
 help-info-start-title = Getting Started
 help-info-start-body = Just pick any training mode on the home screen and start practicing. Peach adapts to your skill level automatically.
 
+## Help - Profile
+profile-help-title = Progress Charts
+help-profile-chart-title = Your Progress Chart
+help-profile-chart-body = This chart shows how your pitch perception is developing over time.
+help-profile-trend-title = Trend Line
+help-profile-trend-body = The blue line shows your smoothed average — it filters out random ups and downs to reveal your real progress.
+help-profile-band-title = Variability Band
+help-profile-band-body = The shaded area around the line shows how consistent you are — a narrower band means more reliable results.
+help-profile-baseline-title = Target Baseline
+help-profile-baseline-body = The green dashed line is your goal — as the trend line approaches it, your ear is getting sharper.
+help-profile-zones-title = Time Zones
+help-profile-zones-body = The chart groups your data by time: months on the left, recent days in the middle, and today's sessions on the right.
+
 ## Chart Annotations
 chart-annotation-records = { $count } records
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records

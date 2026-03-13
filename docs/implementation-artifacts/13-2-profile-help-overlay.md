@@ -1,6 +1,6 @@
 # Story 13.2: Profile Help Overlay
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -25,20 +25,20 @@ so that I can learn to read my progress charts.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define PROFILE_HELP sections (AC: #3)
-  - [ ] 1.1 Add `PROFILE_HELP` static array to `web/src/help_sections.rs` with 5 `HelpSection` entries using i18n keys
-  - [ ] 1.2 Add English i18n keys to `web/locales/en/main.ftl`: `profile-help-title`, `help-profile-chart-title`, `help-profile-chart-body`, `help-profile-trend-title`, `help-profile-trend-body`, `help-profile-band-title`, `help-profile-band-body`, `help-profile-baseline-title`, `help-profile-baseline-body`, `help-profile-zones-title`, `help-profile-zones-body`
-  - [ ] 1.3 Add German i18n keys to `web/locales/de/main.ftl` with equivalent translations
+- [x] Task 1: Define PROFILE_HELP sections (AC: #3)
+  - [x] 1.1 Add `PROFILE_HELP` static array to `web/src/help_sections.rs` with 5 `HelpSection` entries using i18n keys
+  - [x] 1.2 Add English i18n keys to `web/locales/en/main.ftl`: `profile-help-title`, `help-profile-chart-title`, `help-profile-chart-body`, `help-profile-trend-title`, `help-profile-trend-body`, `help-profile-band-title`, `help-profile-band-body`, `help-profile-baseline-title`, `help-profile-baseline-body`, `help-profile-zones-title`, `help-profile-zones-body`
+  - [x] 1.3 Add German i18n keys to `web/locales/de/main.ftl` with equivalent translations
 
-- [ ] Task 2: Add help button to profile NavBar (AC: #1)
-  - [ ] 2.1 Add `is_help_open: RwSignal<bool>` signal in `ProfileView`
-  - [ ] 2.2 Add `NavIconButton` as child of `NavBar` with `icon="?"`, `circled=true`, and `on_click` callback that sets `is_help_open` to `true`
-  - [ ] 2.3 Import `NavIconButton` from `super::nav_bar`
+- [x] Task 2: Add help button to profile NavBar (AC: #1)
+  - [x] 2.1 Add `is_help_open: RwSignal<bool>` signal in `ProfileView`
+  - [x] 2.2 Add `NavIconButton` as child of `NavBar` with `icon="?"`, `circled=true`, and `on_click` callback that sets `is_help_open` to `true`
+  - [x] 2.3 Import `NavIconButton` from `super::nav_bar`
 
-- [ ] Task 3: Render HelpModal (AC: #2, #4)
-  - [ ] 3.1 Add `HelpModal` component after the NavBar, passing `title=move_tr!("profile-help-title")`, `sections=PROFILE_HELP`, `is_open=is_help_open`
-  - [ ] 3.2 Import `HelpModal` from `super::help_content` and `PROFILE_HELP` from `crate::help_sections`
-  - [ ] 3.3 No `on_close` callback needed — profile view is read-only (no pause/resume like training views)
+- [x] Task 3: Render HelpModal (AC: #2, #4)
+  - [x] 3.1 Add `HelpModal` component after the NavBar, passing `title=move_tr!("profile-help-title")`, `sections=PROFILE_HELP`, `is_open=is_help_open`
+  - [x] 3.2 Import `HelpModal` from `super::help_content` and `PROFILE_HELP` from `crate::help_sections`
+  - [x] 3.3 No `on_close` callback needed — profile view is read-only (no pause/resume like training views)
 
 ## Dev Notes
 
@@ -132,10 +132,31 @@ Translate the help content naturally. The existing German help text in the app u
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+No issues encountered.
+
 ### Completion Notes List
 
+- Added `PROFILE_HELP` static array with 5 sections to `help_sections.rs`, following the exact same pattern as `SETTINGS_HELP`
+- Added 11 English i18n keys (`profile-help-title` + 5 title/body pairs) to `en/main.ftl`
+- Added 11 German i18n keys with natural translations using informal "du/dein" form to `de/main.ftl`
+- Added `is_help_open` signal, `NavIconButton` (circled "?"), and `HelpModal` to `ProfileView`, following the settings view pattern exactly
+- Chart state preservation (AC #4) is inherent — native `<dialog>` overlays without unmounting the DOM
+- All 359 domain tests pass, clippy clean with zero warnings
+- Manual browser testing deferred to user
+
+### Change Log
+
+- 2026-03-13: Implemented profile help overlay (story 13.2) — help button + modal with 5 chart explanation sections in EN/DE
+
 ### File List
+
+- `web/src/help_sections.rs` — added `PROFILE_HELP` static array
+- `web/src/components/profile_view.rs` — added help button + HelpModal
+- `web/locales/en/main.ftl` — added English profile help i18n keys
+- `web/locales/de/main.ftl` — added German profile help i18n keys
+- `docs/implementation-artifacts/sprint-status.yaml` — status updated
+- `docs/implementation-artifacts/13-2-profile-help-overlay.md` — story file updated
