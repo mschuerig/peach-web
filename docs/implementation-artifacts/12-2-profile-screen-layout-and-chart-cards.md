@@ -1,6 +1,6 @@
 # Story 12.2: Profile Screen Layout & Chart Cards
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
