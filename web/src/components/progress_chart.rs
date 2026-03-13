@@ -1,6 +1,4 @@
 use leptos::prelude::*;
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 
 use domain::{BucketSize, TimeBucket};
@@ -168,17 +166,14 @@ pub fn ProgressChart(
     if is_scrollable {
         Effect::new(move |_| {
             if container_ref.get().is_some() {
-                let cb = Closure::<dyn FnMut()>::new(move || {
+                wasm_bindgen_futures::spawn_local(async move {
+                    gloo_timers::future::TimeoutFuture::new(0).await;
                     if let Some(el) = container_ref.get() {
                         let element: &web_sys::Element = el.as_ref();
                         element
                             .set_scroll_left(element.scroll_width() - element.client_width());
                     }
                 });
-                let _ = web_sys::window()
-                    .unwrap()
-                    .request_animation_frame(cb.as_ref().unchecked_ref());
-                cb.forget();
             }
         });
     }

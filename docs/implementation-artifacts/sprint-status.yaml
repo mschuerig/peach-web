@@ -135,9 +135,9 @@ development_status:
   epic-11-retrospective: optional
 
   # Epic 12: Profile Progress Charts
-  epic-12: in-progress
+  epic-12: done
   12-1-progress-data-pipeline: done
   12-2-profile-screen-layout-and-chart-cards: done
   12-3-chart-rendering: done
-  12-4-chart-scrolling: review
+  12-4-chart-scrolling: done
   epic-12-retrospective: optional

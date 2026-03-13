@@ -1,6 +1,6 @@
 # Story 12.4: Chart Scrolling
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -25,7 +25,7 @@ so that I can review my full training timeline while keeping the chart readable.
 - [x] Task 1: Add scrollable container wrapper (AC: 1, 2)
   - [x] 1.1 In `progress_chart.rs`, wrap the `<svg>` in a `<div>` container. When `bucket_count > 8`, apply `overflow-x: auto` to the container and scale SVG width proportionally (`bucket_count / 8 * 100%`). When `bucket_count <= 8`, keep current static layout with `width="100%"`.
   - [x] 1.2 Create a `NodeRef` for the scroll container div.
-  - [x] 1.3 Adjust the SVG `preserveAspectRatio` to `"xMinYMid meet"` (instead of `"none"`) so the chart maintains its aspect ratio when wider than the viewport.
+  - [x] 1.3 Evaluate SVG `preserveAspectRatio` — tested `"xMinYMid meet"` but kept `"none"` because meet caused content to scale to height without filling width; instead scaled viewBox width proportionally to preserve per-bucket sizing.
 
 - [x] Task 2: Set initial scroll position (AC: 2, 4)
   - [x] 2.1 Use `request_animation_frame` (or `leptos::task::spawn_local`) after mount to set `scroll_left` on the container ref to `scroll_width - client_width` (i.e., scroll to right edge).
@@ -208,9 +208,10 @@ Claude Opus 4.6
 - SVG width scales proportionally (`bucket_count / 8 * 100%`) for scrollable mode, `100%` for static
 - `NodeRef` on container div for scroll position control
 - `preserveAspectRatio` kept as `"none"` for both modes — `"xMinYMid meet"` caused content to scale to height and not fill width
-- Initial scroll position set to right edge via `request_animation_frame` + `set_scroll_left(scroll_width - client_width)` — always instant (no animation)
+- Initial scroll position set to right edge via `spawn_local` + `TimeoutFuture::new(0)` + `set_scroll_left(scroll_width - client_width)` — always instant (no animation)
 - Height classes (`h-[180px] md:h-[240px]`) moved from SVG to container div; SVG uses `height="100%"`
 - Thin scrollbar CSS added via `.chart-scroll-container` class in `input.css`
+- **Additional visual alignment with iOS reference:** Y-axis redesigned as separate fixed SVG with numeric tick labels (right side), grid lines (horizontal at Y ticks, vertical dashed at bucket centers), unit label moved above chart, `MARGIN_LEFT` reduced from 35 to 10, label font sizes and opacities adjusted
 - No changes to chart rendering logic (all 6 layers), domain crate, or `progress_card.rs`
 - Clippy: zero warnings. Domain tests: 359 passed.
 - Manual browser tests (5.3-5.6) deferred to user — agent cannot verify in browser.
@@ -218,8 +219,9 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-13: Implemented chart scrolling — scrollable container wrapper, initial scroll-to-right, height preservation, scrollbar styling
+- 2026-03-13: Code review — fixed `Closure::forget()` memory leak (replaced with `spawn_local` + `TimeoutFuture`), updated File List and Completion Notes to document Y-axis redesign and grid lines, reworded Task 1.3 to reflect `preserveAspectRatio` decision
 
 ### File List
 
-- web/src/components/progress_chart.rs (modified — scroll container wrapper, NodeRef, rAF scroll, preserveAspectRatio)
+- web/src/components/progress_chart.rs (modified — scroll container wrapper, NodeRef, initial scroll-to-right, viewBox scaling, Y-axis separated to fixed right-side SVG with numeric ticks, grid lines added, MARGIN_LEFT reduced, label sizing adjusted)
 - input.css (modified — added `.chart-scroll-container` scrollbar styling)
