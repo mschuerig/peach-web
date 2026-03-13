@@ -25,12 +25,6 @@ fn format_x_label(epoch_secs: f64, bucket_size: BucketSize) -> String {
             const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             WEEKDAYS[date.get_day() as usize].to_string()
         }
-        BucketSize::Week => {
-            const MONTHS: [&str; 12] = [
-                "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-            ];
-            format!("{} {}", MONTHS[date.get_month() as usize], date.get_date())
-        }
         BucketSize::Month => {
             const MONTHS: [&str; 12] = [
                 "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

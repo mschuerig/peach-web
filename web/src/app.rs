@@ -218,10 +218,17 @@ pub fn App() -> impl IntoView {
                 // ProgressTimeline hydration — rebuild from all records
                 {
                     let now = js_sys::Date::now() / 1000.0;
+                    let date = js_sys::Date::new_0();
+                    date.set_hours(0);
+                    date.set_minutes(0);
+                    date.set_seconds(0);
+                    date.set_milliseconds(0);
+                    let start_of_today = date.get_time() / 1000.0;
                     ptl_for_hydration.borrow_mut().rebuild(
                         &comparison_records,
                         &matching_records,
                         now,
+                        start_of_today,
                     );
                     log::info!("ProgressTimeline hydrated");
                 }

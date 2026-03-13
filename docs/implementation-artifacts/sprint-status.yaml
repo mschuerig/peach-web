@@ -136,7 +136,7 @@ development_status:
 
   # Epic 12: Profile Progress Charts
   epic-12: in-progress
-  12-1-progress-data-pipeline: ready-for-dev
+  12-1-progress-data-pipeline: review
   12-2-profile-screen-layout-and-chart-cards: backlog
   12-3-chart-rendering: backlog
   12-4-chart-scrolling: backlog

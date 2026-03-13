@@ -71,7 +71,7 @@ pub fn ProgressSparkline(mode: TrainingMode) -> impl IntoView {
                 return view! { <span /> }.into_any();
             }
 
-            let buckets = tl.buckets(mode);
+            let buckets = tl.display_buckets(mode);
             let ewma = tl.current_ewma(mode);
             let trend = tl.trend(mode);
             drop(tl);

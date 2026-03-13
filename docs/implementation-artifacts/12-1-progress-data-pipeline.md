@@ -1,6 +1,6 @@
 # Story 12.1: Progress Data Pipeline
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -31,37 +31,37 @@ So that the chart rendering layer receives fully computed, ready-to-render data 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Refactor display bucketing to three-zone calendar-day-snapped (AC: 2, 3)
-  - [ ] 1.1 Add `start_of_today: f64` parameter to `rebuild()` and `build_display_buckets()` (local midnight epoch, passed from web layer via `js_sys::Date`)
-  - [ ] 1.2 Implement `build_display_buckets(points, start_of_today, session_gap)` with three zones: Month (< start_of_today - 7d), Day (>= start_of_today - 7d AND < start_of_today), Session (>= start_of_today)
-  - [ ] 1.3 Calendar-day grouping for Day zone: floor timestamp to day boundary relative to start_of_today
-  - [ ] 1.4 Calendar-month grouping for Month zone: group by (year, month) derived from epoch
-  - [ ] 1.5 Truncate last monthly bucket's end to the day zone boundary
-  - [ ] 1.6 Session grouping within Session zone using 30-min gap rule
-  - [ ] 1.7 Change stddev to population formula: `sqrt(m2 / n)` instead of `sqrt(m2 / (n-1))`
-  - [ ] 1.8 Remove `BucketSize::Week` variant (no longer used in display pipeline)
-- [ ] Task 2: Separate EWMA session pipeline (AC: 4)
-  - [ ] 2.1 Add `ewma_buckets: Vec<TimeBucket>` field to ModeState (session-level only, independent of display)
-  - [ ] 2.2 Implement `build_ewma_session_buckets(points, session_gap)` — pure 30-min gap grouping with NO zone logic
-  - [ ] 2.3 EWMA computation reads from `ewma_buckets`, not `display_buckets`
-  - [ ] 2.4 Both pipelines rebuilt on `rebuild()` and updated on `add_comparison()`/`add_matching()`
-- [ ] Task 3: Fix trend stddev to population formula (AC: 5)
-  - [ ] 3.1 Change `running_stddev` from `sqrt(m2 / (n-1))` to `sqrt(m2 / n)` in `recompute_trend()`
-- [ ] Task 4: Add public API for chart rendering (AC: 1, 2, 4, 5, 6)
-  - [ ] 4.1 `display_buckets(mode) -> Vec<TimeBucket>` — returns three-zone display buckets
-  - [ ] 4.2 `latest_bucket_stddev(mode) -> Option<f64>` — stddev of last display bucket (for headline ±)
-  - [ ] 4.3 Ensure existing `current_ewma(mode)`, `trend(mode)`, `state(mode)` still work
-  - [ ] 4.4 Rename old `buckets()` to `display_buckets()` or deprecate
-- [ ] Task 5: Update and add tests (AC: 1-7)
-  - [ ] 5.1 Update existing tests for population stddev (divisor n, not n-1)
-  - [ ] 5.2 Test three-zone bucketing: records spanning months/days/today correctly assigned
-  - [ ] 5.3 Test calendar-day boundary snapping (not age-based)
-  - [ ] 5.4 Test monthly bucket end truncation at day zone boundary
-  - [ ] 5.5 Test EWMA uses session pipeline, not display pipeline
-  - [ ] 5.6 Test trend with population running stddev
-  - [ ] 5.7 Test empty zones (e.g., no session data today, only historical)
-  - [ ] 5.8 Test incremental add_comparison/add_matching produce same results as rebuild
-  - [ ] 5.9 Verify `cargo test -p domain` passes, `cargo clippy --workspace` zero warnings
+- [x] Task 1: Refactor display bucketing to three-zone calendar-day-snapped (AC: 2, 3)
+  - [x] 1.1 Add `start_of_today: f64` parameter to `rebuild()` and `build_display_buckets()` (local midnight epoch, passed from web layer via `js_sys::Date`)
+  - [x] 1.2 Implement `build_display_buckets(points, start_of_today, session_gap)` with three zones: Month (< start_of_today - 7d), Day (>= start_of_today - 7d AND < start_of_today), Session (>= start_of_today)
+  - [x] 1.3 Calendar-day grouping for Day zone: floor timestamp to day boundary relative to start_of_today
+  - [x] 1.4 Calendar-month grouping for Month zone: group by (year, month) derived from epoch
+  - [x] 1.5 Truncate last monthly bucket's end to the day zone boundary
+  - [x] 1.6 Session grouping within Session zone using 30-min gap rule
+  - [x] 1.7 Change stddev to population formula: `sqrt(m2 / n)` instead of `sqrt(m2 / (n-1))`
+  - [x] 1.8 Remove `BucketSize::Week` variant (no longer used in display pipeline)
+- [x] Task 2: Separate EWMA session pipeline (AC: 4)
+  - [x] 2.1 Add `ewma_buckets: Vec<TimeBucket>` field to ModeState (session-level only, independent of display)
+  - [x] 2.2 Implement `build_ewma_session_buckets(points, session_gap)` — pure 30-min gap grouping with NO zone logic
+  - [x] 2.3 EWMA computation reads from `ewma_buckets`, not `display_buckets`
+  - [x] 2.4 Both pipelines rebuilt on `rebuild()` and updated on `add_comparison()`/`add_matching()`
+- [x] Task 3: Fix trend stddev to population formula (AC: 5)
+  - [x] 3.1 Change `running_stddev` from `sqrt(m2 / (n-1))` to `sqrt(m2 / n)` in `recompute_trend()`
+- [x] Task 4: Add public API for chart rendering (AC: 1, 2, 4, 5, 6)
+  - [x] 4.1 `display_buckets(mode) -> Vec<TimeBucket>` — returns three-zone display buckets
+  - [x] 4.2 `latest_bucket_stddev(mode) -> Option<f64>` — stddev of last display bucket (for headline ±)
+  - [x] 4.3 Ensure existing `current_ewma(mode)`, `trend(mode)`, `state(mode)` still work
+  - [x] 4.4 Rename old `buckets()` to `display_buckets()` or deprecate
+- [x] Task 5: Update and add tests (AC: 1-7)
+  - [x] 5.1 Update existing tests for population stddev (divisor n, not n-1)
+  - [x] 5.2 Test three-zone bucketing: records spanning months/days/today correctly assigned
+  - [x] 5.3 Test calendar-day boundary snapping (not age-based)
+  - [x] 5.4 Test monthly bucket end truncation at day zone boundary
+  - [x] 5.5 Test EWMA uses session pipeline, not display pipeline
+  - [x] 5.6 Test trend with population running stddev
+  - [x] 5.7 Test empty zones (e.g., no session data today, only historical)
+  - [x] 5.8 Test incremental add_comparison/add_matching produce same results as rebuild
+  - [x] 5.9 Verify `cargo test -p domain` passes, `cargo clippy --workspace` zero warnings
 
 ## Dev Notes
 
@@ -176,8 +176,39 @@ These downstream changes are **out of scope** for this story (they belong to sto
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+No debug issues encountered.
 
 ### Completion Notes List
 
+- Replaced `build_adaptive_buckets()` with `build_display_buckets()` implementing three-zone bucketing (Month/Day/Session) based on `start_of_today` parameter
+- Added `build_ewma_session_buckets()` for separate EWMA pipeline using pure 30-min gap grouping independent of display zones
+- Changed all stddev computations from sample (n-1 divisor) to population (n divisor) in three locations: `aggregate_bucket()`, `welford_update_bucket()`, and `recompute_trend()`
+- Removed `BucketSize::Week` variant; updated `progress_chart.rs` match arm
+- Added `start_of_today: f64` parameter to `rebuild()`, `add_comparison()`, `add_matching()`
+- Renamed `buckets()` to `display_buckets()` on `ProgressTimeline`
+- Added `latest_bucket_stddev(mode)` public API method
+- Added `ewma_buckets` field to `ModeState` for separate EWMA pipeline
+- Added helper functions: `floor_to_day()`, `epoch_to_month_start()`, `epoch_to_year_month()`, `year_month_to_epoch()`, `aggregate_bucket()`, `welford_update_bucket()`, `update_session_bucket()`, `update_or_create_bucket()`
+- Updated web crate callers: `app.rs` (rebuild), `bridge.rs` (add_comparison/add_matching), `progress_card.rs` (display_buckets), `progress_sparkline.rs` (display_buckets)
+- Added `compute_start_of_today()` helper in `bridge.rs` for local midnight epoch
+- 27 tests in progress_timeline module covering all acceptance criteria
+- All 343 domain tests pass, zero clippy warnings across workspace
+
 ### File List
+
+- domain/src/progress_timeline.rs (modified)
+- web/src/app.rs (modified)
+- web/src/bridge.rs (modified)
+- web/src/components/progress_chart.rs (modified)
+- web/src/components/progress_card.rs (modified)
+- web/src/components/progress_sparkline.rs (modified)
+- docs/implementation-artifacts/sprint-status.yaml (modified)
+- docs/implementation-artifacts/12-1-progress-data-pipeline.md (modified)
+
+## Change Log
+
+- 2026-03-13: Story 12.1 implemented — three-zone display bucketing, separate EWMA pipeline, population stddev, BucketSize::Week removed, public API added

@@ -173,11 +173,23 @@ impl ProgressTimelineObserver {
     }
 }
 
+fn compute_start_of_today() -> f64 {
+    let date = js_sys::Date::new_0();
+    date.set_hours(0);
+    date.set_minutes(0);
+    date.set_seconds(0);
+    date.set_milliseconds(0);
+    date.get_time() / 1000.0
+}
+
 impl PitchComparisonObserver for ProgressTimelineObserver {
     fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
         let record = PitchComparisonRecord::from_completed(completed);
         let now = js_sys::Date::now() / 1000.0;
-        self.0.borrow_mut().add_comparison(&record, now);
+        let start_of_today = compute_start_of_today();
+        self.0
+            .borrow_mut()
+            .add_comparison(&record, now, start_of_today);
     }
 }
 
@@ -185,6 +197,9 @@ impl PitchMatchingObserver for ProgressTimelineObserver {
     fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
         let record = PitchMatchingRecord::from_completed(completed);
         let now = js_sys::Date::now() / 1000.0;
-        self.0.borrow_mut().add_matching(&record, now);
+        let start_of_today = compute_start_of_today();
+        self.0
+            .borrow_mut()
+            .add_matching(&record, now, start_of_today);
     }
 }
