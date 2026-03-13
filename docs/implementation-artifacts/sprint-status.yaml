@@ -139,5 +139,5 @@ development_status:
   12-1-progress-data-pipeline: done
   12-2-profile-screen-layout-and-chart-cards: done
   12-3-chart-rendering: done
-  12-4-chart-scrolling: backlog
+  12-4-chart-scrolling: ready-for-dev
   epic-12-retrospective: optional
