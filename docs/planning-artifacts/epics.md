@@ -1657,3 +1657,419 @@ Visual polish to match iOS app: audio volume alignment, consistent headline layo
 2. The help modal is closed by a "Done" button (no decoration) rendered inside a pill in the top left corner of the modal, replacing the current top-right "Done" button
 3. The info view is closed by a "Done" button (no decoration) rendered inside a pill in the top left corner, replacing the current back-arrow pill
 4. Help modals display without a grey backdrop overlay — matching the info view's no-overlay appearance
+
+## Epic 12: Profile Progress Charts
+
+Users can see their training progress over time, with a chart card for each active training mode showing trend lines, variability bands, session dots, baselines, scrollable history, and a headline with EWMA value and trend indicator. Replaces the earlier piano keyboard visualization (Epic 7 stories 7.2/7.4) with a design proven across three iOS iterations.
+
+**Source reference:** `docs/ios-reference/profile-screen-specification.md` (authoritative)
+
+**Profile Screen FRs covered:** PFR1-PFR14, PFR16
+**Profile Screen NFRs covered:** PNFR1-PNFR5
+
+### Profile Screen Requirements
+
+**Functional Requirements:**
+
+- PFR1: Display a scrollable profile screen with progress chart cards for each training mode that has at least one record, ordered by TrainingMode enum order
+- PFR2: Show a headline row per card with mode display name, current EWMA value (1 decimal place, locale-aware formatting), per-bucket stddev of the most recent bucket (±format), and a colored trend arrow (improving/stable/declining)
+- PFR3: Extract metric points from raw training records per mode — absolute cent offset for comparison modes, absolute user cent error for matching modes — as (timestamp, value) pairs
+- PFR4: Bucket metric points into three granularity zones with boundaries snapped to calendar-day boundaries (local time): session zone starts at midnight today, daily zone spans the 7 calendar days before today, monthly zone covers everything older. Sessions within the session zone are defined by a 30-minute gap rule. Monthly buckets truncate at the day zone boundary to prevent overlap.
+- PFR5: Compute per-bucket mean and population standard deviation (not sample stddev); single-record buckets have stddev = 0
+- PFR6: Compute EWMA over session-level buckets (separate from display buckets) using exponential decay with a 7-day half-life (604800 seconds)
+- PFR7: Compute trend direction requiring at least 2 records: improving (latest value < EWMA), stable (latest value >= EWMA AND <= running mean + running stddev), declining (latest value > running mean + running stddev) — using running population statistics across all individual records
+- PFR8: Render chart with index-based X-axis (equal visual width per bucket), Y domain from 0 to max(1, max bucket mean + stddev)
+- PFR9: Enable horizontal scrolling when more than 8 buckets exist, with 8 buckets visible at a time, initial scroll position showing the most recent data at the right edge
+- PFR10: Render zone background tints and vertical divider lines at zone transitions and year boundaries (only when more than one zone exists); suppress year boundaries within 1 index of a zone transition
+- PFR11: Render a standard deviation band connecting non-session buckets, with a weighted-average session bridge point at the zone boundary (firstSessionIndex - 0.5); no band through session zone
+- PFR12: Render a mean trend line through non-session bucket means plus the session bridge point; session buckets excluded from the line
+- PFR13: Render disconnected session dots (circle symbol, size 20) for each session bucket
+- PFR14: Render a horizontal dashed baseline at each mode's optimal baseline value (green, dashed pattern [5,3])
+- PFR15: Show an annotation popover on tap/click with bucket date (formatted per zone), mean value, stddev, and record count; tapping again or scrolling dismisses the annotation
+- PFR16: Display X-axis labels: short month names for monthly zone, short weekday names for daily zone, "Today" for first session bucket (empty for subsequent); strip trailing dots from abbreviated names in languages that add them. Year labels below the monthly zone, centered per calendar year span.
+- PFR17: Provide a help overlay (triggered by ? toolbar button) with five sections: Your Progress Chart, Trend Line, Variability Band, Target Baseline, Time Zones
+
+**Non-Functional Requirements:**
+
+- PNFR1: Card-level accessibility: each card is an accessibility container with label "Progress chart for {mode display name}" and value "Current: {EWMA} {unit}, trend: {trend label}". Screen-level: scroll view aria-label summarizing which modes have data. Zone-level VoiceOver summaries deferred to follow-up story.
+- PNFR2: All fonts use semantic text styles with relative units (rem/em) — no hardcoded pixel sizes for text
+- PNFR3: Increased contrast mode: detect via @media (prefers-contrast: more) and double opacity values for stddev band (0.15→0.30), baseline (0.60→0.90), zone backgrounds (0.06→0.12), selection indicator (0.50→0.80), zone dividers switch from secondary to primary color
+- PNFR4: Locale-aware number formatting with 1 decimal place (minimumFractionDigits: 1, maximumFractionDigits: 1) — e.g. "25.3" in English, "25,3" in German
+- PNFR5: Responsive chart height: 180px on compact/mobile, 240px on regular/tablet/desktop
+
+**Additional Requirements:**
+
+- Two distinct bucketing pipelines: (1) multi-granularity display buckets with calendar-day-snapped zone boundaries for chart rendering, and (2) session-level buckets for EWMA computation. These are independent — the display pipeline must not reuse the EWMA pipeline's bucketing logic.
+- Chart data pipeline (bucketing, aggregation, EWMA, trend) lives in the domain crate (pure Rust, no browser deps)
+- Chart rendering lives in the web crate
+- Card background: frosted glass via CSS backdrop-filter: blur() with semi-transparent backgrounds, 12px corner radius
+- Charting approach: Canvas/SVG or JS charting library (to be decided during implementation)
+- Per-mode chart parameters: Unison Comparison (baseline 8¢, half-life 7d, gap 30min), Interval Comparison (baseline 12¢, half-life 7d, gap 30min), Unison Matching (baseline 5¢, half-life 7d, gap 30min), Interval Matching (baseline 8¢, half-life 7d, gap 30min)
+- Empty state: modes with zero records show no card; if no mode has data, empty scroll view with nav bar and help button still visible
+
+**Profile Screen FR Coverage Map:**
+
+- PFR1: Epic 12 — Profile screen with chart cards per mode
+- PFR2: Epic 12 — Headline row with EWMA, stddev, trend arrow
+- PFR3: Epic 12 — Metric extraction from training records
+- PFR4: Epic 12 — Multi-granularity bucketing with calendar-day boundaries
+- PFR5: Epic 12 — Per-bucket mean and population stddev
+- PFR6: Epic 12 — EWMA computation over session-level buckets
+- PFR7: Epic 12 — Trend direction computation
+- PFR8: Epic 12 — Index-based X-axis chart rendering
+- PFR9: Epic 12 — Horizontal scrolling for >8 buckets
+- PFR10: Epic 12 — Zone backgrounds and divider lines
+- PFR11: Epic 12 — StdDev band with session bridge
+- PFR12: Epic 12 — Mean trend line
+- PFR13: Epic 12 — Session dots
+- PFR14: Epic 12 — Baseline dashed line
+- PFR15: Epic 13 — Annotation popover on tap/click
+- PFR16: Epic 12 — X-axis labels and year labels
+- PFR17: Epic 13 — Help overlay with five sections
+
+### Story 12.1: Progress Data Pipeline
+
+**As a** developer,
+**I want** the domain crate to extract metric points from training records, bucket them into multi-granularity display zones, compute EWMA over session-level buckets, and determine trend direction,
+**So that** the chart rendering layer receives fully computed, ready-to-render data structures.
+
+**Acceptance Criteria:**
+
+**Given** a list of PitchComparisonRecord entries with interval == 0
+**When** metric extraction runs for the Unison Comparison mode
+**Then** each record produces a metric point of (timestamp, abs(centOffset))
+**And** records with interval != 0 are excluded from this mode
+
+**Given** a list of PitchComparisonRecord entries with interval != 0
+**When** metric extraction runs for the Interval Comparison mode
+**Then** each record produces a metric point of (timestamp, abs(centOffset))
+
+**Given** a list of PitchMatchingRecord entries with interval == 0
+**When** metric extraction runs for the Unison Matching mode
+**Then** each record produces a metric point of (timestamp, abs(userCentError))
+
+**Given** a list of PitchMatchingRecord entries with interval != 0
+**When** metric extraction runs for the Interval Matching mode
+**Then** each record produces a metric point of (timestamp, abs(userCentError))
+
+**Given** metric points spanning months, recent days, and today
+**When** multi-granularity display bucketing runs with current time T
+**Then** points with timestamp >= startOfDay(T) are bucketed into session zone, grouped by 30-minute session gap
+**And** points with timestamp >= startOfDay(T) - 7 days AND < startOfDay(T) are bucketed by calendar day
+**And** points with timestamp < startOfDay(T) - 7 days are bucketed by calendar month
+**And** the last monthly bucket's end date is truncated to the day zone boundary
+**And** all buckets are concatenated chronologically: months, days, sessions
+
+**Given** a bucket with multiple metric values
+**When** aggregation runs
+**Then** mean = sum(values) / count
+**And** stddev = sqrt(sum((value - mean)^2) / count) (population stddev)
+
+**Given** a bucket with exactly one metric value
+**When** aggregation runs
+**Then** mean = that value and stddev = 0
+
+**Given** session-level buckets (the EWMA pipeline, separate from display buckets)
+**When** EWMA computation runs
+**Then** ewma[0] = bucket[0].mean
+**And** for subsequent buckets: alpha = 1.0 - exp(-ln(2) * dt / 604800), ewma[i] = alpha * bucket[i].mean + (1 - alpha) * ewma[i-1]
+**And** the current EWMA is ewma[last]
+
+**Given** at least 2 individual records and a computed current EWMA
+**When** trend direction is computed
+**Then** running mean and running population stddev are calculated across all individual metric values (not buckets)
+**And** if latestValue > runningMean + runningStddev then trend is Declining
+**And** if latestValue >= currentEWMA then trend is Stable
+**And** otherwise trend is Improving
+
+**Given** fewer than 2 records for a mode
+**When** trend is queried
+**Then** trend returns None
+
+**Given** the TrainingMode enum
+**When** chart parameters are queried
+**Then** Unison Comparison returns baseline=8, halfLife=604800, sessionGap=1800
+**And** Interval Comparison returns baseline=12, halfLife=604800, sessionGap=1800
+**And** Unison Matching returns baseline=5, halfLife=604800, sessionGap=1800
+**And** Interval Matching returns baseline=8, halfLife=604800, sessionGap=1800
+
+**Given** all pipeline code
+**When** I run `cargo test -p domain`
+**Then** all tests pass with zero browser dependencies
+
+### Story 12.2: Profile Screen Layout & Chart Cards
+
+**As a** musician,
+**I want** to see a profile screen with a card for each training mode I've used, showing my current EWMA and trend at a glance,
+**So that** I can quickly see how I'm doing in each mode.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/profile`
+**When** training data exists for at least one mode
+**Then** I see a scrollable list of chart cards, one per mode with data
+**And** cards appear in TrainingMode enum order: unison comparison, interval comparison, unison matching, interval matching
+**And** modes with zero records show no card
+**And** 16px gap between cards
+
+**Given** the profile screen
+**When** no mode has any training data
+**Then** I see the navigation bar with "Profile" title and help button
+**And** the scroll area is empty (no cards)
+
+**Given** a chart card for a mode
+**When** it renders
+**Then** the card has a frosted glass background (backdrop-filter: blur() with semi-transparent background) and 12px corner radius
+**And** internal padding follows the existing app's system default pattern
+
+**Given** a chart card headline row
+**When** it renders with sufficient data
+**Then** the left side shows the mode display name in headline font
+**And** the right side shows the EWMA value in title 2 bold (e.g. "25.3")
+**And** next to the EWMA, the stddev of the most recent display bucket in caption secondary color (e.g. "±4.2")
+**And** a trend arrow icon colored by direction: green down-right for improving, gray right for stable, orange up-right for declining
+
+**Given** a mode with fewer than 2 records
+**When** the headline renders
+**Then** the EWMA value is shown (computed from the single record)
+**And** no trend arrow is displayed
+
+**Given** the EWMA value "25.3" in an English locale
+**When** formatted for display
+**Then** it shows "25.3" with a decimal point
+
+**Given** the EWMA value "25.3" in a German locale
+**When** formatted for display
+**Then** it shows "25,3" with a comma
+
+**Given** a chart card
+**When** the chart area renders (before Story 12.3)
+**Then** a placeholder area is shown at the correct height: 180px on mobile, 240px on tablet/desktop
+
+**Given** the profile screen scroll view
+**When** inspected for accessibility
+**Then** it has an aria-label summarizing which modes have data (e.g. "Profile showing progress for: Hear & Compare – Single Notes, Tune & Match – Single Notes")
+
+**Given** a chart card
+**When** inspected for accessibility
+**Then** it has role and aria-label "Progress chart for {mode display name}"
+**And** aria-valuenow or equivalent conveys "Current: {EWMA} cents, trend: {trend label}"
+
+**Given** the profile screen on any viewport
+**When** rendered
+**Then** all text uses semantic sizes (rem/em) with no hardcoded pixel font sizes
+
+### Story 12.3: Chart Rendering
+
+**As a** musician,
+**I want** to see my progress visualized as a chart with trend lines, variability bands, session dots, and a target baseline,
+**So that** I can understand how my pitch perception is developing over time.
+
+**Acceptance Criteria:**
+
+**Given** computed display buckets for a mode
+**When** the chart renders
+**Then** the X-axis is index-based: each bucket gets equal visual width regardless of time span
+**And** X domain is -0.5 to bucketCount - 0.5
+**And** Y domain is 0 to max(1, max(bucket.mean + bucket.stddev))
+
+**Given** buckets spanning multiple granularity zones
+**When** zone backgrounds render (Layer 1)
+**Then** colored rectangles span each zone from startIndex - 0.5 to endIndex + 0.5
+**And** monthly zone uses system background color at 6% opacity
+**And** daily zone uses secondary system background at 6% opacity
+**And** session zone uses system background color at 6% opacity
+
+**Given** all data falls in a single zone
+**When** the chart renders
+**Then** no zone backgrounds or divider lines are drawn
+
+**Given** zone transitions exist
+**When** dividers render (Layer 2)
+**Then** vertical lines appear at each index where granularity changes, drawn at index - 0.5
+**And** year boundary dividers appear within the monthly zone where calendar year changes
+**And** year boundaries within 1 index of a zone transition are suppressed
+**And** lines are solid, 1px, secondary color
+
+**Given** non-session buckets exist
+**When** the stddev band renders (Layer 3)
+**Then** a shaded area spans from max(0, mean - stddev) to mean + stddev for each non-session bucket
+**And** the band connects via a continuous line through non-session buckets only
+**And** color is blue at 15% opacity
+
+**Given** both non-session and session buckets exist
+**When** the session bridge renders
+**Then** a bridge point is computed at X = firstSessionIndex - 0.5
+**And** bridgeMean = weighted average of session bucket means by record count
+**And** bridgeStddev = sqrt(weighted average of session bucket variances by record count)
+**And** the band and line extend to this bridge point
+
+**Given** only session buckets exist (all data is from today)
+**When** the chart renders
+**Then** no line or band is drawn — only disconnected session dots appear
+
+**Given** non-session buckets
+**When** the mean trend line renders (Layer 4)
+**Then** a blue line connects the mean values of non-session buckets plus the bridge point
+**And** session buckets are not connected by the line
+
+**Given** session buckets
+**When** session dots render (Layer 5)
+**Then** each session bucket is shown as a disconnected blue circle (point mark, size 20 area units)
+
+**Given** a mode's optimal baseline value
+**When** the baseline renders (Layer 6)
+**Then** a horizontal dashed line appears at that Y value
+**And** dash pattern is [5, 3] (5px dash, 3px gap), 1px width
+**And** color is green at 60% opacity
+
+**Given** X-axis labels
+**When** they render
+**Then** monthly zone buckets show short month name (e.g. "Jan", "Feb")
+**And** daily zone buckets show short weekday name (e.g. "Mon", "Tue")
+**And** the first session bucket shows "Today"; subsequent session buckets show nothing
+**And** trailing dots are stripped from abbreviated names (e.g. "Dez." → "Dez" in German)
+
+**Given** monthly zone spans multiple calendar years
+**When** year labels render
+**Then** year text (e.g. "2025", "2026") is centered below the monthly zone between the first and last bucket index of each year span
+**And** font is caption2 size, secondary color
+**And** extra bottom padding (16px baseline, scales with text size) is added to accommodate year labels
+
+**Given** no monthly zone exists
+**When** the chart renders
+**Then** no year labels appear and no extra bottom padding is added
+
+**Given** @media (prefers-contrast: more) is active
+**When** the chart renders
+**Then** stddev band opacity is 0.30 (instead of 0.15)
+**And** baseline opacity is 0.90 (instead of 0.60)
+**And** zone background opacity is 0.12 (instead of 0.06)
+**And** zone dividers use primary color (instead of secondary)
+
+**Given** the chart area
+**When** rendered on mobile
+**Then** chart height is 180px
+
+**Given** the chart area
+**When** rendered on tablet or desktop
+**Then** chart height is 240px
+
+### Story 12.4: Chart Scrolling
+
+**As a** musician,
+**I want** to scroll through my chart history when I have more than 8 data points,
+**So that** I can review my full training timeline while keeping the chart readable.
+
+**Acceptance Criteria:**
+
+**Given** a mode with 8 or fewer display buckets
+**When** the chart renders
+**Then** all buckets are visible in a static layout with no scrolling
+
+**Given** a mode with more than 8 display buckets
+**When** the chart renders
+**Then** the chart is horizontally scrollable
+**And** 8 buckets are visible at a time
+**And** the initial scroll position shows the rightmost (most recent) data at the right edge
+**And** scroll position = max(0, bucketCount - 8)
+
+**Given** a scrollable chart
+**When** I scroll horizontally
+**Then** the chart pans smoothly to reveal earlier or later buckets
+**And** any active selection annotation is dismissed
+
+**Given** a scrollable chart with @media (prefers-reduced-motion: reduce) active
+**When** the initial scroll position is set
+**Then** it is applied without animation
+
+---
+
+## Epic 13: Chart Exploration & Help
+
+Users can tap chart data points to see detailed annotations (date, mean, stddev, record count) and access a help overlay explaining what each chart element means. Standalone — the charts from Epic 12 are fully functional without this.
+
+**Source reference:** `docs/ios-reference/profile-screen-specification.md` (authoritative)
+
+**Profile Screen FRs covered:** PFR15, PFR17
+
+### Story 13.1: Chart Tap Annotation
+
+**As a** musician,
+**I want** to tap a data point on the chart and see its details in a popover,
+**So that** I can explore specific time periods and see exactly how I performed.
+
+**Acceptance Criteria:**
+
+**Given** a rendered chart
+**When** I tap/click on the chart area
+**Then** the tap resolves to the nearest bucket index by rounding the X coordinate
+**And** a vertical dashed selection line appears at that bucket's X position
+**And** an annotation popover appears at the top of the chart
+
+**Given** the selection line
+**When** rendered
+**Then** it is dashed with pattern [5, 3], 1px width
+**And** gray at 50% opacity (80% in increased contrast mode)
+
+**Given** the annotation popover for a monthly zone bucket
+**When** displayed
+**Then** it shows the date as "MMM yyyy" (e.g. "Jan 2026")
+**And** the bucket mean value in caption bold (e.g. "25.3")
+**And** the bucket stddev in caption2 secondary (e.g. "±4.2")
+**And** the record count in caption2 secondary (e.g. "47 records")
+
+**Given** the annotation popover for a daily zone bucket
+**When** displayed
+**Then** it shows the date as "E MMM d" (e.g. "Mon, Mar 5")
+
+**Given** the annotation popover for a session zone bucket
+**When** displayed
+**Then** it shows the time as "HH:mm" (e.g. "14:30")
+
+**Given** the popover
+**When** rendered
+**Then** it has a frosted glass background with 6px corner radius
+**And** 6px padding on all sides, 2px VStack spacing
+**And** overflow resolution keeps the popover within chart bounds on both axes
+
+**Given** a bucket is selected
+**When** I tap the same area again
+**Then** the annotation and selection line are dismissed
+
+**Given** a bucket is selected on a scrollable chart
+**When** I scroll the chart
+**Then** the annotation and selection line are dismissed
+
+**Given** number values in the popover
+**When** formatted
+**Then** they use locale-aware formatting with 1 decimal place (matching the headline row)
+
+### Story 13.2: Profile Help Overlay
+
+**As a** musician,
+**I want** a help overlay on the profile screen that explains what each chart element means,
+**So that** I can learn to read my progress charts.
+
+**Acceptance Criteria:**
+
+**Given** the profile screen navigation bar
+**When** rendered
+**Then** a help button (? icon) is visible in the toolbar trailing position
+
+**Given** I tap the help button
+**When** the help overlay opens
+**Then** it uses the same overlay mechanism as all other screens in the app
+
+**Given** the help overlay content
+**When** displayed
+**Then** it shows five sections in this order:
+**And** "Your Progress Chart" — "This chart shows how your pitch perception is developing over time"
+**And** "Trend Line" — "The blue line shows your smoothed average — it filters out random ups and downs to reveal your real progress"
+**And** "Variability Band" — "The shaded area around the line shows how consistent you are — a narrower band means more reliable results"
+**And** "Target Baseline" — "The green dashed line is your goal — as the trend line approaches it, your ear is getting sharper"
+**And** "Time Zones" — "The chart groups your data by time: months on the left, recent days in the middle, and today's sessions on the right"
+
+**Given** the help overlay
+**When** I dismiss it (Done button or equivalent)
+**Then** I return to the profile screen with chart state preserved
