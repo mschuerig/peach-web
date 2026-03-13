@@ -55,7 +55,7 @@ trend-declining = Declining
 ## Settings
 settings-title = Settings
 settings-help-title = Settings Help
-pitch-range = Pitch Range
+pitch-range = Training Range
 lowest-note = Lowest Note: { $note }
 highest-note = Highest Note: { $note }
 intervals-section = Intervals
@@ -69,12 +69,12 @@ stop-preview = Stop preview
 preview-sound = Preview sound
 duration-label = Duration: { $value }s
 concert-pitch-label = Concert Pitch: { $value } Hz
-tuning-label = Tuning
+tuning-label = Tuning System
 equal-temperament = Equal Temperament
 just-intonation = Just Intonation
-tuning-hint = Select the tuning for intervals. Equal temperament divides the octave into 12 equal steps. Just intonation uses pure frequency ratios.
+tuning-hint = Select how intervals are tuned. Equal Temperament divides the octave into 12 equal steps. Just Intonation uses pure frequency ratios.
 difficulty-section = Difficulty
-loudness-variation = Loudness Variation
+loudness-variation = Vary Loudness
 loudness-variation-aria = Loudness variation
 off = Off
 max = Max
@@ -84,7 +84,7 @@ exporting = Exporting…
 exported = Exported!
 import-training-data = Import Training Data
 importing = Importing…
-delete-all-training-data = Delete All Training Data
+delete-all-training-data = Reset Training Data
 resetting = Resetting…
 data-reset = Data Reset
 reset-failed = Reset Failed
@@ -100,9 +100,9 @@ import-dialog-found = Found { $comparisons } comparison records and { $matchings
 import-dialog-warnings = { " " }({ $count } rows skipped with warnings)
 replace-all-data = Replace All Data
 merge-with-existing = Merge with Existing
-reset-dialog-title = Reset Training Data?
-reset-dialog-message = This will permanently delete all training data, including your perceptual profile and comparison history. This cannot be undone.
-delete-all-data = Delete All Data
+reset-dialog-title = Reset All Training Data
+reset-dialog-message = This will permanently delete all training data and reset your profile. This cannot be undone.
+delete-all-data = Reset
 database-not-available = Database not available
 language-label = Language
 
@@ -116,7 +116,7 @@ matching-help-title = Pitch Matching Training
 
 ## Profile
 profile-title = Profile
-no-training-data = No training data yet. Start a training session to see your progress.
+no-training-data = No training data yet. Start training to build your profile.
 profile-no-data-aria = Profile. No training data available.
 profile-showing-progress = Profile showing progress for: { $modes }
 progress-for = Progress for { $name }: { $ewma } cents, { $trend }
@@ -158,11 +158,11 @@ help-data-body = **Export** saves your training data as a file you can keep as a
 help-comparison-goal-title = Goal
 help-comparison-goal-body = Two notes play one after the other. Your job is to decide: was the **second note higher or lower** than the first? The closer the notes are, the harder it gets — and the sharper your ear becomes.
 help-comparison-controls-title = Controls
-help-comparison-controls-body = After both notes have played, the **Higher** and **Lower** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Up** or **H** for higher, **Arrow Down** or **L** for lower.
+help-comparison-controls-body = Once the second note starts playing, the **Higher** and **Lower** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Up** or **H** for higher, **Arrow Down** or **L** for lower.
 help-comparison-feedback-title = Feedback
 help-comparison-feedback-body = After each answer you'll see a brief **checkmark** (correct) or **X** (incorrect). Use this to calibrate your listening — over time, you'll notice patterns in what you get right.
 help-comparison-difficulty-title = Difficulty
-help-comparison-difficulty-body = The difference between the two notes is measured in **cents** (1/100 of a semitone). A smaller number means a harder comparison. The app adapts difficulty to your skill level automatically.
+help-comparison-difficulty-body = The number at the top shows the **cent difference** between the two notes – a smaller number means a harder comparison. Your **session best** tracks the smallest difference you answered correctly.
 help-comparison-intervals-title = Intervals
 help-comparison-intervals-body = In interval mode, the two notes are separated by a specific **musical interval** (like a fifth or an octave) instead of a small pitch difference. You still decide which note is higher — but now you're training your sense of musical distance.
 
@@ -180,12 +180,12 @@ help-matching-intervals-body = In interval mode, your target pitch is a specific
 help-info-what-title = What is Peach?
 help-info-what-body = Peach helps you train your ear for music. Practice hearing the difference between notes and learn to match pitches accurately.
 help-info-modes-title = Training Modes
-help-info-modes-body = **Hear & Compare — Single Notes** — Listen to two notes and decide which one is higher.{"\u000A\u000A"}**Hear & Compare — Intervals** — The same idea, but with musical intervals between notes.{"\u000A\u000A"}**Tune & Match — Single Notes** — Hear a note and slide to match its pitch.{"\u000A\u000A"}**Tune & Match — Intervals** — Match pitches using musical intervals.
+help-info-modes-body = **Hear & Compare – Single Notes** – Listen to two notes and decide which one is higher.{"\u000A\u000A"}**Hear & Compare – Intervals** – The same idea, but with musical intervals between notes.{"\u000A\u000A"}**Tune & Match – Single Notes** – Hear a note and slide to match its pitch.{"\u000A\u000A"}**Tune & Match – Intervals** – Match pitches using musical intervals.
 help-info-start-title = Getting Started
 help-info-start-body = Just pick any training mode on the home screen and start practicing. Peach adapts to your skill level automatically.
 
 ## Help - Profile
-profile-help-title = Progress Charts
+profile-help-title = Chart Help
 help-profile-chart-title = Your Progress Chart
 help-profile-chart-body = This chart shows how your pitch perception is developing over time.
 help-profile-trend-title = Trend Line
@@ -202,10 +202,10 @@ chart-annotation-records = { $count } records
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records
 
 ## Domain - Training Modes
-training-mode-hear-compare-single = Hear & Compare — Single Notes
-training-mode-hear-compare-intervals = Hear & Compare — Intervals
-training-mode-tune-match-single = Tune & Match — Single Notes
-training-mode-tune-match-intervals = Tune & Match — Intervals
+training-mode-hear-compare-single = Hear & Compare – Single Notes
+training-mode-hear-compare-intervals = Hear & Compare – Intervals
+training-mode-tune-match-single = Tune & Match – Single Notes
+training-mode-tune-match-intervals = Tune & Match – Intervals
 
 ## Domain - Intervals
 interval-prime = Prime

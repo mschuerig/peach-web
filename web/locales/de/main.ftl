@@ -54,7 +54,7 @@ trend-declining = Nachlassend
 
 ## Settings
 settings-title = Einstellungen
-settings-help-title = Einstellungen — Hilfe
+settings-help-title = Einstellungen – Hilfe
 pitch-range = Tonumfang
 lowest-note = Tiefster Ton: { $note }
 highest-note = Höchster Ton: { $note }
@@ -84,7 +84,7 @@ exporting = Exportiere…
 exported = Exportiert!
 import-training-data = Trainingsdaten importieren
 importing = Importiere…
-delete-all-training-data = Alle Trainingsdaten löschen
+delete-all-training-data = Trainingsdaten zurücksetzen
 resetting = Setze zurück…
 data-reset = Daten zurückgesetzt
 reset-failed = Zurücksetzen fehlgeschlagen
@@ -100,9 +100,9 @@ import-dialog-found = { $comparisons } Vergleichs- und { $matchings } Tonhöhen-
 import-dialog-warnings = { " " }({ $count } Zeilen mit Warnungen übersprungen)
 replace-all-data = Alle Daten ersetzen
 merge-with-existing = Mit vorhandenen Daten zusammenführen
-reset-dialog-title = Trainingsdaten löschen?
+reset-dialog-title = Alle Trainingsdaten zurücksetzen
 reset-dialog-message = Alle Trainingsdaten werden unwiderruflich gelöscht und dein Profil wird zurückgesetzt. Dies kann nicht rückgängig gemacht werden.
-delete-all-data = Alle Daten löschen
+delete-all-data = Zurücksetzen
 database-not-available = Datenbank nicht verfügbar
 language-label = Sprache
 
@@ -116,7 +116,7 @@ matching-help-title = Tonhöhen-Training
 
 ## Profile
 profile-title = Profil
-no-training-data = Noch keine Trainingsdaten. Starte ein Training, um deinen Fortschritt zu sehen.
+no-training-data = Noch keine Trainingsdaten. Trainiere, um dein Profil aufzubauen.
 profile-no-data-aria = Profil. Keine Trainingsdaten vorhanden.
 profile-showing-progress = Profil mit Fortschritt für: { $modes }
 progress-for = Fortschritt für { $name }: { $ewma } Cent, { $trend }
@@ -158,11 +158,11 @@ help-data-body = **Exportieren** speichert deine Trainingsdaten als Datei, die d
 help-comparison-goal-title = Ziel
 help-comparison-goal-body = Zwei Töne werden nacheinander gespielt. Deine Aufgabe: War der **zweite Ton höher oder tiefer** als der erste? Je näher die Töne beieinander liegen, desto schwieriger wird es — und desto schärfer wird dein Gehör.
 help-comparison-controls-title = Bedienung
-help-comparison-controls-body = Nachdem beide Töne gespielt wurden, werden die Tasten **Höher** und **Tiefer** aktiv. Tippe auf die Taste, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil hoch** oder **H** für höher, **Pfeil runter** oder **T** für tiefer.
+help-comparison-controls-body = Sobald der zweite Ton zu spielen beginnt, werden die Tasten **Höher** und **Tiefer** aktiv. Tippe auf die Taste, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil hoch** oder **H** für höher, **Pfeil runter** oder **T** für tiefer.
 help-comparison-feedback-title = Feedback
 help-comparison-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkchen** (richtig) oder ein **X** (falsch). Nutze das, um dein Hören zu kalibrieren — mit der Zeit erkennst du Muster in dem, was du richtig hörst.
 help-comparison-difficulty-title = Schwierigkeit
-help-comparison-difficulty-body = Der Unterschied zwischen den beiden Tönen wird in **Cent** gemessen (1/100 eines Halbtons). Eine kleinere Zahl bedeutet einen schwierigeren Vergleich. Die App passt die Schwierigkeit automatisch an dein Niveau an.
+help-comparison-difficulty-body = Die Zahl oben zeigt den **Cent-Unterschied** zwischen den beiden Tönen – eine kleinere Zahl bedeutet einen schwierigeren Vergleich. Dein **Sitzungsbestwert** zeigt den kleinsten Unterschied, den du korrekt beantwortet hast.
 help-comparison-intervals-title = Intervalle
 help-comparison-intervals-body = Im Intervallmodus sind die beiden Töne durch ein bestimmtes **musikalisches Intervall** getrennt (z. B. eine Quinte oder Oktave) statt durch einen kleinen Tonhöhenunterschied. Du entscheidest weiterhin, welcher Ton höher ist — aber du trainierst jetzt dein Gespür für musikalische Abstände.
 
@@ -180,12 +180,12 @@ help-matching-intervals-body = Im Intervallmodus liegt deine Zieltonhöhe ein be
 help-info-what-title = Was ist Peach?
 help-info-what-body = Peach hilft dir, dein Gehör für Musik zu trainieren. Übe, Unterschiede zwischen Tönen zu hören und Tonhöhen genau zu treffen.
 help-info-modes-title = Trainingsmodi
-help-info-modes-body = **Hören & Vergleichen — Einzeltöne** — Höre zwei Töne und entscheide, welcher höher ist.{"\u000A\u000A"}**Hören & Vergleichen — Intervalle** — Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\u000A\u000A"}**Stimmen & Treffen — Einzeltöne** — Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\u000A\u000A"}**Stimmen & Treffen — Intervalle** — Gleiche Tonhöhen mit musikalischen Intervallen an.
+help-info-modes-body = **Hören & Vergleichen – Einzeltöne** – Höre zwei Töne und entscheide, welcher höher ist.{"\u000A\u000A"}**Hören & Vergleichen – Intervalle** – Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\u000A\u000A"}**Stimmen & Treffen – Einzeltöne** – Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\u000A\u000A"}**Stimmen & Treffen – Intervalle** – Gleiche Tonhöhen mit musikalischen Intervallen an.
 help-info-start-title = Erste Schritte
 help-info-start-body = Wähle einfach einen Trainingsmodus auf dem Startbildschirm und leg los. Peach passt sich automatisch deinem Niveau an.
 
 ## Help - Profile
-profile-help-title = Fortschrittsdiagramme
+profile-help-title = Diagramm-Hilfe
 help-profile-chart-title = Dein Fortschrittsdiagramm
 help-profile-chart-body = Dieses Diagramm zeigt, wie sich deine Tonwahrnehmung im Laufe der Zeit entwickelt.
 help-profile-trend-title = Trendlinie
@@ -202,10 +202,10 @@ chart-annotation-records = { $count } Einträge
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } Einträge
 
 ## Domain - Training Modes
-training-mode-hear-compare-single = Hören & Vergleichen — Einzeltöne
-training-mode-hear-compare-intervals = Hören & Vergleichen — Intervalle
-training-mode-tune-match-single = Stimmen & Treffen — Einzeltöne
-training-mode-tune-match-intervals = Stimmen & Treffen — Intervalle
+training-mode-hear-compare-single = Hören & Vergleichen – Einzeltöne
+training-mode-hear-compare-intervals = Hören & Vergleichen – Intervalle
+training-mode-tune-match-single = Stimmen & Treffen – Einzeltöne
+training-mode-tune-match-intervals = Stimmen & Treffen – Intervalle
 
 ## Domain - Intervals
 interval-prime = Prime
