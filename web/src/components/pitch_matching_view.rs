@@ -29,7 +29,7 @@ use crate::components::pitch_slider::VerticalPitchSlider;
 use crate::help_sections::PITCH_MATCHING_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
-use domain::types::{AmplitudeDB, MIDIVelocity};
+use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
 use domain::{
     FEEDBACK_DURATION_SECS, Interval, PITCH_MATCHING_VELOCITY, PerceptualProfile,
     PitchMatchingSession, PitchMatchingSessionState, ProgressTimeline, TrainingMode, Trend,
@@ -82,7 +82,7 @@ pub fn PitchMatchingView() -> impl IntoView {
 
     let settings = LocalStorageSettings;
     let sound_source = LocalStorageSettings::get_string("peach.sound_source")
-        .unwrap_or_else(|| "oscillator:sine".to_string());
+        .unwrap_or_else(|| SoundSourceID::default().raw_value().to_string());
     let sound_source_clone = sound_source.clone();
     let note_player = Rc::new(RefCell::new(create_note_player(
         &sound_source,

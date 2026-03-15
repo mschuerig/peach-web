@@ -36,14 +36,6 @@ Known rough edges include a profile visualization that needs redesign, no onboar
 
 ## Building
 
-Before the first build, download the SF2 SoundFont sample file:
-
-```bash
-./bin/download-sf2.sh
-```
-
-This downloads GeneralUser GS (~31 MB) to `.cache/` in the project root. The file is not tracked in git. You only need to run this once.
-
 For development with live reload:
 
 ```bash

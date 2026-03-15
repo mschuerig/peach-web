@@ -18,7 +18,7 @@ use crate::adapters::sound_preview::SoundPreview;
 use crate::app::base_href;
 use crate::app::{AudioNeedsGesture, SoundFontLoadStatus, WorkletAssets, WorkletConnecting};
 use domain::ports::UserSettings;
-use domain::types::{DetunedMIDINote, Frequency, MIDINote};
+use domain::types::{DetunedMIDINote, Frequency, MIDINote, SoundSourceID};
 use domain::{
     DirectedInterval, Direction, Interval, PerceptualProfile, ThresholdTimeline, TrendAnalyzer,
     TuningSystem,
@@ -136,7 +136,7 @@ pub fn SettingsView() -> impl IntoView {
     );
     let sound_source = RwSignal::new(
         LocalStorageSettings::get_string("peach.sound_source")
-            .unwrap_or_else(|| "oscillator:sine".to_string()),
+            .unwrap_or_else(|| SoundSourceID::default().raw_value().to_string()),
     );
     let sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage> =
         use_context().expect("sf2_presets not provided");

@@ -3,9 +3,27 @@
 This file lists third-party components included in or used by Peach,
 along with their licenses and required attributions.
 
-## GeneralUser GS SoundFont
+## SoundFont Samples
 
-Peach includes the GeneralUser GS SoundFont for instrument sample playback.
+Peach includes a custom SoundFont file (`Samples.sf2`) assembled from two
+open-source sources:
+
+### FluidR3_GM (Piano Presets)
+
+The following presets are sourced from FluidR3_GM:
+
+- Yamaha Grand Piano (bank 0, program 0)
+- Bright Yamaha Grand (bank 0, program 1)
+- Electric Piano (bank 0, program 2)
+
+- **Creator:** Frank Wen
+- **License:** MIT License
+- **Original source:** https://member.keymusician.com/Member/FluidR3_GM/index.html
+- **Archive:** https://github.com/Jacalz/fluid-soundfont
+
+### GeneralUser GS (All Other Presets)
+
+All remaining presets are sourced from GeneralUser GS v2.0.3.
 
 - **Creator:** S. Christian Collins
 - **License:** GeneralUser GS License v2.0

@@ -348,7 +348,7 @@ async fn fetch_worklet_assets() -> Result<WorkletAssets, String> {
     let sf2_response = JsFuture::from(
         web_sys::window()
             .ok_or("no window")?
-            .fetch_with_str("./GeneralUser-GS.sf2"),
+            .fetch_with_str("./soundfont/Samples.sf2"),
     )
     .await
     .map_err(|e| format!("fetch SF2 failed: {e:?}"))?;

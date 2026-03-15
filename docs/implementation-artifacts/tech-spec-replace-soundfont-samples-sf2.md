@@ -2,7 +2,7 @@
 title: 'Replace GeneralUser GS with Samples.sf2'
 slug: 'replace-soundfont-samples-sf2'
 created: '2026-03-15'
-status: 'ready-for-dev'
+status: 'implementation-complete'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['Rust', 'Leptos 0.8', 'Trunk', 'WASM', 'Fluent i18n']
 files_to_modify: ['web/src/app.rs', 'domain/src/types/sound_source.rs', 'web/src/components/settings_view.rs', 'web/src/components/pitch_comparison_view.rs', 'web/src/components/pitch_matching_view.rs', 'web/locales/en/main.ftl', 'web/locales/de/main.ftl', 'index.html', '.github/workflows/ci.yml', 'README.md', 'docs/project-context.md']
@@ -88,69 +88,69 @@ Tasks are ordered by dependency: domain layer first, then asset pipeline, then c
 
 ### Tasks
 
-- [ ] Task 1: Change default sound source constant
+- [x] Task 1: Change default sound source constant
   - File: `domain/src/types/sound_source.rs`
   - Action: Change `const DEFAULT: &str = "sf2:8:80"` to `"sf2:0:0"`. Update doc comment on line 3. Update test assertions on lines 49 and 55 from `"sf2:8:80"` to `"sf2:0:0"`.
 
-- [ ] Task 2: Move Samples.sf2 to asset directory
+- [x] Task 2: Move Samples.sf2 to asset directory
   - File: `Samples.sf2` (project root) → `web/assets/soundfont/Samples.sf2`
   - Action: `mv Samples.sf2 web/assets/soundfont/Samples.sf2`
 
-- [ ] Task 3: Remove copy-file directive from index.html
+- [x] Task 3: Remove copy-file directive from index.html
   - File: `index.html`
   - Action: Delete line 11 (`<link data-trunk rel="copy-file" href=".cache/GeneralUser-GS.sf2" />`). The file is now served from the `soundfont/` directory via the existing `copy-dir` directive.
 
-- [ ] Task 4: Update SF2 fetch URL in app.rs
+- [x] Task 4: Update SF2 fetch URL in app.rs
   - File: `web/src/app.rs`
   - Action: Change `fetch_with_str("./GeneralUser-GS.sf2")` to `fetch_with_str("./soundfont/Samples.sf2")` on line 351.
 
-- [ ] Task 5: Update sound source fallback in settings_view.rs
+- [x] Task 5: Update sound source fallback in settings_view.rs
   - File: `web/src/components/settings_view.rs`
   - Action: Change `.unwrap_or_else(|| "oscillator:sine".to_string())` to `.unwrap_or_else(|| "sf2:0:0".to_string())` on line 139.
 
-- [ ] Task 6: Update sound source fallback in pitch_comparison_view.rs
+- [x] Task 6: Update sound source fallback in pitch_comparison_view.rs
   - File: `web/src/components/pitch_comparison_view.rs`
   - Action: Change `.unwrap_or_else(|| "oscillator:sine".to_string())` to `.unwrap_or_else(|| "sf2:0:0".to_string())` on line 92.
 
-- [ ] Task 7: Update sound source fallback in pitch_matching_view.rs
+- [x] Task 7: Update sound source fallback in pitch_matching_view.rs
   - File: `web/src/components/pitch_matching_view.rs`
   - Action: Change `.unwrap_or_else(|| "oscillator:sine".to_string())` to `.unwrap_or_else(|| "sf2:0:0".to_string())` on line 85.
 
-- [ ] Task 8: Update English acknowledgements
+- [x] Task 8: Update English acknowledgements
   - File: `web/locales/en/main.ftl`
   - Action: Replace line 137 acknowledgements-body with: `acknowledgments-body = Piano sounds from <a href="https://member.keymusician.com/Member/FluidR3_GM/index.html" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline dark:text-indigo-400">FluidR3_GM by Frank Wen</a> (MIT License). All other sounds from <a href="https://schristiancollins.com/generaluser.php" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline dark:text-indigo-400">GeneralUser GS by S. Christian Collins</a>.`
 
-- [ ] Task 9: Update German acknowledgements
+- [x] Task 9: Update German acknowledgements
   - File: `web/locales/de/main.ftl`
   - Action: Replace line 137 acknowledgements-body with: `acknowledgments-body = Pianoklänge von <a href="https://member.keymusician.com/Member/FluidR3_GM/index.html" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline dark:text-indigo-400">FluidR3_GM von Frank Wen</a> (MIT-Lizenz). Alle anderen Klänge von <a href="https://schristiancollins.com/generaluser.php" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline dark:text-indigo-400">GeneralUser GS von S. Christian Collins</a>.`
 
-- [ ] Task 10: Remove CI SoundFont download steps
+- [x] Task 10: Remove CI SoundFont download steps
   - File: `.github/workflows/ci.yml`
   - Action: Delete the three steps: "Cache SoundFont" (lines 66-70), "Download SoundFont" (lines 72-73), and "Verify SoundFont exists" (lines 75-76).
 
-- [ ] Task 11: Update README build instructions
+- [x] Task 11: Update README build instructions
   - File: `README.md`
   - Action: Remove the SF2 download section (lines 39-45: "Before the first build..." through "You only need to run this once."). The SoundFont is now included in the repository.
 
-- [ ] Task 12: Update project-context.md asset path example
+- [x] Task 12: Update project-context.md asset path example
   - File: `docs/project-context.md`
   - Action: Change `./GeneralUser-GS.sf2` to `./soundfont/Samples.sf2` on line 216.
 
-- [ ] Task 13: Delete download script and config
+- [x] Task 13: Delete download script and config
   - Files: `bin/download-sf2.sh`, `bin/sf2-sources.conf`
   - Action: Delete both files. Check if `bin/` directory is now empty; if so, delete it.
 
-- [ ] Task 14: Run tests and lints
+- [x] Task 14: Run tests and lints
   - Action: Run `cargo test -p domain` (verify sound_source tests pass with new default). Run `cargo clippy --workspace` (no warnings).
 
 ### Acceptance Criteria
 
-- [ ] AC 1: Given a fresh checkout, when `trunk build` is run without any download step, then the build succeeds and `dist/soundfont/Samples.sf2` exists in the output.
-- [ ] AC 2: Given the app is loaded in a browser with no `peach.sound_source` in localStorage, when a training view is opened, then the sound source defaults to `sf2:0:0`.
-- [ ] AC 3: Given the app is loaded, when the info page is viewed, then the acknowledgements show both FluidR3_GM (MIT) and GeneralUser GS attributions with correct links.
-- [ ] AC 4: Given the CI pipeline runs on main, when the build-deploy job executes, then it succeeds without any SF2 download step.
-- [ ] AC 5: Given `domain/src/types/sound_source.rs`, when `cargo test -p domain` is run, then all sound_source tests pass with the new `sf2:0:0` default.
-- [ ] AC 6: Given the README, when a new developer reads it, then there is no mention of downloading a SoundFont separately.
+- [x] AC 1: Given a fresh checkout, when `trunk build` is run without any download step, then the build succeeds and `dist/soundfont/Samples.sf2` exists in the output.
+- [x] AC 2: Given the app is loaded in a browser with no `peach.sound_source` in localStorage, when a training view is opened, then the sound source defaults to `sf2:0:0`.
+- [x] AC 3: Given the app is loaded, when the info page is viewed, then the acknowledgements show both FluidR3_GM (MIT) and GeneralUser GS attributions with correct links.
+- [x] AC 4: Given the CI pipeline runs on main, when the build-deploy job executes, then it succeeds without any SF2 download step.
+- [x] AC 5: Given `domain/src/types/sound_source.rs`, when `cargo test -p domain` is run, then all sound_source tests pass with the new `sf2:0:0` default.
+- [x] AC 6: Given the README, when a new developer reads it, then there is no mention of downloading a SoundFont separately.
 
 ## Additional Context
 

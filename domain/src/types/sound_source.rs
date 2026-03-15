@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-/// Sound source identifier — defaults to "sf2:8:80" if empty.
+/// Sound source identifier — defaults to "sf2:0:0" if empty.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SoundSourceID {
     raw_value: String,
 }
 
 impl SoundSourceID {
-    const DEFAULT: &str = "sf2:8:80";
+    const DEFAULT: &str = "sf2:0:0";
 
     /// Access the raw sound source identifier string.
     pub fn raw_value(&self) -> &str {
@@ -46,13 +46,13 @@ mod tests {
     #[test]
     fn test_sound_source_empty_defaults() {
         let s = SoundSourceID::new(String::new());
-        assert_eq!(s.raw_value, "sf2:8:80");
+        assert_eq!(s.raw_value, "sf2:0:0");
     }
 
     #[test]
     fn test_sound_source_default_trait() {
         let s = SoundSourceID::default();
-        assert_eq!(s.raw_value, "sf2:8:80");
+        assert_eq!(s.raw_value, "sf2:0:0");
     }
 
     #[test]

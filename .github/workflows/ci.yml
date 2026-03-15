@@ -63,18 +63,6 @@ jobs:
           curl -sfL "https://github.com/trunk-rs/trunk/releases/download/${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar xzf - -C /usr/local/bin
           trunk --version
 
-      - name: Cache SoundFont
-        uses: actions/cache@v4
-        with:
-          path: .cache/
-          key: soundfont-${{ hashFiles('bin/sf2-sources.conf') }}
-
-      - name: Download SoundFont
-        run: bin/download-sf2.sh
-
-      - name: Verify SoundFont exists
-        run: test -f .cache/GeneralUser-GS.sf2
-
       - name: Build WASM app
         run: trunk build --release --public-url /peach-web/
 

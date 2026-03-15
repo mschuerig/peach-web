@@ -134,7 +134,7 @@ license-label = License:
 copyright-label = Copyright:
 copyright-text = © 2026 Michael Schürig
 acknowledgments = Acknowledgments
-acknowledgments-body = Sounds provided by <a href="https://schristiancollins.com/generaluser.php" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline dark:text-indigo-400">GeneralUser GS by S. Christian Collins</a>.
+acknowledgments-body = Piano sounds from <a href="https://member.keymusician.com/Member/FluidR3_GM/index.html" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline dark:text-indigo-400">FluidR3_GM by Frank Wen</a> (MIT License). All other sounds from <a href="https://schristiancollins.com/generaluser.php" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline dark:text-indigo-400">GeneralUser GS by S. Christian Collins</a>.
 
 ## Audio Errors
 audio-engine-failed = Audio engine failed to start
