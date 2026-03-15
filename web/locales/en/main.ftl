@@ -76,6 +76,8 @@ tuning-hint = Select how intervals are tuned. Equal Temperament divides the octa
 difficulty-section = Difficulty
 loudness-variation = Vary Loudness
 loudness-variation-aria = Loudness variation
+note-gap-label = Note Gap (Hear & Compare): { $value }s
+note-gap-aria = Note gap for pitch comparison
 off = Off
 max = Max
 data-section = Data
@@ -150,7 +152,7 @@ help-intervals-body = Intervals are the distance between two notes. Choose which
 help-sound-title = Sound
 help-sound-body = Pick the **sound** you want to train with — each instrument has a different character.{"\u000A\u000A"}**Duration** controls how long each note plays.{"\u000A\u000A"}**Concert Pitch** sets the reference tuning. Most musicians use 440 Hz. Some orchestras tune to 442 Hz.{"\u000A\u000A"}**Tuning System** determines how intervals are calculated. Equal Temperament divides the octave into 12 equal steps and is standard for most Western music. Just Intonation uses pure frequency ratios and sounds smoother for some intervals.
 help-difficulty-title = Difficulty
-help-difficulty-body = **Vary Loudness** changes the volume of notes randomly. This makes training harder but more realistic — in real music, notes are rarely played at the same volume.
+help-difficulty-body = **Vary Loudness** changes the volume of notes randomly. This makes training harder but more realistic — in real music, notes are rarely played at the same volume.{"\u000A\u000A"}**Note Gap** adds a pause between the two notes in Hear & Compare training. At zero, notes play back-to-back.
 help-data-title = Data
 help-data-body = **Export** saves your training data as a file you can keep as a backup or transfer to another device.{"\u000A\u000A"}**Import** loads training data from a file. You can replace your current data or merge it with existing records.{"\u000A\u000A"}**Reset** permanently deletes all training data and resets your profile. This cannot be undone.
 

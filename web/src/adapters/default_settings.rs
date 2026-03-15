@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use domain::TuningSystem;
 use domain::ports::UserSettings;
 use domain::types::{Frequency, MIDINote, NoteDuration, NoteRange};
@@ -24,5 +26,9 @@ impl UserSettings for DefaultSettings {
 
     fn vary_loudness(&self) -> f64 {
         0.0
+    }
+
+    fn note_gap(&self) -> Duration {
+        Duration::ZERO
     }
 }

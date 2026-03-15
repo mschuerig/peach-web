@@ -380,6 +380,7 @@ mod tests {
     use super::*;
     use crate::types::{Direction, Interval, NoteRange};
     use std::cell::Cell;
+    use std::time::Duration;
 
     // --- Mock types ---
 
@@ -452,6 +453,9 @@ mod tests {
         }
         fn vary_loudness(&self) -> f64 {
             0.0
+        }
+        fn note_gap(&self) -> Duration {
+            Duration::ZERO
         }
     }
 
@@ -599,6 +603,9 @@ mod tests {
             }
             fn vary_loudness(&self) -> f64 {
                 0.0
+            }
+            fn note_gap(&self) -> Duration {
+                Duration::ZERO
             }
         }
 
@@ -1047,6 +1054,9 @@ mod tests {
         }
         fn vary_loudness(&self) -> f64 {
             self.vary_loudness
+        }
+        fn note_gap(&self) -> Duration {
+            Duration::ZERO
         }
     }
 

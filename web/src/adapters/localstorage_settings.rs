@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::time::Duration;
 
 use domain::TuningSystem;
 use domain::ports::UserSettings;
@@ -93,5 +94,9 @@ impl UserSettings for LocalStorageSettings {
 
     fn vary_loudness(&self) -> f64 {
         Self::get_f64("peach.vary_loudness", 0.0)
+    }
+
+    fn note_gap(&self) -> Duration {
+        Duration::from_secs_f64(Self::get_f64("peach.note_gap", 0.0).clamp(0.0, 5.0))
     }
 }

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::records::PitchComparisonRecord;
 use crate::records::PitchMatchingRecord;
 use crate::training::{CompletedPitchComparison, CompletedPitchMatching};
@@ -50,6 +52,7 @@ pub trait UserSettings {
     fn reference_pitch(&self) -> Frequency;
     fn tuning_system(&self) -> TuningSystem;
     fn vary_loudness(&self) -> f64; // 0.0-1.0 (UnitInterval range)
+    fn note_gap(&self) -> Duration;
 }
 
 /// Error type for storage operations (IndexedDB, localStorage).

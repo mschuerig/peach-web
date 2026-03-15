@@ -127,6 +127,10 @@ pub fn SettingsView() -> impl IntoView {
     let note_duration = RwSignal::new(settings.note_duration().raw_value());
     let reference_pitch = RwSignal::new(settings.reference_pitch().raw_value());
     let vary_loudness_pct = RwSignal::new((settings.vary_loudness() * 100.0).round() as i32);
+    let note_gap = RwSignal::new(settings.note_gap().as_secs_f64());
+    let note_gap_label = Signal::derive(move || {
+        tr!("note-gap-label", {"value" => format!("{:.1}", note_gap.get())})
+    });
     let tuning_system = RwSignal::new(
         match settings.tuning_system() {
             TuningSystem::EqualTemperament => "equalTemperament",
@@ -618,6 +622,26 @@ pub fn SettingsView() -> impl IntoView {
                         <span class="text-xs text-gray-400 dark:text-gray-500">{move_tr!("max")}</span>
                     </div>
                 </div>
+                <div class="border-t border-gray-200 dark:border-gray-700"></div>
+                <SettingsRowDynamic label=note_gap_label>
+                    <Stepper
+                        label=move_tr!("note-gap-aria")
+                        on_decrement=Callback::new(move |_| {
+                            let val = note_gap.get();
+                            let new_val = ((val * 10.0 - 1.0).round() / 10.0).max(0.0);
+                            note_gap.set(new_val);
+                            LocalStorageSettings::set("peach.note_gap", &format!("{new_val:.1}"));
+                        })
+                        on_increment=Callback::new(move |_| {
+                            let val = note_gap.get();
+                            let new_val = ((val * 10.0 + 1.0).round() / 10.0).min(5.0);
+                            note_gap.set(new_val);
+                            LocalStorageSettings::set("peach.note_gap", &format!("{new_val:.1}"));
+                        })
+                        decrement_disabled=Signal::derive(move || note_gap.get() <= 0.0)
+                        increment_disabled=Signal::derive(move || note_gap.get() >= 5.0)
+                    />
+                </SettingsRowDynamic>
             </SettingsSection>
 
             // Data section (AC: 1, 8)

@@ -591,6 +591,22 @@ pub fn PitchComparisonView() -> impl IntoView {
                     session.borrow_mut().on_reference_note_finished();
                     sync();
 
+                    // === Note gap phase (silence between reference and target) ===
+                    let note_gap_ms = settings.note_gap().as_millis() as u32;
+                    if note_gap_ms > 0 {
+                        let mut gap_elapsed = 0u32;
+                        while gap_elapsed < note_gap_ms {
+                            if cancelled.get() {
+                                break 'training;
+                            }
+                            TimeoutFuture::new(POLL_INTERVAL_MS).await;
+                            gap_elapsed += POLL_INTERVAL_MS;
+                        }
+                        if cancelled.get() {
+                            break;
+                        }
+                    }
+
                     // === PlayingTargetNote phase (buttons enabled — early answer possible) ===
                     if let Err(e) = note_player.borrow().play_for_duration(
                         data.target_frequency,
