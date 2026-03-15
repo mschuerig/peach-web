@@ -128,9 +128,9 @@ pub fn SettingsView() -> impl IntoView {
     let reference_pitch = RwSignal::new(settings.reference_pitch().raw_value());
     let vary_loudness_pct = RwSignal::new((settings.vary_loudness() * 100.0).round() as i32);
     let note_gap = RwSignal::new(settings.note_gap().as_secs_f64());
-    let note_gap_label = Signal::derive(move || {
-        tr!("note-gap-label", {"value" => format!("{:.1}", note_gap.get())})
-    });
+    let note_gap_label = Signal::derive(
+        move || tr!("note-gap-label", {"value" => format!("{:.1}", note_gap.get())}),
+    );
     let tuning_system = RwSignal::new(
         match settings.tuning_system() {
             TuningSystem::EqualTemperament => "equalTemperament",
