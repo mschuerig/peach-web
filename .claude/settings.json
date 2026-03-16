@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "pre-commit": {
+      "command": "cargo fmt --check && cargo clippy --quiet",
+      "description": "Format and lint check before every commit"
+    }
+  }
+}
