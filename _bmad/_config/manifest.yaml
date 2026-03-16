@@ -1,42 +1,56 @@
 installation:
-  version: 6.0.4
-  installDate: 2026-03-02T20:20:39.708Z
-  lastUpdated: 2026-03-02T20:20:39.708Z
+  version: 6.2.0
+  installDate: 2026-03-16T22:54:47.096Z
+  lastUpdated: 2026-03-16T22:54:47.096Z
 modules:
   - name: core
-    version: 6.0.4
-    installDate: 2026-03-02T20:20:38.456Z
-    lastUpdated: 2026-03-02T20:20:38.456Z
+    version: 6.2.0
+    installDate: 2026-03-16T22:54:45.787Z
+    lastUpdated: 2026-03-16T22:54:45.787Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmm
-    version: 6.0.4
-    installDate: 2026-03-02T20:20:32.010Z
-    lastUpdated: 2026-03-02T20:20:38.456Z
+    version: 6.2.0
+    installDate: 2026-03-16T22:54:37.599Z
+    lastUpdated: 2026-03-16T22:54:45.787Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmb
-    version: 0.1.6
-    installDate: 2026-03-02T20:20:33.633Z
-    lastUpdated: 2026-03-02T20:20:38.899Z
+    version: 1.0.2
+    installDate: 2026-03-16T22:54:38.653Z
+    lastUpdated: 2026-03-16T22:54:46.111Z
     source: external
     npmPackage: bmad-builder
     repoUrl: https://github.com/bmad-code-org/bmad-builder
   - name: cis
     version: 0.1.8
-    installDate: 2026-03-02T20:20:35.021Z
-    lastUpdated: 2026-03-02T20:20:39.312Z
+    installDate: 2026-03-16T22:54:40.170Z
+    lastUpdated: 2026-03-16T22:54:46.436Z
     source: external
     npmPackage: bmad-creative-intelligence-suite
     repoUrl: https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite
   - name: tea
-    version: 1.5.0
-    installDate: 2026-03-02T20:20:36.370Z
-    lastUpdated: 2026-03-02T20:20:39.708Z
+    version: 1.7.0
+    installDate: 2026-03-16T22:54:41.621Z
+    lastUpdated: 2026-03-16T22:54:46.756Z
     source: external
     npmPackage: bmad-method-test-architecture-enterprise
     repoUrl: https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise
+  - name: wds
+    version: 0.3.0
+    installDate: 2026-03-16T22:54:43.263Z
+    lastUpdated: 2026-03-16T22:54:47.095Z
+    source: external
+    npmPackage: bmad-method-wds-expansion
+    repoUrl: https://github.com/bmad-code-org/bmad-method-wds-expansion
+  - name: arc42-documentation-architect
+    version: null
+    installDate: 2026-03-16T22:54:43.272Z
+    lastUpdated: 2026-03-16T22:54:47.096Z
+    source: custom
+    npmPackage: null
+    repoUrl: null
 ides:
   - claude-code

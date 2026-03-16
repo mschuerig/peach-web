@@ -1,0 +1,4 @@
+code: arc42-documentation-architect
+name: "arc42 Documentation Architect"
+description: "Creates and maintains arc42 architecture documentation with Mermaid UML diagrams"
+default_selected: false
