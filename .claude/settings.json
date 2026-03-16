@@ -1,0 +1,46 @@
+{
+  "env": {
+    "ENABLE_LSP_TOOL": "1"
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": ["gh", "trunk"],
+    "allowUnsandboxedCommands": true,
+    "filesystem": {
+      "denyRead": [
+        "~/.ssh",
+        "~/.aws",
+        "~/.gnupg"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "*.github.com",
+        "crates.io",
+        "docs.rs",
+        "lib.rs",
+        "book.leptos.dev",
+        "trunkrs.dev",
+        "rustwasm.github.io",
+        "developer.chrome.com",
+        "raw.githubusercontent.com"
+      ]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:lib.rs)",
+      "WebFetch(domain:book.leptos.dev)",
+      "WebFetch(domain:trunkrs.dev)",
+      "WebFetch(domain:rustwasm.github.io)",
+      "WebFetch(domain:developer.chrome.com)"
+    ]
+  }
+}
