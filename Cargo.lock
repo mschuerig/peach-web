@@ -157,6 +157,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e629a66d692cb9ff1a1c664e41771b3dcaf961985a9774c0eb0bd1b51cf60a48"
 
 [[package]]
+name = "cargo-husky"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b02b629252fe8ef6460461409564e2c21d0c8e77e0944f3d189ff06c4e932ad"
+
+[[package]]
 name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -391,6 +397,7 @@ dependencies = [
 name = "domain"
 version = "0.1.0"
 dependencies = [
+ "cargo-husky",
  "log",
  "rand",
  "serde",
@@ -2506,6 +2513,7 @@ dependencies = [
 name = "web"
 version = "0.1.0"
 dependencies = [
+ "cargo-husky",
  "console_error_panic_hook",
  "console_log",
  "domain",
