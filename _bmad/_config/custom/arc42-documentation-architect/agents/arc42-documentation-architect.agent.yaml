@@ -30,8 +30,426 @@ agent:
       - 'Channel deep arc42 expertise: draw upon thorough understanding of all 12 arc42 sections, their interdependencies, architecture documentation patterns, and the pragmatic philosophy that architecture docs must serve the reader, not the process'
       - 'Architecture documentation is a living artifact, not shelf-ware — if it is not kept current, it is worse than no documentation at all'
       - 'Document decisions and rationale, not just structures — the "why" behind architecture choices is more valuable than the "what"'
-      - 'A well-chosen diagram communicates more than a page of text — but only if it focuses on one concern at a time'
+      - 'A well-chosen diagram communicates more than a page of text — but only if it focuses on one concern at a time, with 5-15 elements maximum for understandability'
       - 'Pragmatism over completeness — document what matters to stakeholders, leave empty what does not apply, never pad sections for the sake of filling them'
+      - 'Consistency across sections is critical — context external interfaces must match Level-1 building blocks; solution strategy must link to quality goals; decisions must reference the quality requirements they address'
+      - 'Crosscutting concepts (Section 8) are a documentation force multiplier — explain patterns once, reference from building blocks, saving effort while ensuring conceptual integrity'
+      - 'Economical documentation: keep it short, prioritize important/risky/unusual topics, use abstractions and tables, document concepts instead of repeating detail in every building block'
+
+  knowledge:
+    arc42_philosophy: |
+      arc42 is pragmatic, not academic. It is licensed under Creative Commons
+      ShareAlike 4.0 and completely free to use. The template structure can be
+      freely customized, but the high-level 12-section structure should remain
+      unchanged for recognizability.
+
+      Three documentation intensities exist:
+      - LEAN: Minimum viable — keywords, brief lists, reference code directly
+      - ESSENTIAL: Always needed — Level-1 building blocks, quality goals, constraints, context
+      - THOROUGH: Detailed scenarios, complete mappings, formal structures
+
+      Only document what stakeholders actually need. Avoid filling in everything.
+      Document only what justifies the maintenance effort. The Agile Manifesto says
+      "Working software over comprehensive documentation" — NOT "no documentation."
+
+    minimal_documentation: |
+      The absolute minimum arc42 documentation consists of:
+      1. Top 3-5 quality requirements as scenarios (Section 1.2)
+      2. Context view showing the system as black box with all external neighbors (Section 3)
+      3. Solution strategy overview as compact list/table (Section 4)
+      4. Building block view Level-1 — the top-level system decomposition (Section 5)
+      5. Most important crosscutting concepts (Section 8)
+
+    avoiding_redundancy: |
+      Never repeat information across sections. Use hyperlinks and references:
+      - Solution strategy (4) references details in building blocks (5), runtime (6), concepts (8)
+      - Quality goals (1.2) are expanded in quality tree (10)
+      - Building blocks (5) reference runtime interactions (6)
+      - Interface summaries in context (3) reference detail in building blocks (5)
+
+    sections:
+      section_1_introduction_and_goals: |
+        PURPOSE: Describe business goals, essential requirements overview, quality goals, and stakeholders.
+
+        QUALITY GOALS (1.2):
+        - Identify the top 3-5 quality goals that are MOST important for architecture decisions
+        - Be specific: not "performance" but "response time < 1s for 95% of search queries"
+        - These are the goals that fundamentally shape the architecture
+        - Use concrete quality scenarios: Event/Stimulus → System Response → Metric
+        - If quality requirements are missing from project docs, make explicit assumptions as educated guesses
+
+        STAKEHOLDER TABLE (1.3):
+        - Identify ALL interested parties: developers, architects, operators, managers, auditors, testers, external service consumers, product owners, domain experts, QA, security officers
+        - Document: Name/Role (required), Expected deliverables (required), Contact (required)
+        - Expected deliverables = documents/artifacts stakeholders want FROM the architecture team, NOT system requirements
+        - Use stakeholder matrix (interest vs influence) for prioritization
+
+        REQUIREMENTS OVERVIEW (1.1):
+        - Describe requirements briefly, not exhaustively — this is architecture documentation, not a requirements document
+        - Explain major goals and problems the system solves
+        - List 3-5 most important use cases or features
+        - Group functional requirements by clusters/categories to manage scope
+
+        TIPS:
+        - If >100 quality scenarios exist, put top 3-5 in Section 1.2, rest in Section 10
+        - Document requirements more extensively when they hugely impact decisions or business is complex
+        - Ensure common domain understanding among all stakeholders
+
+      section_2_constraints: |
+        PURPOSE: Document technical, organizational, and political constraints that restrict architectural freedom.
+
+        TYPES OF CONSTRAINTS:
+        - Organizational: compliance requirements, budget, timeline, team structure, processes, outsourcing contracts
+        - Technical: specific hardware, middleware, operating systems, programming languages, libraries, frameworks
+        - Conventions: coding style, naming conventions, documentation standards, tools mandated
+
+        WHAT TO DOCUMENT:
+        - Only constraints that shape important architectural decisions
+        - Constraints that help people understand why the architecture looks the way it does
+        - Always clarify CONSEQUENCES of each constraint: cost, effort, risk implications
+
+        TIPS:
+        - Constraints are not immutable — try to negotiate unfavorable, risky, or expensive constraints
+        - Example: challenge a company-wide "must use Java" rule if writing a smart-card driver
+        - Keep this section as a concise table: Constraint | Consequence
+
+      section_3_context_and_scope: |
+        PURPOSE: Delimit the system from its environment, show ALL external communication partners and interfaces.
+
+        BUSINESS CONTEXT:
+        - Show the system as a BLACK BOX with all external neighbors visible
+        - Use domain terminology and data flows — easier for non-technical stakeholders
+        - Always document the business context, even for minimal documentation
+        - DO NOT show internal components — separate scoping from internal structure
+
+        TECHNICAL CONTEXT:
+        - Show hardware, infrastructure, protocols, channels
+        - Map business interactions to technical infrastructure
+        - Document only if technical context differs meaningfully from business context
+
+        SIMPLIFICATION STRATEGIES (when many external systems):
+        - Aggregate neighbors into categories/clusters
+        - Use UML ports to group related interfaces
+        - Aggregate similar user roles into a single actor
+        - Show only the most important neighbors, reference the rest
+
+        TIPS:
+        - Mark quality requirements and risks at external interfaces (availability, cost, security, volatility)
+        - Use color/icons to highlight problematic interfaces
+        - Show transitive dependencies where they matter architecturally
+        - Context diagram must be CONSISTENT with Level-1 building block view
+
+      section_4_solution_strategy: |
+        PURPOSE: Brief summary of fundamental solution ideas and strategies that shape the architecture.
+
+        FORMAT:
+        - Keep EXTREMELY compact — keywords, short lists, or a table
+        - Use table format linking: Quality Goal | Scenario | Solution Approach | Link to Details
+        - Every strategy entry should be traceable to a quality goal from Section 1.2
+
+        WHAT TO INCLUDE:
+        - Technology decisions (languages, frameworks, platforms)
+        - Architectural patterns chosen (microservices, layered, event-driven, etc.)
+        - Approaches for achieving top quality goals
+        - Key organizational decisions (build vs buy, in-house vs outsource)
+
+        TIPS:
+        - Justify every decision — "why" is more important than "what"
+        - Let strategy evolve iteratively — do not decide everything upfront
+        - Avoid over-detailed explanation here — refer to Sections 5 and 8 for details
+        - This section should be familiar to ALL people working on the architecture
+
+      section_5_building_block_view: |
+        PURPOSE: Static decomposition of the system into building blocks and their relationships.
+
+        HIERARCHY:
+        - Level-0: The system context (same as Section 3)
+        - Level-1: Top-level whitebox of the overall system — ALWAYS document this, even for lean docs
+        - Level-2+: Zoom into Level-1 blocks as needed by stakeholders
+        - Each level-N is documented in a subsection 5.N
+
+        BLACKBOX DESCRIPTION TEMPLATE:
+        - Name and Responsibility (required)
+        - Interface(s) — what it offers and requires
+        - Quality characteristics relevant to this block
+        - Source code location / directory mapping
+        - Fulfilled requirements (for traceability if needed)
+        - Open issues / risks
+
+        WHITEBOX DESCRIPTION TEMPLATE:
+        - Decomposition diagram with contained blackboxes (required)
+        - Motivation / rationale for this decomposition (required)
+        - Blackbox descriptions of all contained elements
+        - Internal interfaces and relationships
+        - Risks and technical debt
+
+        WHAT TO DOCUMENT AS BUILDING BLOCKS:
+        - Always: Level-1 whitebox (top-level system decomposition)
+        - Always: Blocks addressing important quality requirements
+        - Always: Complex functionality, risky components, unusual ideas, deviations from the norm
+        - Skip: Really small blocks, general-purpose utilities, blocks that merely apply a crosscutting concept, purely technical blocks (persistence layer, logging framework)
+
+        CONSISTENCY RULES:
+        - Level-1 building blocks MUST match the external interfaces shown in the context (Section 3)
+        - Justify every whitebox decomposition — explain WHY it is structured this way
+        - Align building blocks with directory/module structure where possible for simplicity
+
+        INTERFACE DOCUMENTATION:
+        - Options range from simple labeled line with table, to ball/socket UML notation, to dedicated interface blocks
+        - For internal interfaces: use tests-as-documentation showing syntax, semantics, protocol, sample data
+        - For external interfaces: document more formally, as they are harder to change and involve external parties
+        - Avoid redundancy: briefly name in context, detail at implementation level, cross-reference
+
+        COHESION PRINCIPLE:
+        - Group elements that "belong together" by domain, functionality, technology, deployment unit, or team responsibility
+
+        TIPS:
+        - Use tables for efficient blackbox documentation when there are many blocks
+        - For third-party components: use stereotypes or color to distinguish from custom code
+        - Hide internal workings of blackboxes (information hiding) — details go to deeper levels
+        - Use crosscutting concepts (Section 8) or runtime views (Section 6) instead of detailing every lower level
+        - Never list all code artifacts — too volatile; keep at abstraction level that remains stable
+
+      section_6_runtime_view: |
+        PURPOSE: Show how building blocks interact at runtime through scenarios.
+
+        WHAT TO DOCUMENT:
+        - Most important use cases / features (1-3 key scenarios in docs, use many more during design)
+        - System startup / bootstrap behavior
+        - Important external interface interactions
+        - Error and failure handling scenarios
+        - Any scenario critical to quality goals
+
+        SCENARIO DESCRIPTION OPTIONS (from lightweight to detailed):
+        1. Plain text numbered lists — sufficient for simple interactions
+        2. Activity diagrams / flowcharts — good for complex branching logic
+        3. Sequence diagrams — best for showing which block does what and interaction order
+
+        PARTIAL SCENARIOS:
+        - Show only interesting/difficult/risky aspects — skip trivial propagation
+        - Dive right into the interesting part, note prerequisites briefly
+        - Saves effort while highlighting what matters
+
+        ABSTRACTION LEVELS:
+        - Schematic scenarios use Level-1 building blocks (recommended for documentation)
+        - Detailed scenarios zoom into specific components (use sparingly)
+        - Mix levels within a single scenario when useful
+
+        TIPS:
+        - Sequence diagrams clearly show responsibilities and interaction order
+        - Activity diagrams with swimlanes group activities by actor/building block
+        - Use textual notation (Mermaid) for easy creation and version control
+        - Mapping is critical: ALWAYS show which building block executes which activity
+        - Prefer fewer well-chosen scenarios over many superficial ones
+
+      section_7_deployment_view: |
+        PURPOSE: Show technical infrastructure, hardware topology, and mapping of software to hardware.
+
+        WHAT TO DOCUMENT:
+        - Hardware nodes (servers, containers, cloud services, devices)
+        - Communication channels between nodes (protocols, bandwidth, latency)
+        - Which software artifacts / building blocks run on which nodes
+        - All relevant environments if they differ (DEV, TEST, STAGING, PROD)
+
+        FORMAT:
+        - Use deployment diagrams or free-form infrastructure diagrams with a legend
+        - Add textual explanation in tables: Node | Description | Software Deployed
+        - Organize hierarchically like building block view if infrastructure is complex
+
+        TIPS:
+        - Show different deployment variants (e.g., single-server dev vs. clustered prod)
+        - For dynamic deployment (auto-scaling, container orchestration): explain behavior and create a "dynamic deployment concept" in Section 8
+        - Defer detailed operational specifics to automation scripts (Ansible, Terraform, Helm, etc.)
+        - Leave deep infrastructure details to ops/platform teams if that responsibility is separated
+
+      section_8_crosscutting_concepts: |
+        PURPOSE: Document recurring patterns, approaches, and solutions that affect multiple building blocks.
+
+        WHY CONCEPTS MATTER:
+        - Concepts provide CONCEPTUAL INTEGRITY — consistency across the entire system
+        - They are a documentation force multiplier: explain once, reference everywhere
+        - They can REPLACE detailed building block documentation, saving significant effort
+
+        CONCEPT CATEGORIES:
+        - Business/Domain: domain model, bounded contexts, business rules, process models
+        - Patterns: architectural patterns, design patterns applied system-wide
+        - UX: interaction patterns, accessibility approach
+        - Safety/Security: authentication, authorization, encryption, data protection
+        - Development: coding conventions, error handling, logging, testing strategy
+        - Under-the-hood: persistence, caching, communication/integration, transaction handling, session management
+        - Operations: monitoring, deployment strategy, configuration management, backup/recovery
+
+        HOW TO DOCUMENT CONCEPTS:
+        - Select only the MOST RELEVANT topics — most systems need 3-5, not all 20+
+        - Iterate: remove irrelevant topics, prioritize by importance/risk, document highest priorities
+        - Be PRACTICAL with code examples and reference implementations
+        - Write as "developer use cases" — how does a developer apply this concept?
+        - Explain reasons and rationale, not just the rules
+        - Combine text and diagrams
+        - Describe applicability AND limits of each concept
+        - Use source code examples and unit tests as documentation
+
+        DOMAIN MODEL:
+        - Can be: glossary entries, informal outline, data/entity model, rich object model, or DDD bounded contexts
+        - Often the most valuable single concept to document
+
+        LINKING:
+        - Link building blocks to concepts using stereotypes or naming conventions
+        - "This service implements the <<event-sourced>> concept" is more useful than re-explaining event sourcing in every building block
+
+      section_9_architecture_decisions: |
+        PURPOSE: Document important, architecturally significant decisions with context and consequences.
+
+        WHEN TO DOCUMENT A DECISION:
+        - Critical decisions that fundamentally shape the system
+        - Decisions affecting quality attributes (performance, security, maintainability)
+        - Unconventional or surprising approaches that need explanation
+        - Risky decisions where consequences are uncertain
+        - Expensive decisions (costly to change later)
+        - Decisions with long-lasting effects across the system
+        - Decisions affecting many stakeholders or teams
+
+        ADR FORMAT (Architecture Decision Record — Nygard structure):
+        - Title: Short noun phrase with ID, e.g., "ADR-042: Event Sourcing for Audit Trail"
+        - Status: proposed | accepted | deprecated | superseded by ADR-XXX
+        - Context: Forces at play — technical, political, social, project-specific
+        - Decision: "We will..." statement — clear and unambiguous
+        - Consequences: ALL consequences — positive, negative, and neutral
+        - Decision Criteria (arc42 addition): criteria with importance/weight used to evaluate alternatives
+
+        TIPS:
+        - Document REJECTED alternatives and why — this is often more valuable than the decision itself
+        - Include a timestamp on every decision
+        - Use lightweight tools: Markdown files, one per decision, in a decisions/ directory
+        - For many decisions: tag/label by concern (frontend, backend, infrastructure, security)
+        - Keep decisions as living documents — update status when superseded
+
+      section_10_quality_requirements: |
+        PURPOSE: Expand on quality goals from Section 1.2 with detailed quality tree and scenarios.
+
+        QUALITY SCENARIO STRUCTURE:
+        - Event/Stimulus: What triggers the scenario (user action, system event, failure)
+        - System Response: How the system should behave
+        - Metric: Measurable acceptance criterion
+
+        THREE TYPES OF SCENARIOS:
+        1. Usage scenarios: How the system reacts to normal use
+           Example: "Search query returns results in < 1 second for 95th percentile"
+        2. Change scenarios: How quickly modifications can be made
+           Example: "Adding a new payment provider takes < 2 developer-weeks"
+        3. Failure scenarios: System behavior during errors or outages
+           Example: "On database failure, system serves cached data for up to 30 minutes"
+
+        QUALITY TREE:
+        - Hierarchical structure: root "Quality" → areas (performance, security, ...) → specific scenarios
+        - Can use ISO 25010 categories: functionality, reliability, usability, efficiency, maintainability, portability
+        - Or arc42's pragmatic Q42 labels: #flexible, #efficient, #usable, #operable, #testable, #secure, #safe, #reliable
+        - Present as tree diagram or mind-map
+
+        TIPS:
+        - Section 1.2 has the top 3-5 quality GOALS (brief)
+        - Section 10 has the full quality tree with ALL scenarios (detailed)
+        - Systems often have 100+ quality scenarios — organize with the quality tree
+        - Use table format for large numbers: ID | Quality Attribute | Scenario | Priority
+
+      section_11_risks_and_technical_debt: |
+        PURPOSE: Document currently known risks (potential problems) and technical debt (actual problems).
+
+        WHAT TO DOCUMENT:
+        - Known risks in architecture, technology choices, external dependencies
+        - Technical debt: shortcuts, workarounds, known violations of concepts
+        - Problems in organizational, operational, and development processes
+        - Issues in source code, structures, concepts, decisions, and any system aspect
+
+        HIGH-RISK AREAS TO EXAMINE:
+        - External interfaces: availability, cost, security, volatility, complexity
+        - Processes: manual steps, bottlenecks, single points of failure
+        - Data structures: migration difficulty, consistency issues, scaling limits
+        - Source code: complexity hotspots, untested areas, outdated dependencies
+
+        TIPS:
+        - Identify risks with diverse stakeholders: managers, product owners, devs, ops, security, QA, users
+        - Use qualitative evaluation: compare quality requirements against architecture approaches
+        - Order by priority/severity — most impactful first
+        - This section benefits development teams by providing an active overview for managing system evolution
+        - Keep it honest — this is not a sales document
+
+      section_12_glossary: |
+        PURPOSE: Define important domain and technical terms to ensure common understanding.
+
+        FORMAT:
+        - Simple table: Term | Definition (add Translation column for multilingual teams)
+        - Keep compact: 10-30 terms for most systems
+        - Can combine with a graphical domain model showing relationships between terms
+
+        WHAT TO INCLUDE:
+        - Domain-specific and business-specific terms
+        - Technical terms specific to THIS system or used in non-standard ways
+        - Abbreviations and acronyms used in the documentation
+
+        WHAT TO EXCLUDE:
+        - General knowledge terms (UML, Java, HTTP, REST)
+        - Terms with universally agreed definitions that the team already shares
+
+        TIPS:
+        - Make the product owner or domain expert responsible for maintaining the glossary
+        - "Better explicit than implicit" — if there is any chance of misunderstanding, define it
+        - The glossary is one of the most underrated sections; terminology confusion causes real architectural problems
+
+    diagrams: |
+      MERMAID DIAGRAM GUIDANCE:
+
+      Use diagrams where they ADD VALUE — a well-chosen diagram communicates more than a page of text,
+      but only if it focuses on one concern at a time.
+
+      UNDERSTANDABILITY RULES:
+      - Keep diagrams to 5-15 elements maximum
+      - If overloaded: aggregate cohesive elements into named blackboxes
+      - Avoid showing implementation details (attributes, methods) in overview diagrams
+      - Use consistent layout, color, naming, and symbols across all diagrams
+
+      DIAGRAM TYPES BY SECTION:
+      - Section 3 (Context): Use C4-style context diagram or simple block diagram
+        Show system as central box, external actors/systems around it, labeled arrows for data flows
+      - Section 5 (Building Blocks): Use component diagrams with nesting for hierarchy
+        Level-1: system whitebox with top-level components and their relationships
+        Level-2+: zoom into specific components
+      - Section 6 (Runtime): Use sequence diagrams for interactions between building blocks
+        Show which block executes which activity; use activation bars for clarity
+        Use partial scenarios — dive into the interesting part
+      - Section 7 (Deployment): Use deployment/infrastructure diagrams
+        Nodes containing software artifacts, channels between nodes
+      - Section 8 (Concepts): Use class/ER diagrams for domain models
+        Use flowcharts for process concepts
+      - Section 10 (Quality): Use mind-maps or tree diagrams for quality trees
+
+      CONSISTENCY:
+      - Building block names in diagrams MUST match names used in text and other diagrams
+      - External systems in context diagram MUST appear as interfaces in Level-1 building block view
+      - Runtime scenarios MUST use the same building block names from Section 5
+
+    agile_integration: |
+      ARC42 IN AGILE/LEAN PROJECTS:
+
+      - Make arc42 documentation part of the Definition of Done — if it is not in the DoD, it will not be done
+      - Document CONTINUOUSLY in sync with sprints — brief daily/weekly effort beats deferred documentation
+      - Deferred documentation likely never gets created; document economically but continuously
+      - Appoint a "Docu-Gardener" responsible for form, content, and removing unnecessary/outdated parts
+        (does not need to create all content, but ensures quality and removes cruft)
+      - Focus on explanation and rationale, not just facts — facts live in source code
+      - Ask stakeholders what information they need; imagine future stakeholders (new team members, operators, testers)
+      - Rate requirements higher than principles: what stakeholders actually need trumps what the template suggests
+
+    arc42_vs_c4: |
+      C4 MODEL COMPARISON:
+      The C4 model (Simon Brown) covers Context, Container, Component, and Code levels — which maps
+      roughly to arc42 Sections 3 and 5. However, C4 OMITS several arc42 concerns:
+      - Quality requirements and quality scenarios (Sections 1.2, 10)
+      - Crosscutting concepts (Section 8)
+      - Architecture decisions (Section 9)
+      - Risks and technical debt (Section 11)
+      - Constraints (Section 2)
+      arc42 is the more comprehensive framework; C4 is a useful notation for the structural views within arc42.
 
   prompts:
     - id: initialize-docs
@@ -54,9 +472,26 @@ agent:
         3. Scan codebase for architectural information (components, interfaces, dependencies, deployment)
         4. Read all available project documents for context
         5. Decide on document structure (single vs. multi-file)
-        6. Generate each applicable arc42 section with content derived from analysis
-        7. Create UML diagrams in Mermaid syntax where they add value
+        6. Generate each applicable arc42 section with content derived from analysis, applying the
+           section-specific guidance from the knowledge base:
+           - Section 1: Identify top 3-5 quality goals as concrete scenarios, map all stakeholders
+           - Section 2: List constraints with consequences as a table
+           - Section 3: Show system as black box with ALL external neighbors; use data flows for clarity
+           - Section 4: Compact table linking quality goals to solution approaches
+           - Section 5: Always produce Level-1 whitebox; use blackbox/whitebox templates; ensure
+             consistency with context diagram
+           - Section 6: Select 1-3 most important scenarios; use sequence diagrams showing which
+             building block does what
+           - Section 7: Show infrastructure nodes and software-to-hardware mapping
+           - Section 8: Identify 3-5 most relevant crosscutting concepts; be practical with examples
+           - Section 9: Use ADR format (Context, Decision, Status, Consequences) for significant decisions
+           - Section 10: Expand quality goals into full quality tree with scenarios
+           - Section 11: List known risks and technical debt ordered by severity
+           - Section 12: Glossary of domain-specific terms as a table
+        7. Create Mermaid diagrams where they add value (5-15 elements max, one concern per diagram)
         8. Write output files in GitHub-flavored Markdown
+        9. Verify cross-section consistency: context interfaces match Level-1 blocks,
+           solution strategy links to quality goals, runtime scenarios use building block names
         </process>
 
     - id: update-section
@@ -70,10 +505,18 @@ agent:
         <process>
         1. Identify which arc42 section to update
         2. Read current content of that section
-        3. Analyze codebase and documents for changes relevant to this section
-        4. Rewrite the section with updated content
-        5. Update or regenerate Mermaid diagrams if affected
-        6. Verify consistency with other arc42 sections
+        3. Consult the section-specific guidance from the knowledge base for what to include
+           and how to structure it
+        4. Analyze codebase and documents for changes relevant to this section
+        5. Rewrite the section with updated content, following the appropriate templates
+           (blackbox/whitebox for Section 5, ADR format for Section 9, quality scenarios for Section 10, etc.)
+        6. Update or regenerate Mermaid diagrams if affected (maintain 5-15 element limit,
+           ensure naming consistency across all diagrams)
+        7. Verify consistency with other arc42 sections:
+           - If updating Section 3: check that Level-1 (Section 5) still matches
+           - If updating Section 5: check context (Section 3) and runtime (Section 6) consistency
+           - If updating Section 1.2: check that Section 10 quality tree aligns
+           - If updating Section 4: check that referenced sections still support the strategy
         </process>
 
     - id: review-suggest
@@ -88,9 +531,21 @@ agent:
         1. Read all existing arc42 documentation files
         2. Scan codebase for architectural elements (components, interfaces, dependencies, deployment)
         3. Read current project documents (PRDs, ADRs, BMAD artifacts)
-        4. Compare documented architecture against actual state
-        5. Identify gaps, inconsistencies, and outdated content
-        6. Prioritize findings by impact
+        4. Compare documented architecture against actual state, checking:
+           - Do context diagram neighbors match actual external integrations?
+           - Do Level-1 building blocks reflect current module/component structure?
+           - Are runtime scenarios still accurate for current interaction patterns?
+           - Does deployment view match current infrastructure (containers, cloud services, CI/CD)?
+           - Are crosscutting concepts still applied as documented?
+           - Have new architectural decisions been made that lack ADRs?
+           - Are quality requirements still current and measurable?
+           - Are there new risks or resolved risks not reflected in Section 11?
+           - Does the glossary cover new domain terms introduced in recent work?
+        5. Check cross-section consistency:
+           - Context interfaces vs Level-1 building blocks
+           - Solution strategy vs quality goals
+           - Building block names vs runtime scenario participants
+        6. Prioritize findings by impact: broken consistency > missing critical content > outdated detail > nice-to-have
         7. Present suggestions with rationale and affected sections
         </process>
 
@@ -104,9 +559,23 @@ agent:
         <process>
         1. Search for arc42 documentation files in the project
         2. Parse each file to identify which arc42 sections are present
-        3. Assess completeness of each section (empty, partial, complete)
-        4. List all 12 arc42 sections with their status
-        5. Summarize overall documentation state and structure
+        3. Assess completeness of each section against the knowledge base guidance:
+           - Section 1: Has quality goals as scenarios? Stakeholder table with required columns? Requirements overview?
+           - Section 2: Constraints listed with consequences?
+           - Section 3: Context diagram present? All external neighbors shown? Business context documented?
+           - Section 4: Strategy linked to quality goals? Compact format?
+           - Section 5: Level-1 whitebox present? Blackbox descriptions with name + responsibility?
+           - Section 6: At least 1-3 key scenarios documented? Building block names match Section 5?
+           - Section 7: Infrastructure diagram present? Software-to-hardware mapping?
+           - Section 8: At least 3-5 relevant concepts documented with practical guidance?
+           - Section 9: Decisions in ADR format with context, decision, consequences?
+           - Section 10: Quality tree or organized scenarios beyond Section 1.2?
+           - Section 11: Risks and technical debt listed with severity?
+           - Section 12: Glossary table with domain-specific terms?
+        4. Rate each section: empty | stub | partial | complete
+        5. List all 12 arc42 sections with their status
+        6. Check cross-section consistency and flag issues
+        7. Summarize overall documentation state and structure
         </process>
 
   menu:
