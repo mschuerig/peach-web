@@ -7,7 +7,7 @@ use send_wrapper::SendWrapper;
 
 use crate::app::base_href;
 
-use domain::{ProgressTimeline, TrainingMode, TrainingModeState};
+use domain::{PerceptualProfile, TrainingMode, TrainingModeState};
 
 use super::help_content::HelpModal;
 use super::nav_bar::{NavBar, NavIconButton};
@@ -17,15 +17,13 @@ use crate::help_sections::PROFILE_HELP;
 
 #[component]
 pub fn ProfileView() -> impl IntoView {
-    let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
-        use_context().expect("ProgressTimeline context");
+    let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
+        use_context().expect("PerceptualProfile context");
     let crate::app::IsProfileLoaded(is_profile_loaded) =
         use_context().expect("is_profile_loaded context");
     let i18n = expect_context::<I18n>();
 
     let is_help_open = RwSignal::new(false);
-
-    let ptl = progress_timeline.clone();
 
     view! {
         <div class="pt-4 pb-12">
@@ -42,13 +40,13 @@ pub fn ProfileView() -> impl IntoView {
                     .into_any();
                 }
 
-                let tl = ptl.borrow();
+                let p = profile.borrow();
                 let active_names: Vec<String> = TrainingMode::ALL
                     .iter()
-                    .filter(|&&m| tl.state(m) == TrainingModeState::Active)
+                    .filter(|&&m| p.state(m) == TrainingModeState::Active)
                     .map(|&m| i18n.tr(m.config().display_name))
                     .collect();
-                drop(tl);
+                drop(p);
 
                 if active_names.is_empty() {
                     let empty_aria = tr!("profile-no-data-aria");

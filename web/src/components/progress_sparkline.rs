@@ -4,7 +4,7 @@ use std::rc::Rc;
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 
-use domain::{ProgressTimeline, TrainingMode, TrainingModeState, Trend};
+use domain::{PerceptualProfile, ProgressTimeline, TrainingMode, TrainingModeState, Trend};
 use leptos_fluent::{I18n, tr};
 
 fn trend_stroke_color(trend: Option<Trend>) -> &'static str {
@@ -61,20 +61,22 @@ fn compute_points(values: &[f64]) -> String {
 pub fn ProgressSparkline(mode: TrainingMode) -> impl IntoView {
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline context");
+    let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
+        use_context().expect("PerceptualProfile context");
 
     let i18n = expect_context::<I18n>();
 
     view! {
         {move || {
-            let tl = progress_timeline.borrow();
-            if tl.state(mode) == TrainingModeState::NoData {
+            let p = profile.borrow();
+            if p.state(mode) == TrainingModeState::NoData {
                 return view! { <span /> }.into_any();
             }
+            let ewma = p.current_ewma(mode);
+            let trend = p.trend(mode);
+            drop(p);
 
-            let buckets = tl.display_buckets(mode);
-            let ewma = tl.current_ewma(mode);
-            let trend = tl.trend(mode);
-            drop(tl);
+            let buckets = progress_timeline.borrow().display_buckets(mode);
 
             let values: Vec<f64> = buckets.iter().map(|b| b.mean).collect();
             let points = compute_points(&values);

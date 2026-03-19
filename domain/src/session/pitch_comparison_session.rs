@@ -5,8 +5,7 @@ use std::rc::Rc;
 use rand::prelude::IndexedRandom;
 
 use crate::ports::{PitchComparisonObserver, Resettable, UserSettings};
-use crate::profile::PerceptualNote;
-use crate::profile::PerceptualProfile;
+use crate::profile::{COLD_START_DIFFICULTY, PerceptualProfile};
 use crate::strategy::{MIN_CENT_DIFFERENCE, TrainingSettings, next_pitch_comparison};
 use crate::training::{CompletedPitchComparison, PitchComparison};
 use crate::tuning::TuningSystem;
@@ -277,7 +276,7 @@ impl PitchComparisonSession {
         self.stop();
         self.last_completed = None;
         self.session_best_cent_difference = None;
-        self.profile.borrow_mut().reset();
+        self.profile.borrow_mut().reset_all();
         for resettable in &mut self.resettables {
             resettable.reset();
         }
@@ -292,7 +291,7 @@ impl PitchComparisonSession {
             self.session_note_range,
             self.session_reference_pitch,
             Cents::new(MIN_CENT_DIFFERENCE),
-            Cents::new(PerceptualNote::COLD_START_DIFFICULTY),
+            Cents::new(COLD_START_DIFFICULTY),
         );
 
         let comparison = next_pitch_comparison(
@@ -1008,14 +1007,24 @@ mod tests {
     #[test]
     fn test_reset_training_data_resets_profile() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        profile
-            .borrow_mut()
-            .update(MIDINote::new(60), Cents::new(50.0), true);
-        assert!(profile.borrow().overall_mean().is_some());
+        profile.borrow_mut().add_point(
+            crate::TrainingMode::UnisonPitchComparison,
+            crate::MetricPoint::new(1000.0, Cents::new(50.0)),
+            true,
+        );
+        assert!(
+            profile
+                .borrow()
+                .has_data(crate::TrainingMode::UnisonPitchComparison)
+        );
 
         let mut session = PitchComparisonSession::new(Rc::clone(&profile), vec![], vec![]);
         session.reset_training_data();
-        assert_eq!(profile.borrow().overall_mean(), None);
+        assert!(
+            !profile
+                .borrow()
+                .has_data(crate::TrainingMode::UnisonPitchComparison)
+        );
     }
 
     #[test]

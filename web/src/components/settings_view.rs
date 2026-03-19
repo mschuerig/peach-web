@@ -19,10 +19,7 @@ use crate::app::base_href;
 use crate::app::{AudioNeedsGesture, SoundFontLoadStatus, WorkletAssets, WorkletConnecting};
 use domain::ports::UserSettings;
 use domain::types::{DetunedMIDINote, Frequency, MIDINote, SoundSourceID};
-use domain::{
-    DirectedInterval, Direction, Interval, PerceptualProfile, ThresholdTimeline, TrendAnalyzer,
-    TuningSystem,
-};
+use domain::{DirectedInterval, Direction, Interval, PerceptualProfile, TuningSystem};
 
 use super::help_content::HelpModal;
 use super::nav_bar::{NavBar, NavIconButton};
@@ -151,10 +148,6 @@ pub fn SettingsView() -> impl IntoView {
     // Reset training data
     let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
         use_context().expect("PerceptualProfile not provided");
-    let trend: SendWrapper<Rc<RefCell<TrendAnalyzer>>> =
-        use_context().expect("TrendAnalyzer not provided");
-    let timeline: SendWrapper<Rc<RefCell<ThresholdTimeline>>> =
-        use_context().expect("ThresholdTimeline not provided");
     let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
         use_context().expect("db_store not provided");
 
@@ -219,8 +212,6 @@ pub fn SettingsView() -> impl IntoView {
     let handle_confirm = move |_| {
         reset_status.set(ResetStatus::Resetting);
         let profile = Rc::clone(&*profile);
-        let trend = Rc::clone(&*trend);
-        let timeline = Rc::clone(&*timeline);
 
         spawn_local(async move {
             let db_result = if let Some(store) = db_store.get_untracked() {
@@ -231,13 +222,7 @@ pub fn SettingsView() -> impl IntoView {
 
             match db_result {
                 Ok(()) => {
-                    {
-                        let mut p = profile.borrow_mut();
-                        p.reset();
-                        p.reset_matching();
-                    }
-                    trend.borrow_mut().reset();
-                    timeline.borrow_mut().reset();
+                    profile.borrow_mut().reset_all();
                     if let Some(dialog) = dialog_ref.get() {
                         dialog.close();
                     }

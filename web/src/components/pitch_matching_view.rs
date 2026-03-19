@@ -20,7 +20,9 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{UnifiedPlaybackHandle, create_note_player};
 use crate::app::{SoundFontLoadStatus, WorkletAssets, ensure_worklet_connected};
-use crate::bridge::{PitchMatchingDataStoreObserver, ProgressTimelineObserver};
+use crate::bridge::{
+    PitchMatchingDataStoreObserver, PitchMatchingProfileObserver, ProgressTimelineObserver,
+};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
@@ -93,9 +95,8 @@ pub fn PitchMatchingView() -> impl IntoView {
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
     let audio_error: RwSignal<Option<String>> = RwSignal::new(None);
 
-    // Build observers — PitchMatchingSession already updates profile directly,
-    // so only the data store observer is needed here.
     let observers: Vec<Box<dyn PitchMatchingObserver>> = vec![
+        Box::new(PitchMatchingProfileObserver::new(Rc::clone(&profile))),
         Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
         Box::new(PitchMatchingDataStoreObserver::new(db_store, storage_error)),
     ];
@@ -268,7 +269,6 @@ pub fn PitchMatchingView() -> impl IntoView {
     // Commit handler — used by slider on_commit and keyboard Enter/Space
     let on_commit = {
         let session = Rc::clone(&session);
-        let progress_timeline = Rc::clone(&progress_timeline);
         let tunable_handle = Rc::clone(&tunable_handle);
         let sync = sync_signals.clone();
         let cancelled = Rc::clone(&cancelled);
@@ -301,7 +301,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                     stats_session_best.set(Some(new_best));
                 }
             }
-            stats_trend.set(progress_timeline.borrow().trend(training_mode));
+            stats_trend.set(profile.borrow().trend(training_mode));
 
             // Stop tunable note
             if let Some(ref mut h) = *tunable_handle.borrow_mut() {

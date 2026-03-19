@@ -5,7 +5,7 @@ use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsValue;
 
-use domain::{ProgressTimeline, TrainingMode, TrainingModeState, Trend};
+use domain::{PerceptualProfile, ProgressTimeline, TrainingMode, TrainingModeState, Trend};
 use leptos_fluent::{I18n, tr};
 
 fn format_decimal_1(value: f64) -> String {
@@ -51,6 +51,8 @@ fn trend_text(trend: Option<Trend>) -> String {
 pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline context");
+    let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
+        use_context().expect("PerceptualProfile context");
 
     let ptl = progress_timeline.clone();
     let config = mode.config();
@@ -58,15 +60,15 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
 
     view! {
         {move || {
-            let tl = ptl.borrow();
-            if tl.state(mode) == TrainingModeState::NoData {
+            let p = profile.borrow();
+            if p.state(mode) == TrainingModeState::NoData {
                 return view! { <div /> }.into_any();
             }
+            let ewma = p.current_ewma(mode);
+            let trend = p.trend(mode);
+            drop(p);
 
-            let buckets = tl.display_buckets(mode);
-            let ewma = tl.current_ewma(mode);
-            let trend = tl.trend(mode);
-            drop(tl);
+            let buckets = ptl.borrow().display_buckets(mode);
 
             let ewma_str = ewma.map(format_decimal_1).unwrap_or_default();
             let stddev_str = format_stddev(&buckets);

@@ -71,8 +71,9 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
     InfoView, PitchComparisonView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
-use domain::types::MIDINote;
-use domain::{PerceptualProfile, ProgressTimeline, ThresholdTimeline, TrendAnalyzer};
+use domain::{
+    MetricPoint, PerceptualProfile, ProgressTimeline, TrainingMode, parse_iso8601_to_epoch,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SoundFontLoadStatus {
@@ -88,8 +89,6 @@ pub fn App() -> impl IntoView {
     // WASM is single-threaded — the Send + Sync bounds are never actually exercised.
     let profile = SendWrapper::new(Rc::new(RefCell::new(PerceptualProfile::new())));
     let audio_ctx_manager = SendWrapper::new(Rc::new(RefCell::new(AudioContextManager::new())));
-    let trend_analyzer = SendWrapper::new(Rc::new(RefCell::new(TrendAnalyzer::new())));
-    let timeline = SendWrapper::new(Rc::new(RefCell::new(ThresholdTimeline::new())));
     let progress_timeline = SendWrapper::new(Rc::new(RefCell::new(ProgressTimeline::new())));
     let is_profile_loaded = RwSignal::new(false);
     let db_store = RwSignal::new_local(None::<Rc<IndexedDbStore>>);
@@ -107,8 +106,6 @@ pub fn App() -> impl IntoView {
     provide_context(sf2_load_status);
     provide_context(profile.clone());
     provide_context(audio_ctx_manager.clone());
-    provide_context(trend_analyzer.clone());
-    provide_context(timeline.clone());
     provide_context(progress_timeline.clone());
     provide_context(IsProfileLoaded(is_profile_loaded));
     provide_context(db_store);
@@ -122,8 +119,6 @@ pub fn App() -> impl IntoView {
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);
-    let trend_for_hydration = Rc::clone(&*trend_analyzer);
-    let timeline_for_hydration = Rc::clone(&*timeline);
     let ptl_for_hydration = Rc::clone(&*progress_timeline);
 
     spawn_local(async move {
@@ -133,45 +128,7 @@ pub fn App() -> impl IntoView {
 
                 let comparison_records = match store.fetch_all_pitch_comparisons().await {
                     Ok(records) => {
-                        let mut prof = profile_for_hydration.borrow_mut();
-                        let mut trend = trend_for_hydration.borrow_mut();
-                        let mut tl = timeline_for_hydration.borrow_mut();
-                        let mut skipped = 0u32;
-
-                        for record in &records {
-                            let note = match MIDINote::try_new(record.reference_note) {
-                                Ok(n) => n,
-                                Err(_) => {
-                                    skipped += 1;
-                                    continue;
-                                }
-                            };
-
-                            prof.update(
-                                note,
-                                domain::Cents::new(record.cent_offset.abs()),
-                                record.is_correct,
-                            );
-
-                            trend.push(record.cent_offset.abs());
-
-                            tl.push(
-                                &record.timestamp,
-                                record.cent_offset.abs(),
-                                record.is_correct,
-                                record.reference_note,
-                            );
-                        }
-
-                        if skipped > 0 {
-                            log::warn!(
-                                "Skipped {skipped} records with invalid MIDI note values during hydration"
-                            );
-                        }
-                        log::info!(
-                            "Profile comparison hydrated from {} records",
-                            records.len() - skipped as usize
-                        );
+                        log::info!("Fetched {} comparison records", records.len());
                         records
                     }
                     Err(e) => {
@@ -180,33 +137,9 @@ pub fn App() -> impl IntoView {
                     }
                 };
 
-                // Pitch matching hydration
                 let matching_records = match store.fetch_all_pitch_matchings().await {
                     Ok(records) => {
-                        let mut prof = profile_for_hydration.borrow_mut();
-                        let mut skipped = 0u32;
-
-                        for record in &records {
-                            let note = match MIDINote::try_new(record.reference_note) {
-                                Ok(n) => n,
-                                Err(_) => {
-                                    skipped += 1;
-                                    continue;
-                                }
-                            };
-
-                            prof.update_matching(note, domain::Cents::new(record.user_cent_error));
-                        }
-
-                        if skipped > 0 {
-                            log::warn!(
-                                "Skipped {skipped} pitch matching records with invalid MIDI note values during hydration"
-                            );
-                        }
-                        log::info!(
-                            "Profile pitch matching hydrated from {} records",
-                            records.len() - skipped as usize
-                        );
+                        log::info!("Fetched {} matching records", records.len());
                         records
                     }
                     Err(e) => {
@@ -214,6 +147,61 @@ pub fn App() -> impl IntoView {
                         Vec::new()
                     }
                 };
+
+                // Profile hydration — build MetricPoints grouped by TrainingMode
+                {
+                    use std::collections::HashMap;
+
+                    let mut mode_points: HashMap<TrainingMode, Vec<MetricPoint<domain::Cents>>> =
+                        HashMap::new();
+
+                    for record in &comparison_records {
+                        if !record.is_correct {
+                            continue;
+                        }
+                        let mode = if record.interval == 0 {
+                            TrainingMode::UnisonPitchComparison
+                        } else {
+                            TrainingMode::IntervalPitchComparison
+                        };
+                        let ts = parse_iso8601_to_epoch(&record.timestamp);
+                        let metric = record.cent_offset.abs();
+                        mode_points
+                            .entry(mode)
+                            .or_default()
+                            .push(MetricPoint::new(ts, domain::Cents::new(metric)));
+                    }
+
+                    for record in &matching_records {
+                        let mode = if record.interval == 0 {
+                            TrainingMode::UnisonMatching
+                        } else {
+                            TrainingMode::IntervalMatching
+                        };
+                        let ts = parse_iso8601_to_epoch(&record.timestamp);
+                        let metric = record.user_cent_error.abs();
+                        mode_points
+                            .entry(mode)
+                            .or_default()
+                            .push(MetricPoint::new(ts, domain::Cents::new(metric)));
+                    }
+
+                    // Sort each mode's points by timestamp
+                    for points in mode_points.values_mut() {
+                        points.sort_by(|a, b| {
+                            a.timestamp
+                                .partial_cmp(&b.timestamp)
+                                .unwrap_or(std::cmp::Ordering::Equal)
+                        });
+                    }
+
+                    profile_for_hydration.borrow_mut().rebuild_all(mode_points);
+                    log::info!(
+                        "Profile hydrated from {} comparison + {} matching records",
+                        comparison_records.len(),
+                        matching_records.len()
+                    );
+                }
 
                 // ProgressTimeline hydration — rebuild from all records
                 {

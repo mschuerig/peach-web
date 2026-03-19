@@ -1,248 +1,172 @@
-use serde::{Deserialize, Serialize};
-use std::ops::RangeInclusive;
+use std::collections::HashMap;
 
-use crate::types::{Cents, MIDINote};
+use crate::metric_point::MetricPoint;
+use crate::training_mode::TrainingMode;
+use crate::training_mode_statistics::TrainingModeStatistics;
+use crate::trend::Trend;
+use crate::types::Cents;
 
-/// Custom serde for [PerceptualNote; 128] — serialize as Vec since serde
-/// doesn't support arrays > 32 elements natively.
-mod note_array_serde {
-    use super::PerceptualNote;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+/// Cold-start difficulty for untrained modes (cents).
+pub const COLD_START_DIFFICULTY: f64 = 100.0;
 
-    pub fn serialize<S>(notes: &[PerceptualNote; 128], serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        notes.as_slice().serialize(serializer)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<[PerceptualNote; 128], D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let vec = Vec::<PerceptualNote>::deserialize(deserializer)?;
-        let arr: [PerceptualNote; 128] = vec.try_into().map_err(|v: Vec<_>| {
-            serde::de::Error::custom(format!("expected 128 notes, got {}", v.len()))
-        })?;
-        Ok(arr)
-    }
-}
-
-/// Per-note perceptual statistics tracked via Welford's online algorithm.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PerceptualNote {
-    mean: f64,
-    std_dev: f64,
-    m2: f64,
-    sample_count: u32,
-    current_difficulty: f64,
-}
-
-impl Default for PerceptualNote {
-    fn default() -> Self {
-        Self {
-            mean: 0.0,
-            std_dev: 0.0,
-            m2: 0.0,
-            sample_count: 0,
-            current_difficulty: Self::COLD_START_DIFFICULTY,
-        }
-    }
-}
-
-impl PerceptualNote {
-    /// Default difficulty for untrained notes (cents).
-    pub const COLD_START_DIFFICULTY: f64 = 100.0;
-
-    pub fn mean(&self) -> f64 {
-        self.mean
-    }
-
-    pub fn std_dev(&self) -> f64 {
-        self.std_dev
-    }
-
-    pub fn sample_count(&self) -> u32 {
-        self.sample_count
-    }
-
-    pub fn current_difficulty(&self) -> f64 {
-        self.current_difficulty
-    }
-
-    pub fn is_trained(&self) -> bool {
-        self.sample_count > 0
-    }
-}
-
-/// Aggregate perceptual profile across all 128 MIDI notes.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+/// Mode-aware perceptual profile — single source of truth for all per-mode statistics.
+///
+/// Each `TrainingMode` gets its own `TrainingModeStatistics` (Welford accumulator,
+/// EWMA, trend, time-ordered metrics). This aligns with the iOS `PerceptualProfile`
+/// post-Epic-44 architecture.
+#[derive(Clone, Debug)]
 pub struct PerceptualProfile {
-    #[serde(with = "note_array_serde")]
-    notes: [PerceptualNote; 128],
-    matching_count: u32,
-    matching_mean_abs: f64,
-    matching_m2: f64,
+    modes: HashMap<TrainingMode, TrainingModeStatistics>,
 }
 
 impl PerceptualProfile {
     pub fn new() -> Self {
-        Self {
-            notes: [PerceptualNote::default(); 128],
-            matching_count: 0,
-            matching_mean_abs: 0.0,
-            matching_m2: 0.0,
+        let mut modes = HashMap::new();
+        for mode in TrainingMode::ALL {
+            modes.insert(mode, TrainingModeStatistics::new());
+        }
+        Self { modes }
+    }
+
+    // --- Per-mode query API ---
+
+    /// Direct access to a mode's statistics.
+    pub fn statistics(&self, mode: TrainingMode) -> &TrainingModeStatistics {
+        self.modes.get(&mode).expect("all modes initialized")
+    }
+
+    /// Whether a mode has any recorded data.
+    pub fn has_data(&self, mode: TrainingMode) -> bool {
+        self.statistics(mode).record_count() > 0
+    }
+
+    /// Training mode state (NoData or Active).
+    pub fn state(&self, mode: TrainingMode) -> crate::training_mode::TrainingModeState {
+        if self.has_data(mode) {
+            crate::training_mode::TrainingModeState::Active
+        } else {
+            crate::training_mode::TrainingModeState::NoData
         }
     }
 
-    /// Update a note's statistics using Welford's online algorithm.
-    /// `cent_offset` is the absolute magnitude of the cent difference presented.
-    /// `_is_correct` is reserved for per-note accuracy tracking in future epics.
-    pub fn update(&mut self, note: MIDINote, cent_offset: Cents, _is_correct: bool) {
-        let raw = cent_offset.raw_value;
-        assert!(!raw.is_nan(), "cent_offset must not be NaN");
-        let stats = &mut self.notes[note.raw_value() as usize];
-        stats.sample_count += 1;
-        let delta = raw - stats.mean;
-        stats.mean += delta / stats.sample_count as f64;
-        let delta2 = raw - stats.mean;
-        stats.m2 += delta * delta2;
-        let variance = if stats.sample_count < 2 {
-            0.0
+    /// Trend for a mode (None if < 2 records).
+    pub fn trend(&self, mode: TrainingMode) -> Option<Trend> {
+        self.statistics(mode).trend
+    }
+
+    /// Current EWMA for a mode.
+    pub fn current_ewma(&self, mode: TrainingMode) -> Option<f64> {
+        self.statistics(mode).ewma
+    }
+
+    /// Record count for a mode.
+    pub fn record_count(&self, mode: TrainingMode) -> usize {
+        self.statistics(mode).record_count()
+    }
+
+    // --- Strategy-facing API (replaces old per-note aggregate) ---
+
+    /// Comparison mean for the given interval.
+    /// Maps interval to the correct mode (unison if interval == 0, otherwise interval mode).
+    /// Used by `KazezNoteStrategy` as warm-start difficulty fallback.
+    pub fn comparison_mean(&self, interval: u8) -> Option<Cents> {
+        let mode = if interval == 0 {
+            TrainingMode::UnisonPitchComparison
         } else {
-            stats.m2 / (stats.sample_count - 1) as f64
+            TrainingMode::IntervalPitchComparison
         };
-        stats.std_dev = variance.sqrt();
-    }
-
-    /// Return the top `count` weak spots: untrained notes first (infinite score),
-    /// then trained notes sorted by highest mean (weaker = higher threshold).
-    pub fn weak_spots(&self, count: usize) -> Vec<MIDINote> {
-        let mut scored: Vec<(u8, f64)> = self
-            .notes
-            .iter()
-            .enumerate()
-            .map(|(i, note)| {
-                let score = if note.is_trained() {
-                    note.mean
-                } else {
-                    f64::INFINITY
-                };
-                (i as u8, score)
-            })
-            .collect();
-
-        // Sort descending by score (highest = weakest)
-        scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        scored
-            .into_iter()
-            .take(count)
-            .map(|(i, _)| MIDINote::new(i))
-            .collect()
-    }
-
-    /// Collect the per-note means for all trained notes.
-    fn trained_means(&self) -> Vec<f64> {
-        self.notes
-            .iter()
-            .filter(|n| n.is_trained())
-            .map(|n| n.mean)
-            .collect()
-    }
-
-    /// Average of per-note means across all trained notes.
-    pub fn overall_mean(&self) -> Option<f64> {
-        let means = self.trained_means();
-        if means.is_empty() {
-            None
+        let stats = self.statistics(mode);
+        if stats.record_count() > 0 {
+            Some(Cents::new(stats.welford.mean()))
         } else {
-            Some(means.iter().sum::<f64>() / means.len() as f64)
+            None
         }
     }
 
-    /// Sample standard deviation of per-note means across trained notes.
-    pub fn overall_std_dev(&self) -> Option<f64> {
-        let means = self.trained_means();
-        if means.len() < 2 {
+    /// Weighted matching mean across both matching modes (backward compat for UI).
+    pub fn matching_mean(&self) -> Option<Cents> {
+        let unison = self.statistics(TrainingMode::UnisonMatching);
+        let interval = self.statistics(TrainingMode::IntervalMatching);
+        let u_count = unison.record_count();
+        let i_count = interval.record_count();
+        let total = u_count + i_count;
+        if total == 0 {
             return None;
         }
-
-        let avg = means.iter().sum::<f64>() / means.len() as f64;
-        let variance =
-            means.iter().map(|v| (v - avg).powi(2)).sum::<f64>() / (means.len() - 1) as f64;
-        Some(variance.sqrt())
+        let sum = unison.welford.mean() * u_count as f64 + interval.welford.mean() * i_count as f64;
+        Some(Cents::new(sum / total as f64))
     }
 
-    /// Average mean across trained notes within a MIDI note range.
-    pub fn average_threshold(&self, range: RangeInclusive<u8>) -> Option<Cents> {
-        let trained: Vec<f64> = self
-            .notes
-            .iter()
-            .enumerate()
-            .filter(|(i, n)| range.contains(&(*i as u8)) && n.is_trained())
-            .map(|(_, n)| n.mean)
-            .collect();
+    /// Weighted matching std dev across both matching modes.
+    pub fn matching_std_dev(&self) -> Option<Cents> {
+        let unison = self.statistics(TrainingMode::UnisonMatching);
+        let interval = self.statistics(TrainingMode::IntervalMatching);
+        let u_count = unison.record_count();
+        let i_count = interval.record_count();
+        let total = u_count + i_count;
+        if total < 2 {
+            return None;
+        }
+        // For a single mode with data, return its std dev directly
+        if u_count == 0 {
+            return interval.welford.typed_std_dev();
+        }
+        if i_count == 0 {
+            return unison.welford.typed_std_dev();
+        }
+        // Both modes have data — use combined population std dev
+        let combined_mean = (unison.welford.mean() * u_count as f64
+            + interval.welford.mean() * i_count as f64)
+            / total as f64;
+        let u_var = unison.welford.population_std_dev().unwrap_or(0.0).powi(2);
+        let i_var = interval.welford.population_std_dev().unwrap_or(0.0).powi(2);
+        let u_shift = (unison.welford.mean() - combined_mean).powi(2);
+        let i_shift = (interval.welford.mean() - combined_mean).powi(2);
+        let combined_var = (u_count as f64 * (u_var + u_shift)
+            + i_count as f64 * (i_var + i_shift))
+            / total as f64;
+        Some(Cents::new(combined_var.sqrt()))
+    }
 
-        if trained.is_empty() {
-            None
-        } else {
-            Some(Cents::new(
-                trained.iter().sum::<f64>() / trained.len() as f64,
-            ))
+    /// Total matching sample count across both modes.
+    pub fn matching_sample_count(&self) -> usize {
+        self.record_count(TrainingMode::UnisonMatching)
+            + self.record_count(TrainingMode::IntervalMatching)
+    }
+
+    // --- Incremental update ---
+
+    /// Add a single metric point for the given mode.
+    /// For comparison modes, `is_correct` filters: only correct answers contribute.
+    /// For matching modes, all answers contribute (pass `true`).
+    pub fn add_point(&mut self, mode: TrainingMode, point: MetricPoint<Cents>, is_correct: bool) {
+        if !is_correct {
+            return;
+        }
+        let config = mode.config();
+        let stats = self.modes.get_mut(&mode).expect("all modes initialized");
+        stats.add_point(point, config);
+    }
+
+    // --- Batch operations ---
+
+    /// Rebuild all modes from pre-sorted metric points.
+    pub fn rebuild_all(&mut self, points: HashMap<TrainingMode, Vec<MetricPoint<Cents>>>) {
+        for mode in TrainingMode::ALL {
+            let stats = self.modes.get_mut(&mode).expect("all modes initialized");
+            if let Some(mode_points) = points.get(&mode) {
+                stats.rebuild(mode_points.clone(), mode.config());
+            } else {
+                stats.reset();
+            }
         }
     }
 
-    /// Update aggregate pitch matching statistics using Welford's on abs(cent_error).
-    /// `_note` is reserved for per-note pitch matching accuracy in Epic 4+.
-    pub fn update_matching(&mut self, _note: MIDINote, cent_error: Cents) {
-        assert!(!cent_error.raw_value.is_nan(), "cent_error must not be NaN");
-        let abs_error = cent_error.magnitude();
-        self.matching_count += 1;
-        let delta = abs_error - self.matching_mean_abs;
-        self.matching_mean_abs += delta / self.matching_count as f64;
-        let delta2 = abs_error - self.matching_mean_abs;
-        self.matching_m2 += delta * delta2;
-    }
-
-    /// Number of pitch matching samples recorded.
-    pub fn matching_count(&self) -> u32 {
-        self.matching_count
-    }
-
-    /// Mean absolute pitch matching error, or None if no data.
-    pub fn matching_mean(&self) -> Option<f64> {
-        if self.matching_count > 0 {
-            Some(self.matching_mean_abs)
-        } else {
-            None
+    /// Reset all modes to empty state.
+    pub fn reset_all(&mut self) {
+        for stats in self.modes.values_mut() {
+            stats.reset();
         }
-    }
-
-    /// Standard deviation of absolute pitch matching errors, or None if fewer than 2 samples.
-    pub fn matching_std_dev(&self) -> Option<f64> {
-        if self.matching_count >= 2 {
-            Some((self.matching_m2 / (self.matching_count - 1) as f64).sqrt())
-        } else {
-            None
-        }
-    }
-
-    /// Reset all 128 notes to defaults.
-    pub fn reset(&mut self) {
-        self.notes = [PerceptualNote::default(); 128];
-    }
-
-    /// Zero matching accumulators.
-    pub fn reset_matching(&mut self) {
-        self.matching_count = 0;
-        self.matching_mean_abs = 0.0;
-        self.matching_m2 = 0.0;
-    }
-
-    /// Read-only access to a specific note's statistics.
-    pub fn note_stats(&self, note: MIDINote) -> &PerceptualNote {
-        &self.notes[note.raw_value() as usize]
     }
 }
 
@@ -256,306 +180,186 @@ impl Default for PerceptualProfile {
 mod tests {
     use super::*;
 
-    // --- AC1: Single update ---
-
     #[test]
-    fn test_single_update_mean_count_stddev() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(50.0), true);
-
-        let stats = profile.note_stats(MIDINote::new(60));
-        assert_eq!(stats.mean(), 50.0);
-        assert_eq!(stats.sample_count(), 1);
-        assert_eq!(stats.std_dev(), 0.0);
-        assert!(stats.is_trained());
-    }
-
-    // --- AC2: Welford's correctness ---
-
-    #[test]
-    fn test_welford_two_samples() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(40.0), true);
-        profile.update(MIDINote::new(60), Cents::new(60.0), false);
-
-        let stats = profile.note_stats(MIDINote::new(60));
-        assert_eq!(stats.sample_count(), 2);
-        assert!((stats.mean() - 50.0).abs() < 1e-10);
-        // Sample std dev: sqrt(((40-50)^2 + (60-50)^2) / (2-1)) = sqrt(200) ≈ 14.142
-        assert!((stats.std_dev() - (200.0_f64).sqrt()).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_welford_three_samples() {
-        let mut profile = PerceptualProfile::new();
-        let values = [10.0, 20.0, 30.0];
-        for &v in &values {
-            profile.update(MIDINote::new(42), Cents::new(v), true);
+    fn test_new_profile_all_modes_empty() {
+        let profile = PerceptualProfile::new();
+        for mode in TrainingMode::ALL {
+            assert_eq!(
+                profile.state(mode),
+                crate::training_mode::TrainingModeState::NoData
+            );
+            assert_eq!(profile.trend(mode), None);
+            assert_eq!(profile.current_ewma(mode), None);
+            assert_eq!(profile.record_count(mode), 0);
         }
-
-        let stats = profile.note_stats(MIDINote::new(42));
-        assert_eq!(stats.sample_count(), 3);
-        // Mean: (10 + 20 + 30) / 3 = 20
-        assert!((stats.mean() - 20.0).abs() < 1e-10);
-        // Sample std dev: sqrt(((10-20)^2 + (20-20)^2 + (30-20)^2) / 2) = sqrt(100) = 10
-        assert!((stats.std_dev() - 10.0).abs() < 1e-10);
     }
 
     #[test]
-    fn test_welford_five_samples() {
+    fn test_add_point_updates_correct_mode() {
         let mut profile = PerceptualProfile::new();
-        let values = [2.0, 4.0, 4.0, 4.0, 5.0];
-        for &v in &values {
-            profile.update(MIDINote::new(69), Cents::new(v), true);
-        }
-
-        let stats = profile.note_stats(MIDINote::new(69));
-        assert_eq!(stats.sample_count(), 5);
-        // Mean: (2+4+4+4+5)/5 = 19/5 = 3.8
-        assert!((stats.mean() - 3.8).abs() < 1e-10);
-        // Variance (sample): sum of (x - mean)^2 / (n-1)
-        // = ((2-3.8)^2 + (4-3.8)^2 + (4-3.8)^2 + (4-3.8)^2 + (5-3.8)^2) / 4
-        // = (3.24 + 0.04 + 0.04 + 0.04 + 1.44) / 4
-        // = 4.8 / 4 = 1.2
-        // Std dev: sqrt(1.2) ≈ 1.0954
-        assert!((stats.std_dev() - (1.2_f64).sqrt()).abs() < 1e-10);
-    }
-
-    // --- AC3: Weak spots ---
-
-    #[test]
-    fn test_weak_spots_untrained_first() {
-        let mut profile = PerceptualProfile::new();
-        // Train notes 0, 1, 2 with varying means
-        profile.update(MIDINote::new(0), Cents::new(10.0), true);
-        profile.update(MIDINote::new(1), Cents::new(50.0), true);
-        profile.update(MIDINote::new(2), Cents::new(30.0), true);
-
-        let weak = profile.weak_spots(5);
-        assert_eq!(weak.len(), 5);
-        // First 2 should be untrained (any of notes 3-127)
-        assert!(!profile.note_stats(weak[0]).is_trained());
-        assert!(!profile.note_stats(weak[1]).is_trained());
-    }
-
-    #[test]
-    fn test_weak_spots_trained_sorted_by_highest_mean() {
-        let mut profile = PerceptualProfile::new();
-        // Train all 128 notes with different means
-        for i in 0..128u8 {
-            profile.update(MIDINote::new(i), Cents::new(i as f64), true);
-        }
-
-        let weak = profile.weak_spots(3);
-        assert_eq!(weak.len(), 3);
-        // Highest mean first: 127, 126, 125
-        assert_eq!(weak[0].raw_value(), 127);
-        assert_eq!(weak[1].raw_value(), 126);
-        assert_eq!(weak[2].raw_value(), 125);
-    }
-
-    #[test]
-    fn test_weak_spots_count_limits() {
-        let profile = PerceptualProfile::new();
-        let weak = profile.weak_spots(10);
-        assert_eq!(weak.len(), 10);
-    }
-
-    // --- AC4: Summary statistics ---
-
-    #[test]
-    fn test_overall_mean_no_trained_notes() {
-        let profile = PerceptualProfile::new();
-        assert_eq!(profile.overall_mean(), None);
-    }
-
-    #[test]
-    fn test_overall_mean_with_trained_notes() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(40.0), true);
-        profile.update(MIDINote::new(72), Cents::new(60.0), true);
-
-        // overall_mean = average of per-note means = (40 + 60) / 2 = 50
-        assert!((profile.overall_mean().unwrap() - 50.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_overall_std_dev_none_with_fewer_than_two() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(40.0), true);
-        assert_eq!(profile.overall_std_dev(), None);
-    }
-
-    #[test]
-    fn test_overall_std_dev_with_trained_notes() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(40.0), true);
-        profile.update(MIDINote::new(72), Cents::new(60.0), true);
-
-        // Means: [40, 60], overall mean = 50
-        // Sample std dev = sqrt(((40-50)^2 + (60-50)^2) / 1) = sqrt(200) ≈ 14.142
-        let std = profile.overall_std_dev().unwrap();
-        assert!((std - (200.0_f64).sqrt()).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_average_threshold_range() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(40.0), true);
-        profile.update(MIDINote::new(65), Cents::new(60.0), true);
-        profile.update(MIDINote::new(72), Cents::new(80.0), true);
-
-        // Range 60..=65 includes notes 60 (mean=40) and 65 (mean=60)
-        let avg = profile.average_threshold(60..=65).unwrap();
-        assert!((avg.raw_value - 50.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_average_threshold_no_trained_in_range() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(40.0), true);
-        assert_eq!(profile.average_threshold(70..=80), None);
-    }
-
-    // --- AC5: Pitch matching accumulators ---
-
-    #[test]
-    fn test_matching_no_data() {
-        let profile = PerceptualProfile::new();
-        assert_eq!(profile.matching_mean(), None);
-        assert_eq!(profile.matching_std_dev(), None);
-    }
-
-    #[test]
-    fn test_matching_single_sample() {
-        let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), Cents::new(-5.0));
-
-        assert!((profile.matching_mean().unwrap() - 5.0).abs() < 1e-10);
-        assert_eq!(profile.matching_std_dev(), None); // Need 2+ samples
-    }
-
-    #[test]
-    fn test_matching_multiple_samples() {
-        let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), Cents::new(3.0));
-        profile.update_matching(MIDINote::new(60), Cents::new(-5.0));
-        profile.update_matching(MIDINote::new(60), Cents::new(7.0));
-
-        // Abs values: 3, 5, 7. Mean = 5.0
-        assert!((profile.matching_mean().unwrap() - 5.0).abs() < 1e-10);
-
-        // Sample std dev: sqrt(((3-5)^2 + (5-5)^2 + (7-5)^2) / 2) = sqrt(4) = 2.0
-        assert!((profile.matching_std_dev().unwrap() - 2.0).abs() < 1e-10);
-    }
-
-    // --- AC6: Reset ---
-
-    #[test]
-    fn test_reset_clears_all_notes() {
-        let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(50.0), true);
-        profile.update(MIDINote::new(72), Cents::new(30.0), false);
-
-        profile.reset();
-
-        assert!(!profile.note_stats(MIDINote::new(60)).is_trained());
-        assert!(!profile.note_stats(MIDINote::new(72)).is_trained());
-        assert_eq!(profile.overall_mean(), None);
-    }
-
-    #[test]
-    fn test_reset_matching_clears_accumulators() {
-        let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), Cents::new(5.0));
-        profile.update_matching(MIDINote::new(60), Cents::new(10.0));
-
-        profile.reset_matching();
-
-        assert_eq!(profile.matching_mean(), None);
-        assert_eq!(profile.matching_std_dev(), None);
-    }
-
-    // --- Untrained note defaults ---
-
-    #[test]
-    fn test_untrained_note_defaults() {
-        let profile = PerceptualProfile::new();
-        let stats = profile.note_stats(MIDINote::new(60));
-        assert_eq!(stats.mean(), 0.0);
-        assert_eq!(stats.std_dev(), 0.0);
-        assert_eq!(stats.sample_count(), 0);
-        assert_eq!(
-            stats.current_difficulty(),
-            PerceptualNote::COLD_START_DIFFICULTY
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(1000.0, Cents::new(20.0)),
+            true,
         );
-        assert!(!stats.is_trained());
-    }
-
-    // --- Serde ---
-
-    #[test]
-    fn test_perceptual_note_serde_roundtrip() {
-        let note = PerceptualNote {
-            mean: 42.5,
-            std_dev: 3.2,
-            m2: 20.48,
-            sample_count: 3,
-            current_difficulty: 50.0,
-        };
-        let json = serde_json::to_string(&note).unwrap();
-        let parsed: PerceptualNote = serde_json::from_str(&json).unwrap();
-        assert_eq!(note, parsed);
+        assert!(profile.has_data(TrainingMode::UnisonPitchComparison));
+        assert!(!profile.has_data(TrainingMode::IntervalPitchComparison));
+        assert!(!profile.has_data(TrainingMode::UnisonMatching));
     }
 
     #[test]
-    fn test_perceptual_profile_serde_roundtrip() {
+    fn test_add_point_filters_incorrect() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(50.0), true);
-        profile.update_matching(MIDINote::new(60), Cents::new(3.0));
-
-        let json = serde_json::to_string(&profile).unwrap();
-        let parsed: PerceptualProfile = serde_json::from_str(&json).unwrap();
-        assert_eq!(profile, parsed);
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(1000.0, Cents::new(20.0)),
+            false, // incorrect — should be filtered
+        );
+        assert!(!profile.has_data(TrainingMode::UnisonPitchComparison));
     }
 
-    // --- Matching count getter ---
-
     #[test]
-    fn test_matching_count_returns_sample_count() {
+    fn test_comparison_mean_unison() {
         let mut profile = PerceptualProfile::new();
-        assert_eq!(profile.matching_count(), 0);
-
-        profile.update_matching(MIDINote::new(60), Cents::new(3.0));
-        assert_eq!(profile.matching_count(), 1);
-
-        profile.update_matching(MIDINote::new(72), Cents::new(-5.0));
-        assert_eq!(profile.matching_count(), 2);
-
-        profile.update_matching(MIDINote::new(60), Cents::new(7.0));
-        assert_eq!(profile.matching_count(), 3);
-    }
-
-    // --- Default trait ---
-
-    #[test]
-    fn test_profile_default() {
-        let profile = PerceptualProfile::default();
-        assert_eq!(profile.overall_mean(), None);
-        assert_eq!(profile.matching_mean(), None);
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(1000.0, Cents::new(40.0)),
+            true,
+        );
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(2000.0, Cents::new(60.0)),
+            true,
+        );
+        let mean = profile.comparison_mean(0).unwrap();
+        assert!((mean.raw_value - 50.0).abs() < 1e-10);
     }
 
     #[test]
-    #[should_panic(expected = "cent_offset must not be NaN")]
-    fn test_update_panics_on_nan() {
+    fn test_comparison_mean_interval() {
         let mut profile = PerceptualProfile::new();
-        profile.update(MIDINote::new(60), Cents::new(f64::NAN), true);
+        profile.add_point(
+            TrainingMode::IntervalPitchComparison,
+            MetricPoint::new(1000.0, Cents::new(30.0)),
+            true,
+        );
+        let mean = profile.comparison_mean(7).unwrap();
+        assert!((mean.raw_value - 30.0).abs() < 1e-10);
     }
 
     #[test]
-    #[should_panic(expected = "cent_error must not be NaN")]
-    fn test_update_matching_panics_on_nan() {
+    fn test_comparison_mean_no_data() {
+        let profile = PerceptualProfile::new();
+        assert_eq!(profile.comparison_mean(0), None);
+    }
+
+    #[test]
+    fn test_matching_mean_single_mode() {
         let mut profile = PerceptualProfile::new();
-        profile.update_matching(MIDINote::new(60), Cents::new(f64::NAN));
+        profile.add_point(
+            TrainingMode::UnisonMatching,
+            MetricPoint::new(1000.0, Cents::new(5.0)),
+            true,
+        );
+        profile.add_point(
+            TrainingMode::UnisonMatching,
+            MetricPoint::new(2000.0, Cents::new(15.0)),
+            true,
+        );
+        let mean = profile.matching_mean().unwrap();
+        assert!((mean.raw_value - 10.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_matching_mean_both_modes() {
+        let mut profile = PerceptualProfile::new();
+        // Unison: 1 sample of 10
+        profile.add_point(
+            TrainingMode::UnisonMatching,
+            MetricPoint::new(1000.0, Cents::new(10.0)),
+            true,
+        );
+        // Interval: 1 sample of 20
+        profile.add_point(
+            TrainingMode::IntervalMatching,
+            MetricPoint::new(2000.0, Cents::new(20.0)),
+            true,
+        );
+        let mean = profile.matching_mean().unwrap();
+        // Weighted: (10 * 1 + 20 * 1) / 2 = 15
+        assert!((mean.raw_value - 15.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_matching_sample_count() {
+        let mut profile = PerceptualProfile::new();
+        profile.add_point(
+            TrainingMode::UnisonMatching,
+            MetricPoint::new(1000.0, Cents::new(5.0)),
+            true,
+        );
+        profile.add_point(
+            TrainingMode::IntervalMatching,
+            MetricPoint::new(2000.0, Cents::new(10.0)),
+            true,
+        );
+        assert_eq!(profile.matching_sample_count(), 2);
+    }
+
+    #[test]
+    fn test_rebuild_all() {
+        let mut profile = PerceptualProfile::new();
+        let mut points = HashMap::new();
+        points.insert(
+            TrainingMode::UnisonPitchComparison,
+            vec![
+                MetricPoint::new(1000.0, Cents::new(20.0)),
+                MetricPoint::new(2000.0, Cents::new(30.0)),
+            ],
+        );
+        profile.rebuild_all(points);
+        assert_eq!(profile.record_count(TrainingMode::UnisonPitchComparison), 2);
+        assert_eq!(
+            profile.record_count(TrainingMode::IntervalPitchComparison),
+            0
+        );
+    }
+
+    #[test]
+    fn test_reset_all() {
+        let mut profile = PerceptualProfile::new();
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(1000.0, Cents::new(20.0)),
+            true,
+        );
+        profile.add_point(
+            TrainingMode::UnisonMatching,
+            MetricPoint::new(2000.0, Cents::new(10.0)),
+            true,
+        );
+        profile.reset_all();
+        for mode in TrainingMode::ALL {
+            assert!(!profile.has_data(mode));
+        }
+    }
+
+    #[test]
+    fn test_cold_start_difficulty_constant() {
+        assert_eq!(COLD_START_DIFFICULTY, 100.0);
+    }
+
+    #[test]
+    fn test_state_active_after_data() {
+        let mut profile = PerceptualProfile::new();
+        profile.add_point(
+            TrainingMode::IntervalMatching,
+            MetricPoint::new(1000.0, Cents::new(5.0)),
+            true,
+        );
+        assert_eq!(
+            profile.state(TrainingMode::IntervalMatching),
+            crate::training_mode::TrainingModeState::Active
+        );
     }
 }

@@ -1,7 +1,7 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::profile::{PerceptualNote, PerceptualProfile};
+use crate::profile::{COLD_START_DIFFICULTY, PerceptualProfile};
 use crate::training::CompletedPitchComparison;
 use crate::training::pitch_comparison::PitchComparison;
 use crate::types::{
@@ -80,7 +80,7 @@ impl Default for TrainingSettings {
             note_range: NoteRange::new(MIDINote::new(36), MIDINote::new(84)),
             reference_pitch: Frequency::CONCERT_440,
             min_cent_difference: Cents::new(MIN_CENT_DIFFERENCE),
-            max_cent_difference: Cents::new(PerceptualNote::COLD_START_DIFFICULTY),
+            max_cent_difference: Cents::new(COLD_START_DIFFICULTY),
         }
     }
 }
@@ -118,10 +118,12 @@ pub fn next_pitch_comparison(
             }
         }
         None => {
-            // Warm start: use profile overall_mean if available
+            // Warm start: use profile comparison_mean for the matching interval
             // Cold start: use max_cent_difference (100 cents)
+            let semitones = interval.signed_semitones().unsigned_abs() as u8;
             profile
-                .overall_mean()
+                .comparison_mean(semitones)
+                .map(|c| c.raw_value)
                 .unwrap_or(settings.max_cent_difference.raw_value)
         }
     };
@@ -233,12 +235,23 @@ mod tests {
     // --- AC10: Warm start ---
 
     #[test]
-    fn test_warm_start_uses_overall_mean() {
+    fn test_warm_start_uses_comparison_mean() {
+        use crate::metric_point::MetricPoint;
+        use crate::training_mode::TrainingMode;
+
         let mut profile = PerceptualProfile::new();
-        // Train two notes to establish an overall_mean
-        profile.update(MIDINote::new(60), Cents::new(40.0), true);
-        profile.update(MIDINote::new(72), Cents::new(60.0), true);
-        // overall_mean = 50.0
+        // Add two unison comparison points to establish a comparison_mean
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(1000.0, Cents::new(40.0)),
+            true,
+        );
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(2000.0, Cents::new(60.0)),
+            true,
+        );
+        // comparison_mean(0) = 50.0
 
         let settings = TrainingSettings::default();
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
@@ -247,16 +260,23 @@ mod tests {
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
             (magnitude - 50.0).abs() < 1e-10,
-            "Warm start magnitude should be 50.0 (overall_mean), got {magnitude}"
+            "Warm start magnitude should be 50.0 (comparison_mean), got {magnitude}"
         );
     }
 
     #[test]
     fn test_warm_start_clamped_to_range() {
+        use crate::metric_point::MetricPoint;
+        use crate::training_mode::TrainingMode;
+
         let mut profile = PerceptualProfile::new();
         // Train with very low mean that would be below min_cent_difference
-        profile.update(MIDINote::new(60), Cents::new(0.01), true);
-        // overall_mean = 0.01
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(1000.0, Cents::new(0.01)),
+            true,
+        );
+        // comparison_mean(0) = 0.01
 
         let settings = TrainingSettings::default(); // min = 0.1
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);

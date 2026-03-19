@@ -223,11 +223,7 @@ impl PitchMatchingSession {
         // Notify observers with panic isolation
         self.notify_observers(&completed);
 
-        // Update profile
-        self.profile.borrow_mut().update_matching(
-            completed.target_note(),
-            Cents::new(completed.user_cent_error()),
-        );
+        // Profile update is handled by observers (bridge layer), consistent with comparison session.
 
         self.show_feedback = true;
         self.last_completed = Some(completed);
@@ -263,7 +259,7 @@ impl PitchMatchingSession {
     /// Stop if running, reset matching accumulators, and call reset on all resettables.
     pub fn reset_training_data(&mut self) {
         self.stop();
-        self.profile.borrow_mut().reset_matching();
+        self.profile.borrow_mut().reset_all();
         for resettable in &mut self.resettables {
             resettable.reset();
         }
@@ -834,7 +830,7 @@ mod tests {
     }
 
     #[test]
-    fn test_commit_pitch_updates_profile() {
+    fn test_commit_pitch_stores_last_completed() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let mut session = PitchMatchingSession::new(Rc::clone(&profile), vec![], vec![]);
         session.start(default_intervals(), &DefaultTestSettings);
@@ -842,8 +838,11 @@ mod tests {
         session.adjust_pitch(0.5);
         session.commit_pitch(0.5, "2026-03-04T10:00:00Z".to_string());
 
-        assert_eq!(profile.borrow().matching_count(), 1);
-        assert!(profile.borrow().matching_mean().is_some());
+        assert!(session.last_completed().is_some());
+        assert_eq!(
+            session.last_completed().unwrap().timestamp(),
+            "2026-03-04T10:00:00Z"
+        );
     }
 
     // --- AC8: Feedback to next challenge ---
@@ -962,11 +961,13 @@ mod tests {
     // --- AC14: Reset training data ---
 
     #[test]
-    fn test_reset_training_data_stops_session_resets_matching_calls_resettables() {
+    fn test_reset_training_data_stops_session_resets_profile_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        profile
-            .borrow_mut()
-            .update_matching(MIDINote::new(60), Cents::new(5.0));
+        profile.borrow_mut().add_point(
+            crate::TrainingMode::UnisonMatching,
+            crate::MetricPoint::new(1000.0, Cents::new(5.0)),
+            true,
+        );
         assert!(profile.borrow().matching_mean().is_some());
 
         let (resettable, count) = MockResettable::new();

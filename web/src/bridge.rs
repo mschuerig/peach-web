@@ -4,13 +4,17 @@ use std::rc::Rc;
 use domain::ports::{PitchComparisonObserver, PitchMatchingObserver};
 use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
 use domain::training::{CompletedPitchComparison, CompletedPitchMatching};
-use domain::{PerceptualProfile, ProgressTimeline, ThresholdTimeline, TrendAnalyzer};
+use domain::{
+    MetricPoint, PerceptualProfile, ProgressTimeline, TrainingMode, parse_iso8601_to_epoch,
+};
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::indexeddb_store::IndexedDbStore;
 
+/// Observer that feeds completed comparisons into the profile via `add_point()`.
+/// Determines the training mode (unison vs interval) from the comparison interval.
 pub struct ProfileObserver(Rc<RefCell<PerceptualProfile>>);
 
 impl ProfileObserver {
@@ -21,20 +25,53 @@ impl ProfileObserver {
 
 impl PitchComparisonObserver for ProfileObserver {
     fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
-        let mut profile = self.0.borrow_mut();
-        let cent_offset = domain::Cents::new(
-            completed
-                .pitch_comparison()
-                .target_note()
-                .offset
-                .raw_value
-                .abs(),
-        );
-        profile.update(
-            completed.pitch_comparison().reference_note(),
-            cent_offset,
-            completed.is_correct(),
-        );
+        let comparison = completed.pitch_comparison();
+        let ref_note = comparison.reference_note().raw_value();
+        let target_note = comparison.target_note().note.raw_value();
+        let interval = target_note.abs_diff(ref_note);
+
+        let mode = if interval == 0 {
+            TrainingMode::UnisonPitchComparison
+        } else {
+            TrainingMode::IntervalPitchComparison
+        };
+
+        let metric = comparison.target_note().offset.raw_value.abs();
+        let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
+        let point = MetricPoint::new(timestamp_secs, domain::Cents::new(metric));
+
+        self.0
+            .borrow_mut()
+            .add_point(mode, point, completed.is_correct());
+    }
+}
+
+/// Observer that feeds completed pitch matching results into the profile.
+pub struct PitchMatchingProfileObserver(Rc<RefCell<PerceptualProfile>>);
+
+impl PitchMatchingProfileObserver {
+    pub fn new(profile: Rc<RefCell<PerceptualProfile>>) -> Self {
+        Self(profile)
+    }
+}
+
+impl PitchMatchingObserver for PitchMatchingProfileObserver {
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
+        let ref_note = completed.reference_note().raw_value();
+        let target_note = completed.target_note().raw_value();
+        let interval = target_note.abs_diff(ref_note);
+
+        let mode = if interval == 0 {
+            TrainingMode::UnisonMatching
+        } else {
+            TrainingMode::IntervalMatching
+        };
+
+        let metric = completed.user_cent_error().abs();
+        let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
+        let point = MetricPoint::new(timestamp_secs, domain::Cents::new(metric));
+
+        self.0.borrow_mut().add_point(mode, point, true);
     }
 }
 
@@ -70,7 +107,6 @@ impl PitchComparisonObserver for DataStoreObserver {
         spawn_local(async move {
             if let Err(e) = store.save_pitch_comparison(&record).await {
                 log::error!("Storage write failed: {e}");
-                // TODO: localize when called from reactive context
                 error_signal.set(Some(
                     "Training data may not have been saved. Training continues.".to_string(),
                 ));
@@ -78,51 +114,6 @@ impl PitchComparisonObserver for DataStoreObserver {
         });
     }
 }
-
-pub struct TrendObserver(Rc<RefCell<TrendAnalyzer>>);
-
-impl TrendObserver {
-    pub fn new(analyzer: Rc<RefCell<TrendAnalyzer>>) -> Self {
-        Self(analyzer)
-    }
-}
-
-impl PitchComparisonObserver for TrendObserver {
-    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
-        let abs_offset = completed
-            .pitch_comparison()
-            .target_note()
-            .offset
-            .raw_value
-            .abs();
-        self.0.borrow_mut().push(abs_offset);
-    }
-}
-
-pub struct TimelineObserver(Rc<RefCell<ThresholdTimeline>>);
-
-impl TimelineObserver {
-    pub fn new(timeline: Rc<RefCell<ThresholdTimeline>>) -> Self {
-        Self(timeline)
-    }
-}
-
-impl PitchComparisonObserver for TimelineObserver {
-    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
-        let comparison = completed.pitch_comparison();
-        let abs_offset = comparison.target_note().offset.raw_value.abs();
-        self.0.borrow_mut().push(
-            completed.timestamp(),
-            abs_offset,
-            completed.is_correct(),
-            comparison.reference_note().raw_value(),
-        );
-    }
-}
-
-// Note: PitchMatchingProfileObserver is not needed because PitchMatchingSession
-// updates the profile directly in commit_pitch() — unlike PitchComparisonSession which
-// delegates to the observer.
 
 pub struct PitchMatchingDataStoreObserver {
     store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
@@ -156,7 +147,6 @@ impl PitchMatchingObserver for PitchMatchingDataStoreObserver {
         spawn_local(async move {
             if let Err(e) = store.save_pitch_matching(&record).await {
                 log::error!("Storage write failed: {e}");
-                // TODO: localize when called from reactive context
                 error_signal.set(Some(
                     "Training data may not have been saved. Training continues.".to_string(),
                 ));

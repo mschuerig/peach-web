@@ -21,9 +21,7 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
 use crate::app::{SoundFontLoadStatus, WorkletAssets, ensure_worklet_connected};
-use crate::bridge::{
-    DataStoreObserver, ProfileObserver, ProgressTimelineObserver, TimelineObserver, TrendObserver,
-};
+use crate::bridge::{DataStoreObserver, ProfileObserver, ProgressTimelineObserver};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
@@ -34,8 +32,7 @@ use domain::ports::{NotePlayer, PitchComparisonObserver, UserSettings};
 use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
 use domain::{
     FEEDBACK_DURATION_SECS, Interval, PerceptualProfile, PitchComparisonSession,
-    PitchComparisonSessionState, ProgressTimeline, ThresholdTimeline, TrainingMode, Trend,
-    TrendAnalyzer,
+    PitchComparisonSessionState, ProgressTimeline, TrainingMode, Trend,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -48,10 +45,6 @@ pub fn PitchComparisonView() -> impl IntoView {
         use_context().expect("PerceptualProfile not provided");
     let audio_ctx: SendWrapper<Rc<RefCell<AudioContextManager>>> =
         use_context().expect("AudioContextManager not provided");
-    let trend_analyzer: SendWrapper<Rc<RefCell<TrendAnalyzer>>> =
-        use_context().expect("TrendAnalyzer not provided");
-    let timeline: SendWrapper<Rc<RefCell<ThresholdTimeline>>> =
-        use_context().expect("ThresholdTimeline not provided");
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline not provided");
     let db_store: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage> =
@@ -105,8 +98,6 @@ pub fn PitchComparisonView() -> impl IntoView {
     // opens after PitchComparisonView mounts.
     let observers: Vec<Box<dyn PitchComparisonObserver>> = vec![
         Box::new(ProfileObserver::new(Rc::clone(&profile))),
-        Box::new(TrendObserver::new(Rc::clone(&trend_analyzer))),
-        Box::new(TimelineObserver::new(Rc::clone(&timeline))),
         Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
         Box::new(DataStoreObserver::new(db_store, storage_error)),
     ];
@@ -228,7 +219,6 @@ pub fn PitchComparisonView() -> impl IntoView {
     // No feedback timer here — the main loop controls feedback timing.
     let on_answer = {
         let session = Rc::clone(&session);
-        let progress_timeline = Rc::clone(&progress_timeline);
         let sync = sync_signals.clone();
         let cancelled = Rc::clone(&cancelled);
         Rc::new(move |is_higher: bool| {
@@ -258,7 +248,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                 latest_cent_difference.set(s.last_cent_difference());
                 stats_session_best.set(s.session_best_cent_difference());
             }
-            stats_trend.set(progress_timeline.borrow().trend(training_mode));
+            stats_trend.set(profile.borrow().trend(training_mode));
 
             sync();
         })

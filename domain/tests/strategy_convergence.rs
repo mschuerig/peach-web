@@ -11,7 +11,7 @@ fn test_kazez_convergence_all_correct() {
     let mut last_completed: Option<CompletedPitchComparison> = None;
     let mut magnitudes = Vec::new();
 
-    for _ in 0..20 {
+    for i in 0..20 {
         let comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
 
         let magnitude = comp.target_note().offset.magnitude();
@@ -26,9 +26,9 @@ fn test_kazez_convergence_all_correct() {
         );
 
         // Update profile with the comparison result
-        profile.update(
-            comp.reference_note(),
-            Cents::new(magnitude),
+        profile.add_point(
+            TrainingMode::UnisonPitchComparison,
+            MetricPoint::new(i as f64 * 1000.0, Cents::new(magnitude)),
             completed.is_correct(),
         );
 
