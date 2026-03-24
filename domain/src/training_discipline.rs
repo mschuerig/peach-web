@@ -1,12 +1,14 @@
 use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 
-/// The four independent training disciplines tracked by the app.
+/// The six independent training disciplines tracked by the app.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TrainingDiscipline {
     UnisonPitchDiscrimination,
     IntervalPitchDiscrimination,
     UnisonPitchMatching,
     IntervalPitchMatching,
+    RhythmOffsetDetection,
+    ContinuousRhythmMatching,
 }
 
 /// Per-discipline configuration constants.
@@ -61,13 +63,31 @@ static INTERVAL_PITCH_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDiscip
     session_gap_secs: SESSION_GAP_SECS,
 };
 
+static RHYTHM_OFFSET_DETECTION_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
+    display_name: "training-mode-compare-timing",
+    unit_label: "% of 16th",
+    optimal_baseline: 5.0,
+    ewma_halflife_secs: EWMA_HALFLIFE_SECS,
+    session_gap_secs: SESSION_GAP_SECS,
+};
+
+static CONTINUOUS_RHYTHM_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
+    display_name: "training-mode-fill-the-gap",
+    unit_label: "% of 16th",
+    optimal_baseline: 5.0,
+    ewma_halflife_secs: EWMA_HALFLIFE_SECS,
+    session_gap_secs: SESSION_GAP_SECS,
+};
+
 impl TrainingDiscipline {
-    /// All four training discipline variants.
-    pub const ALL: [TrainingDiscipline; 4] = [
+    /// All six training discipline variants.
+    pub const ALL: [TrainingDiscipline; 6] = [
         TrainingDiscipline::UnisonPitchDiscrimination,
         TrainingDiscipline::IntervalPitchDiscrimination,
         TrainingDiscipline::UnisonPitchMatching,
         TrainingDiscipline::IntervalPitchMatching,
+        TrainingDiscipline::RhythmOffsetDetection,
+        TrainingDiscipline::ContinuousRhythmMatching,
     ];
 
     /// Returns the static configuration for this training discipline.
@@ -79,6 +99,8 @@ impl TrainingDiscipline {
             }
             TrainingDiscipline::UnisonPitchMatching => &UNISON_PITCH_MATCHING_CONFIG,
             TrainingDiscipline::IntervalPitchMatching => &INTERVAL_PITCH_MATCHING_CONFIG,
+            TrainingDiscipline::RhythmOffsetDetection => &RHYTHM_OFFSET_DETECTION_CONFIG,
+            TrainingDiscipline::ContinuousRhythmMatching => &CONTINUOUS_RHYTHM_MATCHING_CONFIG,
         }
     }
 
@@ -119,12 +141,35 @@ impl TrainingDiscipline {
         }
     }
 
+    /// URL-safe slug for routing.
+    pub fn slug(&self) -> &'static str {
+        match self {
+            TrainingDiscipline::UnisonPitchDiscrimination => "unison-pitch-discrimination",
+            TrainingDiscipline::IntervalPitchDiscrimination => "interval-pitch-discrimination",
+            TrainingDiscipline::UnisonPitchMatching => "unison-pitch-matching",
+            TrainingDiscipline::IntervalPitchMatching => "interval-pitch-matching",
+            TrainingDiscipline::RhythmOffsetDetection => "rhythm-offset-detection",
+            TrainingDiscipline::ContinuousRhythmMatching => "continuous-rhythm-matching",
+        }
+    }
+
+    /// Parse a discipline from its slug. Returns `None` for unknown slugs.
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        TrainingDiscipline::ALL
+            .iter()
+            .find(|d| d.slug() == slug)
+            .copied()
+    }
+
     fn matches_interval(&self, interval: u8) -> bool {
         match self {
             TrainingDiscipline::UnisonPitchDiscrimination
             | TrainingDiscipline::UnisonPitchMatching => interval == 0,
             TrainingDiscipline::IntervalPitchDiscrimination
             | TrainingDiscipline::IntervalPitchMatching => interval != 0,
+            // Rhythm disciplines don't use pitch intervals
+            TrainingDiscipline::RhythmOffsetDetection
+            | TrainingDiscipline::ContinuousRhythmMatching => false,
         }
     }
 }
@@ -182,12 +227,14 @@ mod tests {
     }
 
     #[test]
-    fn test_all_contains_four_variants() {
-        assert_eq!(TrainingDiscipline::ALL.len(), 4);
+    fn test_all_contains_six_variants() {
+        assert_eq!(TrainingDiscipline::ALL.len(), 6);
         assert!(TrainingDiscipline::ALL.contains(&TrainingDiscipline::UnisonPitchDiscrimination));
         assert!(TrainingDiscipline::ALL.contains(&TrainingDiscipline::IntervalPitchDiscrimination));
         assert!(TrainingDiscipline::ALL.contains(&TrainingDiscipline::UnisonPitchMatching));
         assert!(TrainingDiscipline::ALL.contains(&TrainingDiscipline::IntervalPitchMatching));
+        assert!(TrainingDiscipline::ALL.contains(&TrainingDiscipline::RhythmOffsetDetection));
+        assert!(TrainingDiscipline::ALL.contains(&TrainingDiscipline::ContinuousRhythmMatching));
     }
 
     // --- Metric extraction tests (AC: 5, 6) ---
@@ -392,5 +439,115 @@ mod tests {
                 .extract_matching_metric(&matching_interval)
                 .is_none()
         );
+    }
+
+    // --- Rhythm discipline config tests ---
+
+    #[test]
+    fn test_rhythm_offset_detection_config() {
+        let cfg = TrainingDiscipline::RhythmOffsetDetection.config();
+        assert_eq!(cfg.display_name, "training-mode-compare-timing");
+        assert_eq!(cfg.unit_label, "% of 16th");
+        assert_eq!(cfg.optimal_baseline, 5.0);
+        assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
+        assert_eq!(cfg.session_gap_secs, 1_800.0);
+    }
+
+    #[test]
+    fn test_continuous_rhythm_matching_config() {
+        let cfg = TrainingDiscipline::ContinuousRhythmMatching.config();
+        assert_eq!(cfg.display_name, "training-mode-fill-the-gap");
+        assert_eq!(cfg.unit_label, "% of 16th");
+        assert_eq!(cfg.optimal_baseline, 5.0);
+        assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
+        assert_eq!(cfg.session_gap_secs, 1_800.0);
+    }
+
+    // --- Rhythm metric extraction tests (AC6) ---
+
+    #[test]
+    fn test_rhythm_disciplines_return_none_for_discrimination_metric() {
+        let record = discrimination_record(0, 10.0);
+        assert!(
+            TrainingDiscipline::RhythmOffsetDetection
+                .extract_discrimination_metric(&record)
+                .is_none()
+        );
+        assert!(
+            TrainingDiscipline::ContinuousRhythmMatching
+                .extract_discrimination_metric(&record)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_rhythm_disciplines_return_none_for_matching_metric() {
+        let record = matching_record(0, 5.0);
+        assert!(
+            TrainingDiscipline::RhythmOffsetDetection
+                .extract_matching_metric(&record)
+                .is_none()
+        );
+        assert!(
+            TrainingDiscipline::ContinuousRhythmMatching
+                .extract_matching_metric(&record)
+                .is_none()
+        );
+    }
+
+    // --- Slug tests (AC7) ---
+
+    #[test]
+    fn test_rhythm_offset_detection_slug() {
+        assert_eq!(
+            TrainingDiscipline::RhythmOffsetDetection.slug(),
+            "rhythm-offset-detection"
+        );
+    }
+
+    #[test]
+    fn test_continuous_rhythm_matching_slug() {
+        assert_eq!(
+            TrainingDiscipline::ContinuousRhythmMatching.slug(),
+            "continuous-rhythm-matching"
+        );
+    }
+
+    #[test]
+    fn test_all_slugs_unique() {
+        let slugs: Vec<&str> = TrainingDiscipline::ALL.iter().map(|d| d.slug()).collect();
+        let mut deduped = slugs.clone();
+        deduped.sort();
+        deduped.dedup();
+        assert_eq!(slugs.len(), deduped.len());
+    }
+
+    #[test]
+    fn test_from_slug_roundtrip() {
+        for discipline in TrainingDiscipline::ALL {
+            let slug = discipline.slug();
+            assert_eq!(TrainingDiscipline::from_slug(slug), Some(discipline));
+        }
+    }
+
+    #[test]
+    fn test_from_slug_unknown_returns_none() {
+        assert_eq!(TrainingDiscipline::from_slug("nonexistent"), None);
+    }
+
+    // --- matches_interval for rhythm (AC4 of Task 4) ---
+
+    #[test]
+    fn test_rhythm_disciplines_matches_interval_always_false() {
+        for interval in [0, 1, 4, 7, 12] {
+            assert!(
+                !TrainingDiscipline::RhythmOffsetDetection.matches_interval(interval),
+                "RhythmOffsetDetection should not match interval {interval}"
+            );
+            assert!(
+                !TrainingDiscipline::ContinuousRhythmMatching.matches_interval(interval),
+                "ContinuousRhythmMatching should not match interval {interval}"
+            );
+        }
     }
 }

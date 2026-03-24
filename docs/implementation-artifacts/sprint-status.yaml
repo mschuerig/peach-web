@@ -153,3 +153,7 @@ development_status:
   14-1-domain-terminology-rename: done
   14-2-web-terminology-rename: done
   14-3-update-living-docs: done
+
+  # Epic 15: Rhythm Discipline Foundation
+  epic-15: in-progress
+  15-1-rhythm-discipline-enum-and-domain-types: review

@@ -1,6 +1,6 @@
 # Story 15.1: Rhythm Discipline Enum Cases and Domain Types
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -51,14 +51,14 @@ This story adds the two new rhythm variants and the minimal domain types they ne
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `TempoBPM` type to `domain/src/types/`
-- [ ] Task 2: Add `StepPosition` type to `domain/src/types/`
-- [ ] Task 3: Extend `TrainingDiscipline` enum with rhythm variants + configs
-- [ ] Task 4: Update `ALL` constant and `matches_interval()` (return `false` for rhythm)
-- [ ] Task 5: Ensure `extract_comparison_metric` / `extract_matching_metric` return `None` for rhythm
-- [ ] Task 6: Update `PerceptualProfile::new()` to initialize rhythm disciplines
-- [ ] Task 7: Add unit tests for new types and configs
-- [ ] Task 8: `cargo test -p domain` and `cargo clippy --workspace` pass
+- [x] Task 1: Add `TempoBPM` type to `domain/src/types/`
+- [x] Task 2: Add `StepPosition` type to `domain/src/types/`
+- [x] Task 3: Extend `TrainingDiscipline` enum with rhythm variants + configs
+- [x] Task 4: Update `ALL` constant and `matches_interval()` (return `false` for rhythm)
+- [x] Task 5: Ensure `extract_comparison_metric` / `extract_matching_metric` return `None` for rhythm
+- [x] Task 6: Update `PerceptualProfile::new()` to initialize rhythm disciplines
+- [x] Task 7: Add unit tests for new types and configs
+- [x] Task 8: `cargo test -p domain` and `cargo clippy --workspace` pass
 
 ## Dev Notes
 
@@ -66,3 +66,43 @@ This story adds the two new rhythm variants and the minimal domain types they ne
 - The rhythm configs use placeholder optimal_baseline values (5.0) — these will be tuned during rhythm implementation
 - `PerceptualProfile` will need the rhythm variants in its map, but with no special statistics handling yet
 - Do NOT add rhythm records, sessions, or observers — those come in Epics 17–18
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Add `TempoBPM` newtype (u16, 40-200, default 80) with `sixteenth_note_duration_secs()` in `domain/src/types/tempo.rs`
+- Add `StepPosition` enum (First/Second/Third/Fourth) with Display labels in `domain/src/types/step_position.rs`
+- Extend `TrainingDiscipline` with `RhythmOffsetDetection` and `ContinuousRhythmMatching` variants
+- Add configs, slug(), from_slug(), update ALL to 6, matches_interval returns false for rhythm
+- Metric extraction methods already use `_ => None` wildcard — rhythm covered automatically
+- `PerceptualProfile::new()` iterates `ALL` — rhythm disciplines initialized with NoData automatically
+
+### Debug Log
+
+No issues encountered. Clean implementation.
+
+### Completion Notes
+
+All 9 acceptance criteria satisfied:
+- AC1: Two rhythm variants added to `TrainingDiscipline`
+- AC2: `ALL` updated to 6 variants
+- AC3: Rhythm configs with correct display_name, unit_label "% of 16th", optimal_baseline 5.0
+- AC4: `TempoBPM` newtype with validation, default 80, `sixteenth_note_duration_secs()`
+- AC5: `StepPosition` enum with Clone, Copy, Hash, Eq derives and Display labels
+- AC6: Both `extract_discrimination_metric` and `extract_matching_metric` return None for rhythm
+- AC7: Correct slug values for both rhythm disciplines
+- AC8: `PerceptualProfile` initializes rhythm disciplines with NoData (uses ALL iterator)
+- AC9: All 342 domain tests pass, clippy clean, cargo fmt applied
+
+## File List
+
+- `domain/src/types/tempo.rs` — NEW: TempoBPM newtype with tests
+- `domain/src/types/step_position.rs` — NEW: StepPosition enum with tests
+- `domain/src/types/mod.rs` — MODIFIED: added tempo, step_position modules and re-exports
+- `domain/src/training_discipline.rs` — MODIFIED: added rhythm variants, configs, slugs, updated ALL/matches_interval, added tests
+- `domain/src/error.rs` — MODIFIED: added InvalidTempo error variant
+
+## Change Log
+
+- 2026-03-24: Implemented Story 15.1 — added rhythm discipline enum variants, TempoBPM, StepPosition types, and comprehensive tests

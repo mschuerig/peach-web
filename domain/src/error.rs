@@ -22,4 +22,7 @@ pub enum DomainError {
 
     #[error("transposition out of MIDI range: note {note} + {semitones} semitones")]
     TranspositionOutOfRange { note: u8, semitones: i16 },
+
+    #[error("invalid tempo: {0} BPM (must be 40-200)")]
+    InvalidTempo(u16),
 }

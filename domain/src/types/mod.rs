@@ -7,6 +7,8 @@ pub mod interval;
 pub mod midi;
 pub mod note_range;
 pub mod sound_source;
+pub mod step_position;
+pub mod tempo;
 
 pub use amplitude::{AmplitudeDB, UnitInterval};
 pub use cents::Cents;
@@ -17,3 +19,5 @@ pub use interval::{DirectedInterval, Direction, Interval};
 pub use midi::{MIDINote, MIDIVelocity};
 pub use note_range::NoteRange;
 pub use sound_source::SoundSourceID;
+pub use step_position::StepPosition;
+pub use tempo::TempoBPM;
