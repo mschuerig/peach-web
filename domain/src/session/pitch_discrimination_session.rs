@@ -1033,7 +1033,7 @@ mod tests {
     fn test_reset_training_data_resets_profile() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         profile.borrow_mut().add_point(
-            crate::TrainingDiscipline::UnisonPitchDiscrimination,
+            crate::StatisticsKey::Pitch(crate::TrainingDiscipline::UnisonPitchDiscrimination),
             crate::MetricPoint::new(1000.0, 50.0),
             true,
         );

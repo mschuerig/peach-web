@@ -1,4 +1,6 @@
 use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
+use crate::statistics_key::StatisticsKey;
+use crate::types::{RhythmDirection, TempoRange};
 
 /// The six independent training disciplines tracked by the app.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -159,6 +161,31 @@ impl TrainingDiscipline {
             .iter()
             .find(|d| d.slug() == slug)
             .copied()
+    }
+
+    /// Whether this is a rhythm discipline (expands to multiple statistics keys).
+    pub fn is_rhythm(&self) -> bool {
+        matches!(
+            self,
+            TrainingDiscipline::RhythmOffsetDetection
+                | TrainingDiscipline::ContinuousRhythmMatching
+        )
+    }
+
+    /// Returns all statistics keys for this discipline.
+    /// Pitch disciplines: 1 key. Rhythm disciplines: 6 keys (3 tempo ranges × 2 directions).
+    pub fn statistics_keys(&self) -> Vec<StatisticsKey> {
+        if self.is_rhythm() {
+            let mut keys = Vec::with_capacity(6);
+            for tempo_range in TempoRange::ALL {
+                for direction in RhythmDirection::ALL {
+                    keys.push(StatisticsKey::Rhythm(*self, tempo_range, direction));
+                }
+            }
+            keys
+        } else {
+            vec![StatisticsKey::Pitch(*self)]
+        }
     }
 
     fn matches_interval(&self, interval: u8) -> bool {
@@ -533,6 +560,66 @@ mod tests {
     #[test]
     fn test_from_slug_unknown_returns_none() {
         assert_eq!(TrainingDiscipline::from_slug("nonexistent"), None);
+    }
+
+    // --- statistics_keys tests ---
+
+    #[test]
+    fn test_pitch_discipline_has_one_key() {
+        let keys = TrainingDiscipline::UnisonPitchDiscrimination.statistics_keys();
+        assert_eq!(keys.len(), 1);
+        assert_eq!(
+            keys[0],
+            StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination)
+        );
+    }
+
+    #[test]
+    fn test_rhythm_discipline_has_six_keys() {
+        let keys = TrainingDiscipline::RhythmOffsetDetection.statistics_keys();
+        assert_eq!(keys.len(), 6);
+        // Verify all combinations present
+        for tempo in TempoRange::ALL {
+            for dir in RhythmDirection::ALL {
+                assert!(keys.contains(&StatisticsKey::Rhythm(
+                    TrainingDiscipline::RhythmOffsetDetection,
+                    tempo,
+                    dir,
+                )));
+            }
+        }
+    }
+
+    #[test]
+    fn test_all_pitch_disciplines_have_one_key() {
+        for discipline in [
+            TrainingDiscipline::UnisonPitchDiscrimination,
+            TrainingDiscipline::IntervalPitchDiscrimination,
+            TrainingDiscipline::UnisonPitchMatching,
+            TrainingDiscipline::IntervalPitchMatching,
+        ] {
+            assert_eq!(discipline.statistics_keys().len(), 1, "{discipline:?}");
+        }
+    }
+
+    #[test]
+    fn test_all_rhythm_disciplines_have_six_keys() {
+        for discipline in [
+            TrainingDiscipline::RhythmOffsetDetection,
+            TrainingDiscipline::ContinuousRhythmMatching,
+        ] {
+            assert_eq!(discipline.statistics_keys().len(), 6, "{discipline:?}");
+        }
+    }
+
+    #[test]
+    fn test_is_rhythm() {
+        assert!(!TrainingDiscipline::UnisonPitchDiscrimination.is_rhythm());
+        assert!(!TrainingDiscipline::IntervalPitchDiscrimination.is_rhythm());
+        assert!(!TrainingDiscipline::UnisonPitchMatching.is_rhythm());
+        assert!(!TrainingDiscipline::IntervalPitchMatching.is_rhythm());
+        assert!(TrainingDiscipline::RhythmOffsetDetection.is_rhythm());
+        assert!(TrainingDiscipline::ContinuousRhythmMatching.is_rhythm());
     }
 
     // --- matches_interval for rhythm (AC4 of Task 4) ---

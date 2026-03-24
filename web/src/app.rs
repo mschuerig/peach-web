@@ -149,46 +149,48 @@ pub fn App() -> impl IntoView {
                     }
                 };
 
-                // Profile hydration — build MetricPoints grouped by TrainingDiscipline
+                // Profile hydration — build MetricPoints grouped by StatisticsKey
                 {
+                    use domain::StatisticsKey;
                     use std::collections::HashMap;
 
-                    let mut mode_points: HashMap<TrainingDiscipline, Vec<MetricPoint>> =
-                        HashMap::new();
+                    let mut key_points: HashMap<StatisticsKey, Vec<MetricPoint>> = HashMap::new();
 
                     for record in &discrimination_records {
                         if !record.is_correct {
                             continue;
                         }
-                        let mode = if record.interval == 0 {
+                        let discipline = if record.interval == 0 {
                             TrainingDiscipline::UnisonPitchDiscrimination
                         } else {
                             TrainingDiscipline::IntervalPitchDiscrimination
                         };
+                        let key = StatisticsKey::Pitch(discipline);
                         let ts = parse_iso8601_to_epoch(&record.timestamp);
                         let metric = record.cent_offset.abs();
-                        mode_points
-                            .entry(mode)
+                        key_points
+                            .entry(key)
                             .or_default()
                             .push(MetricPoint::new(ts, metric));
                     }
 
                     for record in &matching_records {
-                        let mode = if record.interval == 0 {
+                        let discipline = if record.interval == 0 {
                             TrainingDiscipline::UnisonPitchMatching
                         } else {
                             TrainingDiscipline::IntervalPitchMatching
                         };
+                        let key = StatisticsKey::Pitch(discipline);
                         let ts = parse_iso8601_to_epoch(&record.timestamp);
                         let metric = record.user_cent_error.abs();
-                        mode_points
-                            .entry(mode)
+                        key_points
+                            .entry(key)
                             .or_default()
                             .push(MetricPoint::new(ts, metric));
                     }
 
-                    // Sort each mode's points by timestamp
-                    for points in mode_points.values_mut() {
+                    // Sort each key's points by timestamp
+                    for points in key_points.values_mut() {
                         points.sort_by(|a, b| {
                             a.timestamp
                                 .partial_cmp(&b.timestamp)
@@ -196,7 +198,7 @@ pub fn App() -> impl IntoView {
                         });
                     }
 
-                    profile_for_hydration.borrow_mut().rebuild_all(mode_points);
+                    profile_for_hydration.borrow_mut().rebuild_all(key_points);
                     log::info!(
                         "Profile hydrated from {} discrimination + {} matching records",
                         discrimination_records.len(),

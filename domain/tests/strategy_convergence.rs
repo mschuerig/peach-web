@@ -28,7 +28,7 @@ fn test_kazez_convergence_all_correct() {
 
         // Update profile with the comparison result
         profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
+            StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination),
             MetricPoint::new(i as f64 * 1000.0, magnitude),
             completed.is_correct(),
         );

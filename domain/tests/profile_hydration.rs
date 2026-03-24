@@ -4,15 +4,12 @@ use domain::*;
 #[test]
 fn test_profile_hydration_from_discrimination_sequence() {
     let mut profile = PerceptualProfile::new();
+    let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
 
     // Simulate a sequence of discrimination trials via add_point
     let offsets = [50.0, 40.0, 45.0, 35.0, 55.0];
     for (i, &offset) in offsets.iter().enumerate() {
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 1000.0, offset),
-            true,
-        );
+        profile.add_point(key, MetricPoint::new(i as f64 * 1000.0, offset), true);
     }
 
     assert_eq!(
@@ -29,23 +26,16 @@ fn test_profile_hydration_from_discrimination_sequence() {
 #[test]
 fn test_profile_hydration_order_independence() {
     let offsets = [10.0, 20.0, 30.0, 40.0, 50.0];
+    let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
 
     let mut profile_forward = PerceptualProfile::new();
     for (i, &offset) in offsets.iter().enumerate() {
-        profile_forward.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 1000.0, offset),
-            true,
-        );
+        profile_forward.add_point(key, MetricPoint::new(i as f64 * 1000.0, offset), true);
     }
 
     let mut profile_reverse = PerceptualProfile::new();
     for (i, &offset) in offsets.iter().rev().enumerate() {
-        profile_reverse.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 1000.0, offset),
-            true,
-        );
+        profile_reverse.add_point(key, MetricPoint::new(i as f64 * 1000.0, offset), true);
     }
 
     let fwd_mean = profile_forward.discrimination_mean(0).unwrap();
@@ -63,17 +53,10 @@ fn test_profile_hydration_order_independence() {
 #[test]
 fn test_profile_filters_incorrect_answers() {
     let mut profile = PerceptualProfile::new();
+    let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
 
-    profile.add_point(
-        TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(1000.0, 20.0),
-        true,
-    );
-    profile.add_point(
-        TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(2000.0, 999.0),
-        false, // incorrect — should be filtered
-    );
+    profile.add_point(key, MetricPoint::new(1000.0, 20.0), true);
+    profile.add_point(key, MetricPoint::new(2000.0, 999.0), false);
 
     assert_eq!(
         profile.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
@@ -87,53 +70,37 @@ fn test_profile_filters_incorrect_answers() {
 #[test]
 fn test_profile_hydration_matching_accumulators() {
     let mut profile = PerceptualProfile::new();
+    let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchMatching);
 
     // Simulate pitch matching results (absolute errors)
     let errors = [3.0, 5.0, 7.0, 2.0, 4.0];
     for (i, &error) in errors.iter().enumerate() {
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(i as f64 * 1000.0, error),
-            true,
-        );
+        profile.add_point(key, MetricPoint::new(i as f64 * 1000.0, error), true);
     }
 
     // Mean: (3+5+7+2+4)/5 = 21/5 = 4.2
-    let mean = profile.matching_mean().unwrap();
-    assert!((mean.raw_value - 4.2).abs() < 1e-10);
+    let stats = profile
+        .discipline_statistics(TrainingDiscipline::UnisonPitchMatching)
+        .unwrap();
+    assert!((stats.welford.mean() - 4.2).abs() < 1e-10);
 }
 
 /// Verify reset + re-hydration produces same results.
 #[test]
 fn test_profile_reset_and_rehydrate() {
     let mut profile = PerceptualProfile::new();
+    let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
 
     // First hydration
-    profile.add_point(
-        TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(1000.0, 50.0),
-        true,
-    );
-    profile.add_point(
-        TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(2000.0, 30.0),
-        true,
-    );
+    profile.add_point(key, MetricPoint::new(1000.0, 50.0), true);
+    profile.add_point(key, MetricPoint::new(2000.0, 30.0), true);
 
     let mean_before = profile.discrimination_mean(0).unwrap();
 
     // Reset and re-hydrate with same data
     profile.reset_all();
-    profile.add_point(
-        TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(1000.0, 50.0),
-        true,
-    );
-    profile.add_point(
-        TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(2000.0, 30.0),
-        true,
-    );
+    profile.add_point(key, MetricPoint::new(1000.0, 50.0), true);
+    profile.add_point(key, MetricPoint::new(2000.0, 30.0), true);
 
     let mean_after = profile.discrimination_mean(0).unwrap();
     assert!((mean_before.raw_value - mean_after.raw_value).abs() < 1e-10);
@@ -143,15 +110,12 @@ fn test_profile_reset_and_rehydrate() {
 #[test]
 fn test_profile_hydration_large_dataset() {
     let mut profile = PerceptualProfile::new();
+    let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
 
     // 1000 records
     for i in 0..1000 {
         let offset = 50.0 + (i % 20) as f64; // 50..69 repeating
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 100.0, offset),
-            true,
-        );
+        profile.add_point(key, MetricPoint::new(i as f64 * 100.0, offset), true);
     }
 
     assert_eq!(
@@ -172,7 +136,7 @@ fn test_profile_rebuild_all() {
     let mut profile = PerceptualProfile::new();
     let mut points = HashMap::new();
     points.insert(
-        TrainingDiscipline::UnisonPitchDiscrimination,
+        StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination),
         vec![
             MetricPoint::new(1000.0, 20.0),
             MetricPoint::new(2000.0, 40.0),
@@ -180,7 +144,7 @@ fn test_profile_rebuild_all() {
         ],
     );
     points.insert(
-        TrainingDiscipline::UnisonPitchMatching,
+        StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchMatching),
         vec![
             MetricPoint::new(1000.0, 5.0),
             MetricPoint::new(2000.0, 10.0),
@@ -205,6 +169,8 @@ fn test_profile_rebuild_all() {
     let disc_mean = profile.discrimination_mean(0).unwrap();
     assert!((disc_mean.raw_value - 30.0).abs() < 1e-10);
 
-    let match_mean = profile.matching_mean().unwrap();
-    assert!((match_mean.raw_value - 7.5).abs() < 1e-10);
+    let match_stats = profile
+        .discipline_statistics(TrainingDiscipline::UnisonPitchMatching)
+        .unwrap();
+    assert!((match_stats.welford.mean() - 7.5).abs() < 1e-10);
 }

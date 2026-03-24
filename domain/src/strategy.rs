@@ -236,20 +236,14 @@ mod tests {
     #[test]
     fn test_warm_start_uses_discrimination_mean() {
         use crate::metric_point::MetricPoint;
+        use crate::statistics_key::StatisticsKey;
         use crate::training_discipline::TrainingDiscipline;
 
         let mut profile = PerceptualProfile::new();
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
         // Add two unison discrimination points to establish a discrimination_mean
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, 40.0),
-            true,
-        );
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(2000.0, 60.0),
-            true,
-        );
+        profile.add_point(key, MetricPoint::new(1000.0, 40.0), true);
+        profile.add_point(key, MetricPoint::new(2000.0, 60.0), true);
         // discrimination_mean(0) = 50.0
 
         let settings = TrainingSettings::default();
@@ -266,15 +260,13 @@ mod tests {
     #[test]
     fn test_warm_start_clamped_to_range() {
         use crate::metric_point::MetricPoint;
+        use crate::statistics_key::StatisticsKey;
         use crate::training_discipline::TrainingDiscipline;
 
         let mut profile = PerceptualProfile::new();
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
         // Train with very low mean that would be below min_cent_difference
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, 0.01),
-            true,
-        );
+        profile.add_point(key, MetricPoint::new(1000.0, 0.01), true);
         // discrimination_mean(0) = 0.01
 
         let settings = TrainingSettings::default(); // min = 0.1

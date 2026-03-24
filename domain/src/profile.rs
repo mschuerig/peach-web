@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::metric_point::MetricPoint;
+use crate::statistics_key::StatisticsKey;
 use crate::training_discipline::TrainingDiscipline;
 use crate::training_discipline_statistics::TrainingDisciplineStatistics;
 use crate::trend::Trend;
@@ -11,35 +12,91 @@ pub const COLD_START_DIFFICULTY: f64 = 100.0;
 
 /// Discipline-aware perceptual profile — single source of truth for all per-discipline statistics.
 ///
-/// Each `TrainingDiscipline` gets its own `TrainingDisciplineStatistics` (Welford accumulator,
-/// EWMA, trend, time-ordered metrics). This aligns with the iOS `PerceptualProfile`
-/// post-Epic-44 architecture.
+/// Uses `StatisticsKey` as map key: pitch disciplines have 1 key each,
+/// rhythm disciplines expand to 6 keys (3 tempo ranges × 2 directions).
+/// Aligns with iOS `PerceptualProfile` post-Epic-44 architecture.
 #[derive(Clone, Debug)]
 pub struct PerceptualProfile {
-    disciplines: HashMap<TrainingDiscipline, TrainingDisciplineStatistics>,
+    entries: HashMap<StatisticsKey, TrainingDisciplineStatistics>,
 }
 
 impl PerceptualProfile {
+    /// Creates a profile with all keys initialized to empty statistics.
+    /// 4 pitch keys + 12 rhythm keys = 16 total for 6 disciplines.
     pub fn new() -> Self {
-        let mut disciplines = HashMap::new();
+        let mut entries = HashMap::new();
         for discipline in TrainingDiscipline::ALL {
-            disciplines.insert(discipline, TrainingDisciplineStatistics::new());
+            for key in discipline.statistics_keys() {
+                entries.insert(key, TrainingDisciplineStatistics::new());
+            }
         }
-        Self { disciplines }
+        Self { entries }
     }
 
-    // --- Per-discipline query API ---
+    // --- Per-key query API ---
 
-    /// Direct access to a discipline's statistics.
-    pub fn statistics(&self, discipline: TrainingDiscipline) -> &TrainingDisciplineStatistics {
-        self.disciplines
-            .get(&discipline)
-            .expect("all disciplines initialized")
+    /// Direct access to statistics for a specific key.
+    pub fn statistics_for_key(&self, key: &StatisticsKey) -> &TrainingDisciplineStatistics {
+        self.entries.get(key).expect("all keys initialized")
     }
 
-    /// Whether a discipline has any recorded data.
+    // --- Per-discipline query API (merged across keys) ---
+
+    /// Merged statistics for a discipline (aggregates across all its keys).
+    /// Returns `None` if no data across any key for this discipline.
+    pub fn discipline_statistics(
+        &self,
+        discipline: TrainingDiscipline,
+    ) -> Option<TrainingDisciplineStatistics> {
+        self.merged_statistics(&discipline.statistics_keys())
+    }
+
+    /// Merge statistics from multiple keys by collecting all metrics chronologically
+    /// and rebuilding Welford/EWMA/trend from scratch.
+    pub fn merged_statistics(
+        &self,
+        keys: &[StatisticsKey],
+    ) -> Option<TrainingDisciplineStatistics> {
+        // Collect all metrics from the requested keys
+        let mut all_metrics: Vec<MetricPoint> = Vec::new();
+        let mut config = None;
+
+        for key in keys {
+            if let Some(stats) = self.entries.get(key) {
+                all_metrics.extend(stats.metrics.iter().cloned());
+                // All keys for a discipline share the same config
+                if config.is_none() {
+                    config = Some(match key {
+                        StatisticsKey::Pitch(d) | StatisticsKey::Rhythm(d, _, _) => d.config(),
+                    });
+                }
+            }
+        }
+
+        if all_metrics.is_empty() {
+            return None;
+        }
+
+        // Sort chronologically
+        all_metrics.sort_by(|a, b| {
+            a.timestamp
+                .partial_cmp(&b.timestamp)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Rebuild statistics from the merged, sorted metrics
+        let config = config.expect("at least one key had metrics");
+        let mut merged = TrainingDisciplineStatistics::new();
+        merged.rebuild(all_metrics, config);
+        Some(merged)
+    }
+
+    /// Whether a discipline has any recorded data (across any of its keys).
     pub fn has_data(&self, discipline: TrainingDiscipline) -> bool {
-        self.statistics(discipline).record_count() > 0
+        discipline
+            .statistics_keys()
+            .iter()
+            .any(|key| self.statistics_for_key(key).record_count() > 0)
     }
 
     /// Training discipline state (NoData or Active).
@@ -55,132 +112,89 @@ impl PerceptualProfile {
     }
 
     /// Trend for a discipline (None if < 2 records).
+    /// For single-key disciplines, returns the key's trend directly.
+    /// For multi-key disciplines, returns the merged trend.
     pub fn trend(&self, discipline: TrainingDiscipline) -> Option<Trend> {
-        self.statistics(discipline).trend
+        let keys = discipline.statistics_keys();
+        if keys.len() == 1 {
+            self.statistics_for_key(&keys[0]).trend
+        } else {
+            self.discipline_statistics(discipline).and_then(|s| s.trend)
+        }
     }
 
     /// Current EWMA for a discipline.
+    /// For single-key disciplines, returns the key's EWMA directly.
+    /// For multi-key disciplines, returns the merged EWMA.
     pub fn current_ewma(&self, discipline: TrainingDiscipline) -> Option<f64> {
-        self.statistics(discipline).ewma
+        let keys = discipline.statistics_keys();
+        if keys.len() == 1 {
+            self.statistics_for_key(&keys[0]).ewma
+        } else {
+            self.discipline_statistics(discipline).and_then(|s| s.ewma)
+        }
     }
 
-    /// Record count for a discipline.
+    /// Record count for a discipline (sum across all its keys).
     pub fn record_count(&self, discipline: TrainingDiscipline) -> usize {
-        self.statistics(discipline).record_count()
+        discipline
+            .statistics_keys()
+            .iter()
+            .map(|key| self.statistics_for_key(key).record_count())
+            .sum()
     }
 
-    // --- Strategy-facing API (replaces old per-note aggregate) ---
+    // --- Strategy-facing API ---
 
     /// Discrimination mean for the given interval.
-    /// Maps interval to the correct mode (unison if interval == 0, otherwise interval mode).
+    /// Maps interval to the correct discipline (unison if interval == 0, otherwise interval mode).
     /// Used by `KazezNoteStrategy` as warm-start difficulty fallback.
     pub fn discrimination_mean(&self, interval: u8) -> Option<Cents> {
-        let mode = if interval == 0 {
+        let discipline = if interval == 0 {
             TrainingDiscipline::UnisonPitchDiscrimination
         } else {
             TrainingDiscipline::IntervalPitchDiscrimination
         };
-        let stats = self.statistics(mode);
-        if stats.record_count() > 0 {
-            Some(Cents::new(stats.welford.mean()))
-        } else {
-            None
-        }
-    }
-
-    /// Weighted matching mean across both matching disciplines (backward compat for UI).
-    pub fn matching_mean(&self) -> Option<Cents> {
-        let unison = self.statistics(TrainingDiscipline::UnisonPitchMatching);
-        let interval = self.statistics(TrainingDiscipline::IntervalPitchMatching);
-        let u_count = unison.record_count();
-        let i_count = interval.record_count();
-        let total = u_count + i_count;
-        if total == 0 {
-            return None;
-        }
-        let sum = unison.welford.mean() * u_count as f64 + interval.welford.mean() * i_count as f64;
-        Some(Cents::new(sum / total as f64))
-    }
-
-    /// Weighted matching std dev across both matching disciplines.
-    pub fn matching_std_dev(&self) -> Option<Cents> {
-        let unison = self.statistics(TrainingDiscipline::UnisonPitchMatching);
-        let interval = self.statistics(TrainingDiscipline::IntervalPitchMatching);
-        let u_count = unison.record_count();
-        let i_count = interval.record_count();
-        let total = u_count + i_count;
-        if total < 2 {
-            return None;
-        }
-        // For a single mode with data, return its std dev directly
-        if u_count == 0 {
-            return interval.welford.population_std_dev().map(Cents::new);
-        }
-        if i_count == 0 {
-            return unison.welford.population_std_dev().map(Cents::new);
-        }
-        // Both disciplines have data — use combined population std dev
-        let combined_mean = (unison.welford.mean() * u_count as f64
-            + interval.welford.mean() * i_count as f64)
-            / total as f64;
-        let u_var = unison.welford.population_std_dev().unwrap_or(0.0).powi(2);
-        let i_var = interval.welford.population_std_dev().unwrap_or(0.0).powi(2);
-        let u_shift = (unison.welford.mean() - combined_mean).powi(2);
-        let i_shift = (interval.welford.mean() - combined_mean).powi(2);
-        let combined_var = (u_count as f64 * (u_var + u_shift)
-            + i_count as f64 * (i_var + i_shift))
-            / total as f64;
-        Some(Cents::new(combined_var.sqrt()))
-    }
-
-    /// Total matching sample count across both disciplines.
-    pub fn matching_sample_count(&self) -> usize {
-        self.record_count(TrainingDiscipline::UnisonPitchMatching)
-            + self.record_count(TrainingDiscipline::IntervalPitchMatching)
+        self.discipline_statistics(discipline)
+            .map(|s| Cents::new(s.welford.mean()))
     }
 
     // --- Incremental update ---
 
-    /// Add a single metric point for the given discipline.
+    /// Add a single metric point for the given key.
     /// For discrimination disciplines, `is_correct` filters: only correct answers contribute.
     /// For matching disciplines, all answers contribute (pass `true`).
-    pub fn add_point(
-        &mut self,
-        discipline: TrainingDiscipline,
-        point: MetricPoint,
-        is_correct: bool,
-    ) {
+    pub fn add_point(&mut self, key: StatisticsKey, point: MetricPoint, is_correct: bool) {
         if !is_correct {
             return;
         }
+        let discipline = match key {
+            StatisticsKey::Pitch(d) | StatisticsKey::Rhythm(d, _, _) => d,
+        };
         let config = discipline.config();
-        let stats = self
-            .disciplines
-            .get_mut(&discipline)
-            .expect("all disciplines initialized");
+        let stats = self.entries.get_mut(&key).expect("all keys initialized");
         stats.add_point(point, config);
     }
 
     // --- Batch operations ---
 
-    /// Rebuild all disciplines from pre-sorted metric points.
-    pub fn rebuild_all(&mut self, points: HashMap<TrainingDiscipline, Vec<MetricPoint>>) {
+    /// Rebuild from pre-sorted metric points keyed by StatisticsKey.
+    pub fn rebuild_all(&mut self, points: HashMap<StatisticsKey, Vec<MetricPoint>>) {
         for discipline in TrainingDiscipline::ALL {
-            let stats = self
-                .disciplines
-                .get_mut(&discipline)
-                .expect("all disciplines initialized");
-            if let Some(discipline_points) = points.get(&discipline) {
-                stats.rebuild(discipline_points.clone(), discipline.config());
-            } else {
-                stats.reset();
+            for key in discipline.statistics_keys() {
+                let stats = self.entries.get_mut(&key).expect("all keys initialized");
+                if let Some(key_points) = points.get(&key) {
+                    stats.rebuild(key_points.clone(), discipline.config());
+                } else {
+                    stats.reset();
+                }
             }
         }
     }
 
-    /// Reset all disciplines to empty state.
+    /// Reset all entries to empty state.
     pub fn reset_all(&mut self) {
-        for stats in self.disciplines.values_mut() {
+        for stats in self.entries.values_mut() {
             stats.reset();
         }
     }
@@ -211,13 +225,17 @@ mod tests {
     }
 
     #[test]
-    fn test_add_point_updates_correct_mode() {
+    fn test_new_profile_has_16_entries() {
+        let profile = PerceptualProfile::new();
+        // 4 pitch + 12 rhythm (2 × 3 × 2)
+        assert_eq!(profile.entries.len(), 16);
+    }
+
+    #[test]
+    fn test_add_point_updates_correct_key() {
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, 20.0),
-            true,
-        );
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
+        profile.add_point(key, MetricPoint::new(1000.0, 20.0), true);
         assert!(profile.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
         assert!(!profile.has_data(TrainingDiscipline::IntervalPitchDiscrimination));
         assert!(!profile.has_data(TrainingDiscipline::UnisonPitchMatching));
@@ -226,27 +244,17 @@ mod tests {
     #[test]
     fn test_add_point_filters_incorrect() {
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, 20.0),
-            false, // incorrect — should be filtered
-        );
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
+        profile.add_point(key, MetricPoint::new(1000.0, 20.0), false);
         assert!(!profile.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
     }
 
     #[test]
     fn test_discrimination_mean_unison() {
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, 40.0),
-            true,
-        );
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(2000.0, 60.0),
-            true,
-        );
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
+        profile.add_point(key, MetricPoint::new(1000.0, 40.0), true);
+        profile.add_point(key, MetricPoint::new(2000.0, 60.0), true);
         let mean = profile.discrimination_mean(0).unwrap();
         assert!((mean.raw_value - 50.0).abs() < 1e-10);
     }
@@ -254,11 +262,8 @@ mod tests {
     #[test]
     fn test_discrimination_mean_interval() {
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::IntervalPitchDiscrimination,
-            MetricPoint::new(1000.0, 30.0),
-            true,
-        );
+        let key = StatisticsKey::Pitch(TrainingDiscipline::IntervalPitchDiscrimination);
+        profile.add_point(key, MetricPoint::new(1000.0, 30.0), true);
         let mean = profile.discrimination_mean(7).unwrap();
         assert!((mean.raw_value - 30.0).abs() < 1e-10);
     }
@@ -270,64 +275,91 @@ mod tests {
     }
 
     #[test]
-    fn test_matching_mean_single_mode() {
+    fn test_discipline_statistics_single_key() {
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(1000.0, 5.0),
-            true,
-        );
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(2000.0, 15.0),
-            true,
-        );
-        let mean = profile.matching_mean().unwrap();
-        assert!((mean.raw_value - 10.0).abs() < 1e-10);
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
+        profile.add_point(key, MetricPoint::new(1000.0, 20.0), true);
+        profile.add_point(key, MetricPoint::new(2000.0, 40.0), true);
+
+        let stats = profile
+            .discipline_statistics(TrainingDiscipline::UnisonPitchDiscrimination)
+            .unwrap();
+        assert_eq!(stats.record_count(), 2);
+        assert!((stats.welford.mean() - 30.0).abs() < 1e-10);
     }
 
     #[test]
-    fn test_matching_mean_both_modes() {
-        let mut profile = PerceptualProfile::new();
-        // Unison: 1 sample of 10
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(1000.0, 10.0),
-            true,
+    fn test_discipline_statistics_no_data() {
+        let profile = PerceptualProfile::new();
+        assert!(
+            profile
+                .discipline_statistics(TrainingDiscipline::UnisonPitchDiscrimination)
+                .is_none()
         );
-        // Interval: 1 sample of 20
-        profile.add_point(
-            TrainingDiscipline::IntervalPitchMatching,
-            MetricPoint::new(2000.0, 20.0),
-            true,
-        );
-        let mean = profile.matching_mean().unwrap();
-        // Weighted: (10 * 1 + 20 * 1) / 2 = 15
-        assert!((mean.raw_value - 15.0).abs() < 1e-10);
     }
 
     #[test]
-    fn test_matching_sample_count() {
+    fn test_merged_statistics_rhythm_multiple_keys() {
+        use crate::types::{RhythmDirection, TempoRange};
+
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(1000.0, 5.0),
-            true,
+        let key_slow_early = StatisticsKey::Rhythm(
+            TrainingDiscipline::RhythmOffsetDetection,
+            TempoRange::Slow,
+            RhythmDirection::Early,
         );
-        profile.add_point(
-            TrainingDiscipline::IntervalPitchMatching,
-            MetricPoint::new(2000.0, 10.0),
-            true,
+        let key_fast_late = StatisticsKey::Rhythm(
+            TrainingDiscipline::RhythmOffsetDetection,
+            TempoRange::Fast,
+            RhythmDirection::Late,
         );
-        assert_eq!(profile.matching_sample_count(), 2);
+
+        profile.add_point(key_slow_early, MetricPoint::new(1000.0, 10.0), true);
+        profile.add_point(key_fast_late, MetricPoint::new(2000.0, 20.0), true);
+
+        let merged = profile
+            .discipline_statistics(TrainingDiscipline::RhythmOffsetDetection)
+            .unwrap();
+        assert_eq!(merged.record_count(), 2);
+        assert!((merged.welford.mean() - 15.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_merged_statistics_chronological_order() {
+        use crate::types::{RhythmDirection, TempoRange};
+
+        let mut profile = PerceptualProfile::new();
+        let key1 = StatisticsKey::Rhythm(
+            TrainingDiscipline::RhythmOffsetDetection,
+            TempoRange::Slow,
+            RhythmDirection::Early,
+        );
+        let key2 = StatisticsKey::Rhythm(
+            TrainingDiscipline::RhythmOffsetDetection,
+            TempoRange::Fast,
+            RhythmDirection::Late,
+        );
+
+        // Add later timestamp first to key1, earlier to key2
+        profile.add_point(key1, MetricPoint::new(2000.0, 30.0), true);
+        profile.add_point(key2, MetricPoint::new(1000.0, 10.0), true);
+
+        let merged = profile
+            .discipline_statistics(TrainingDiscipline::RhythmOffsetDetection)
+            .unwrap();
+        // Metrics should be sorted: [1000.0→10.0, 2000.0→30.0]
+        assert_eq!(merged.metrics.len(), 2);
+        assert!((merged.metrics[0].timestamp - 1000.0).abs() < 1e-10);
+        assert!((merged.metrics[1].timestamp - 2000.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_rebuild_all() {
         let mut profile = PerceptualProfile::new();
         let mut points = HashMap::new();
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
         points.insert(
-            TrainingDiscipline::UnisonPitchDiscrimination,
+            key,
             vec![
                 MetricPoint::new(1000.0, 20.0),
                 MetricPoint::new(2000.0, 30.0),
@@ -347,16 +379,10 @@ mod tests {
     #[test]
     fn test_reset_all() {
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, 20.0),
-            true,
-        );
-        profile.add_point(
-            TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(2000.0, 10.0),
-            true,
-        );
+        let key = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchDiscrimination);
+        profile.add_point(key, MetricPoint::new(1000.0, 20.0), true);
+        let key2 = StatisticsKey::Pitch(TrainingDiscipline::UnisonPitchMatching);
+        profile.add_point(key2, MetricPoint::new(2000.0, 10.0), true);
         profile.reset_all();
         for mode in TrainingDiscipline::ALL {
             assert!(!profile.has_data(mode));
@@ -371,14 +397,37 @@ mod tests {
     #[test]
     fn test_state_active_after_data() {
         let mut profile = PerceptualProfile::new();
-        profile.add_point(
-            TrainingDiscipline::IntervalPitchMatching,
-            MetricPoint::new(1000.0, 5.0),
-            true,
-        );
+        let key = StatisticsKey::Pitch(TrainingDiscipline::IntervalPitchMatching);
+        profile.add_point(key, MetricPoint::new(1000.0, 5.0), true);
         assert_eq!(
             profile.state(TrainingDiscipline::IntervalPitchMatching),
             crate::training_discipline::TrainingDisciplineState::Active
+        );
+    }
+
+    #[test]
+    fn test_record_count_sums_across_keys() {
+        use crate::types::{RhythmDirection, TempoRange};
+
+        let mut profile = PerceptualProfile::new();
+        let key1 = StatisticsKey::Rhythm(
+            TrainingDiscipline::RhythmOffsetDetection,
+            TempoRange::Slow,
+            RhythmDirection::Early,
+        );
+        let key2 = StatisticsKey::Rhythm(
+            TrainingDiscipline::RhythmOffsetDetection,
+            TempoRange::Fast,
+            RhythmDirection::Late,
+        );
+
+        profile.add_point(key1, MetricPoint::new(1000.0, 10.0), true);
+        profile.add_point(key1, MetricPoint::new(2000.0, 20.0), true);
+        profile.add_point(key2, MetricPoint::new(3000.0, 30.0), true);
+
+        assert_eq!(
+            profile.record_count(TrainingDiscipline::RhythmOffsetDetection),
+            3
         );
     }
 }

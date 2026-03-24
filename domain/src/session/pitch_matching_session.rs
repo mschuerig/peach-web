@@ -976,11 +976,15 @@ mod tests {
     fn test_reset_training_data_stops_session_resets_profile_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         profile.borrow_mut().add_point(
-            crate::TrainingDiscipline::UnisonPitchMatching,
+            crate::StatisticsKey::Pitch(crate::TrainingDiscipline::UnisonPitchMatching),
             crate::MetricPoint::new(1000.0, 5.0),
             true,
         );
-        assert!(profile.borrow().matching_mean().is_some());
+        assert!(
+            profile
+                .borrow()
+                .has_data(crate::TrainingDiscipline::UnisonPitchMatching)
+        );
 
         let (resettable, count) = MockResettable::new();
         let mut session =
@@ -990,7 +994,11 @@ mod tests {
         session.reset_training_data();
 
         assert_eq!(session.state(), PitchMatchingSessionState::Idle);
-        assert_eq!(profile.borrow().matching_mean(), None);
+        assert!(
+            !profile
+                .borrow()
+                .has_data(crate::TrainingDiscipline::UnisonPitchMatching)
+        );
         assert_eq!(count.get(), 1);
     }
 

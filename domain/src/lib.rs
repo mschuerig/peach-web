@@ -5,6 +5,7 @@ pub mod profile;
 pub mod progress_timeline;
 pub mod records;
 pub mod session;
+pub mod statistics_key;
 pub mod strategy;
 pub mod training;
 pub mod training_discipline;
@@ -28,6 +29,7 @@ pub use session::{
     PitchDiscriminationSession, PitchDiscriminationSessionState, PitchMatchingPlaybackData,
     PitchMatchingSession, PitchMatchingSessionState,
 };
+pub use statistics_key::StatisticsKey;
 pub use strategy::{TrainingSettings, kazez_narrow, kazez_widen, next_pitch_discrimination_trial};
 pub use training::*;
 pub use training_discipline::{

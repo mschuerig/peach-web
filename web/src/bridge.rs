@@ -5,7 +5,8 @@ use domain::ports::{PitchDiscriminationObserver, PitchMatchingObserver};
 use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 use domain::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial};
 use domain::{
-    MetricPoint, PerceptualProfile, ProgressTimeline, TrainingDiscipline, parse_iso8601_to_epoch,
+    MetricPoint, PerceptualProfile, ProgressTimeline, StatisticsKey, TrainingDiscipline,
+    parse_iso8601_to_epoch,
 };
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
@@ -30,11 +31,12 @@ impl PitchDiscriminationObserver for ProfileObserver {
         let target_note = trial.target_note().note.raw_value();
         let interval = target_note.abs_diff(ref_note);
 
-        let mode = if interval == 0 {
+        let discipline = if interval == 0 {
             TrainingDiscipline::UnisonPitchDiscrimination
         } else {
             TrainingDiscipline::IntervalPitchDiscrimination
         };
+        let key = StatisticsKey::Pitch(discipline);
 
         let metric = trial.target_note().offset.raw_value.abs();
         let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
@@ -42,7 +44,7 @@ impl PitchDiscriminationObserver for ProfileObserver {
 
         self.0
             .borrow_mut()
-            .add_point(mode, point, completed.is_correct());
+            .add_point(key, point, completed.is_correct());
     }
 }
 
@@ -61,17 +63,18 @@ impl PitchMatchingObserver for PitchMatchingProfileObserver {
         let target_note = completed.target_note().raw_value();
         let interval = target_note.abs_diff(ref_note);
 
-        let mode = if interval == 0 {
+        let discipline = if interval == 0 {
             TrainingDiscipline::UnisonPitchMatching
         } else {
             TrainingDiscipline::IntervalPitchMatching
         };
+        let key = StatisticsKey::Pitch(discipline);
 
         let metric = completed.user_cent_error().abs();
         let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
         let point = MetricPoint::new(timestamp_secs, metric);
 
-        self.0.borrow_mut().add_point(mode, point, true);
+        self.0.borrow_mut().add_point(key, point, true);
     }
 }
 
