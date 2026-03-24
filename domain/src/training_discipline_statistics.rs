@@ -4,7 +4,7 @@ use crate::trend::Trend;
 use crate::types::Cents;
 use crate::welford::WelfordAccumulator;
 
-/// Per-mode statistical engine: Welford accumulator, EWMA, trend, and time-ordered metrics.
+/// Per-discipline statistical engine: Welford accumulator, EWMA, trend, and time-ordered metrics.
 /// Mirrors iOS `TrainingDisciplineStatistics` — each `TrainingDiscipline` gets one instance.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrainingDisciplineStatistics {

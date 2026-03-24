@@ -24,27 +24,27 @@ pub struct TimeBucket {
     pub record_count: usize,
 }
 
-/// Internal per-mode display bucket state.
-/// Trend, EWMA, and mode state live in `TrainingDisciplineStatistics` via `PerceptualProfile`.
+/// Internal per-discipline display bucket state.
+/// Trend, EWMA, and discipline state live in `TrainingDisciplineStatistics` via `PerceptualProfile`.
 #[derive(Clone, Debug)]
-struct ModeState {
-    mode: TrainingDiscipline,
+struct DisciplineState {
+    discipline: TrainingDiscipline,
     display_buckets: Vec<TimeBucket>,
     record_count: usize,
 }
 
-impl ModeState {
-    fn new(mode: TrainingDiscipline) -> Self {
+impl DisciplineState {
+    fn new(discipline: TrainingDiscipline) -> Self {
         Self {
-            mode,
+            discipline,
             display_buckets: Vec::new(),
             record_count: 0,
         }
     }
 
     fn reset(&mut self) {
-        let mode = self.mode;
-        *self = Self::new(mode);
+        let discipline = self.discipline;
+        *self = Self::new(discipline);
     }
 
     /// Note: if `start_of_today` changes between calls (midnight crossover), previously
@@ -52,7 +52,7 @@ impl ModeState {
     fn add_point(&mut self, timestamp: f64, metric: f64, start_of_today: f64) {
         self.record_count += 1;
 
-        let session_gap = self.mode.config().session_gap_secs;
+        let session_gap = self.discipline.config().session_gap_secs;
 
         // Update display buckets with zone-aware logic
         let day_zone_start = start_of_today - 7.0 * SECS_PER_DAY;
@@ -159,51 +159,51 @@ fn welford_update_bucket(bucket: &mut TimeBucket, timestamp: f64, metric: f64) {
 /// Pure three-zone time-bucketing layer for UI progress display.
 ///
 /// Buckets training metrics into Session (today), Day (last 7 days),
-/// and Month (older) zones. Trend, EWMA, and mode state are owned by
+/// and Month (older) zones. Trend, EWMA, and discipline state are owned by
 /// `TrainingDisciplineStatistics` via `PerceptualProfile`.
 #[derive(Clone, Debug)]
 pub struct ProgressTimeline {
-    modes: HashMap<TrainingDiscipline, ModeState>,
+    disciplines: HashMap<TrainingDiscipline, DisciplineState>,
 }
 
 impl ProgressTimeline {
     pub fn new() -> Self {
-        let mut modes = HashMap::new();
-        for mode in TrainingDiscipline::ALL {
-            modes.insert(mode, ModeState::new(mode));
+        let mut disciplines = HashMap::new();
+        for discipline in TrainingDiscipline::ALL {
+            disciplines.insert(discipline, DisciplineState::new(discipline));
         }
-        Self { modes }
+        Self { disciplines }
     }
 
-    /// Rebuild all per-mode data from stored records.
+    /// Rebuild all per-discipline data from stored records.
     pub fn rebuild(
         &mut self,
         comparison_records: &[PitchDiscriminationRecord],
         matching_records: &[PitchMatchingRecord],
         start_of_today: f64,
     ) {
-        // Reset all modes
-        for state in self.modes.values_mut() {
+        // Reset all disciplines
+        for state in self.disciplines.values_mut() {
             state.reset();
         }
 
-        // Collect (timestamp, metric, mode) tuples from all records
+        // Collect (timestamp, metric, discipline) tuples from all records
         let mut points: Vec<(f64, f64, TrainingDiscipline)> = Vec::new();
 
         for record in comparison_records {
             let ts = parse_iso8601_to_epoch(&record.timestamp);
-            for mode in TrainingDiscipline::ALL {
-                if let Some(metric) = mode.extract_comparison_metric(record) {
-                    points.push((ts, metric, mode));
+            for discipline in TrainingDiscipline::ALL {
+                if let Some(metric) = discipline.extract_comparison_metric(record) {
+                    points.push((ts, metric, discipline));
                 }
             }
         }
 
         for record in matching_records {
             let ts = parse_iso8601_to_epoch(&record.timestamp);
-            for mode in TrainingDiscipline::ALL {
-                if let Some(metric) = mode.extract_matching_metric(record) {
-                    points.push((ts, metric, mode));
+            for discipline in TrainingDiscipline::ALL {
+                if let Some(metric) = discipline.extract_matching_metric(record) {
+                    points.push((ts, metric, discipline));
                 }
             }
         }
@@ -211,17 +211,20 @@ impl ProgressTimeline {
         // Sort by timestamp
         points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Group by mode
-        let mut mode_points: HashMap<TrainingDiscipline, Vec<(f64, f64)>> = HashMap::new();
-        for (ts, metric, mode) in points {
-            mode_points.entry(mode).or_default().push((ts, metric));
+        // Group by discipline
+        let mut discipline_points: HashMap<TrainingDiscipline, Vec<(f64, f64)>> = HashMap::new();
+        for (ts, metric, discipline) in points {
+            discipline_points
+                .entry(discipline)
+                .or_default()
+                .push((ts, metric));
         }
 
-        // Build each mode
+        // Build each discipline
         let day_zone_start = start_of_today - 7.0 * SECS_PER_DAY;
-        for (mode, pts) in mode_points {
-            let state = self.modes.get_mut(&mode).unwrap();
-            let session_gap = mode.config().session_gap_secs;
+        for (discipline, pts) in discipline_points {
+            let state = self.disciplines.get_mut(&discipline).unwrap();
+            let session_gap = discipline.config().session_gap_secs;
 
             // Build display buckets (three-zone)
             state.display_buckets =
@@ -231,18 +234,18 @@ impl ProgressTimeline {
         }
     }
 
-    /// Returns three-zone display buckets for the given mode.
-    pub fn display_buckets(&self, mode: TrainingDiscipline) -> Vec<TimeBucket> {
-        self.modes
-            .get(&mode)
+    /// Returns three-zone display buckets for the given discipline.
+    pub fn display_buckets(&self, discipline: TrainingDiscipline) -> Vec<TimeBucket> {
+        self.disciplines
+            .get(&discipline)
             .map(|s| s.display_buckets.clone())
             .unwrap_or_default()
     }
 
     /// Returns the stddev of the last display bucket (for headline ±).
-    pub fn latest_bucket_stddev(&self, mode: TrainingDiscipline) -> Option<f64> {
-        self.modes
-            .get(&mode)
+    pub fn latest_bucket_stddev(&self, discipline: TrainingDiscipline) -> Option<f64> {
+        self.disciplines
+            .get(&discipline)
             .and_then(|s| s.display_buckets.last())
             .map(|b| b.stddev)
     }
@@ -250,9 +253,9 @@ impl ProgressTimeline {
     /// Incrementally update from a new comparison record.
     pub fn add_comparison(&mut self, record: &PitchDiscriminationRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
-        for mode in TrainingDiscipline::ALL {
-            if let Some(metric) = mode.extract_comparison_metric(record)
-                && let Some(state) = self.modes.get_mut(&mode)
+        for discipline in TrainingDiscipline::ALL {
+            if let Some(metric) = discipline.extract_comparison_metric(record)
+                && let Some(state) = self.disciplines.get_mut(&discipline)
             {
                 state.add_point(ts, metric, start_of_today);
             }
@@ -262,23 +265,25 @@ impl ProgressTimeline {
     /// Incrementally update from a new pitch matching record.
     pub fn add_matching(&mut self, record: &PitchMatchingRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
-        for mode in TrainingDiscipline::ALL {
-            if let Some(metric) = mode.extract_matching_metric(record)
-                && let Some(state) = self.modes.get_mut(&mode)
+        for discipline in TrainingDiscipline::ALL {
+            if let Some(metric) = discipline.extract_matching_metric(record)
+                && let Some(state) = self.disciplines.get_mut(&discipline)
             {
                 state.add_point(ts, metric, start_of_today);
             }
         }
     }
 
-    /// Whether a mode has any bucketed data.
-    pub fn has_data(&self, mode: TrainingDiscipline) -> bool {
-        self.modes.get(&mode).is_some_and(|s| s.record_count > 0)
+    /// Whether a discipline has any bucketed data.
+    pub fn has_data(&self, discipline: TrainingDiscipline) -> bool {
+        self.disciplines
+            .get(&discipline)
+            .is_some_and(|s| s.record_count > 0)
     }
 
-    /// Clear all per-mode data.
+    /// Clear all per-discipline data.
     pub fn reset(&mut self) {
-        for state in self.modes.values_mut() {
+        for state in self.disciplines.values_mut() {
             state.reset();
         }
     }
@@ -599,9 +604,9 @@ mod tests {
     #[test]
     fn test_new_creates_empty_timeline() {
         let tl = ProgressTimeline::new();
-        for mode in TrainingDiscipline::ALL {
-            assert!(!tl.has_data(mode));
-            assert!(tl.display_buckets(mode).is_empty());
+        for discipline in TrainingDiscipline::ALL {
+            assert!(!tl.has_data(discipline));
+            assert!(tl.display_buckets(discipline).is_empty());
         }
     }
 
@@ -611,8 +616,8 @@ mod tests {
     fn test_rebuild_with_empty_records() {
         let mut tl = ProgressTimeline::new();
         tl.rebuild(&[], &[], today_epoch());
-        for mode in TrainingDiscipline::ALL {
-            assert!(!tl.has_data(mode));
+        for discipline in TrainingDiscipline::ALL {
+            assert!(!tl.has_data(discipline));
         }
     }
 
@@ -978,9 +983,9 @@ mod tests {
         assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
 
         tl.reset();
-        for mode in TrainingDiscipline::ALL {
-            assert!(!tl.has_data(mode));
-            assert!(tl.display_buckets(mode).is_empty());
+        for discipline in TrainingDiscipline::ALL {
+            assert!(!tl.has_data(discipline));
+            assert!(tl.display_buckets(discipline).is_empty());
         }
     }
 

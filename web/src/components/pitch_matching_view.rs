@@ -127,8 +127,8 @@ pub fn PitchMatchingView() -> impl IntoView {
         }
     });
 
-    // Determine TrainingMode from intervals
-    let training_mode = if is_interval_mode {
+    // Determine TrainingDiscipline from intervals
+    let training_discipline = if is_interval_mode {
         TrainingDiscipline::IntervalPitchMatching
     } else {
         TrainingDiscipline::UnisonPitchMatching
@@ -301,7 +301,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                     stats_session_best.set(Some(new_best));
                 }
             }
-            stats_trend.set(profile.borrow().trend(training_mode));
+            stats_trend.set(profile.borrow().trend(training_discipline));
 
             // Stop tunable note
             if let Some(ref mut h) = *tunable_handle.borrow_mut() {

@@ -14,7 +14,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 
 /// Observer that feeds completed comparisons into the profile via `add_point()`.
-/// Determines the training mode (unison vs interval) from the comparison interval.
+/// Determines the training discipline (unison vs interval) from the discrimination interval.
 pub struct ProfileObserver(Rc<RefCell<PerceptualProfile>>);
 
 impl ProfileObserver {

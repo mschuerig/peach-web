@@ -30,7 +30,7 @@ pub trait PlaybackHandle {
     fn adjust_frequency(&mut self, frequency: Frequency) -> Result<(), AudioError>;
 }
 
-/// Observer for comparison training events.
+/// Observer for pitch discrimination training events.
 pub trait PitchDiscriminationObserver {
     fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial);
 }

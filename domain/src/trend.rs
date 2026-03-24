@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Direction of perceptual performance trend.
-/// Computed per-mode in `TrainingModeStatistics` by comparing
+/// Computed per-discipline in `TrainingDisciplineStatistics` by comparing
 /// the latest metric value against population statistics and EWMA.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

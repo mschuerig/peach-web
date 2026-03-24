@@ -2,69 +2,71 @@ use std::collections::HashMap;
 
 use crate::metric_point::MetricPoint;
 use crate::training_discipline::TrainingDiscipline;
-use crate::training_mode_statistics::TrainingDisciplineStatistics;
+use crate::training_discipline_statistics::TrainingDisciplineStatistics;
 use crate::trend::Trend;
 use crate::types::Cents;
 
-/// Cold-start difficulty for untrained modes (cents).
+/// Cold-start difficulty for untrained disciplines (cents).
 pub const COLD_START_DIFFICULTY: f64 = 100.0;
 
-/// Mode-aware perceptual profile — single source of truth for all per-mode statistics.
+/// Discipline-aware perceptual profile — single source of truth for all per-discipline statistics.
 ///
 /// Each `TrainingDiscipline` gets its own `TrainingDisciplineStatistics` (Welford accumulator,
 /// EWMA, trend, time-ordered metrics). This aligns with the iOS `PerceptualProfile`
 /// post-Epic-44 architecture.
 #[derive(Clone, Debug)]
 pub struct PerceptualProfile {
-    modes: HashMap<TrainingDiscipline, TrainingDisciplineStatistics>,
+    disciplines: HashMap<TrainingDiscipline, TrainingDisciplineStatistics>,
 }
 
 impl PerceptualProfile {
     pub fn new() -> Self {
-        let mut modes = HashMap::new();
-        for mode in TrainingDiscipline::ALL {
-            modes.insert(mode, TrainingDisciplineStatistics::new());
+        let mut disciplines = HashMap::new();
+        for discipline in TrainingDiscipline::ALL {
+            disciplines.insert(discipline, TrainingDisciplineStatistics::new());
         }
-        Self { modes }
+        Self { disciplines }
     }
 
-    // --- Per-mode query API ---
+    // --- Per-discipline query API ---
 
-    /// Direct access to a mode's statistics.
-    pub fn statistics(&self, mode: TrainingDiscipline) -> &TrainingDisciplineStatistics {
-        self.modes.get(&mode).expect("all modes initialized")
+    /// Direct access to a discipline's statistics.
+    pub fn statistics(&self, discipline: TrainingDiscipline) -> &TrainingDisciplineStatistics {
+        self.disciplines
+            .get(&discipline)
+            .expect("all disciplines initialized")
     }
 
-    /// Whether a mode has any recorded data.
-    pub fn has_data(&self, mode: TrainingDiscipline) -> bool {
-        self.statistics(mode).record_count() > 0
+    /// Whether a discipline has any recorded data.
+    pub fn has_data(&self, discipline: TrainingDiscipline) -> bool {
+        self.statistics(discipline).record_count() > 0
     }
 
-    /// Training mode state (NoData or Active).
+    /// Training discipline state (NoData or Active).
     pub fn state(
         &self,
-        mode: TrainingDiscipline,
+        discipline: TrainingDiscipline,
     ) -> crate::training_discipline::TrainingDisciplineState {
-        if self.has_data(mode) {
+        if self.has_data(discipline) {
             crate::training_discipline::TrainingDisciplineState::Active
         } else {
             crate::training_discipline::TrainingDisciplineState::NoData
         }
     }
 
-    /// Trend for a mode (None if < 2 records).
-    pub fn trend(&self, mode: TrainingDiscipline) -> Option<Trend> {
-        self.statistics(mode).trend
+    /// Trend for a discipline (None if < 2 records).
+    pub fn trend(&self, discipline: TrainingDiscipline) -> Option<Trend> {
+        self.statistics(discipline).trend
     }
 
-    /// Current EWMA for a mode.
-    pub fn current_ewma(&self, mode: TrainingDiscipline) -> Option<f64> {
-        self.statistics(mode).ewma
+    /// Current EWMA for a discipline.
+    pub fn current_ewma(&self, discipline: TrainingDiscipline) -> Option<f64> {
+        self.statistics(discipline).ewma
     }
 
-    /// Record count for a mode.
-    pub fn record_count(&self, mode: TrainingDiscipline) -> usize {
-        self.statistics(mode).record_count()
+    /// Record count for a discipline.
+    pub fn record_count(&self, discipline: TrainingDiscipline) -> usize {
+        self.statistics(discipline).record_count()
     }
 
     // --- Strategy-facing API (replaces old per-note aggregate) ---
@@ -86,7 +88,7 @@ impl PerceptualProfile {
         }
     }
 
-    /// Weighted matching mean across both matching modes (backward compat for UI).
+    /// Weighted matching mean across both matching disciplines (backward compat for UI).
     pub fn matching_mean(&self) -> Option<Cents> {
         let unison = self.statistics(TrainingDiscipline::UnisonPitchMatching);
         let interval = self.statistics(TrainingDiscipline::IntervalPitchMatching);
@@ -100,7 +102,7 @@ impl PerceptualProfile {
         Some(Cents::new(sum / total as f64))
     }
 
-    /// Weighted matching std dev across both matching modes.
+    /// Weighted matching std dev across both matching disciplines.
     pub fn matching_std_dev(&self) -> Option<Cents> {
         let unison = self.statistics(TrainingDiscipline::UnisonPitchMatching);
         let interval = self.statistics(TrainingDiscipline::IntervalPitchMatching);
@@ -117,7 +119,7 @@ impl PerceptualProfile {
         if i_count == 0 {
             return unison.welford.typed_std_dev();
         }
-        // Both modes have data — use combined population std dev
+        // Both disciplines have data — use combined population std dev
         let combined_mean = (unison.welford.mean() * u_count as f64
             + interval.welford.mean() * i_count as f64)
             / total as f64;
@@ -131,7 +133,7 @@ impl PerceptualProfile {
         Some(Cents::new(combined_var.sqrt()))
     }
 
-    /// Total matching sample count across both modes.
+    /// Total matching sample count across both disciplines.
     pub fn matching_sample_count(&self) -> usize {
         self.record_count(TrainingDiscipline::UnisonPitchMatching)
             + self.record_count(TrainingDiscipline::IntervalPitchMatching)
@@ -139,40 +141,46 @@ impl PerceptualProfile {
 
     // --- Incremental update ---
 
-    /// Add a single metric point for the given mode.
-    /// For comparison modes, `is_correct` filters: only correct answers contribute.
-    /// For matching modes, all answers contribute (pass `true`).
+    /// Add a single metric point for the given discipline.
+    /// For discrimination disciplines, `is_correct` filters: only correct answers contribute.
+    /// For matching disciplines, all answers contribute (pass `true`).
     pub fn add_point(
         &mut self,
-        mode: TrainingDiscipline,
+        discipline: TrainingDiscipline,
         point: MetricPoint<Cents>,
         is_correct: bool,
     ) {
         if !is_correct {
             return;
         }
-        let config = mode.config();
-        let stats = self.modes.get_mut(&mode).expect("all modes initialized");
+        let config = discipline.config();
+        let stats = self
+            .disciplines
+            .get_mut(&discipline)
+            .expect("all disciplines initialized");
         stats.add_point(point, config);
     }
 
     // --- Batch operations ---
 
-    /// Rebuild all modes from pre-sorted metric points.
+    /// Rebuild all disciplines from pre-sorted metric points.
     pub fn rebuild_all(&mut self, points: HashMap<TrainingDiscipline, Vec<MetricPoint<Cents>>>) {
-        for mode in TrainingDiscipline::ALL {
-            let stats = self.modes.get_mut(&mode).expect("all modes initialized");
-            if let Some(mode_points) = points.get(&mode) {
-                stats.rebuild(mode_points.clone(), mode.config());
+        for discipline in TrainingDiscipline::ALL {
+            let stats = self
+                .disciplines
+                .get_mut(&discipline)
+                .expect("all disciplines initialized");
+            if let Some(discipline_points) = points.get(&discipline) {
+                stats.rebuild(discipline_points.clone(), discipline.config());
             } else {
                 stats.reset();
             }
         }
     }
 
-    /// Reset all modes to empty state.
+    /// Reset all disciplines to empty state.
     pub fn reset_all(&mut self) {
-        for stats in self.modes.values_mut() {
+        for stats in self.disciplines.values_mut() {
             stats.reset();
         }
     }

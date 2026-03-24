@@ -1,6 +1,6 @@
 use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 
-/// The four independent training modes tracked by the app.
+/// The four independent training disciplines tracked by the app.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TrainingDiscipline {
     UnisonPitchDiscrimination,
@@ -9,7 +9,7 @@ pub enum TrainingDiscipline {
     IntervalPitchMatching,
 }
 
-/// Per-mode configuration constants.
+/// Per-discipline configuration constants.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TrainingDisciplineConfig {
     pub display_name: &'static str,
@@ -19,7 +19,7 @@ pub struct TrainingDisciplineConfig {
     pub session_gap_secs: f64,
 }
 
-/// Whether a training mode has accumulated any data yet.
+/// Whether a training discipline has accumulated any data yet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TrainingDisciplineState {
     NoData,
@@ -29,32 +29,32 @@ pub enum TrainingDisciplineState {
 const EWMA_HALFLIFE_SECS: f64 = 604_800.0; // 7 days
 const SESSION_GAP_SECS: f64 = 1_800.0; // 30 minutes
 
-static UNISON_PITCH_COMPARISON_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
-    display_name: "training-mode-hear-compare-single",
+static UNISON_PITCH_DISCRIMINATION_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
+    display_name: "training-discipline-hear-discriminate-single",
     unit_label: "cents",
     optimal_baseline: 8.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
 };
 
-static INTERVAL_PITCH_COMPARISON_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
-    display_name: "training-mode-hear-compare-intervals",
+static INTERVAL_PITCH_DISCRIMINATION_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
+    display_name: "training-discipline-hear-discriminate-intervals",
     unit_label: "cents",
     optimal_baseline: 12.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
 };
 
-static UNISON_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
-    display_name: "training-mode-tune-match-single",
+static UNISON_PITCH_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
+    display_name: "training-discipline-tune-match-single",
     unit_label: "cents",
     optimal_baseline: 5.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
 };
 
-static INTERVAL_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
-    display_name: "training-mode-tune-match-intervals",
+static INTERVAL_PITCH_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
+    display_name: "training-discipline-tune-match-intervals",
     unit_label: "cents",
     optimal_baseline: 8.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
@@ -62,7 +62,7 @@ static INTERVAL_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineCo
 };
 
 impl TrainingDiscipline {
-    /// All four training mode variants.
+    /// All four training discipline variants.
     pub const ALL: [TrainingDiscipline; 4] = [
         TrainingDiscipline::UnisonPitchDiscrimination,
         TrainingDiscipline::IntervalPitchDiscrimination,
@@ -70,21 +70,23 @@ impl TrainingDiscipline {
         TrainingDiscipline::IntervalPitchMatching,
     ];
 
-    /// Returns the static configuration for this training mode.
+    /// Returns the static configuration for this training discipline.
     pub fn config(&self) -> &'static TrainingDisciplineConfig {
         match self {
-            TrainingDiscipline::UnisonPitchDiscrimination => &UNISON_PITCH_COMPARISON_CONFIG,
-            TrainingDiscipline::IntervalPitchDiscrimination => &INTERVAL_PITCH_COMPARISON_CONFIG,
-            TrainingDiscipline::UnisonPitchMatching => &UNISON_MATCHING_CONFIG,
-            TrainingDiscipline::IntervalPitchMatching => &INTERVAL_MATCHING_CONFIG,
+            TrainingDiscipline::UnisonPitchDiscrimination => &UNISON_PITCH_DISCRIMINATION_CONFIG,
+            TrainingDiscipline::IntervalPitchDiscrimination => {
+                &INTERVAL_PITCH_DISCRIMINATION_CONFIG
+            }
+            TrainingDiscipline::UnisonPitchMatching => &UNISON_PITCH_MATCHING_CONFIG,
+            TrainingDiscipline::IntervalPitchMatching => &INTERVAL_PITCH_MATCHING_CONFIG,
         }
     }
 
-    /// Extracts the metric (absolute cent offset) from a comparison record
-    /// if this is a comparison mode and the record's interval matches.
+    /// Extracts the metric (absolute cent offset) from a discrimination record
+    /// if this is a discrimination discipline and the record's interval matches.
     ///
-    /// Returns `None` for matching modes (use `extract_matching_metric` instead).
-    /// Unison modes match interval == 0; interval modes match interval != 0.
+    /// Returns `None` for matching disciplines (use `extract_matching_metric` instead).
+    /// Unison disciplines match interval == 0; interval disciplines match interval != 0.
     pub fn extract_comparison_metric(&self, record: &PitchDiscriminationRecord) -> Option<f64> {
         match self {
             TrainingDiscipline::UnisonPitchDiscrimination
@@ -100,10 +102,10 @@ impl TrainingDiscipline {
     }
 
     /// Extracts the metric (absolute user cent error) from a pitch matching record
-    /// if this is a matching mode and the record's interval matches.
+    /// if this is a matching discipline and the record's interval matches.
     ///
-    /// Returns `None` for comparison modes (use `extract_comparison_metric` instead).
-    /// Unison modes match interval == 0; interval modes match interval != 0.
+    /// Returns `None` for discrimination disciplines (use `extract_comparison_metric` instead).
+    /// Unison disciplines match interval == 0; interval disciplines match interval != 0.
     pub fn extract_matching_metric(&self, record: &PitchMatchingRecord) -> Option<f64> {
         match self {
             TrainingDiscipline::UnisonPitchMatching | TrainingDiscipline::IntervalPitchMatching => {
@@ -134,9 +136,12 @@ mod tests {
     // --- Config tests (AC: 1, 2, 3, 4, 8, 9) ---
 
     #[test]
-    fn test_unison_comparison_config() {
+    fn test_unison_discrimination_config() {
         let cfg = TrainingDiscipline::UnisonPitchDiscrimination.config();
-        assert_eq!(cfg.display_name, "training-mode-hear-compare-single");
+        assert_eq!(
+            cfg.display_name,
+            "training-discipline-hear-discriminate-single"
+        );
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 8.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
@@ -144,9 +149,12 @@ mod tests {
     }
 
     #[test]
-    fn test_interval_comparison_config() {
+    fn test_interval_discrimination_config() {
         let cfg = TrainingDiscipline::IntervalPitchDiscrimination.config();
-        assert_eq!(cfg.display_name, "training-mode-hear-compare-intervals");
+        assert_eq!(
+            cfg.display_name,
+            "training-discipline-hear-discriminate-intervals"
+        );
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 12.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
@@ -156,7 +164,7 @@ mod tests {
     #[test]
     fn test_unison_matching_config() {
         let cfg = TrainingDiscipline::UnisonPitchMatching.config();
-        assert_eq!(cfg.display_name, "training-mode-tune-match-single");
+        assert_eq!(cfg.display_name, "training-discipline-tune-match-single");
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 5.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
@@ -166,7 +174,7 @@ mod tests {
     #[test]
     fn test_interval_matching_config() {
         let cfg = TrainingDiscipline::IntervalPitchMatching.config();
-        assert_eq!(cfg.display_name, "training-mode-tune-match-intervals");
+        assert_eq!(cfg.display_name, "training-discipline-tune-match-intervals");
         assert_eq!(cfg.unit_label, "cents");
         assert_eq!(cfg.optimal_baseline, 8.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);

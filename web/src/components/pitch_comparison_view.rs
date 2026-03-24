@@ -128,8 +128,8 @@ pub fn PitchComparisonView() -> impl IntoView {
         }
     });
 
-    // Determine TrainingMode from intervals
-    let training_mode = if is_interval_mode {
+    // Determine TrainingDiscipline from intervals
+    let training_discipline = if is_interval_mode {
         TrainingDiscipline::IntervalPitchDiscrimination
     } else {
         TrainingDiscipline::UnisonPitchDiscrimination
@@ -248,7 +248,7 @@ pub fn PitchComparisonView() -> impl IntoView {
                 latest_cent_difference.set(s.last_cent_difference());
                 stats_session_best.set(s.session_best_cent_difference());
             }
-            stats_trend.set(profile.borrow().trend(training_mode));
+            stats_trend.set(profile.borrow().trend(training_discipline));
 
             sync();
         })

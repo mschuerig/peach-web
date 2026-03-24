@@ -204,10 +204,10 @@ chart-annotation-records = { $count } records
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records
 
 ## Domain - Training Modes
-training-mode-hear-compare-single = Hear & Compare – Single Notes
-training-mode-hear-compare-intervals = Hear & Compare – Intervals
-training-mode-tune-match-single = Tune & Match – Single Notes
-training-mode-tune-match-intervals = Tune & Match – Intervals
+training-discipline-hear-discriminate-single = Hear & Compare – Single Notes
+training-discipline-hear-discriminate-intervals = Hear & Compare – Intervals
+training-discipline-tune-match-single = Tune & Match – Single Notes
+training-discipline-tune-match-intervals = Tune & Match – Intervals
 
 ## Domain - Intervals
 interval-prime = Prime

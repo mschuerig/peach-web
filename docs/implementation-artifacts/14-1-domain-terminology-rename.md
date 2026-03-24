@@ -1,6 +1,6 @@
 # Story 14.1: Domain Crate Terminology Rename
 
-Status: review
+Status: done
 
 ## Story
 

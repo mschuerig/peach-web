@@ -8,7 +8,7 @@ pub mod session;
 pub mod strategy;
 pub mod training;
 pub mod training_discipline;
-pub mod training_mode_statistics;
+pub mod training_discipline_statistics;
 pub mod trend;
 pub mod tuning;
 pub mod types;
@@ -33,7 +33,7 @@ pub use training::*;
 pub use training_discipline::{
     TrainingDiscipline, TrainingDisciplineConfig, TrainingDisciplineState,
 };
-pub use training_mode_statistics::TrainingDisciplineStatistics;
+pub use training_discipline_statistics::TrainingDisciplineStatistics;
 pub use trend::Trend;
 pub use tuning::TuningSystem;
 pub use types::*;
