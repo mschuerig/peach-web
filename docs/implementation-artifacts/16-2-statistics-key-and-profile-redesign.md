@@ -1,6 +1,6 @@
 # Story 16.2: StatisticsKey and Profile Redesign
 
-Status: review
+Status: done
 
 ## Story
 

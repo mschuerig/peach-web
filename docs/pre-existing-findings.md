@@ -37,3 +37,35 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Location:** `domain/src/welford.rs` — `mean()`
 - **Description:** `mean()` returns `0.0` when `count == 0` rather than `Option<f64>`. All current callers guard with `count > 0` checks, but the public API is a footgun for future callers.
 - **Recommendation:** Change return type to `Option<f64>`, or add a doc comment making the 0.0 contract explicit.
+
+### PEF-005: merged_statistics rebuilds from scratch on every query
+
+- **Status:** OPEN
+- **Surfaced:** Story 16.2 code review (2026-03-24)
+- **Location:** `domain/src/profile.rs` — `merged_statistics()`
+- **Description:** `merged_statistics()` collects all metrics from requested keys, sorts O(n log n), and rebuilds Welford/EWMA/trend from scratch on every call. `trend()`, `current_ewma()`, and `discipline_statistics()` all invoke it for multi-key (rhythm) disciplines. No caching.
+- **Recommendation:** Cache merged results and invalidate on `add_point`. Matters once rhythm disciplines are actively recording data.
+
+### PEF-006: merged_statistics accepts cross-discipline key slices
+
+- **Status:** OPEN
+- **Surfaced:** Story 16.2 code review (2026-03-24)
+- **Location:** `domain/src/profile.rs` — `merged_statistics()`
+- **Description:** The public `merged_statistics` API accepts arbitrary `&[StatisticsKey]`. If keys from different disciplines are passed, the config from whichever key has data first wins, producing wrong EWMA/trend parameters. No current caller does this.
+- **Recommendation:** Add a `debug_assert!` that all keys share the same discipline, or make the method `pub(crate)`.
+
+### PEF-007: New statistics types lack Serialize/Deserialize
+
+- **Status:** OPEN
+- **Surfaced:** Story 16.2 code review (2026-03-24)
+- **Location:** `domain/src/statistics_key.rs`, `domain/src/types/tempo_range.rs`, `domain/src/types/rhythm_direction.rs`
+- **Description:** `StatisticsKey`, `TempoRange`, and `RhythmDirection` have no serde derives. Not needed today (profile is rebuilt from records at hydration), but constrains future persistence strategies. `StatisticsKey` as a HashMap key would need a custom `Serialize` impl or string-based representation.
+- **Recommendation:** Add serde derives when a persistence story requires it. No action needed now.
+
+### PEF-008: rebuild_all silently drops mismatched keys
+
+- **Status:** OPEN
+- **Surfaced:** Story 16.2 code review (2026-03-24)
+- **Location:** `domain/src/profile.rs` — `rebuild_all()`
+- **Description:** `rebuild_all` iterates only valid discipline-key combinations. Any entries in the input HashMap with keys that don't match a valid combination are silently ignored. All current callers construct keys correctly.
+- **Recommendation:** Log or `debug_assert!` if input contains unrecognized keys.

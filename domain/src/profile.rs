@@ -36,7 +36,16 @@ impl PerceptualProfile {
     // --- Per-key query API ---
 
     /// Direct access to statistics for a specific key.
+    ///
+    /// # Panics
+    /// Panics in debug builds if the key does not match its discipline's key expansion
+    /// (e.g., `Pitch` wrapping a rhythm discipline). In release builds, returns the
+    /// entry or panics if the key was not initialized.
     pub fn statistics_for_key(&self, key: &StatisticsKey) -> &TrainingDisciplineStatistics {
+        debug_assert!(
+            self.entries.contains_key(key),
+            "StatisticsKey {key:?} not found — possible discipline/variant mismatch"
+        );
         self.entries.get(key).expect("all keys initialized")
     }
 
@@ -77,12 +86,8 @@ impl PerceptualProfile {
             return None;
         }
 
-        // Sort chronologically
-        all_metrics.sort_by(|a, b| {
-            a.timestamp
-                .partial_cmp(&b.timestamp)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        // Sort chronologically (total_cmp handles NaN deterministically)
+        all_metrics.sort_by(|a, b| a.timestamp.total_cmp(&b.timestamp));
 
         // Rebuild statistics from the merged, sorted metrics
         let config = config.expect("at least one key had metrics");
@@ -168,6 +173,10 @@ impl PerceptualProfile {
         if !is_correct {
             return;
         }
+        debug_assert!(
+            self.entries.contains_key(&key),
+            "StatisticsKey {key:?} not found — possible discipline/variant mismatch"
+        );
         let discipline = match key {
             StatisticsKey::Pitch(d) | StatisticsKey::Rhythm(d, _, _) => d,
         };

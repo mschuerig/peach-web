@@ -13,7 +13,11 @@ impl RhythmDirection {
 
     /// Classify a timing offset (in milliseconds) into a direction.
     /// Negative → Early, zero or positive → Late.
+    ///
+    /// # Panics
+    /// Debug-asserts that `offset_ms` is not NaN.
     pub fn from_offset_ms(offset_ms: f64) -> Self {
+        debug_assert!(!offset_ms.is_nan(), "offset_ms must not be NaN");
         if offset_ms < 0.0 {
             RhythmDirection::Early
         } else {

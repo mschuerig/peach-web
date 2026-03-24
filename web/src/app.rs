@@ -191,11 +191,7 @@ pub fn App() -> impl IntoView {
 
                     // Sort each key's points by timestamp
                     for points in key_points.values_mut() {
-                        points.sort_by(|a, b| {
-                            a.timestamp
-                                .partial_cmp(&b.timestamp)
-                                .unwrap_or(std::cmp::Ordering::Equal)
-                        });
+                        points.sort_by(|a, b| a.timestamp.total_cmp(&b.timestamp));
                     }
 
                     profile_for_hydration.borrow_mut().rebuild_all(key_points);
