@@ -13,7 +13,7 @@ pub const COLD_START_DIFFICULTY: f64 = 100.0;
 /// Discipline-aware perceptual profile — single source of truth for all per-discipline statistics.
 ///
 /// Uses `StatisticsKey` as map key: pitch disciplines have 1 key each,
-/// rhythm disciplines expand to 6 keys (3 tempo ranges × 2 directions).
+/// rhythm disciplines expand to 9 keys (3 tempo ranges × 3 directions).
 /// Aligns with iOS `PerceptualProfile` post-Epic-44 architecture.
 #[derive(Clone, Debug)]
 pub struct PerceptualProfile {
@@ -234,10 +234,10 @@ mod tests {
     }
 
     #[test]
-    fn test_new_profile_has_16_entries() {
+    fn test_new_profile_has_22_entries() {
         let profile = PerceptualProfile::new();
-        // 4 pitch + 12 rhythm (2 × 3 × 2)
-        assert_eq!(profile.entries.len(), 16);
+        // 4 pitch + 18 rhythm (2 × 3 × 3)
+        assert_eq!(profile.entries.len(), 22);
     }
 
     #[test]

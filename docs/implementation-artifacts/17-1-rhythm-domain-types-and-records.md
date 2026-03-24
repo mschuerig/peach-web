@@ -1,6 +1,6 @@
 # Story 17.1: Rhythm Domain Types, Records, and Observer Ports
 
-Status: review
+Status: done
 
 ## Story
 
@@ -29,7 +29,7 @@ This story adds the rhythm-specific domain types that the offset detection sessi
 
 2. **AC2 — CompletedRhythmOffsetDetectionTrial:**
    - Fields: `tempo: TempoBPM`, `offset: RhythmOffset`, `is_correct: bool`, `timestamp: String`
-   - Method to extract metric: `metric_value(tempo: TempoBPM) -> f64` returns `offset.percentage_of_sixteenth(tempo)`
+   - Method to extract metric: `metric_value() -> f64` returns `offset.percentage_of_sixteenth(self.tempo)` (uses stored tempo)
 
 3. **AC3 — RhythmOffsetDetectionRecord:** Flat persistence record:
    - `tempo_bpm: u16`, `offset_ms: f64`, `is_correct: bool`, `timestamp: String`

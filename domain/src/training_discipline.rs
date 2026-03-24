@@ -1,4 +1,6 @@
-use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord, RhythmOffsetDetectionRecord};
+use crate::records::{
+    PitchDiscriminationRecord, PitchMatchingRecord, RhythmOffsetDetectionRecord, TrainingRecord,
+};
 use crate::statistics_key::StatisticsKey;
 use crate::types::{RhythmDirection, RhythmOffset, TempoBPM, TempoRange};
 
@@ -154,6 +156,9 @@ impl TrainingDiscipline {
         match self {
             TrainingDiscipline::RhythmOffsetDetection => {
                 let tempo = TempoBPM::try_new(record.tempo_bpm).ok()?;
+                if !record.offset_ms.is_finite() {
+                    return None;
+                }
                 let offset = RhythmOffset::new(record.offset_ms);
                 Some(offset.percentage_of_sixteenth(tempo))
             }
@@ -172,11 +177,33 @@ impl TrainingDiscipline {
         match self {
             TrainingDiscipline::RhythmOffsetDetection => {
                 let tempo = TempoBPM::try_new(record.tempo_bpm).ok()?;
+                if !record.offset_ms.is_finite() {
+                    return None;
+                }
                 let direction = RhythmDirection::from_offset_ms(record.offset_ms);
                 let tempo_range = TempoRange::from_bpm(tempo);
                 Some(StatisticsKey::Rhythm(*self, tempo_range, direction))
             }
             _ => None,
+        }
+    }
+
+    /// Extracts the metric value and corresponding `StatisticsKey` from any training record.
+    ///
+    /// Returns `None` if this discipline does not match the record type/content.
+    pub fn extract_metric_and_key(&self, record: &TrainingRecord) -> Option<(f64, StatisticsKey)> {
+        match record {
+            TrainingRecord::PitchDiscrimination(r) => self
+                .extract_discrimination_metric(r)
+                .map(|m| (m, StatisticsKey::Pitch(*self))),
+            TrainingRecord::PitchMatching(r) => self
+                .extract_matching_metric(r)
+                .map(|m| (m, StatisticsKey::Pitch(*self))),
+            TrainingRecord::RhythmOffsetDetection(r) => {
+                let metric = self.extract_rhythm_offset_metric(r)?;
+                let key = self.rhythm_offset_statistics_key(r)?;
+                Some((metric, key))
+            }
         }
     }
 
@@ -210,10 +237,10 @@ impl TrainingDiscipline {
     }
 
     /// Returns all statistics keys for this discipline.
-    /// Pitch disciplines: 1 key. Rhythm disciplines: 6 keys (3 tempo ranges × 2 directions).
+    /// Pitch disciplines: 1 key. Rhythm disciplines: 9 keys (3 tempo ranges × 3 directions).
     pub fn statistics_keys(&self) -> Vec<StatisticsKey> {
         if self.is_rhythm() {
-            let mut keys = Vec::with_capacity(6);
+            let mut keys = Vec::with_capacity(9);
             for tempo_range in TempoRange::ALL {
                 for direction in RhythmDirection::ALL {
                     keys.push(StatisticsKey::Rhythm(*self, tempo_range, direction));
@@ -612,9 +639,9 @@ mod tests {
     }
 
     #[test]
-    fn test_rhythm_discipline_has_six_keys() {
+    fn test_rhythm_discipline_has_nine_keys() {
         let keys = TrainingDiscipline::RhythmOffsetDetection.statistics_keys();
-        assert_eq!(keys.len(), 6);
+        assert_eq!(keys.len(), 9);
         // Verify all combinations present
         for tempo in TempoRange::ALL {
             for dir in RhythmDirection::ALL {
@@ -640,12 +667,12 @@ mod tests {
     }
 
     #[test]
-    fn test_all_rhythm_disciplines_have_six_keys() {
+    fn test_all_rhythm_disciplines_have_nine_keys() {
         for discipline in [
             TrainingDiscipline::RhythmOffsetDetection,
             TrainingDiscipline::ContinuousRhythmMatching,
         ] {
-            assert_eq!(discipline.statistics_keys().len(), 6, "{discipline:?}");
+            assert_eq!(discipline.statistics_keys().len(), 9, "{discipline:?}");
         }
     }
 

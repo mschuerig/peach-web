@@ -188,16 +188,7 @@ impl ProgressTimeline {
         for record in records {
             let ts = parse_iso8601_to_epoch(record.timestamp());
             for discipline in TrainingDiscipline::ALL {
-                let metric = match record {
-                    TrainingRecord::PitchDiscrimination(r) => {
-                        discipline.extract_discrimination_metric(r)
-                    }
-                    TrainingRecord::PitchMatching(r) => discipline.extract_matching_metric(r),
-                    TrainingRecord::RhythmOffsetDetection(r) => {
-                        discipline.extract_rhythm_offset_metric(r)
-                    }
-                };
-                if let Some(m) = metric {
+                if let Some((m, _key)) = discipline.extract_metric_and_key(record) {
                     points.push((ts, m, discipline));
                 }
             }
@@ -266,16 +257,7 @@ impl ProgressTimeline {
     pub fn add_record(&mut self, record: &TrainingRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(record.timestamp());
         for discipline in TrainingDiscipline::ALL {
-            let metric = match record {
-                TrainingRecord::PitchDiscrimination(r) => {
-                    discipline.extract_discrimination_metric(r)
-                }
-                TrainingRecord::PitchMatching(r) => discipline.extract_matching_metric(r),
-                TrainingRecord::RhythmOffsetDetection(r) => {
-                    discipline.extract_rhythm_offset_metric(r)
-                }
-            };
-            if let Some(m) = metric
+            if let Some((m, _key)) = discipline.extract_metric_and_key(record)
                 && let Some(state) = self.disciplines.get_mut(&discipline)
             {
                 state.add_point(ts, m, start_of_today);

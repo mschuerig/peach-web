@@ -12,9 +12,9 @@ impl RhythmOffset {
     /// Create a new RhythmOffset from a signed millisecond value.
     ///
     /// # Panics
-    /// Debug-asserts that `ms` is not NaN.
+    /// Panics if `ms` is NaN or infinite.
     pub fn new(ms: f64) -> Self {
-        debug_assert!(!ms.is_nan(), "offset_ms must not be NaN");
+        assert!(ms.is_finite(), "offset_ms must be finite (got {ms})");
         Self { ms }
     }
 
@@ -78,8 +78,26 @@ mod tests {
     }
 
     #[test]
-    fn test_direction_zero_is_late() {
-        assert_eq!(RhythmOffset::new(0.0).direction(), RhythmDirection::Late);
+    fn test_direction_zero_is_on_beat() {
+        assert_eq!(RhythmOffset::new(0.0).direction(), RhythmDirection::OnBeat);
+    }
+
+    #[test]
+    #[should_panic(expected = "offset_ms must be finite")]
+    fn test_nan_panics() {
+        RhythmOffset::new(f64::NAN);
+    }
+
+    #[test]
+    #[should_panic(expected = "offset_ms must be finite")]
+    fn test_infinity_panics() {
+        RhythmOffset::new(f64::INFINITY);
+    }
+
+    #[test]
+    #[should_panic(expected = "offset_ms must be finite")]
+    fn test_neg_infinity_panics() {
+        RhythmOffset::new(f64::NEG_INFINITY);
     }
 
     #[test]

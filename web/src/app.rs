@@ -146,29 +146,20 @@ pub fn App() -> impl IntoView {
                     let mut key_points: HashMap<StatisticsKey, Vec<MetricPoint>> = HashMap::new();
 
                     for record in &all_records {
-                        // Skip incorrect discrimination records before entering discipline loop
+                        // Skip incorrect discrimination records
                         if let domain::TrainingRecord::PitchDiscrimination(r) = record
                             && !r.is_correct
                         {
                             continue;
                         }
+                        // Skip incorrect rhythm offset detection records
+                        if let domain::TrainingRecord::RhythmOffsetDetection(r) = record
+                            && !r.is_correct
+                        {
+                            continue;
+                        }
                         for discipline in TrainingDiscipline::ALL {
-                            if discipline.is_rhythm() {
-                                continue; // rhythm hydration not yet implemented
-                            }
-                            let metric = match record {
-                                domain::TrainingRecord::PitchDiscrimination(r) => {
-                                    discipline.extract_discrimination_metric(r)
-                                }
-                                domain::TrainingRecord::PitchMatching(r) => {
-                                    discipline.extract_matching_metric(r)
-                                }
-                                domain::TrainingRecord::RhythmOffsetDetection(r) => {
-                                    discipline.extract_rhythm_offset_metric(r)
-                                }
-                            };
-                            if let Some(m) = metric {
-                                let key = StatisticsKey::Pitch(discipline);
+                            if let Some((m, key)) = discipline.extract_metric_and_key(record) {
                                 let ts = parse_iso8601_to_epoch(record.timestamp());
                                 key_points
                                     .entry(key)

@@ -11,6 +11,7 @@ pub struct CompletedRhythmOffsetDetectionTrial {
 
 impl CompletedRhythmOffsetDetectionTrial {
     pub fn new(tempo: TempoBPM, offset: RhythmOffset, is_correct: bool, timestamp: String) -> Self {
+        assert!(!timestamp.is_empty(), "timestamp must not be empty");
         Self {
             tempo,
             offset,
@@ -92,5 +93,16 @@ mod tests {
         // 12.5ms at 120 BPM: sixteenth = 125ms → 10.0%
         let trial = make_trial(120, 12.5, true);
         assert!((trial.metric_value() - 10.0).abs() < 1e-10);
+    }
+
+    #[test]
+    #[should_panic(expected = "timestamp must not be empty")]
+    fn test_empty_timestamp_panics() {
+        CompletedRhythmOffsetDetectionTrial::new(
+            TempoBPM::new(80),
+            RhythmOffset::new(0.0),
+            true,
+            String::new(),
+        );
     }
 }

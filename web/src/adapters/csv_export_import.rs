@@ -114,7 +114,7 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                 ));
             }
             TrainingRecord::RhythmOffsetDetection(_) => {
-                // Rhythm CSV export not yet implemented
+                log::warn!("Rhythm offset detection records are not yet included in CSV export");
             }
         }
     }
@@ -374,7 +374,9 @@ pub async fn import_merge(
                 existing_pm_ts.insert(truncate_timestamp_to_second(&r.timestamp));
             }
             TrainingRecord::RhythmOffsetDetection(_) => {
-                // Rhythm import deduplication not yet implemented
+                log::warn!(
+                    "Rhythm offset detection records are not yet included in CSV import deduplication"
+                );
             }
         }
     }
