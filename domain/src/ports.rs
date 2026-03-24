@@ -1,10 +1,13 @@
+use std::collections::HashSet;
 use std::time::Duration;
 
 use crate::records::PitchDiscriminationRecord;
 use crate::records::PitchMatchingRecord;
 use crate::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial};
 use crate::tuning::TuningSystem;
-use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteDuration, NoteRange};
+use crate::types::{
+    AmplitudeDB, Frequency, MIDIVelocity, NoteDuration, NoteRange, StepPosition, TempoBPM,
+};
 
 /// Error type for audio engine operations.
 #[derive(Debug, thiserror::Error)]
@@ -53,6 +56,8 @@ pub trait UserSettings {
     fn tuning_system(&self) -> TuningSystem;
     fn vary_loudness(&self) -> f64; // 0.0-1.0 (UnitInterval range)
     fn note_gap(&self) -> Duration;
+    fn tempo_bpm(&self) -> TempoBPM;
+    fn enabled_gap_positions(&self) -> HashSet<StepPosition>;
 }
 
 /// Error type for storage operations (IndexedDB, localStorage).

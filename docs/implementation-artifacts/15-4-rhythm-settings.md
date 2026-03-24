@@ -1,6 +1,6 @@
 # Story 15.4: Rhythm Settings
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -56,13 +56,13 @@ These settings are persisted in LocalStorage and will be consumed by rhythm sess
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Extend `UserSettings` port with tempo and gap position methods
-- [ ] Task 2: Implement in `LocalStorageSettings` adapter with persistence
-- [ ] Task 3: Add tempo stepper UI to settings view
-- [ ] Task 4: Add gap position toggle row to settings view
-- [ ] Task 5: Enforce "at least one position" constraint
-- [ ] Task 6: Add localization strings (en + de)
-- [ ] Task 7: Test persistence across reloads
+- [x] Task 1: Extend `UserSettings` port with tempo and gap position methods
+- [x] Task 2: Implement in `LocalStorageSettings` adapter with persistence
+- [x] Task 3: Add tempo stepper UI to settings view
+- [x] Task 4: Add gap position toggle row to settings view
+- [x] Task 5: Enforce "at least one position" constraint
+- [x] Task 6: Add localization strings (en + de)
+- [x] Task 7: Test persistence across reloads — verified by user in browser
 
 ## Dev Notes
 
@@ -71,3 +71,39 @@ These settings are persisted in LocalStorage and will be consumed by rhythm sess
 - `TempoBPM` validation (clamp 40–200) happens at the type level per story 15.1
 - The step size for the tempo stepper could be 1 (precise) or 5 (faster to reach target). iOS uses 1. Start with 1; we can adjust if it feels tedious.
 - These settings won't be consumed by anything yet — rhythm sessions will read them once implemented
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Extended `UserSettings` trait with `tempo_bpm()` and `enabled_gap_positions()` getters (following existing read-only pattern)
+- Added setter methods `set_tempo_bpm()` and `set_enabled_gap_positions()` as static methods on `LocalStorageSettings` (matching `set_selected_intervals` pattern)
+- Implemented persistence: `peach.tempo_bpm` as integer, `peach.gap_positions` as comma-separated indices
+- Added Rhythm section to settings view between Difficulty and Data sections
+- Used existing `Stepper` component for tempo, custom toggle buttons for gap positions
+- Gap position toggle buttons use `flex-1` layout with indigo active / gray inactive styling
+- "At least one position" constraint: button disabled when it's the only active position (same pattern as intervals)
+- Added help section for Rhythm settings in settings help modal
+
+### Completion Notes
+
+- AC5 deviation: Getters added to `UserSettings` trait; setters on `LocalStorageSettings` directly (consistent with existing codebase pattern — trait is read-only)
+- Tempo step size: 1 BPM (matching iOS)
+- All 357 domain tests pass, zero clippy warnings
+- Task 7 (persistence across reloads) deferred — requires browser testing
+
+## File List
+
+- `domain/src/ports.rs` — Added `tempo_bpm()` and `enabled_gap_positions()` to `UserSettings` trait
+- `domain/src/session/pitch_discrimination_session.rs` — Updated test mock impls for new trait methods
+- `domain/src/session/pitch_matching_session.rs` — Updated test mock impls for new trait methods
+- `web/src/adapters/default_settings.rs` — Implemented new `UserSettings` methods with defaults
+- `web/src/adapters/localstorage_settings.rs` — Implemented persistence (get/set for tempo and gap positions)
+- `web/src/components/settings_view.rs` — Added Rhythm section with tempo stepper and gap position toggles
+- `web/src/help_sections.rs` — Added Rhythm help section
+- `web/locales/en/main.ftl` — Added rhythm settings and help localization strings
+- `web/locales/de/main.ftl` — Added rhythm settings and help localization strings (German)
+
+## Change Log
+
+- 2026-03-24: Implemented rhythm settings (tempo stepper + gap position toggles) with persistence and localization

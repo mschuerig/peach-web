@@ -18,7 +18,7 @@ use crate::adapters::sound_preview::SoundPreview;
 use crate::app::base_href;
 use crate::app::{AudioNeedsGesture, SoundFontLoadStatus, WorkletAssets, WorkletConnecting};
 use domain::ports::UserSettings;
-use domain::types::{DetunedMIDINote, Frequency, MIDINote, SoundSourceID};
+use domain::types::{DetunedMIDINote, Frequency, MIDINote, SoundSourceID, StepPosition, TempoBPM};
 use domain::{DirectedInterval, Direction, Interval, PerceptualProfile, TuningSystem};
 
 use super::help_content::HelpModal;
@@ -144,6 +144,12 @@ pub fn SettingsView() -> impl IntoView {
     let sf2_load_status: RwSignal<SoundFontLoadStatus> =
         use_context().expect("sf2_load_status not provided");
     let selected_intervals = RwSignal::new(LocalStorageSettings::get_selected_intervals());
+
+    // Rhythm settings
+    let tempo_bpm = RwSignal::new(settings.tempo_bpm().bpm());
+    let tempo_label =
+        Signal::derive(move || tr!("tempo-label", {"value" => tempo_bpm.get().to_string()}));
+    let gap_positions = RwSignal::new(LocalStorageSettings::get_enabled_gap_positions_static());
 
     // Reset training data
     let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
@@ -628,6 +634,82 @@ pub fn SettingsView() -> impl IntoView {
                     />
                 </SettingsRowDynamic>
             </SettingsSection>
+
+            // Rhythm section
+            <SettingsSection title=move_tr!("rhythm-section")>
+                <SettingsRowDynamic label=tempo_label>
+                    <Stepper
+                        label=move_tr!("tempo-aria")
+                        on_decrement=Callback::new(move |_| {
+                            let val = tempo_bpm.get();
+                            if val > 40 {
+                                let new_val = val - 1;
+                                tempo_bpm.set(new_val);
+                                LocalStorageSettings::set_tempo_bpm(TempoBPM::new(new_val));
+                            }
+                        })
+                        on_increment=Callback::new(move |_| {
+                            let val = tempo_bpm.get();
+                            if val < 200 {
+                                let new_val = val + 1;
+                                tempo_bpm.set(new_val);
+                                LocalStorageSettings::set_tempo_bpm(TempoBPM::new(new_val));
+                            }
+                        })
+                        decrement_disabled=Signal::derive(move || tempo_bpm.get() <= 40)
+                        increment_disabled=Signal::derive(move || tempo_bpm.get() >= 200)
+                    />
+                </SettingsRowDynamic>
+                <div class="px-4 py-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-900 dark:text-gray-100">{move_tr!("gap-positions-label")}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        {StepPosition::ALL.iter().map(|&pos| {
+                            let label = match pos {
+                                StepPosition::First => Signal::derive(move || tr!("gap-position-beat")),
+                                StepPosition::Second => Signal::derive(move || tr!("gap-position-e")),
+                                StepPosition::Third => Signal::derive(move || tr!("gap-position-and")),
+                                StepPosition::Fourth => Signal::derive(move || tr!("gap-position-a")),
+                            };
+                            view! {
+                                <button
+                                    on:click=move |_| {
+                                        gap_positions.update(|set| {
+                                            if set.contains(&pos) {
+                                                if set.len() > 1 {
+                                                    set.remove(&pos);
+                                                }
+                                            } else {
+                                                set.insert(pos);
+                                            }
+                                        });
+                                        LocalStorageSettings::set_enabled_gap_positions(&gap_positions.get());
+                                    }
+                                    disabled=move || {
+                                        let set = gap_positions.get();
+                                        set.len() == 1 && set.contains(&pos)
+                                    }
+                                    aria-pressed=move || gap_positions.get().contains(&pos).to_string()
+                                    aria-label=move || label.get()
+                                    class=move || {
+                                        if gap_positions.get().contains(&pos) {
+                                            "flex-1 min-h-[34px] rounded-lg text-sm font-semibold bg-indigo-600 text-white dark:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                        } else {
+                                            "flex-1 min-h-[34px] rounded-lg text-sm font-semibold bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                        }
+                                    }
+                                >
+                                    {move || label.get()}
+                                </button>
+                            }
+                        }).collect::<Vec<_>>()}
+                    </div>
+                </div>
+            </SettingsSection>
+            <p class="px-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {move_tr!("gap-positions-hint")}
+            </p>
 
             // Data section (AC: 1, 8)
             <SettingsSection title=move_tr!("data-section")>

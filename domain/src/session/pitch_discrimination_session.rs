@@ -381,7 +381,7 @@ fn calculate_target_amplitude(vary_loudness: f64) -> AmplitudeDB {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Direction, Interval, NoteRange};
+    use crate::types::{Direction, Interval, NoteRange, StepPosition, TempoBPM};
     use std::cell::Cell;
     use std::time::Duration;
 
@@ -466,6 +466,12 @@ mod tests {
         fn note_gap(&self) -> Duration {
             Duration::ZERO
         }
+        fn tempo_bpm(&self) -> TempoBPM {
+            TempoBPM::default()
+        }
+        fn enabled_gap_positions(&self) -> HashSet<StepPosition> {
+            HashSet::from([StepPosition::Fourth])
+        }
     }
 
     struct LoudnessTestSettings {
@@ -490,6 +496,12 @@ mod tests {
         }
         fn note_gap(&self) -> Duration {
             Duration::ZERO
+        }
+        fn tempo_bpm(&self) -> TempoBPM {
+            TempoBPM::default()
+        }
+        fn enabled_gap_positions(&self) -> HashSet<StepPosition> {
+            HashSet::from([StepPosition::Fourth])
         }
     }
 

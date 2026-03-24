@@ -18,6 +18,10 @@ pub static SETTINGS_HELP: &[HelpSection] = &[
         body_key: "help-difficulty-body",
     },
     HelpSection {
+        title_key: "help-rhythm-title",
+        body_key: "help-rhythm-body",
+    },
+    HelpSection {
         title_key: "help-data-title",
         body_key: "help-data-body",
     },

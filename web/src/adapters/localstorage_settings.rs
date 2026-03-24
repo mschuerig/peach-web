@@ -5,6 +5,7 @@ use domain::TuningSystem;
 use domain::ports::UserSettings;
 use domain::types::{
     DirectedInterval, Direction, Frequency, Interval, MIDINote, NoteDuration, NoteRange,
+    StepPosition, TempoBPM,
 };
 
 pub struct LocalStorageSettings;
@@ -53,6 +54,55 @@ impl LocalStorageSettings {
         }
     }
 
+    fn get_u16(key: &str, default: u16) -> u16 {
+        Self::get_string(key)
+            .and_then(|s| s.parse::<u16>().ok())
+            .unwrap_or(default)
+    }
+
+    /// Persist tempo BPM to localStorage.
+    pub fn set_tempo_bpm(tempo: TempoBPM) {
+        Self::set("peach.tempo_bpm", &tempo.bpm().to_string());
+    }
+
+    /// Persist enabled gap positions to localStorage as comma-separated indices.
+    pub fn set_enabled_gap_positions(positions: &HashSet<StepPosition>) {
+        let mut indices: Vec<u8> = positions
+            .iter()
+            .map(|p| match p {
+                StepPosition::First => 0,
+                StepPosition::Second => 1,
+                StepPosition::Third => 2,
+                StepPosition::Fourth => 3,
+            })
+            .collect();
+        indices.sort();
+        let csv = indices
+            .iter()
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        Self::set("peach.gap_positions", &csv);
+    }
+
+    /// Read enabled gap positions from localStorage. Returns {Fourth} if absent or invalid.
+    pub fn get_enabled_gap_positions_static() -> HashSet<StepPosition> {
+        Self::get_string("peach.gap_positions")
+            .map(|csv| {
+                csv.split(',')
+                    .filter_map(|s| match s.trim() {
+                        "0" => Some(StepPosition::First),
+                        "1" => Some(StepPosition::Second),
+                        "2" => Some(StepPosition::Third),
+                        "3" => Some(StepPosition::Fourth),
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>()
+            })
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| HashSet::from([StepPosition::Fourth]))
+    }
+
     /// Read selected intervals from localStorage. Returns default {Prime/Up} if absent or invalid.
     pub fn get_selected_intervals() -> HashSet<DirectedInterval> {
         Self::get_string("peach.intervals")
@@ -98,5 +148,13 @@ impl UserSettings for LocalStorageSettings {
 
     fn note_gap(&self) -> Duration {
         Duration::from_secs_f64(Self::get_f64("peach.note_gap", 0.0).clamp(0.0, 5.0))
+    }
+
+    fn tempo_bpm(&self) -> TempoBPM {
+        TempoBPM::try_new(Self::get_u16("peach.tempo_bpm", 80)).unwrap_or_default()
+    }
+
+    fn enabled_gap_positions(&self) -> HashSet<StepPosition> {
+        Self::get_enabled_gap_positions_static()
     }
 }

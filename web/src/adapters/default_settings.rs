@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use std::time::Duration;
 
 use domain::TuningSystem;
 use domain::ports::UserSettings;
-use domain::types::{Frequency, MIDINote, NoteDuration, NoteRange};
+use domain::types::{Frequency, MIDINote, NoteDuration, NoteRange, StepPosition, TempoBPM};
 
 #[allow(dead_code)] // Planned fallback for Settings view (Epic 2, story 2.1)
 pub struct DefaultSettings;
@@ -30,5 +31,13 @@ impl UserSettings for DefaultSettings {
 
     fn note_gap(&self) -> Duration {
         Duration::ZERO
+    }
+
+    fn tempo_bpm(&self) -> TempoBPM {
+        TempoBPM::default()
+    }
+
+    fn enabled_gap_positions(&self) -> HashSet<StepPosition> {
+        HashSet::from([StepPosition::Fourth])
     }
 }
