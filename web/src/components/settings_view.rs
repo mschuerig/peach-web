@@ -912,7 +912,7 @@ pub fn SettingsView() -> impl IntoView {
                                             tr!("import-dialog-warnings", {"count" => data.warnings.len().to_string()})
                                         };
                                         tr!("import-dialog-found", {
-                                            "comparisons" => data.pitch_discriminations.len().to_string(),
+                                            "discriminations" => data.pitch_discriminations.len().to_string(),
                                             "matchings" => data.pitch_matchings.len().to_string(),
                                             "warnings" => warnings_text,
                                         })

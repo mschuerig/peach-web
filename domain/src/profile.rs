@@ -71,10 +71,10 @@ impl PerceptualProfile {
 
     // --- Strategy-facing API (replaces old per-note aggregate) ---
 
-    /// Comparison mean for the given interval.
+    /// Discrimination mean for the given interval.
     /// Maps interval to the correct mode (unison if interval == 0, otherwise interval mode).
     /// Used by `KazezNoteStrategy` as warm-start difficulty fallback.
-    pub fn comparison_mean(&self, interval: u8) -> Option<Cents> {
+    pub fn discrimination_mean(&self, interval: u8) -> Option<Cents> {
         let mode = if interval == 0 {
             TrainingDiscipline::UnisonPitchDiscrimination
         } else {
@@ -235,7 +235,7 @@ mod tests {
     }
 
     #[test]
-    fn test_comparison_mean_unison() {
+    fn test_discrimination_mean_unison() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
@@ -247,26 +247,26 @@ mod tests {
             MetricPoint::new(2000.0, Cents::new(60.0)),
             true,
         );
-        let mean = profile.comparison_mean(0).unwrap();
+        let mean = profile.discrimination_mean(0).unwrap();
         assert!((mean.raw_value - 50.0).abs() < 1e-10);
     }
 
     #[test]
-    fn test_comparison_mean_interval() {
+    fn test_discrimination_mean_interval() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::IntervalPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(30.0)),
             true,
         );
-        let mean = profile.comparison_mean(7).unwrap();
+        let mean = profile.discrimination_mean(7).unwrap();
         assert!((mean.raw_value - 30.0).abs() < 1e-10);
     }
 
     #[test]
-    fn test_comparison_mean_no_data() {
+    fn test_discrimination_mean_no_data() {
         let profile = PerceptualProfile::new();
-        assert_eq!(profile.comparison_mean(0), None);
+        assert_eq!(profile.discrimination_mean(0), None);
     }
 
     #[test]

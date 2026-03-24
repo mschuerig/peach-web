@@ -128,7 +128,7 @@ pub fn App() -> impl IntoView {
 
                 let discrimination_records = match store.fetch_all_pitch_discriminations().await {
                     Ok(records) => {
-                        log::info!("Fetched {} comparison records", records.len());
+                        log::info!("Fetched {} discrimination records", records.len());
                         records
                     }
                     Err(e) => {
@@ -199,7 +199,7 @@ pub fn App() -> impl IntoView {
 
                     profile_for_hydration.borrow_mut().rebuild_all(mode_points);
                     log::info!(
-                        "Profile hydrated from {} comparison + {} matching records",
+                        "Profile hydrated from {} discrimination + {} matching records",
                         discrimination_records.len(),
                         matching_records.len()
                     );

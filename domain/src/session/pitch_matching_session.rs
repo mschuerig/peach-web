@@ -223,7 +223,7 @@ impl PitchMatchingSession {
         // Notify observers with panic isolation
         self.notify_observers(&completed);
 
-        // Profile update is handled by observers (bridge layer), consistent with comparison session.
+        // Profile update is handled by observers (bridge layer), consistent with discrimination session.
 
         self.show_feedback = true;
         self.last_completed = Some(completed);

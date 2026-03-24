@@ -26,7 +26,7 @@ use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
 use crate::components::nav_bar::{NavBar, NavIconButton};
-use crate::help_sections::DISCRIMINATION_HELP;
+use crate::help_sections::PITCH_DISCRIMINATION_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchDiscriminationObserver, UserSettings};
 use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
@@ -660,7 +660,7 @@ pub fn PitchDiscriminationView() -> impl IntoView {
                         break;
                     }
 
-                    // End feedback, generate next comparison
+                    // End feedback, generate next trial
                     if session.borrow().state() == PitchDiscriminationSessionState::ShowingFeedback
                     {
                         session.borrow_mut().on_feedback_finished();
@@ -723,7 +723,7 @@ pub fn PitchDiscriminationView() -> impl IntoView {
                 <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
                 <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
             </NavBar>
-            <HelpModal title=move_tr!("discrimination-help-title") sections=DISCRIMINATION_HELP is_open=is_help_open on_close=on_help_close />
+            <HelpModal title=move_tr!("discrimination-help-title") sections=PITCH_DISCRIMINATION_HELP is_open=is_help_open on_close=on_help_close />
 
             <AudioGateOverlay />
 

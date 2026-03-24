@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::tuning::TuningSystem;
 use crate::types::{Cents, DetunedMIDINote, MIDINote};
 
-/// A comparison challenge: a reference note and a detuned target note.
+/// A pitch discrimination trial: a reference note and a detuned target note.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PitchDiscriminationTrial {
     reference_note: MIDINote,
@@ -45,7 +45,7 @@ impl PitchDiscriminationTrial {
     }
 }
 
-/// A completed comparison with the user's answer and metadata.
+/// A completed pitch discrimination trial with the user's answer and metadata.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CompletedPitchDiscriminationTrial {
     pitch_discrimination_trial: PitchDiscriminationTrial,

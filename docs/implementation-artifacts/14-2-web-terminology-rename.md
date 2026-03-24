@@ -1,6 +1,6 @@
 # Story 14.2: Web Crate Terminology Rename
 
-Status: review
+Status: done
 
 ## Story
 

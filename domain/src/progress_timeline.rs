@@ -178,7 +178,7 @@ impl ProgressTimeline {
     /// Rebuild all per-discipline data from stored records.
     pub fn rebuild(
         &mut self,
-        comparison_records: &[PitchDiscriminationRecord],
+        discrimination_records: &[PitchDiscriminationRecord],
         matching_records: &[PitchMatchingRecord],
         start_of_today: f64,
     ) {
@@ -190,10 +190,10 @@ impl ProgressTimeline {
         // Collect (timestamp, metric, discipline) tuples from all records
         let mut points: Vec<(f64, f64, TrainingDiscipline)> = Vec::new();
 
-        for record in comparison_records {
+        for record in discrimination_records {
             let ts = parse_iso8601_to_epoch(&record.timestamp);
             for discipline in TrainingDiscipline::ALL {
-                if let Some(metric) = discipline.extract_comparison_metric(record) {
+                if let Some(metric) = discipline.extract_discrimination_metric(record) {
                     points.push((ts, metric, discipline));
                 }
             }
@@ -250,11 +250,11 @@ impl ProgressTimeline {
             .map(|b| b.stddev)
     }
 
-    /// Incrementally update from a new comparison record.
-    pub fn add_comparison(&mut self, record: &PitchDiscriminationRecord, start_of_today: f64) {
+    /// Incrementally update from a new pitch discrimination record.
+    pub fn add_discrimination(&mut self, record: &PitchDiscriminationRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
         for discipline in TrainingDiscipline::ALL {
-            if let Some(metric) = discipline.extract_comparison_metric(record)
+            if let Some(metric) = discipline.extract_discrimination_metric(record)
                 && let Some(state) = self.disciplines.get_mut(&discipline)
             {
                 state.add_point(ts, metric, start_of_today);
@@ -520,7 +520,7 @@ mod tests {
     use super::*;
     use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 
-    fn make_comparison(
+    fn make_discrimination(
         interval: u8,
         cent_offset: f64,
         timestamp: &str,
@@ -625,8 +625,8 @@ mod tests {
     fn test_rebuild_comparison_unison_active_others_nodata() {
         let mut tl = ProgressTimeline::new();
         let records = vec![
-            make_comparison(0, 15.0, "2026-03-06T11:00:00Z"),
-            make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
+            make_discrimination(0, 15.0, "2026-03-06T11:00:00Z"),
+            make_discrimination(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
         tl.rebuild(&records, &[], today_epoch());
 
@@ -653,8 +653,8 @@ mod tests {
         let mut tl = ProgressTimeline::new();
         let today = today_epoch();
         let records = vec![
-            make_comparison(0, 20.0, "2026-03-06T11:00:00Z"),
-            make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
+            make_discrimination(0, 20.0, "2026-03-06T11:00:00Z"),
+            make_discrimination(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -670,8 +670,8 @@ mod tests {
         let mut tl = ProgressTimeline::new();
         let today = today_epoch();
         let records = vec![
-            make_comparison(0, 20.0, "2026-03-06T09:00:00Z"),
-            make_comparison(0, 10.0, "2026-03-06T11:30:00Z"),
+            make_discrimination(0, 20.0, "2026-03-06T09:00:00Z"),
+            make_discrimination(0, 10.0, "2026-03-06T11:30:00Z"),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -695,9 +695,9 @@ mod tests {
         let ts_session = "2026-03-06T11:00:00Z";
 
         let records = vec![
-            make_comparison(0, 30.0, &ts_month),
-            make_comparison(0, 20.0, &ts_day),
-            make_comparison(0, 10.0, ts_session),
+            make_discrimination(0, 30.0, &ts_month),
+            make_discrimination(0, 20.0, &ts_day),
+            make_discrimination(0, 10.0, ts_session),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -719,8 +719,8 @@ mod tests {
         let ts2 = epoch_to_iso8601(three_days_ago_evening);
 
         let records = vec![
-            make_comparison(0, 20.0, &ts1),
-            make_comparison(0, 10.0, &ts2),
+            make_discrimination(0, 20.0, &ts1),
+            make_discrimination(0, 10.0, &ts2),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -741,8 +741,8 @@ mod tests {
         let ts2 = epoch_to_iso8601(two_days_ago);
 
         let records = vec![
-            make_comparison(0, 20.0, &ts1),
-            make_comparison(0, 10.0, &ts2),
+            make_discrimination(0, 20.0, &ts1),
+            make_discrimination(0, 10.0, &ts2),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -760,7 +760,10 @@ mod tests {
         let ts1 = "2026-01-10T12:00:00Z";
         let ts2 = "2026-01-20T15:00:00Z";
 
-        let records = vec![make_comparison(0, 30.0, ts1), make_comparison(0, 20.0, ts2)];
+        let records = vec![
+            make_discrimination(0, 30.0, ts1),
+            make_discrimination(0, 20.0, ts2),
+        ];
         tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
@@ -780,7 +783,10 @@ mod tests {
         let ts1 = "2026-01-15T12:00:00Z";
         let ts2 = "2026-02-15T12:00:00Z";
 
-        let records = vec![make_comparison(0, 30.0, ts1), make_comparison(0, 20.0, ts2)];
+        let records = vec![
+            make_discrimination(0, 30.0, ts1),
+            make_discrimination(0, 20.0, ts2),
+        ];
         tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
@@ -797,7 +803,7 @@ mod tests {
 
         let ts = "2026-02-25T12:00:00Z";
 
-        let records = vec![make_comparison(0, 20.0, ts)];
+        let records = vec![make_discrimination(0, 20.0, ts)];
         tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
@@ -819,9 +825,9 @@ mod tests {
         let today = today_epoch();
 
         let records = vec![
-            make_comparison(0, 10.0, "2026-03-06T11:00:00Z"),
-            make_comparison(0, 20.0, "2026-03-06T11:05:00Z"),
-            make_comparison(0, 30.0, "2026-03-06T11:10:00Z"),
+            make_discrimination(0, 10.0, "2026-03-06T11:00:00Z"),
+            make_discrimination(0, 20.0, "2026-03-06T11:05:00Z"),
+            make_discrimination(0, 30.0, "2026-03-06T11:10:00Z"),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -841,22 +847,22 @@ mod tests {
         let mut tl = ProgressTimeline::new();
         let today = today_epoch();
 
-        let records = vec![make_comparison(0, 20.0, "2026-03-06T11:00:00Z")];
+        let records = vec![make_discrimination(0, 20.0, "2026-03-06T11:00:00Z")];
         tl.rebuild(&records, &[], today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets[0].stddev, 0.0);
     }
 
-    // --- Incremental comparison update ---
+    // --- Incremental discrimination update ---
 
     #[test]
-    fn test_add_comparison_updates_correct_mode() {
+    fn test_add_discrimination_updates_correct_mode() {
         let mut tl = ProgressTimeline::new();
         let today = today_epoch();
 
-        let record = make_comparison(0, 15.0, "2026-03-06T11:55:00Z");
-        tl.add_comparison(&record, today);
+        let record = make_discrimination(0, 15.0, "2026-03-06T11:55:00Z");
+        tl.add_discrimination(&record, today);
 
         assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
         assert!(!tl.has_data(TrainingDiscipline::IntervalPitchDiscrimination));
@@ -886,17 +892,17 @@ mod tests {
         // Rebuild path
         let mut tl_rebuild = ProgressTimeline::new();
         let records = vec![
-            make_comparison(0, 10.0, ts1),
-            make_comparison(0, 20.0, ts2),
-            make_comparison(0, 30.0, ts3),
+            make_discrimination(0, 10.0, ts1),
+            make_discrimination(0, 20.0, ts2),
+            make_discrimination(0, 30.0, ts3),
         ];
         tl_rebuild.rebuild(&records, &[], today);
 
         // Incremental path
         let mut tl_incr = ProgressTimeline::new();
-        tl_incr.add_comparison(&make_comparison(0, 10.0, ts1), today);
-        tl_incr.add_comparison(&make_comparison(0, 20.0, ts2), today);
-        tl_incr.add_comparison(&make_comparison(0, 30.0, ts3), today);
+        tl_incr.add_discrimination(&make_discrimination(0, 10.0, ts1), today);
+        tl_incr.add_discrimination(&make_discrimination(0, 20.0, ts2), today);
+        tl_incr.add_discrimination(&make_discrimination(0, 30.0, ts3), today);
 
         let rebuild_buckets =
             tl_rebuild.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
@@ -926,17 +932,17 @@ mod tests {
         // Rebuild path
         let mut tl_rebuild = ProgressTimeline::new();
         let records = vec![
-            make_comparison(0, 30.0, ts_month),
-            make_comparison(0, 20.0, &ts_day),
-            make_comparison(0, 10.0, ts_session),
+            make_discrimination(0, 30.0, ts_month),
+            make_discrimination(0, 20.0, &ts_day),
+            make_discrimination(0, 10.0, ts_session),
         ];
         tl_rebuild.rebuild(&records, &[], today);
 
         // Incremental path
         let mut tl_incr = ProgressTimeline::new();
-        tl_incr.add_comparison(&make_comparison(0, 30.0, ts_month), today);
-        tl_incr.add_comparison(&make_comparison(0, 20.0, &ts_day), today);
-        tl_incr.add_comparison(&make_comparison(0, 10.0, ts_session), today);
+        tl_incr.add_discrimination(&make_discrimination(0, 30.0, ts_month), today);
+        tl_incr.add_discrimination(&make_discrimination(0, 20.0, &ts_day), today);
+        tl_incr.add_discrimination(&make_discrimination(0, 10.0, ts_session), today);
 
         let rebuild_buckets =
             tl_rebuild.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
@@ -976,8 +982,8 @@ mod tests {
         let today = today_epoch();
 
         let records = vec![
-            make_comparison(0, 15.0, "2026-03-06T11:00:00Z"),
-            make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
+            make_discrimination(0, 15.0, "2026-03-06T11:00:00Z"),
+            make_discrimination(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
         tl.rebuild(&records, &[], today);
         assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
@@ -1008,8 +1014,8 @@ mod tests {
         let today = today_epoch();
 
         let records = vec![
-            make_comparison(0, 20.0, "2026-01-15T12:00:00Z"),
-            make_comparison(0, 15.0, "2026-02-15T12:00:00Z"),
+            make_discrimination(0, 20.0, "2026-01-15T12:00:00Z"),
+            make_discrimination(0, 15.0, "2026-02-15T12:00:00Z"),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -1023,8 +1029,8 @@ mod tests {
         let today = today_epoch();
 
         let records = vec![
-            make_comparison(0, 20.0, "2026-03-06T10:00:00Z"),
-            make_comparison(0, 15.0, "2026-03-06T11:00:00Z"),
+            make_discrimination(0, 20.0, "2026-03-06T10:00:00Z"),
+            make_discrimination(0, 15.0, "2026-03-06T11:00:00Z"),
         ];
         tl.rebuild(&records, &[], today);
 
@@ -1040,9 +1046,9 @@ mod tests {
         let today = today_epoch();
 
         let records = vec![
-            make_comparison(0, 10.0, "2026-03-06T11:00:00Z"),
-            make_comparison(0, 20.0, "2026-03-06T11:05:00Z"),
-            make_comparison(0, 30.0, "2026-03-06T11:10:00Z"),
+            make_discrimination(0, 10.0, "2026-03-06T11:00:00Z"),
+            make_discrimination(0, 20.0, "2026-03-06T11:05:00Z"),
+            make_discrimination(0, 30.0, "2026-03-06T11:10:00Z"),
         ];
         tl.rebuild(&records, &[], today);
 

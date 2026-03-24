@@ -23,7 +23,7 @@ pub static SETTINGS_HELP: &[HelpSection] = &[
     },
 ];
 
-pub static DISCRIMINATION_HELP: &[HelpSection] = &[
+pub static PITCH_DISCRIMINATION_HELP: &[HelpSection] = &[
     HelpSection {
         title_key: "help-discrimination-goal-title",
         body_key: "help-discrimination-goal-body",

@@ -56,7 +56,7 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
     let pitch_discriminations = store
         .fetch_all_pitch_discriminations()
         .await
-        .map_err(|e| format!("Failed to fetch pitch comparisons: {e:?}"))?;
+        .map_err(|e| format!("Failed to fetch pitch discrimination records: {e:?}"))?;
     let pitch_matchings = store
         .fetch_all_pitch_matchings()
         .await
@@ -70,14 +70,14 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
 
     // Collect all records with timestamps for chronological sorting
     enum Record<'a> {
-        Comparison(&'a PitchDiscriminationRecord),
+        PitchDiscrimination(&'a PitchDiscriminationRecord),
         PitchMatching(&'a PitchMatchingRecord),
     }
 
     let mut all_records: Vec<Record> =
         Vec::with_capacity(pitch_discriminations.len() + pitch_matchings.len());
     for r in &pitch_discriminations {
-        all_records.push(Record::Comparison(r));
+        all_records.push(Record::PitchDiscrimination(r));
     }
     for r in &pitch_matchings {
         all_records.push(Record::PitchMatching(r));
@@ -85,11 +85,11 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
 
     all_records.sort_by(|a, b| {
         let ts_a = match a {
-            Record::Comparison(r) => &r.timestamp,
+            Record::PitchDiscrimination(r) => &r.timestamp,
             Record::PitchMatching(r) => &r.timestamp,
         };
         let ts_b = match b {
-            Record::Comparison(r) => &r.timestamp,
+            Record::PitchDiscrimination(r) => &r.timestamp,
             Record::PitchMatching(r) => &r.timestamp,
         };
         ts_a.cmp(ts_b)
@@ -100,7 +100,7 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
     // If user-provided string fields are added in the future, escaping must be added.
     for record in &all_records {
         match record {
-            Record::Comparison(r) => {
+            Record::PitchDiscrimination(r) => {
                 let interval_code = Interval::from_semitones(r.interval)
                     .ok()
                     .map(|i| i.csv_code())
@@ -242,7 +242,7 @@ fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
 
         let training_type = fields[0];
         match training_type {
-            "pitchComparison" => match parse_comparison_row(&fields, row_num) {
+            "pitchComparison" => match parse_pitch_discrimination_row(&fields, row_num) {
                 Ok(record) => pitch_discriminations.push(record),
                 Err(msg) => warnings.push(msg),
             },
@@ -269,7 +269,7 @@ fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
     })
 }
 
-fn parse_comparison_row(
+fn parse_pitch_discrimination_row(
     fields: &[&str],
     row_num: usize,
 ) -> Result<PitchDiscriminationRecord, String> {
@@ -364,7 +364,7 @@ pub async fn import_replace(
         store
             .save_pitch_discrimination(record)
             .await
-            .map_err(|e| format!("Failed to save comparison: {e:?}"))?;
+            .map_err(|e| format!("Failed to save pitch discrimination record: {e:?}"))?;
     }
 
     for record in &data.pitch_matchings {
@@ -377,7 +377,7 @@ pub async fn import_replace(
     Ok(data.pitch_discriminations.len() + data.pitch_matchings.len())
 }
 
-/// Import records in merge mode: skip duplicates based on timestamp+type comparison.
+/// Import records in merge mode: skip duplicates based on timestamp+type matching.
 /// Returns counts of imported and skipped records.
 pub async fn import_merge(
     store: &IndexedDbStore,
@@ -387,7 +387,7 @@ pub async fn import_merge(
     let existing_pitch_discriminations = store
         .fetch_all_pitch_discriminations()
         .await
-        .map_err(|e| format!("Failed to fetch pitch comparisons: {e:?}"))?;
+        .map_err(|e| format!("Failed to fetch pitch discrimination records: {e:?}"))?;
     let mut existing_pitch_discrimination_ts: HashSet<String> = existing_pitch_discriminations
         .iter()
         .map(|r| truncate_timestamp_to_second(&r.timestamp))
@@ -417,7 +417,7 @@ pub async fn import_merge(
             store
                 .save_pitch_discrimination(record)
                 .await
-                .map_err(|e| format!("Failed to save comparison: {e:?}"))?;
+                .map_err(|e| format!("Failed to save pitch discrimination record: {e:?}"))?;
             existing_pitch_discrimination_ts.insert(ts);
             result.discrimination_imported += 1;
         }

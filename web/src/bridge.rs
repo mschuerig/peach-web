@@ -13,7 +13,7 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::indexeddb_store::IndexedDbStore;
 
-/// Observer that feeds completed comparisons into the profile via `add_point()`.
+/// Observer that feeds completed pitch discrimination trials into the profile via `add_point()`.
 /// Determines the training discipline (unison vs interval) from the discrimination interval.
 pub struct ProfileObserver(Rc<RefCell<PerceptualProfile>>);
 
@@ -25,9 +25,9 @@ impl ProfileObserver {
 
 impl PitchDiscriminationObserver for ProfileObserver {
     fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
-        let comparison = completed.pitch_discrimination_trial();
-        let ref_note = comparison.reference_note().raw_value();
-        let target_note = comparison.target_note().note.raw_value();
+        let trial = completed.pitch_discrimination_trial();
+        let ref_note = trial.reference_note().raw_value();
+        let target_note = trial.target_note().note.raw_value();
         let interval = target_note.abs_diff(ref_note);
 
         let mode = if interval == 0 {
@@ -36,7 +36,7 @@ impl PitchDiscriminationObserver for ProfileObserver {
             TrainingDiscipline::IntervalPitchDiscrimination
         };
 
-        let metric = comparison.target_note().offset.raw_value.abs();
+        let metric = trial.target_note().offset.raw_value.abs();
         let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
         let point = MetricPoint::new(timestamp_secs, domain::Cents::new(metric));
 
@@ -176,7 +176,9 @@ impl PitchDiscriminationObserver for ProgressTimelineObserver {
     fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
         let record = PitchDiscriminationRecord::from_completed(completed);
         let start_of_today = compute_start_of_today();
-        self.0.borrow_mut().add_comparison(&record, start_of_today);
+        self.0
+            .borrow_mut()
+            .add_discrimination(&record, start_of_today);
     }
 }
 

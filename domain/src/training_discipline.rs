@@ -87,7 +87,7 @@ impl TrainingDiscipline {
     ///
     /// Returns `None` for matching disciplines (use `extract_matching_metric` instead).
     /// Unison disciplines match interval == 0; interval disciplines match interval != 0.
-    pub fn extract_comparison_metric(&self, record: &PitchDiscriminationRecord) -> Option<f64> {
+    pub fn extract_discrimination_metric(&self, record: &PitchDiscriminationRecord) -> Option<f64> {
         match self {
             TrainingDiscipline::UnisonPitchDiscrimination
             | TrainingDiscipline::IntervalPitchDiscrimination => {
@@ -104,7 +104,7 @@ impl TrainingDiscipline {
     /// Extracts the metric (absolute user cent error) from a pitch matching record
     /// if this is a matching discipline and the record's interval matches.
     ///
-    /// Returns `None` for discrimination disciplines (use `extract_comparison_metric` instead).
+    /// Returns `None` for discrimination disciplines (use `extract_discrimination_metric` instead).
     /// Unison disciplines match interval == 0; interval disciplines match interval != 0.
     pub fn extract_matching_metric(&self, record: &PitchMatchingRecord) -> Option<f64> {
         match self {
@@ -192,7 +192,7 @@ mod tests {
 
     // --- Metric extraction tests (AC: 5, 6) ---
 
-    fn comparison_record(interval: u8, cent_offset: f64) -> PitchDiscriminationRecord {
+    fn discrimination_record(interval: u8, cent_offset: f64) -> PitchDiscriminationRecord {
         PitchDiscriminationRecord {
             reference_note: 60,
             target_note: 60 + interval,
@@ -217,36 +217,36 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_comparison_metric_unison_matches_zero_interval() {
-        let record = comparison_record(0, 15.0);
+    fn test_extract_discrimination_metric_unison_matches_zero_interval() {
+        let record = discrimination_record(0, 15.0);
         assert_eq!(
-            TrainingDiscipline::UnisonPitchDiscrimination.extract_comparison_metric(&record),
+            TrainingDiscipline::UnisonPitchDiscrimination.extract_discrimination_metric(&record),
             Some(15.0)
         );
         assert_eq!(
-            TrainingDiscipline::IntervalPitchDiscrimination.extract_comparison_metric(&record),
+            TrainingDiscipline::IntervalPitchDiscrimination.extract_discrimination_metric(&record),
             None
         );
     }
 
     #[test]
-    fn test_extract_comparison_metric_interval_matches_nonzero() {
-        let record = comparison_record(4, 10.0);
+    fn test_extract_discrimination_metric_interval_matches_nonzero() {
+        let record = discrimination_record(4, 10.0);
         assert_eq!(
-            TrainingDiscipline::UnisonPitchDiscrimination.extract_comparison_metric(&record),
+            TrainingDiscipline::UnisonPitchDiscrimination.extract_discrimination_metric(&record),
             None
         );
         assert_eq!(
-            TrainingDiscipline::IntervalPitchDiscrimination.extract_comparison_metric(&record),
+            TrainingDiscipline::IntervalPitchDiscrimination.extract_discrimination_metric(&record),
             Some(10.0)
         );
     }
 
     #[test]
-    fn test_extract_comparison_metric_negative_offset_returns_positive() {
-        let record = comparison_record(0, -25.0);
+    fn test_extract_discrimination_metric_negative_offset_returns_positive() {
+        let record = discrimination_record(0, -25.0);
         assert_eq!(
-            TrainingDiscipline::UnisonPitchDiscrimination.extract_comparison_metric(&record),
+            TrainingDiscipline::UnisonPitchDiscrimination.extract_discrimination_metric(&record),
             Some(25.0)
         );
     }
@@ -288,15 +288,15 @@ mod tests {
 
     #[test]
     fn test_boundary_interval_zero_is_unison() {
-        let comp = comparison_record(0, 10.0);
+        let comp = discrimination_record(0, 10.0);
         assert!(
             TrainingDiscipline::UnisonPitchDiscrimination
-                .extract_comparison_metric(&comp)
+                .extract_discrimination_metric(&comp)
                 .is_some()
         );
         assert!(
             TrainingDiscipline::IntervalPitchDiscrimination
-                .extract_comparison_metric(&comp)
+                .extract_discrimination_metric(&comp)
                 .is_none()
         );
 
@@ -315,15 +315,15 @@ mod tests {
 
     #[test]
     fn test_boundary_interval_one_is_interval() {
-        let comp = comparison_record(1, 10.0);
+        let comp = discrimination_record(1, 10.0);
         assert!(
             TrainingDiscipline::UnisonPitchDiscrimination
-                .extract_comparison_metric(&comp)
+                .extract_discrimination_metric(&comp)
                 .is_none()
         );
         assert!(
             TrainingDiscipline::IntervalPitchDiscrimination
-                .extract_comparison_metric(&comp)
+                .extract_discrimination_metric(&comp)
                 .is_some()
         );
 
@@ -342,27 +342,27 @@ mod tests {
 
     #[test]
     fn test_matching_modes_return_none_for_comparison_records() {
-        let comp = comparison_record(0, 10.0);
+        let comp = discrimination_record(0, 10.0);
         assert!(
             TrainingDiscipline::UnisonPitchMatching
-                .extract_comparison_metric(&comp)
+                .extract_discrimination_metric(&comp)
                 .is_none()
         );
         assert!(
             TrainingDiscipline::IntervalPitchMatching
-                .extract_comparison_metric(&comp)
+                .extract_discrimination_metric(&comp)
                 .is_none()
         );
 
-        let comp_interval = comparison_record(4, 10.0);
+        let comp_interval = discrimination_record(4, 10.0);
         assert!(
             TrainingDiscipline::UnisonPitchMatching
-                .extract_comparison_metric(&comp_interval)
+                .extract_discrimination_metric(&comp_interval)
                 .is_none()
         );
         assert!(
             TrainingDiscipline::IntervalPitchMatching
-                .extract_comparison_metric(&comp_interval)
+                .extract_discrimination_metric(&comp_interval)
                 .is_none()
         );
     }

@@ -1,11 +1,11 @@
 use domain::*;
 
-/// Replay a sequence of comparison results and verify profile state.
+/// Replay a sequence of discrimination results and verify profile state.
 #[test]
-fn test_profile_hydration_from_comparison_sequence() {
+fn test_profile_hydration_from_discrimination_sequence() {
     let mut profile = PerceptualProfile::new();
 
-    // Simulate a sequence of comparisons via add_point
+    // Simulate a sequence of discrimination trials via add_point
     let offsets = [50.0, 40.0, 45.0, 35.0, 55.0];
     for (i, &offset) in offsets.iter().enumerate() {
         profile.add_point(
@@ -21,7 +21,7 @@ fn test_profile_hydration_from_comparison_sequence() {
     );
 
     // Manually compute expected mean: (50+40+45+35+55)/5 = 225/5 = 45.0
-    let mean = profile.comparison_mean(0).unwrap();
+    let mean = profile.discrimination_mean(0).unwrap();
     assert!((mean.raw_value - 45.0).abs() < 1e-10);
 }
 
@@ -48,8 +48,8 @@ fn test_profile_hydration_order_independence() {
         );
     }
 
-    let fwd_mean = profile_forward.comparison_mean(0).unwrap();
-    let rev_mean = profile_reverse.comparison_mean(0).unwrap();
+    let fwd_mean = profile_forward.discrimination_mean(0).unwrap();
+    let rev_mean = profile_reverse.discrimination_mean(0).unwrap();
 
     // Mean should be identical regardless of order
     assert!((fwd_mean.raw_value - rev_mean.raw_value).abs() < 1e-10);
@@ -79,7 +79,7 @@ fn test_profile_filters_incorrect_answers() {
         profile.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
         1
     );
-    let mean = profile.comparison_mean(0).unwrap();
+    let mean = profile.discrimination_mean(0).unwrap();
     assert!((mean.raw_value - 20.0).abs() < 1e-10);
 }
 
@@ -120,7 +120,7 @@ fn test_profile_reset_and_rehydrate() {
         true,
     );
 
-    let mean_before = profile.comparison_mean(0).unwrap();
+    let mean_before = profile.discrimination_mean(0).unwrap();
 
     // Reset and re-hydrate with same data
     profile.reset_all();
@@ -135,7 +135,7 @@ fn test_profile_reset_and_rehydrate() {
         true,
     );
 
-    let mean_after = profile.comparison_mean(0).unwrap();
+    let mean_after = profile.discrimination_mean(0).unwrap();
     assert!((mean_before.raw_value - mean_after.raw_value).abs() < 1e-10);
 }
 
@@ -160,7 +160,7 @@ fn test_profile_hydration_large_dataset() {
     );
 
     // Expected mean: average of 50..69 repeating = (50+51+...+69)/20 = 59.5
-    let mean = profile.comparison_mean(0).unwrap();
+    let mean = profile.discrimination_mean(0).unwrap();
     assert!((mean.raw_value - 59.5).abs() < 0.01);
 }
 
@@ -202,8 +202,8 @@ fn test_profile_rebuild_all() {
         0
     );
 
-    let comp_mean = profile.comparison_mean(0).unwrap();
-    assert!((comp_mean.raw_value - 30.0).abs() < 1e-10);
+    let disc_mean = profile.discrimination_mean(0).unwrap();
+    assert!((disc_mean.raw_value - 30.0).abs() < 1e-10);
 
     let match_mean = profile.matching_mean().unwrap();
     assert!((match_mean.raw_value - 7.5).abs() < 1e-10);

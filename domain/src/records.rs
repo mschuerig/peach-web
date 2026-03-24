@@ -4,7 +4,7 @@ use crate::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingT
 use crate::tuning::TuningSystem;
 use crate::types::Interval;
 
-/// Flat persistence record for a completed comparison.
+/// Flat persistence record for a completed pitch discrimination trial.
 /// Blueprint §10.1 — field names match storage schema exactly.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PitchDiscriminationRecord {
@@ -18,7 +18,7 @@ pub struct PitchDiscriminationRecord {
 }
 
 impl PitchDiscriminationRecord {
-    /// Construct a flat persistence record from a completed comparison.
+    /// Construct a flat persistence record from a completed pitch discrimination trial.
     ///
     /// The `interval` field stores semitone distance. `Interval::between()` returns
     /// `Err` when the distance exceeds one octave (13+ semitones), which can happen

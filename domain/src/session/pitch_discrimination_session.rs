@@ -20,7 +20,7 @@ pub const FEEDBACK_DURATION_SECS: f64 = 0.4;
 /// Scaling factor for amplitude variation (±10 dB at max vary_loudness).
 pub const AMPLITUDE_VARY_SCALING: f64 = 10.0;
 
-/// State of the comparison session state machine.
+/// State of the pitch discrimination session state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PitchDiscriminationSessionState {
     Idle,
@@ -30,7 +30,7 @@ pub enum PitchDiscriminationSessionState {
     ShowingFeedback,
 }
 
-/// Data needed by the web layer to play the current comparison's notes.
+/// Data needed by the web layer to play the current trial's notes.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PitchDiscriminationPlaybackData {
     pub reference_frequency: Frequency,
@@ -39,9 +39,9 @@ pub struct PitchDiscriminationPlaybackData {
     pub target_amplitude_db: AmplitudeDB,
 }
 
-/// Pure domain state machine for comparison training sessions.
+/// Pure domain state machine for pitch discrimination training sessions.
 ///
-/// Manages the training loop state, comparison generation, answer processing,
+/// Manages the training loop state, trial generation, answer processing,
 /// and observer notification. No browser dependencies — the web crate drives
 /// the async loop and audio playback.
 pub struct PitchDiscriminationSession {
@@ -58,8 +58,8 @@ pub struct PitchDiscriminationSession {
     session_vary_loudness: f64,
     session_note_range: NoteRange,
 
-    // Current comparison state
-    current_comparison: Option<PitchDiscriminationTrial>,
+    // Current trial state
+    current_trial: Option<PitchDiscriminationTrial>,
     current_playback_data: Option<PitchDiscriminationPlaybackData>,
     last_completed: Option<CompletedPitchDiscriminationTrial>,
 
@@ -86,7 +86,7 @@ impl PitchDiscriminationSession {
             session_note_duration: NoteDuration::new(1.0),
             session_vary_loudness: 0.0,
             session_note_range: NoteRange::new(MIDINote::new(36), MIDINote::new(84)),
-            current_comparison: None,
+            current_trial: None,
             current_playback_data: None,
             last_completed: None,
             show_feedback: false,
@@ -123,7 +123,7 @@ impl PitchDiscriminationSession {
     }
 
     pub fn current_interval(&self) -> Option<DirectedInterval> {
-        self.current_comparison
+        self.current_trial
             .as_ref()
             .and_then(|c| DirectedInterval::between(c.reference_note(), c.target_note().note).ok())
     }
@@ -134,9 +134,9 @@ impl PitchDiscriminationSession {
 
     // --- State transitions ---
 
-    /// Start a new comparison training session.
+    /// Start a new pitch discrimination training session.
     ///
-    /// Snapshots settings, generates the first comparison, transitions to PlayingReferenceNote.
+    /// Snapshots settings, generates the first trial, transitions to PlayingReferenceNote.
     /// Panics if not idle or if intervals is empty.
     pub fn start(&mut self, intervals: HashSet<DirectedInterval>, settings: &dyn UserSettings) {
         assert_eq!(
@@ -163,7 +163,7 @@ impl PitchDiscriminationSession {
         self.is_last_answer_correct = false;
         self.session_best_cent_difference = None;
 
-        // Generate first comparison
+        // Generate first trial
         self.generate_next_pitch_discrimination_trial();
         self.state = PitchDiscriminationSessionState::PlayingReferenceNote;
     }
@@ -199,19 +199,19 @@ impl PitchDiscriminationSession {
             "handle_answer() requires PlayingTargetNote or AwaitingAnswer state"
         );
 
-        let comparison = self
-            .current_comparison
-            .expect("handle_answer() called without a current comparison");
+        let trial = self
+            .current_trial
+            .expect("handle_answer() called without a current trial");
 
         let completed = CompletedPitchDiscriminationTrial::new(
-            comparison,
+            trial,
             is_higher,
             self.session_tuning_system,
             timestamp,
         );
 
         // Update session best cent difference (all attempts, not just correct)
-        let cent_diff = comparison.target_note().offset.magnitude();
+        let cent_diff = trial.target_note().offset.magnitude();
         match self.session_best_cent_difference {
             Some(best) if cent_diff < best => {
                 self.session_best_cent_difference = Some(cent_diff);
@@ -233,7 +233,7 @@ impl PitchDiscriminationSession {
             } else {
                 "\u{2717} WRONG"
             },
-            if comparison.is_target_higher() {
+            if trial.is_target_higher() {
                 "higher"
             } else {
                 "lower"
@@ -248,7 +248,7 @@ impl PitchDiscriminationSession {
     }
 
     /// Called when the feedback display period finishes.
-    /// Generates next comparison, transitions to PlayingReferenceNote.
+    /// Generates next trial, transitions to PlayingReferenceNote.
     pub fn on_feedback_finished(&mut self) {
         assert_eq!(
             self.state,
@@ -266,7 +266,7 @@ impl PitchDiscriminationSession {
             return;
         }
         self.state = PitchDiscriminationSessionState::Idle;
-        self.current_comparison = None;
+        self.current_trial = None;
         self.current_playback_data = None;
         self.last_completed = None;
         self.show_feedback = false;
@@ -297,7 +297,7 @@ impl PitchDiscriminationSession {
             Cents::new(COLD_START_DIFFICULTY),
         );
 
-        let comparison = next_pitch_discrimination_trial(
+        let trial = next_pitch_discrimination_trial(
             &profile,
             &training_settings,
             self.last_completed.as_ref(),
@@ -306,16 +306,16 @@ impl PitchDiscriminationSession {
         drop(profile); // Release borrow before computing frequencies
 
         // Calculate playback data
-        let ref_detuned = DetunedMIDINote::from(comparison.reference_note());
+        let ref_detuned = DetunedMIDINote::from(trial.reference_note());
         let reference_frequency = self
             .session_tuning_system
             .frequency(ref_detuned, self.session_reference_pitch);
         let target_frequency = self
             .session_tuning_system
-            .frequency(comparison.target_note(), self.session_reference_pitch);
+            .frequency(trial.target_note(), self.session_reference_pitch);
         let target_amplitude_db = calculate_target_amplitude(self.session_vary_loudness);
 
-        self.current_comparison = Some(comparison);
+        self.current_trial = Some(trial);
         self.current_playback_data = Some(PitchDiscriminationPlaybackData {
             reference_frequency,
             target_frequency,
@@ -325,27 +325,25 @@ impl PitchDiscriminationSession {
 
         #[cfg(feature = "training-log")]
         {
-            let interval_str = DirectedInterval::between(
-                comparison.reference_note(),
-                comparison.target_note().note,
-            )
-            .map_or("?".to_string(), |di| {
-                format!("{:?}{:?}", di.interval, di.direction)
-            });
+            let interval_str =
+                DirectedInterval::between(trial.reference_note(), trial.target_note().note)
+                    .map_or("?".to_string(), |di| {
+                        format!("{:?}{:?}", di.interval, di.direction)
+                    });
             let tuning_str = match self.session_tuning_system {
                 TuningSystem::EqualTemperament => "ET",
                 TuningSystem::JustIntonation => "JI",
             };
             log::info!(
                 "PitchDiscriminationTrial: ref={} {:.2}Hz @0.0dB, target {:.2}Hz @{:.1}dB, offset={:.1}, interval={}, tuning={}, higher={}",
-                comparison.reference_note().raw_value(),
+                trial.reference_note().raw_value(),
                 reference_frequency.raw_value(),
                 target_frequency.raw_value(),
                 target_amplitude_db.raw_value(),
-                comparison.target_note().offset.raw_value,
+                trial.target_note().offset.raw_value,
                 interval_str,
                 tuning_str,
-                comparison.is_target_higher(),
+                trial.is_target_higher(),
             );
         }
     }
@@ -788,7 +786,7 @@ mod tests {
         session.on_reference_note_finished();
         session.on_target_note_finished();
 
-        // Get the current comparison's target direction
+        // Get the current trial's target direction
         let data = session.current_playback_data().unwrap();
         let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
 
