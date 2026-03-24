@@ -38,23 +38,23 @@ const METADATA_LINE: &str = "# peach-export-format:1";
 /// Result of parsing an import CSV file.
 #[derive(Clone, Debug)]
 pub struct ParsedImportData {
-    pub pitch_comparisons: Vec<PitchDiscriminationRecord>,
+    pub pitch_discriminations: Vec<PitchDiscriminationRecord>,
     pub pitch_matchings: Vec<PitchMatchingRecord>,
     pub warnings: Vec<String>,
 }
 
 /// Result of a merge import operation.
 pub struct MergeResult {
-    pub comparison_imported: usize,
-    pub comparison_skipped: usize,
+    pub discrimination_imported: usize,
+    pub discrimination_skipped: usize,
     pub pitch_matching_imported: usize,
     pub pitch_matching_skipped: usize,
 }
 
 /// Export all training data as a CSV file download.
 pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
-    let pitch_comparisons = store
-        .fetch_all_pitch_comparisons()
+    let pitch_discriminations = store
+        .fetch_all_pitch_discriminations()
         .await
         .map_err(|e| format!("Failed to fetch pitch comparisons: {e:?}"))?;
     let pitch_matchings = store
@@ -75,8 +75,8 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
     }
 
     let mut all_records: Vec<Record> =
-        Vec::with_capacity(pitch_comparisons.len() + pitch_matchings.len());
-    for r in &pitch_comparisons {
+        Vec::with_capacity(pitch_discriminations.len() + pitch_matchings.len());
+    for r in &pitch_discriminations {
         all_records.push(Record::Comparison(r));
     }
     for r in &pitch_matchings {
@@ -221,7 +221,7 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
 
 /// Parse CSV data rows in the v1 format.
 fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
-    let mut pitch_comparisons = Vec::new();
+    let mut pitch_discriminations = Vec::new();
     let mut pitch_matchings = Vec::new();
     let mut warnings = Vec::new();
     let mut has_data = false;
@@ -243,7 +243,7 @@ fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
         let training_type = fields[0];
         match training_type {
             "pitchComparison" => match parse_comparison_row(&fields, row_num) {
-                Ok(record) => pitch_comparisons.push(record),
+                Ok(record) => pitch_discriminations.push(record),
                 Err(msg) => warnings.push(msg),
             },
             "pitchMatching" => match parse_pitch_matching_row(&fields, row_num) {
@@ -263,7 +263,7 @@ fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
     }
 
     Ok(ParsedImportData {
-        pitch_comparisons,
+        pitch_discriminations,
         pitch_matchings,
         warnings,
     })
@@ -360,9 +360,9 @@ pub async fn import_replace(
         .await
         .map_err(|e| format!("Failed to delete existing data: {e:?}"))?;
 
-    for record in &data.pitch_comparisons {
+    for record in &data.pitch_discriminations {
         store
-            .save_pitch_comparison(record)
+            .save_pitch_discrimination(record)
             .await
             .map_err(|e| format!("Failed to save comparison: {e:?}"))?;
     }
@@ -374,7 +374,7 @@ pub async fn import_replace(
             .map_err(|e| format!("Failed to save pitch matching: {e:?}"))?;
     }
 
-    Ok(data.pitch_comparisons.len() + data.pitch_matchings.len())
+    Ok(data.pitch_discriminations.len() + data.pitch_matchings.len())
 }
 
 /// Import records in merge mode: skip duplicates based on timestamp+type comparison.
@@ -384,11 +384,11 @@ pub async fn import_merge(
     data: &ParsedImportData,
 ) -> Result<MergeResult, String> {
     // Build sets of existing timestamps (truncated to second) per type
-    let existing_pitch_comparisons = store
-        .fetch_all_pitch_comparisons()
+    let existing_pitch_discriminations = store
+        .fetch_all_pitch_discriminations()
         .await
         .map_err(|e| format!("Failed to fetch pitch comparisons: {e:?}"))?;
-    let mut existing_pitch_comparison_ts: HashSet<String> = existing_pitch_comparisons
+    let mut existing_pitch_discrimination_ts: HashSet<String> = existing_pitch_discriminations
         .iter()
         .map(|r| truncate_timestamp_to_second(&r.timestamp))
         .collect();
@@ -403,23 +403,23 @@ pub async fn import_merge(
         .collect();
 
     let mut result = MergeResult {
-        comparison_imported: 0,
-        comparison_skipped: 0,
+        discrimination_imported: 0,
+        discrimination_skipped: 0,
         pitch_matching_imported: 0,
         pitch_matching_skipped: 0,
     };
 
-    for record in &data.pitch_comparisons {
+    for record in &data.pitch_discriminations {
         let ts = truncate_timestamp_to_second(&record.timestamp);
-        if existing_pitch_comparison_ts.contains(&ts) {
-            result.comparison_skipped += 1;
+        if existing_pitch_discrimination_ts.contains(&ts) {
+            result.discrimination_skipped += 1;
         } else {
             store
-                .save_pitch_comparison(record)
+                .save_pitch_discrimination(record)
                 .await
                 .map_err(|e| format!("Failed to save comparison: {e:?}"))?;
-            existing_pitch_comparison_ts.insert(ts);
-            result.comparison_imported += 1;
+            existing_pitch_discrimination_ts.insert(ts);
+            result.discrimination_imported += 1;
         }
     }
 
@@ -561,10 +561,10 @@ mod tests {
     fn test_import_valid_v1_comparison() {
         let csv = make_csv(&["pitchComparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 1);
+        assert_eq!(result.pitch_discriminations.len(), 1);
         assert_eq!(result.pitch_matchings.len(), 0);
         assert!(result.warnings.is_empty());
-        let r = &result.pitch_comparisons[0];
+        let r = &result.pitch_discriminations[0];
         assert_eq!(r.reference_note, 60);
         assert_eq!(r.target_note, 64);
         assert!(r.is_correct);
@@ -574,7 +574,7 @@ mod tests {
     fn test_import_valid_v1_pitch_matching() {
         let csv = make_csv(&["pitchMatching,2026-03-04T14:30:00Z,60,C4,67,G4,P5,equal,,,25.5,3.2"]);
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.pitch_discriminations.len(), 0);
         assert_eq!(result.pitch_matchings.len(), 1);
         assert!(result.warnings.is_empty());
         let r = &result.pitch_matchings[0];
@@ -635,7 +635,7 @@ mod tests {
             "{METADATA_LINE}\r\n{CSV_HEADER}\r\npitchComparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,\r\n"
         );
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 1);
+        assert_eq!(result.pitch_discriminations.len(), 1);
         assert!(result.warnings.is_empty());
     }
 
@@ -651,7 +651,7 @@ mod tests {
     fn test_import_unknown_training_type_produces_warning() {
         let csv = make_csv(&["unknownType,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.pitch_discriminations.len(), 0);
         assert_eq!(result.pitch_matchings.len(), 0);
         assert_eq!(result.warnings.len(), 1);
         assert!(result.warnings[0].contains("unknown trainingType 'unknownType'"));
@@ -665,7 +665,7 @@ mod tests {
             "badType,2026-03-04T14:32:00Z,60,C4,64,E4,M3,equal,0,true,,",
         ]);
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 1);
+        assert_eq!(result.pitch_discriminations.len(), 1);
         assert_eq!(result.pitch_matchings.len(), 1);
         assert_eq!(result.warnings.len(), 1);
         assert!(result.warnings[0].contains("unknown trainingType 'badType'"));
@@ -677,7 +677,7 @@ mod tests {
             "pitchComparison,2026-03-04T14:30:00Z,notanumber,C4,64,E4,M3,equal,0,true,,",
         ]);
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.pitch_discriminations.len(), 0);
         assert_eq!(result.warnings.len(), 1);
         assert!(result.warnings[0].contains("invalid referenceNote"));
     }
@@ -686,7 +686,7 @@ mod tests {
     fn test_import_too_few_columns_produces_warning() {
         let csv = make_csv(&["pitchComparison,2026-03-04T14:30:00Z,60,C4,64"]);
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.pitch_discriminations.len(), 0);
         assert_eq!(result.warnings.len(), 1);
         assert!(result.warnings[0].contains("too few columns"));
     }
@@ -695,7 +695,7 @@ mod tests {
     fn test_import_rejects_old_comparison_type() {
         let csv = make_csv(&["comparison,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,"]);
         let result = parse_import_file(&csv).unwrap();
-        assert_eq!(result.pitch_comparisons.len(), 0);
+        assert_eq!(result.pitch_discriminations.len(), 0);
         assert_eq!(result.warnings.len(), 1);
         assert!(result.warnings[0].contains("unknown trainingType 'comparison'"));
     }

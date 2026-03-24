@@ -64,7 +64,7 @@ fn TrainingCard(
 
 #[component]
 pub fn StartPage() -> impl IntoView {
-    let interval_comparison_href = interval_href("/training/comparison");
+    let interval_discrimination_href = interval_href("/training/pitch-discrimination");
     let interval_pitch_matching_href = interval_href("/training/pitch-matching");
 
     let sf2_status: RwSignal<SoundFontLoadStatus> =
@@ -127,18 +127,18 @@ pub fn StartPage() -> impl IntoView {
                     <h2 class="mb-2.5 text-center text-sm font-medium text-gray-500 dark:text-gray-400">{move_tr!("single-notes")}</h2>
                     <div class="flex flex-col gap-2.5">
                         <TrainingCard
-                            label=move_tr!("hear-and-compare")
+                            label=move_tr!("compare")
                             icon="\u{1F442}"
-                            href=base_href("/training/comparison")
-                            aria_label=move_tr!("hear-compare-single-aria")
+                            href=base_href("/training/pitch-discrimination")
+                            aria_label=move_tr!("compare-single-aria")
                             mode=TrainingDiscipline::UnisonPitchDiscrimination
                             disabled=disabled
                         />
                         <TrainingCard
-                            label=move_tr!("tune-and-match")
+                            label=move_tr!("match")
                             icon="\u{1F3AF}"
                             href=base_href("/training/pitch-matching")
-                            aria_label=move_tr!("tune-match-single-aria")
+                            aria_label=move_tr!("match-single-aria")
                             mode=TrainingDiscipline::UnisonPitchMatching
                             disabled=disabled
                         />
@@ -150,18 +150,18 @@ pub fn StartPage() -> impl IntoView {
                     <h2 class="mb-2.5 text-center text-sm font-medium text-gray-500 dark:text-gray-400">{move_tr!("intervals")}</h2>
                     <div class="flex flex-col gap-2.5">
                         <TrainingCard
-                            label=move_tr!("hear-and-compare")
+                            label=move_tr!("compare")
                             icon="\u{1F442}"
-                            href=interval_comparison_href
-                            aria_label=move_tr!("hear-compare-intervals-aria")
+                            href=interval_discrimination_href
+                            aria_label=move_tr!("compare-intervals-aria")
                             mode=TrainingDiscipline::IntervalPitchDiscrimination
                             disabled=disabled
                         />
                         <TrainingCard
-                            label=move_tr!("tune-and-match")
+                            label=move_tr!("match")
                             icon="\u{1F3AF}"
                             href=interval_pitch_matching_href
-                            aria_label=move_tr!("tune-match-intervals-aria")
+                            aria_label=move_tr!("match-intervals-aria")
                             mode=TrainingDiscipline::IntervalPitchMatching
                             disabled=disabled
                         />

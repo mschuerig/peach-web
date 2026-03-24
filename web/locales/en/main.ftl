@@ -19,12 +19,12 @@ page-navigation = Page navigation
 ## Start Page
 single-notes = Single Notes
 intervals = Intervals
-hear-and-compare = Hear & Compare
-tune-and-match = Tune & Match
-hear-compare-single-aria = Hear and Compare, Single Notes
-tune-match-single-aria = Tune and Match, Single Notes
-hear-compare-intervals-aria = Hear and Compare, Intervals
-tune-match-intervals-aria = Tune and Match, Intervals
+compare = Compare
+match = Match
+compare-single-aria = Compare, Single Notes
+match-single-aria = Match, Single Notes
+compare-intervals-aria = Compare, Intervals
+match-intervals-aria = Match, Intervals
 
 ## Training
 training-started = Training started
@@ -76,8 +76,8 @@ tuning-hint = Select how intervals are tuned. Equal Temperament divides the octa
 difficulty-section = Difficulty
 loudness-variation = Vary Loudness
 loudness-variation-aria = Loudness variation
-note-gap-label = Note Gap (Hear & Compare): { $value }s
-note-gap-aria = Note gap for pitch comparison
+note-gap-label = Note Gap (Compare): { $value }s
+note-gap-aria = Note gap for pitch discrimination
 off = Off
 max = Max
 data-section = Data
@@ -98,7 +98,7 @@ data-exported = Data exported
 export-failed = Export failed: { $error }
 import-failed = Import failed: { $error }
 import-dialog-title = Import Training Data
-import-dialog-found = Found { $comparisons } comparison records and { $matchings } pitch matching records.{ $warnings } How would you like to import?
+import-dialog-found = Found { $comparisons } discrimination records and { $matchings } pitch matching records.{ $warnings } How would you like to import?
 import-dialog-warnings = { " " }({ $count } rows skipped with warnings)
 replace-all-data = Replace All Data
 merge-with-existing = Merge with Existing
@@ -108,12 +108,12 @@ delete-all-data = Reset
 database-not-available = Database not available
 language-label = Language
 
-## Comparison Training
-comparison-title = Hear & Compare
-comparison-help-title = Comparison Training
+## Pitch Discrimination Training
+discrimination-title = Compare
+discrimination-help-title = Pitch Discrimination Training
 
 ## Pitch Matching
-matching-title = Tune & Match
+matching-title = Match
 matching-help-title = Pitch Matching Training
 
 ## Profile
@@ -152,21 +152,21 @@ help-intervals-body = Intervals are the distance between two notes. Choose which
 help-sound-title = Sound
 help-sound-body = Pick the **sound** you want to train with — each instrument has a different character.{"\u000A\u000A"}**Duration** controls how long each note plays.{"\u000A\u000A"}**Concert Pitch** sets the reference tuning. Most musicians use 440 Hz. Some orchestras tune to 442 Hz.{"\u000A\u000A"}**Tuning System** determines how intervals are calculated. Equal Temperament divides the octave into 12 equal steps and is standard for most Western music. Just Intonation uses pure frequency ratios and sounds smoother for some intervals.
 help-difficulty-title = Difficulty
-help-difficulty-body = **Vary Loudness** changes the volume of notes randomly. This makes training harder but more realistic — in real music, notes are rarely played at the same volume.{"\u000A\u000A"}**Note Gap** adds a pause between the two notes in Hear & Compare training. At zero, notes play back-to-back.
+help-difficulty-body = **Vary Loudness** changes the volume of notes randomly. This makes training harder but more realistic — in real music, notes are rarely played at the same volume.{"\u000A\u000A"}**Note Gap** adds a pause between the two notes in Compare training. At zero, notes play back-to-back.
 help-data-title = Data
 help-data-body = **Export** saves your training data as a file you can keep as a backup or transfer to another device.{"\u000A\u000A"}**Import** loads training data from a file. You can replace your current data or merge it with existing records.{"\u000A\u000A"}**Reset** permanently deletes all training data and resets your profile. This cannot be undone.
 
-## Help - Comparison
-help-comparison-goal-title = Goal
-help-comparison-goal-body = Two notes play one after the other. Your job is to decide: was the **second note higher or lower** than the first? The closer the notes are, the harder it gets — and the sharper your ear becomes.
-help-comparison-controls-title = Controls
-help-comparison-controls-body = Once the second note starts playing, the **Higher** and **Lower** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Up** or **H** for higher, **Arrow Down** or **L** for lower.
-help-comparison-feedback-title = Feedback
-help-comparison-feedback-body = After each answer you'll see a brief **checkmark** (correct) or **X** (incorrect). Use this to calibrate your listening — over time, you'll notice patterns in what you get right.
-help-comparison-difficulty-title = Difficulty
-help-comparison-difficulty-body = The number at the top shows the **cent difference** between the two notes – a smaller number means a harder comparison. Your **session best** tracks the smallest difference you answered correctly.
-help-comparison-intervals-title = Intervals
-help-comparison-intervals-body = In interval mode, the two notes are separated by a specific **musical interval** (like a fifth or an octave) instead of a small pitch difference. You still decide which note is higher — but now you're training your sense of musical distance.
+## Help - Pitch Discrimination
+help-discrimination-goal-title = Goal
+help-discrimination-goal-body = Two notes play one after the other. Your job is to decide: was the **second note higher or lower** than the first? The closer the notes are, the harder it gets — and the sharper your ear becomes.
+help-discrimination-controls-title = Controls
+help-discrimination-controls-body = Once the second note starts playing, the **Higher** and **Lower** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Up** or **H** for higher, **Arrow Down** or **L** for lower.
+help-discrimination-feedback-title = Feedback
+help-discrimination-feedback-body = After each answer you'll see a brief **checkmark** (correct) or **X** (incorrect). Use this to calibrate your listening — over time, you'll notice patterns in what you get right.
+help-discrimination-difficulty-title = Difficulty
+help-discrimination-difficulty-body = The number at the top shows the **cent difference** between the two notes – a smaller number means a harder comparison. Your **session best** tracks the smallest difference you answered correctly.
+help-discrimination-intervals-title = Intervals
+help-discrimination-intervals-body = In interval mode, the two notes are separated by a specific **musical interval** (like a fifth or an octave) instead of a small pitch difference. You still decide which note is higher — but now you're training your sense of musical distance.
 
 ## Help - Pitch Matching
 help-matching-goal-title = Goal
@@ -182,7 +182,7 @@ help-matching-intervals-body = In interval mode, your target pitch is a specific
 help-info-what-title = What is Peach?
 help-info-what-body = Peach helps you train your ear for music. Practice hearing the difference between notes and learn to match pitches accurately.
 help-info-modes-title = Training Modes
-help-info-modes-body = **Hear & Compare – Single Notes** – Listen to two notes and decide which one is higher.{"\u000A\u000A"}**Hear & Compare – Intervals** – The same idea, but with musical intervals between notes.{"\u000A\u000A"}**Tune & Match – Single Notes** – Hear a note and slide to match its pitch.{"\u000A\u000A"}**Tune & Match – Intervals** – Match pitches using musical intervals.
+help-info-modes-body = **Compare – Single Notes** – Listen to two notes and decide which one is higher.{"\u000A\u000A"}**Compare – Intervals** – The same idea, but with musical intervals between notes.{"\u000A\u000A"}**Match – Single Notes** – Hear a note and slide to match its pitch.{"\u000A\u000A"}**Match – Intervals** – Match pitches using musical intervals.
 help-info-start-title = Getting Started
 help-info-start-body = Just pick any training mode on the home screen and start practicing. Peach adapts to your skill level automatically.
 
@@ -204,10 +204,10 @@ chart-annotation-records = { $count } records
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records
 
 ## Domain - Training Modes
-training-discipline-hear-discriminate-single = Hear & Compare – Single Notes
-training-discipline-hear-discriminate-intervals = Hear & Compare – Intervals
-training-discipline-tune-match-single = Tune & Match – Single Notes
-training-discipline-tune-match-intervals = Tune & Match – Intervals
+training-discipline-hear-discriminate-single = Compare – Single Notes
+training-discipline-hear-discriminate-intervals = Compare – Intervals
+training-discipline-tune-match-single = Match – Single Notes
+training-discipline-tune-match-intervals = Match – Intervals
 
 ## Domain - Intervals
 interval-prime = Prime

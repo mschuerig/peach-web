@@ -94,7 +94,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 **Component Architecture:**
 
-- Component functions use `PascalCase` (e.g. `fn StartPage()`, `fn PitchComparisonView()`)
+- Component functions use `PascalCase` (e.g. `fn StartPage()`, `fn PitchDiscriminationView()`)
 - Components receive signals as props via `#[component]` function parameters
 - No prop drilling beyond one level — use Leptos context providers for deeply nested data
 - One view component per route, composing smaller custom components
@@ -110,7 +110,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 - `leptos_router` with URL-based routes, hub-and-spoke model
 - Start page is root `/`, all views one level deep
-- Routes: `/`, `/training/comparison`, `/training/pitch-matching`, `/profile`, `/settings`, `/info`
+- Routes: `/`, `/training/pitch-discrimination`, `/training/pitch-matching`, `/profile`, `/settings`, `/info`
 - Interval mode via query parameter: `?intervals=<codes>` (e.g., `?intervals=M3u,M3d,m6u,M6d` where each code encodes interval quality, size, and direction u/d)
 
 **AudioContext Lifecycle:**
@@ -151,18 +151,18 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 | Element | Convention | Example |
 |---|---|---|
-| Types, structs, enums | `PascalCase` | `MIDINote`, `PitchComparisonSession` |
-| Functions, methods | `snake_case` | `next_pitch_comparison()`, `handle_answer()` |
+| Types, structs, enums | `PascalCase` | `MIDINote`, `PitchDiscriminationSession` |
+| Functions, methods | `snake_case` | `next_pitch_discrimination()`, `handle_answer()` |
 | Variables, fields | `snake_case` | `reference_note`, `sample_count` |
 | Constants | `SCREAMING_SNAKE_CASE` | `FEEDBACK_DURATION`, `REFERENCE_MIDI_NOTE` |
 | Modules, files | `snake_case` | `tuning.rs`, `pitch_matching.rs` |
 | Enum variants | `PascalCase` | `PlayingReferenceNote`, `AwaitingAnswer` |
-| Leptos components | `PascalCase` functions | `fn StartPage()`, `fn PitchComparisonView()` |
+| Leptos components | `PascalCase` functions | `fn StartPage()`, `fn PitchDiscriminationView()` |
 
 **Domain Blueprint Fidelity (critical):**
 
 - Use EXACT type names from the domain blueprint — no renaming, no abbreviation
-- `MIDINote`, not `MidiNote` or `Note`. `DetunedMIDINote`, not `PitchOffset`. `CompletedPitchComparison`, not `ComparisonResult`.
+- `MIDINote`, not `MidiNote` or `Note`. `DetunedMIDINote`, not `PitchOffset`. `CompletedPitchDiscriminationTrial`, not `ComparisonResult`.
 - The blueprint is the shared language between agents and documentation
 
 **Module Organization:**
@@ -235,7 +235,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 **Observer Contract:**
 
-- Signatures follow the blueprint exactly: `fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison)`
+- Signatures follow the blueprint exactly: `fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial)`
 - Observers take data by reference (`&`), not owned — the session owns the data
 - Observers must never panic — internal errors logged via `web_sys::console::warn_1()`
 - Observers must never return errors — fire-and-forget pattern

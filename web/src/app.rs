@@ -69,7 +69,7 @@ pub struct AudioNeedsGesture(pub RwSignal<bool>);
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
-    InfoView, PitchComparisonView, PitchMatchingView, ProfileView, SettingsView, StartPage,
+    InfoView, PitchDiscriminationView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
 use domain::{
     MetricPoint, PerceptualProfile, ProgressTimeline, TrainingDiscipline, parse_iso8601_to_epoch,
@@ -126,7 +126,7 @@ pub fn App() -> impl IntoView {
             Ok(store) => {
                 let store = Rc::new(store);
 
-                let comparison_records = match store.fetch_all_pitch_comparisons().await {
+                let discrimination_records = match store.fetch_all_pitch_discriminations().await {
                     Ok(records) => {
                         log::info!("Fetched {} comparison records", records.len());
                         records
@@ -157,7 +157,7 @@ pub fn App() -> impl IntoView {
                         Vec<MetricPoint<domain::Cents>>,
                     > = HashMap::new();
 
-                    for record in &comparison_records {
+                    for record in &discrimination_records {
                         if !record.is_correct {
                             continue;
                         }
@@ -200,7 +200,7 @@ pub fn App() -> impl IntoView {
                     profile_for_hydration.borrow_mut().rebuild_all(mode_points);
                     log::info!(
                         "Profile hydrated from {} comparison + {} matching records",
-                        comparison_records.len(),
+                        discrimination_records.len(),
                         matching_records.len()
                     );
                 }
@@ -209,7 +209,7 @@ pub fn App() -> impl IntoView {
                 {
                     let start_of_today = crate::bridge::compute_start_of_today();
                     ptl_for_hydration.borrow_mut().rebuild(
-                        &comparison_records,
+                        &discrimination_records,
                         &matching_records,
                         start_of_today,
                     );
@@ -272,7 +272,7 @@ pub fn App() -> impl IntoView {
                             }
                         }>
                             <Route path=path!("/") view=StartPage />
-                            <Route path=path!("/training/comparison") view=PitchComparisonView />
+                            <Route path=path!("/training/pitch-discrimination") view=PitchDiscriminationView />
                             <Route path=path!("/training/pitch-matching") view=PitchMatchingView />
                             <Route path=path!("/profile") view=ProfileView />
                             <Route path=path!("/settings") view=SettingsView />

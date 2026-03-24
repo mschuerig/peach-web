@@ -799,8 +799,8 @@ pub fn SettingsView() -> impl IntoView {
                                     };
                                     match result {
                                         Ok(r) => {
-                                            let imported = r.comparison_imported + r.pitch_matching_imported;
-                                            let skipped = r.comparison_skipped + r.pitch_matching_skipped;
+                                            let imported = r.discrimination_imported + r.pitch_matching_imported;
+                                            let skipped = r.discrimination_skipped + r.pitch_matching_skipped;
                                             let msg = msg_records_merged_tpl
                                                 .replace(PH1, &imported.to_string())
                                                 .replace(PH2, &skipped.to_string());
@@ -912,7 +912,7 @@ pub fn SettingsView() -> impl IntoView {
                                             tr!("import-dialog-warnings", {"count" => data.warnings.len().to_string()})
                                         };
                                         tr!("import-dialog-found", {
-                                            "comparisons" => data.pitch_comparisons.len().to_string(),
+                                            "comparisons" => data.pitch_discriminations.len().to_string(),
                                             "matchings" => data.pitch_matchings.len().to_string(),
                                             "warnings" => warnings_text,
                                         })

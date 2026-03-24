@@ -19,12 +19,12 @@ page-navigation = Seitennavigation
 ## Start Page
 single-notes = Einzeltöne
 intervals = Intervalle
-hear-and-compare = Hören & Vergleichen
-tune-and-match = Stimmen & Treffen
-hear-compare-single-aria = Hören und Vergleichen, Einzeltöne
-tune-match-single-aria = Stimmen und Treffen, Einzeltöne
-hear-compare-intervals-aria = Hören und Vergleichen, Intervalle
-tune-match-intervals-aria = Stimmen und Treffen, Intervalle
+compare = Vergleichen
+match = Treffen
+compare-single-aria = Vergleichen, Einzeltöne
+match-single-aria = Treffen, Einzeltöne
+compare-intervals-aria = Vergleichen, Intervalle
+match-intervals-aria = Treffen, Intervalle
 
 ## Training
 training-started = Training gestartet
@@ -76,8 +76,8 @@ tuning-hint = Wähle die Stimmung für Intervalle. Die gleichstufige Stimmung te
 difficulty-section = Schwierigkeit
 loudness-variation = Lautstärke variieren
 loudness-variation-aria = Lautstärkevariation
-note-gap-label = Pause (Hören & Vergleichen): { $value }s
-note-gap-aria = Pause für Tonhöhenvergleich
+note-gap-label = Pause (Vergleichen): { $value }s
+note-gap-aria = Pause für Tonhöhenunterscheidung
 off = Aus
 max = Max
 data-section = Daten
@@ -98,7 +98,7 @@ data-exported = Daten exportiert
 export-failed = Export fehlgeschlagen: { $error }
 import-failed = Import fehlgeschlagen: { $error }
 import-dialog-title = Trainingsdaten importieren
-import-dialog-found = { $comparisons } Vergleichs- und { $matchings } Tonhöhen-Datensätze gefunden.{ $warnings } Wie möchtest du importieren?
+import-dialog-found = { $comparisons } Unterscheidungs- und { $matchings } Tonhöhen-Datensätze gefunden.{ $warnings } Wie möchtest du importieren?
 import-dialog-warnings = { " " }({ $count } Zeilen mit Warnungen übersprungen)
 replace-all-data = Alle Daten ersetzen
 merge-with-existing = Mit vorhandenen Daten zusammenführen
@@ -108,12 +108,12 @@ delete-all-data = Zurücksetzen
 database-not-available = Datenbank nicht verfügbar
 language-label = Sprache
 
-## Comparison Training
-comparison-title = Hören & Vergleichen
-comparison-help-title = Vergleichstraining
+## Pitch Discrimination Training
+discrimination-title = Vergleichen
+discrimination-help-title = Tonhöhenunterscheidung
 
 ## Pitch Matching
-matching-title = Stimmen & Treffen
+matching-title = Treffen
 matching-help-title = Tonhöhen-Training
 
 ## Profile
@@ -152,21 +152,21 @@ help-intervals-body = Intervalle sind der Abstand zwischen zwei Tönen. Wähle a
 help-sound-title = Klang
 help-sound-body = Wähle den **Klang**, mit dem du trainieren möchtest — jedes Instrument hat einen eigenen Charakter.{"\u000A\u000A"}**Dauer** bestimmt, wie lange jeder Ton gespielt wird.{"\u000A\u000A"}**Kammerton** legt die Referenzstimmung fest. Die meisten Musiker verwenden 440 Hz. Manche Orchester stimmen auf 442 Hz.{"\u000A\u000A"}**Stimmung** bestimmt, wie Intervalle berechnet werden. Die gleichstufige Stimmung teilt die Oktave in 12 gleiche Schritte und ist Standard in der westlichen Musik. Die reine Stimmung verwendet ganzzahlige Frequenzverhältnisse und klingt bei manchen Intervallen harmonischer.
 help-difficulty-title = Schwierigkeit
-help-difficulty-body = **Lautstärke variieren** verändert die Lautstärke der Töne zufällig. Das macht das Training schwieriger, aber realistischer — in echter Musik werden Töne selten gleich laut gespielt.{"\u000A\u000A"}**Pause** fügt eine Stille zwischen den beiden Tönen im Hören & Vergleichen-Training ein. Bei null werden die Töne direkt nacheinander gespielt.
+help-difficulty-body = **Lautstärke variieren** verändert die Lautstärke der Töne zufällig. Das macht das Training schwieriger, aber realistischer — in echter Musik werden Töne selten gleich laut gespielt.{"\u000A\u000A"}**Pause** fügt eine Stille zwischen den beiden Tönen im Vergleichen-Training ein. Bei null werden die Töne direkt nacheinander gespielt.
 help-data-title = Daten
 help-data-body = **Exportieren** speichert deine Trainingsdaten als Datei, die du als Backup aufbewahren oder auf ein anderes Gerät übertragen kannst.{"\u000A\u000A"}**Importieren** lädt Trainingsdaten aus einer Datei. Du kannst deine aktuellen Daten ersetzen oder mit bestehenden Einträgen zusammenführen.{"\u000A\u000A"}**Zurücksetzen** löscht alle Trainingsdaten unwiderruflich und setzt dein Profil zurück. Dies kann nicht rückgängig gemacht werden.
 
-## Help - Comparison
-help-comparison-goal-title = Ziel
-help-comparison-goal-body = Zwei Töne werden nacheinander gespielt. Deine Aufgabe: War der **zweite Ton höher oder tiefer** als der erste? Je näher die Töne beieinander liegen, desto schwieriger wird es — und desto schärfer wird dein Gehör.
-help-comparison-controls-title = Bedienung
-help-comparison-controls-body = Sobald der zweite Ton zu spielen beginnt, werden die Tasten **Höher** und **Tiefer** aktiv. Tippe auf die Taste, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil hoch** oder **H** für höher, **Pfeil runter** oder **T** für tiefer.
-help-comparison-feedback-title = Feedback
-help-comparison-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkchen** (richtig) oder ein **X** (falsch). Nutze das, um dein Hören zu kalibrieren — mit der Zeit erkennst du Muster in dem, was du richtig hörst.
-help-comparison-difficulty-title = Schwierigkeit
-help-comparison-difficulty-body = Die Zahl oben zeigt den **Cent-Unterschied** zwischen den beiden Tönen – eine kleinere Zahl bedeutet einen schwierigeren Vergleich. Dein **Sitzungsbestwert** zeigt den kleinsten Unterschied, den du korrekt beantwortet hast.
-help-comparison-intervals-title = Intervalle
-help-comparison-intervals-body = Im Intervallmodus sind die beiden Töne durch ein bestimmtes **musikalisches Intervall** getrennt (z. B. eine Quinte oder Oktave) statt durch einen kleinen Tonhöhenunterschied. Du entscheidest weiterhin, welcher Ton höher ist — aber du trainierst jetzt dein Gespür für musikalische Abstände.
+## Help - Pitch Discrimination
+help-discrimination-goal-title = Ziel
+help-discrimination-goal-body = Zwei Töne werden nacheinander gespielt. Deine Aufgabe: War der **zweite Ton höher oder tiefer** als der erste? Je näher die Töne beieinander liegen, desto schwieriger wird es — und desto schärfer wird dein Gehör.
+help-discrimination-controls-title = Bedienung
+help-discrimination-controls-body = Sobald der zweite Ton zu spielen beginnt, werden die Tasten **Höher** und **Tiefer** aktiv. Tippe auf die Taste, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil hoch** oder **H** für höher, **Pfeil runter** oder **T** für tiefer.
+help-discrimination-feedback-title = Feedback
+help-discrimination-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkchen** (richtig) oder ein **X** (falsch). Nutze das, um dein Hören zu kalibrieren — mit der Zeit erkennst du Muster in dem, was du richtig hörst.
+help-discrimination-difficulty-title = Schwierigkeit
+help-discrimination-difficulty-body = Die Zahl oben zeigt den **Cent-Unterschied** zwischen den beiden Tönen – eine kleinere Zahl bedeutet einen schwierigeren Vergleich. Dein **Sitzungsbestwert** zeigt den kleinsten Unterschied, den du korrekt beantwortet hast.
+help-discrimination-intervals-title = Intervalle
+help-discrimination-intervals-body = Im Intervallmodus sind die beiden Töne durch ein bestimmtes **musikalisches Intervall** getrennt (z. B. eine Quinte oder Oktave) statt durch einen kleinen Tonhöhenunterschied. Du entscheidest weiterhin, welcher Ton höher ist — aber du trainierst jetzt dein Gespür für musikalische Abstände.
 
 ## Help - Pitch Matching
 help-matching-goal-title = Ziel
@@ -182,7 +182,7 @@ help-matching-intervals-body = Im Intervallmodus liegt deine Zieltonhöhe ein be
 help-info-what-title = Was ist Peach?
 help-info-what-body = Peach hilft dir, dein Gehör für Musik zu trainieren. Übe, Unterschiede zwischen Tönen zu hören und Tonhöhen genau zu treffen.
 help-info-modes-title = Trainingsmodi
-help-info-modes-body = **Hören & Vergleichen – Einzeltöne** – Höre zwei Töne und entscheide, welcher höher ist.{"\u000A\u000A"}**Hören & Vergleichen – Intervalle** – Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\u000A\u000A"}**Stimmen & Treffen – Einzeltöne** – Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\u000A\u000A"}**Stimmen & Treffen – Intervalle** – Gleiche Tonhöhen mit musikalischen Intervallen an.
+help-info-modes-body = **Vergleichen – Einzeltöne** – Höre zwei Töne und entscheide, welcher höher ist.{"\u000A\u000A"}**Vergleichen – Intervalle** – Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\u000A\u000A"}**Treffen – Einzeltöne** – Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\u000A\u000A"}**Treffen – Intervalle** – Gleiche Tonhöhen mit musikalischen Intervallen an.
 help-info-start-title = Erste Schritte
 help-info-start-body = Wähle einfach einen Trainingsmodus auf dem Startbildschirm und leg los. Peach passt sich automatisch deinem Niveau an.
 
@@ -204,10 +204,10 @@ chart-annotation-records = { $count } Einträge
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } Einträge
 
 ## Domain - Training Modes
-training-discipline-hear-discriminate-single = Hören & Vergleichen – Einzeltöne
-training-discipline-hear-discriminate-intervals = Hören & Vergleichen – Intervalle
-training-discipline-tune-match-single = Stimmen & Treffen – Einzeltöne
-training-discipline-tune-match-intervals = Stimmen & Treffen – Intervalle
+training-discipline-hear-discriminate-single = Vergleichen – Einzeltöne
+training-discipline-hear-discriminate-intervals = Vergleichen – Intervalle
+training-discipline-tune-match-single = Treffen – Einzeltöne
+training-discipline-tune-match-intervals = Treffen – Intervalle
 
 ## Domain - Intervals
 interval-prime = Prime

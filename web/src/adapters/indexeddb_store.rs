@@ -78,7 +78,7 @@ impl IndexedDbStore {
         Ok(Self { db })
     }
 
-    pub async fn save_pitch_comparison(
+    pub async fn save_pitch_discrimination(
         &self,
         record: &PitchDiscriminationRecord,
     ) -> Result<(), StorageError> {
@@ -132,7 +132,7 @@ impl IndexedDbStore {
         Ok(())
     }
 
-    pub async fn fetch_all_pitch_comparisons(
+    pub async fn fetch_all_pitch_discriminations(
         &self,
     ) -> Result<Vec<PitchDiscriminationRecord>, StorageError> {
         let transaction = self

@@ -26,7 +26,7 @@ use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
 use crate::components::nav_bar::{NavBar, NavIconButton};
-use crate::help_sections::COMPARISON_HELP;
+use crate::help_sections::DISCRIMINATION_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
 use domain::ports::{NotePlayer, PitchDiscriminationObserver, UserSettings};
 use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
@@ -40,7 +40,7 @@ use leptos_router::hooks::use_query_map;
 const POLL_INTERVAL_MS: u32 = 50;
 
 #[component]
-pub fn PitchComparisonView() -> impl IntoView {
+pub fn PitchDiscriminationView() -> impl IntoView {
     let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
         use_context().expect("PerceptualProfile not provided");
     let audio_ctx: SendWrapper<Rc<RefCell<AudioContextManager>>> =
@@ -95,7 +95,7 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     // Build observers list — DataStoreObserver holds the signal and checks
     // store availability on each call, so it works even if IndexedDB
-    // opens after PitchComparisonView mounts.
+    // opens after PitchDiscriminationView mounts.
     let observers: Vec<Box<dyn PitchDiscriminationObserver>> = vec![
         Box::new(ProfileObserver::new(Rc::clone(&profile))),
         Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
@@ -382,7 +382,7 @@ pub fn PitchComparisonView() -> impl IntoView {
             {
                 let state = base_ctx.state();
                 log::debug!(
-                    "[DIAG] PitchComparisonView onstatechange fired — new state: {:?}",
+                    "[DIAG] PitchDiscriminationView onstatechange fired — new state: {:?}",
                     state
                 );
                 match state {
@@ -692,7 +692,7 @@ pub fn PitchComparisonView() -> impl IntoView {
         });
     }
 
-    let comparison_title = move_tr!("comparison-title");
+    let discrimination_title = move_tr!("discrimination-title");
     let tuning_label = Signal::derive(move || {
         if is_interval_mode {
             let ts = LocalStorageSettings.tuning_system();
@@ -718,12 +718,12 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title=comparison_title back_href=base_href("/") on_back=on_back_cb pill_group=true>
+            <NavBar title=discrimination_title back_href=base_href("/") on_back=on_back_cb pill_group=true>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb circled=true />
                 <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
                 <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
             </NavBar>
-            <HelpModal title=move_tr!("comparison-help-title") sections=COMPARISON_HELP is_open=is_help_open on_close=on_help_close />
+            <HelpModal title=move_tr!("discrimination-help-title") sections=DISCRIMINATION_HELP is_open=is_help_open on_close=on_help_close />
 
             <AudioGateOverlay />
 

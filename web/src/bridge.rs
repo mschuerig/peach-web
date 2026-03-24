@@ -105,7 +105,7 @@ impl PitchDiscriminationObserver for DataStoreObserver {
         let error_signal = self.error_signal;
 
         spawn_local(async move {
-            if let Err(e) = store.save_pitch_comparison(&record).await {
+            if let Err(e) = store.save_pitch_discrimination(&record).await {
                 log::error!("Storage write failed: {e}");
                 error_signal.set(Some(
                     "Training data may not have been saved. Training continues.".to_string(),
