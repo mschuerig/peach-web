@@ -1,6 +1,6 @@
 # Story 15.3: Placeholder Rhythm Training Screens
 
-Status: review
+Status: done
 
 ## Story
 
