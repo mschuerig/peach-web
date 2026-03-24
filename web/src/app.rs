@@ -69,7 +69,8 @@ pub struct AudioNeedsGesture(pub RwSignal<bool>);
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
-    InfoView, PitchDiscriminationView, PitchMatchingView, ProfileView, SettingsView, StartPage,
+    ContinuousRhythmMatchingView, InfoView, PitchDiscriminationView, PitchMatchingView,
+    ProfileView, RhythmOffsetDetectionView, SettingsView, StartPage,
 };
 use domain::{
     MetricPoint, PerceptualProfile, ProgressTimeline, TrainingDiscipline, parse_iso8601_to_epoch,
@@ -274,6 +275,8 @@ pub fn App() -> impl IntoView {
                             <Route path=path!("/") view=StartPage />
                             <Route path=path!("/training/pitch-discrimination") view=PitchDiscriminationView />
                             <Route path=path!("/training/pitch-matching") view=PitchMatchingView />
+                            <Route path=path!("/training/rhythm-offset-detection") view=RhythmOffsetDetectionView />
+                            <Route path=path!("/training/continuous-rhythm-matching") view=ContinuousRhythmMatchingView />
                             <Route path=path!("/profile") view=ProfileView />
                             <Route path=path!("/settings") view=SettingsView />
                             <Route path=path!("/info") view=InfoView />

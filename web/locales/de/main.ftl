@@ -19,12 +19,18 @@ page-navigation = Seitennavigation
 ## Start Page
 single-notes = Einzeltöne
 intervals = Intervalle
+rhythm = Rhythmus
 compare = Vergleichen
 match = Treffen
-compare-single-aria = Vergleichen, Einzeltöne
-match-single-aria = Treffen, Einzeltöne
-compare-intervals-aria = Vergleichen, Intervalle
-match-intervals-aria = Treffen, Intervalle
+compare-timing = Timing vergleichen
+fill-the-gap = Lücke füllen
+compare-pitch-aria = Tonhöhe vergleichen
+match-pitch-aria = Tonhöhe treffen
+compare-intervals-aria = Intervalle vergleichen
+match-intervals-aria = Intervalle treffen
+compare-timing-aria = Timing vergleichen
+fill-the-gap-aria = Lücke füllen
+coming-soon = Demnächst verfügbar
 
 ## Training
 training-started = Training gestartet

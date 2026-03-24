@@ -130,7 +130,7 @@ pub fn StartPage() -> impl IntoView {
                             label=move_tr!("compare")
                             icon="\u{1F442}"
                             href=base_href("/training/pitch-discrimination")
-                            aria_label=move_tr!("compare-single-aria")
+                            aria_label=move_tr!("compare-pitch-aria")
                             mode=TrainingDiscipline::UnisonPitchDiscrimination
                             disabled=disabled
                         />
@@ -138,7 +138,7 @@ pub fn StartPage() -> impl IntoView {
                             label=move_tr!("match")
                             icon="\u{1F3AF}"
                             href=base_href("/training/pitch-matching")
-                            aria_label=move_tr!("match-single-aria")
+                            aria_label=move_tr!("match-pitch-aria")
                             mode=TrainingDiscipline::UnisonPitchMatching
                             disabled=disabled
                         />
@@ -163,6 +163,29 @@ pub fn StartPage() -> impl IntoView {
                             href=interval_pitch_matching_href
                             aria_label=move_tr!("match-intervals-aria")
                             mode=TrainingDiscipline::IntervalPitchMatching
+                            disabled=disabled
+                        />
+                    </div>
+                </section>
+
+                // Rhythm section
+                <section class="flex-1">
+                    <h2 class="mb-2.5 text-center text-sm font-medium text-gray-500 dark:text-gray-400">{move_tr!("rhythm")}</h2>
+                    <div class="flex flex-col gap-2.5">
+                        <TrainingCard
+                            label=move_tr!("compare-timing")
+                            icon="\u{1F3B5}"
+                            href=base_href("/training/rhythm-offset-detection")
+                            aria_label=move_tr!("compare-timing-aria")
+                            mode=TrainingDiscipline::RhythmOffsetDetection
+                            disabled=disabled
+                        />
+                        <TrainingCard
+                            label=move_tr!("fill-the-gap")
+                            icon="\u{270B}"
+                            href=base_href("/training/continuous-rhythm-matching")
+                            aria_label=move_tr!("fill-the-gap-aria")
+                            mode=TrainingDiscipline::ContinuousRhythmMatching
                             disabled=disabled
                         />
                     </div>

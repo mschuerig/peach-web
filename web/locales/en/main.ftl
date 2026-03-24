@@ -19,12 +19,18 @@ page-navigation = Page navigation
 ## Start Page
 single-notes = Single Notes
 intervals = Intervals
+rhythm = Rhythm
 compare = Compare
 match = Match
-compare-single-aria = Compare, Single Notes
-match-single-aria = Match, Single Notes
-compare-intervals-aria = Compare, Intervals
-match-intervals-aria = Match, Intervals
+compare-timing = Compare Timing
+fill-the-gap = Fill the Gap
+compare-pitch-aria = Compare Pitch
+match-pitch-aria = Match Pitch
+compare-intervals-aria = Compare Intervals
+match-intervals-aria = Match Intervals
+compare-timing-aria = Compare Timing
+fill-the-gap-aria = Fill the Gap
+coming-soon = Coming soon
 
 ## Training
 training-started = Training started
