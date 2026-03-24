@@ -66,10 +66,7 @@ impl TrainingRecordPersisting for RecordPort {
         let error_signal = self.error_signal;
 
         spawn_local(async move {
-            let result = match &record {
-                TrainingRecord::PitchDiscrimination(r) => store.save_pitch_discrimination(r).await,
-                TrainingRecord::PitchMatching(r) => store.save_pitch_matching(r).await,
-            };
+            let result = store.save_record(&record).await;
             if let Err(e) = result {
                 log::error!("Storage write failed: {e}");
                 error_signal.set(Some(

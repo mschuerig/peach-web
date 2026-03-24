@@ -127,24 +127,13 @@ pub fn App() -> impl IntoView {
             Ok(store) => {
                 let store = Rc::new(store);
 
-                let discrimination_records = match store.fetch_all_pitch_discriminations().await {
+                let all_records = match store.fetch_all_records().await {
                     Ok(records) => {
-                        log::info!("Fetched {} discrimination records", records.len());
+                        log::info!("Fetched {} training records for hydration", records.len());
                         records
                     }
                     Err(e) => {
                         log::error!("Failed to fetch records for hydration: {e}");
-                        Vec::new()
-                    }
-                };
-
-                let matching_records = match store.fetch_all_pitch_matchings().await {
-                    Ok(records) => {
-                        log::info!("Fetched {} matching records", records.len());
-                        records
-                    }
-                    Err(e) => {
-                        log::error!("Failed to fetch pitch matching records for hydration: {e}");
                         Vec::new()
                     }
                 };
@@ -156,37 +145,31 @@ pub fn App() -> impl IntoView {
 
                     let mut key_points: HashMap<StatisticsKey, Vec<MetricPoint>> = HashMap::new();
 
-                    for record in &discrimination_records {
-                        if !record.is_correct {
-                            continue;
+                    for record in &all_records {
+                        for discipline in TrainingDiscipline::ALL {
+                            if discipline.is_rhythm() {
+                                continue; // rhythm hydration not yet implemented
+                            }
+                            let metric = match record {
+                                domain::TrainingRecord::PitchDiscrimination(r) => {
+                                    if !r.is_correct {
+                                        continue;
+                                    }
+                                    discipline.extract_discrimination_metric(r)
+                                }
+                                domain::TrainingRecord::PitchMatching(r) => {
+                                    discipline.extract_matching_metric(r)
+                                }
+                            };
+                            if let Some(m) = metric {
+                                let key = StatisticsKey::Pitch(discipline);
+                                let ts = parse_iso8601_to_epoch(record.timestamp());
+                                key_points
+                                    .entry(key)
+                                    .or_default()
+                                    .push(MetricPoint::new(ts, m));
+                            }
                         }
-                        let discipline = if record.interval == 0 {
-                            TrainingDiscipline::UnisonPitchDiscrimination
-                        } else {
-                            TrainingDiscipline::IntervalPitchDiscrimination
-                        };
-                        let key = StatisticsKey::Pitch(discipline);
-                        let ts = parse_iso8601_to_epoch(&record.timestamp);
-                        let metric = record.cent_offset.abs();
-                        key_points
-                            .entry(key)
-                            .or_default()
-                            .push(MetricPoint::new(ts, metric));
-                    }
-
-                    for record in &matching_records {
-                        let discipline = if record.interval == 0 {
-                            TrainingDiscipline::UnisonPitchMatching
-                        } else {
-                            TrainingDiscipline::IntervalPitchMatching
-                        };
-                        let key = StatisticsKey::Pitch(discipline);
-                        let ts = parse_iso8601_to_epoch(&record.timestamp);
-                        let metric = record.user_cent_error.abs();
-                        key_points
-                            .entry(key)
-                            .or_default()
-                            .push(MetricPoint::new(ts, metric));
                     }
 
                     // Sort each key's points by timestamp
@@ -195,21 +178,15 @@ pub fn App() -> impl IntoView {
                     }
 
                     profile_for_hydration.borrow_mut().rebuild_all(key_points);
-                    log::info!(
-                        "Profile hydrated from {} discrimination + {} matching records",
-                        discrimination_records.len(),
-                        matching_records.len()
-                    );
+                    log::info!("Profile hydrated from {} records", all_records.len());
                 }
 
                 // ProgressTimeline hydration — rebuild from all records
                 {
                     let start_of_today = crate::bridge::compute_start_of_today();
-                    ptl_for_hydration.borrow_mut().rebuild(
-                        &discrimination_records,
-                        &matching_records,
-                        start_of_today,
-                    );
+                    ptl_for_hydration
+                        .borrow_mut()
+                        .rebuild(&all_records, start_of_today);
                     log::info!("ProgressTimeline hydrated");
                 }
 

@@ -4,7 +4,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
 
-use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord};
+use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord, TrainingRecord};
 use domain::{Interval, MIDINote};
 
 use super::indexeddb_store::IndexedDbStore;
@@ -53,14 +53,12 @@ pub struct MergeResult {
 
 /// Export all training data as a CSV file download.
 pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
-    let pitch_discriminations = store
-        .fetch_all_pitch_discriminations()
+    let mut all_records = store
+        .fetch_all_records()
         .await
-        .map_err(|e| format!("Failed to fetch pitch discrimination records: {e:?}"))?;
-    let pitch_matchings = store
-        .fetch_all_pitch_matchings()
-        .await
-        .map_err(|e| format!("Failed to fetch pitch matchings: {e:?}"))?;
+        .map_err(|e| format!("Failed to fetch training records: {e:?}"))?;
+
+    all_records.sort_by(|a, b| a.timestamp().cmp(b.timestamp()));
 
     let mut csv = String::new();
     csv.push_str(METADATA_LINE);
@@ -68,39 +66,12 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
     csv.push_str(CSV_HEADER);
     csv.push('\n');
 
-    // Collect all records with timestamps for chronological sorting
-    enum Record<'a> {
-        PitchDiscrimination(&'a PitchDiscriminationRecord),
-        PitchMatching(&'a PitchMatchingRecord),
-    }
-
-    let mut all_records: Vec<Record> =
-        Vec::with_capacity(pitch_discriminations.len() + pitch_matchings.len());
-    for r in &pitch_discriminations {
-        all_records.push(Record::PitchDiscrimination(r));
-    }
-    for r in &pitch_matchings {
-        all_records.push(Record::PitchMatching(r));
-    }
-
-    all_records.sort_by(|a, b| {
-        let ts_a = match a {
-            Record::PitchDiscrimination(r) => &r.timestamp,
-            Record::PitchMatching(r) => &r.timestamp,
-        };
-        let ts_b = match b {
-            Record::PitchDiscrimination(r) => &r.timestamp,
-            Record::PitchMatching(r) => &r.timestamp,
-        };
-        ts_a.cmp(ts_b)
-    });
-
     // NOTE: No RFC 4180 CSV escaping applied. Safe because all field values are
     // numeric, boolean, or fixed enum strings that never contain commas or quotes.
     // If user-provided string fields are added in the future, escaping must be added.
     for record in &all_records {
         match record {
-            Record::PitchDiscrimination(r) => {
+            TrainingRecord::PitchDiscrimination(r) => {
                 let interval_code = Interval::from_semitones(r.interval)
                     .ok()
                     .map(|i| i.csv_code())
@@ -121,7 +92,7 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                     r.is_correct,
                 ));
             }
-            Record::PitchMatching(r) => {
+            TrainingRecord::PitchMatching(r) => {
                 let interval_code = Interval::from_semitones(r.interval)
                     .ok()
                     .map(|i| i.csv_code())
@@ -362,14 +333,14 @@ pub async fn import_replace(
 
     for record in &data.pitch_discriminations {
         store
-            .save_pitch_discrimination(record)
+            .save_record(&TrainingRecord::PitchDiscrimination(record.clone()))
             .await
             .map_err(|e| format!("Failed to save pitch discrimination record: {e:?}"))?;
     }
 
     for record in &data.pitch_matchings {
         store
-            .save_pitch_matching(record)
+            .save_record(&TrainingRecord::PitchMatching(record.clone()))
             .await
             .map_err(|e| format!("Failed to save pitch matching: {e:?}"))?;
     }
@@ -384,23 +355,23 @@ pub async fn import_merge(
     data: &ParsedImportData,
 ) -> Result<MergeResult, String> {
     // Build sets of existing timestamps (truncated to second) per type
-    let existing_pitch_discriminations = store
-        .fetch_all_pitch_discriminations()
+    let existing_records = store
+        .fetch_all_records()
         .await
-        .map_err(|e| format!("Failed to fetch pitch discrimination records: {e:?}"))?;
-    let mut existing_pitch_discrimination_ts: HashSet<String> = existing_pitch_discriminations
-        .iter()
-        .map(|r| truncate_timestamp_to_second(&r.timestamp))
-        .collect();
+        .map_err(|e| format!("Failed to fetch existing records: {e:?}"))?;
 
-    let existing_pitch_matchings = store
-        .fetch_all_pitch_matchings()
-        .await
-        .map_err(|e| format!("Failed to fetch pitch matchings: {e:?}"))?;
-    let mut existing_pm_ts: HashSet<String> = existing_pitch_matchings
-        .iter()
-        .map(|r| truncate_timestamp_to_second(&r.timestamp))
-        .collect();
+    let mut existing_pitch_discrimination_ts: HashSet<String> = HashSet::new();
+    let mut existing_pm_ts: HashSet<String> = HashSet::new();
+    for record in &existing_records {
+        match record {
+            TrainingRecord::PitchDiscrimination(r) => {
+                existing_pitch_discrimination_ts.insert(truncate_timestamp_to_second(&r.timestamp));
+            }
+            TrainingRecord::PitchMatching(r) => {
+                existing_pm_ts.insert(truncate_timestamp_to_second(&r.timestamp));
+            }
+        }
+    }
 
     let mut result = MergeResult {
         discrimination_imported: 0,
@@ -415,7 +386,7 @@ pub async fn import_merge(
             result.discrimination_skipped += 1;
         } else {
             store
-                .save_pitch_discrimination(record)
+                .save_record(&TrainingRecord::PitchDiscrimination(record.clone()))
                 .await
                 .map_err(|e| format!("Failed to save pitch discrimination record: {e:?}"))?;
             existing_pitch_discrimination_ts.insert(ts);
@@ -429,7 +400,7 @@ pub async fn import_merge(
             result.pitch_matching_skipped += 1;
         } else {
             store
-                .save_pitch_matching(record)
+                .save_record(&TrainingRecord::PitchMatching(record.clone()))
                 .await
                 .map_err(|e| format!("Failed to save pitch matching: {e:?}"))?;
             existing_pm_ts.insert(ts);

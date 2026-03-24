@@ -11,6 +11,24 @@ pub enum TrainingRecord {
     PitchMatching(PitchMatchingRecord),
 }
 
+impl TrainingRecord {
+    /// Returns the timestamp of the underlying record.
+    pub fn timestamp(&self) -> &str {
+        match self {
+            TrainingRecord::PitchDiscrimination(r) => &r.timestamp,
+            TrainingRecord::PitchMatching(r) => &r.timestamp,
+        }
+    }
+
+    /// Returns the IndexedDB object store name for this record type.
+    pub fn store_name(&self) -> &'static str {
+        match self {
+            TrainingRecord::PitchDiscrimination(_) => "pitch_discrimination_records",
+            TrainingRecord::PitchMatching(_) => "pitch_matching_records",
+        }
+    }
+}
+
 /// Flat persistence record for a completed pitch discrimination trial.
 /// Blueprint §10.1 — field names match storage schema exactly.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -269,5 +287,63 @@ mod tests {
 
         assert_eq!(record.user_cent_error, -5.0);
         assert_eq!(record.interval, 0); // same note = prime
+    }
+
+    // --- TrainingRecord method tests ---
+
+    #[test]
+    fn test_training_record_timestamp_discrimination() {
+        let record = TrainingRecord::PitchDiscrimination(PitchDiscriminationRecord {
+            reference_note: 60,
+            target_note: 60,
+            cent_offset: 10.0,
+            is_correct: true,
+            interval: 0,
+            tuning_system: "equalTemperament".to_string(),
+            timestamp: "2026-03-03T14:00:00Z".to_string(),
+        });
+        assert_eq!(record.timestamp(), "2026-03-03T14:00:00Z");
+    }
+
+    #[test]
+    fn test_training_record_timestamp_matching() {
+        let record = TrainingRecord::PitchMatching(PitchMatchingRecord {
+            reference_note: 60,
+            target_note: 67,
+            initial_cent_offset: 15.0,
+            user_cent_error: 3.0,
+            interval: 7,
+            tuning_system: "equalTemperament".to_string(),
+            timestamp: "2026-03-04T10:00:00Z".to_string(),
+        });
+        assert_eq!(record.timestamp(), "2026-03-04T10:00:00Z");
+    }
+
+    #[test]
+    fn test_training_record_store_name_discrimination() {
+        let record = TrainingRecord::PitchDiscrimination(PitchDiscriminationRecord {
+            reference_note: 60,
+            target_note: 60,
+            cent_offset: 10.0,
+            is_correct: true,
+            interval: 0,
+            tuning_system: "equalTemperament".to_string(),
+            timestamp: "2026-03-03T14:00:00Z".to_string(),
+        });
+        assert_eq!(record.store_name(), "pitch_discrimination_records");
+    }
+
+    #[test]
+    fn test_training_record_store_name_matching() {
+        let record = TrainingRecord::PitchMatching(PitchMatchingRecord {
+            reference_note: 60,
+            target_note: 67,
+            initial_cent_offset: 15.0,
+            user_cent_error: 3.0,
+            interval: 7,
+            tuning_system: "equalTemperament".to_string(),
+            timestamp: "2026-03-04T10:00:00Z".to_string(),
+        });
+        assert_eq!(record.store_name(), "pitch_matching_records");
     }
 }

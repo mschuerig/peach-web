@@ -4,13 +4,24 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{IdbDatabase, IdbOpenDbRequest, IdbRequest, IdbTransactionMode};
 
 use domain::ports::StorageError;
-use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord};
+use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord, TrainingRecord};
 
 const DB_NAME: &str = "peach";
-const DB_VERSION: u32 = 2;
-const COMPARISON_STORE: &str = "comparison_records";
-const PITCH_MATCHING_STORE: &str = "pitch_matching_records";
+const DB_VERSION: u32 = 3;
 const TIMESTAMP_INDEX: &str = "timestamp";
+
+/// Central registry of all IndexedDB object store names.
+/// New disciplines add their store name here; all store creation, deletion,
+/// and iteration derive from this single source of truth.
+pub const STORE_NAMES: &[&str] = &[
+    "pitch_discrimination_records",
+    "pitch_matching_records",
+    "rhythm_offset_detection_records",
+    "continuous_rhythm_matching_records",
+];
+
+/// Legacy store names from DB versions 1-2. Deleted on upgrade to v3.
+const LEGACY_STORE_NAMES: &[&str] = &["comparison_records"];
 
 pub struct IndexedDbStore {
     db: IdbDatabase,
@@ -28,7 +39,7 @@ impl IndexedDbStore {
             .open_with_u32(DB_NAME, DB_VERSION)
             .map_err(|e| StorageError::DatabaseOpenFailed(format!("{e:?}")))?;
 
-        // Handle onupgradeneeded — create object stores.
+        // Handle onupgradeneeded — create object stores from the registry.
         // unwrap()s here are acceptable: this JS closure runs synchronously during
         // IDB upgrade, where event.target()/result() are guaranteed by the browser,
         // and store creation failure means a fundamentally broken database that
@@ -42,26 +53,25 @@ impl IndexedDbStore {
                 .unwrap()
                 .unchecked_into();
 
-            if !db.object_store_names().contains(COMPARISON_STORE) {
-                let params = web_sys::IdbObjectStoreParameters::new();
-                params.set_auto_increment(true);
-                let store = db
-                    .create_object_store_with_optional_parameters(COMPARISON_STORE, &params)
-                    .unwrap();
-                store
-                    .create_index_with_str(TIMESTAMP_INDEX, TIMESTAMP_INDEX)
-                    .unwrap();
+            // Remove legacy stores from previous DB versions
+            for &name in LEGACY_STORE_NAMES {
+                if db.object_store_names().contains(name) {
+                    db.delete_object_store(name).unwrap();
+                }
             }
 
-            if !db.object_store_names().contains(PITCH_MATCHING_STORE) {
-                let params = web_sys::IdbObjectStoreParameters::new();
-                params.set_auto_increment(true);
-                let store = db
-                    .create_object_store_with_optional_parameters(PITCH_MATCHING_STORE, &params)
-                    .unwrap();
-                store
-                    .create_index_with_str(TIMESTAMP_INDEX, TIMESTAMP_INDEX)
-                    .unwrap();
+            // Create all registered stores that don't yet exist
+            for &name in STORE_NAMES {
+                if !db.object_store_names().contains(name) {
+                    let params = web_sys::IdbObjectStoreParameters::new();
+                    params.set_auto_increment(true);
+                    let store = db
+                        .create_object_store_with_optional_parameters(name, &params)
+                        .unwrap();
+                    store
+                        .create_index_with_str(TIMESTAMP_INDEX, TIMESTAMP_INDEX)
+                        .unwrap();
+                }
             }
         });
         open_request.set_onupgradeneeded(Some(on_upgrade.as_ref().unchecked_ref()));
@@ -78,21 +88,24 @@ impl IndexedDbStore {
         Ok(Self { db })
     }
 
-    pub async fn save_pitch_discrimination(
-        &self,
-        record: &PitchDiscriminationRecord,
-    ) -> Result<(), StorageError> {
+    /// Save a training record to the appropriate object store, dispatched by variant.
+    pub async fn save_record(&self, record: &TrainingRecord) -> Result<(), StorageError> {
+        let store_name = record.store_name();
+
+        let js_value = match record {
+            TrainingRecord::PitchDiscrimination(r) => serde_wasm_bindgen::to_value(r),
+            TrainingRecord::PitchMatching(r) => serde_wasm_bindgen::to_value(r),
+        }
+        .map_err(|e| StorageError::WriteFailed(format!("Serialization: {e}")))?;
+
         let transaction = self
             .db
-            .transaction_with_str_and_mode(COMPARISON_STORE, IdbTransactionMode::Readwrite)
+            .transaction_with_str_and_mode(store_name, IdbTransactionMode::Readwrite)
             .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
 
         let store = transaction
-            .object_store(COMPARISON_STORE)
+            .object_store(store_name)
             .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
-
-        let js_value = serde_wasm_bindgen::to_value(record)
-            .map_err(|e| StorageError::WriteFailed(format!("Serialization: {e}")))?;
 
         let request = store
             .add(&js_value)
@@ -105,80 +118,45 @@ impl IndexedDbStore {
         Ok(())
     }
 
-    pub async fn save_pitch_matching(
-        &self,
-        record: &PitchMatchingRecord,
-    ) -> Result<(), StorageError> {
-        let transaction = self
-            .db
-            .transaction_with_str_and_mode(PITCH_MATCHING_STORE, IdbTransactionMode::Readwrite)
-            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
+    /// Fetch all training records from all populated stores, wrapped in TrainingRecord.
+    pub async fn fetch_all_records(&self) -> Result<Vec<TrainingRecord>, StorageError> {
+        let mut all = Vec::new();
 
-        let store = transaction
-            .object_store(PITCH_MATCHING_STORE)
-            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
-
-        let js_value = serde_wasm_bindgen::to_value(record)
-            .map_err(|e| StorageError::WriteFailed(format!("Serialization: {e}")))?;
-
-        let request = store
-            .add(&js_value)
-            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
-
-        idb_request_to_future(request)
-            .await
-            .map_err(|e| StorageError::WriteFailed(format!("{e:?}")))?;
-
-        Ok(())
-    }
-
-    pub async fn fetch_all_pitch_discriminations(
-        &self,
-    ) -> Result<Vec<PitchDiscriminationRecord>, StorageError> {
-        let transaction = self
-            .db
-            .transaction_with_str_and_mode(COMPARISON_STORE, IdbTransactionMode::Readonly)
-            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
-
-        let store = transaction
-            .object_store(COMPARISON_STORE)
-            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
-
-        let index = store
-            .index(TIMESTAMP_INDEX)
-            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
-
-        let request = index
-            .get_all()
-            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
-
-        let result = idb_request_to_future(request)
-            .await
-            .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
-
-        let array: js_sys::Array = result.unchecked_into();
-        let mut records = Vec::with_capacity(array.length() as usize);
-
-        for i in 0..array.length() {
-            let value = array.get(i);
+        for value in self
+            .fetch_jsvalues_from_store("pitch_discrimination_records")
+            .await?
+        {
             let record: PitchDiscriminationRecord = serde_wasm_bindgen::from_value(value)
                 .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
-            records.push(record);
+            all.push(TrainingRecord::PitchDiscrimination(record));
         }
 
-        Ok(records)
+        for value in self
+            .fetch_jsvalues_from_store("pitch_matching_records")
+            .await?
+        {
+            let record: PitchMatchingRecord = serde_wasm_bindgen::from_value(value)
+                .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
+            all.push(TrainingRecord::PitchMatching(record));
+        }
+
+        // Future rhythm stores would be fetched here once rhythm record types exist.
+
+        Ok(all)
     }
 
-    pub async fn fetch_all_pitch_matchings(
+    /// Fetch all raw JsValues from a named object store, ordered by timestamp index.
+    async fn fetch_jsvalues_from_store(
         &self,
-    ) -> Result<Vec<PitchMatchingRecord>, StorageError> {
+        store_name: &str,
+    ) -> Result<Vec<JsValue>, StorageError> {
         let transaction = self
             .db
-            .transaction_with_str_and_mode(PITCH_MATCHING_STORE, IdbTransactionMode::Readonly)
+            .transaction_with_str_and_mode(store_name, IdbTransactionMode::Readonly)
             .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
 
         let store = transaction
-            .object_store(PITCH_MATCHING_STORE)
+            .object_store(store_name)
             .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
 
         let index = store
@@ -194,30 +172,27 @@ impl IndexedDbStore {
             .map_err(|e| StorageError::ReadFailed(format!("{e:?}")))?;
 
         let array: js_sys::Array = result.unchecked_into();
-        let mut records = Vec::with_capacity(array.length() as usize);
+        let mut values = Vec::with_capacity(array.length() as usize);
 
         for i in 0..array.length() {
-            let value = array.get(i);
-            let record: PitchMatchingRecord = serde_wasm_bindgen::from_value(value)
-                .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
-            records.push(record);
+            values.push(array.get(i));
         }
 
-        Ok(records)
+        Ok(values)
     }
 
+    /// Delete all records from all registered object stores.
     pub async fn delete_all(&self) -> Result<(), StorageError> {
-        let store_names = [COMPARISON_STORE, PITCH_MATCHING_STORE];
         let transaction = self
             .db
             .transaction_with_str_sequence_and_mode(
-                &serde_wasm_bindgen::to_value(&store_names)
+                &serde_wasm_bindgen::to_value(STORE_NAMES)
                     .map_err(|e| StorageError::DeleteFailed(format!("{e}")))?,
                 IdbTransactionMode::Readwrite,
             )
             .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;
 
-        for name in store_names {
+        for &name in STORE_NAMES {
             let store = transaction
                 .object_store(name)
                 .map_err(|e| StorageError::DeleteFailed(format!("{e:?}")))?;

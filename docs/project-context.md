@@ -175,7 +175,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 **Storage Key Conventions:**
 
 - localStorage: `peach.` prefix + `snake_case` (e.g. `peach.note_range_min`, `peach.tuning_system`)
-- IndexedDB: database `peach`, object stores `comparison_records` (legacy name) and `pitch_matching_records`
+- IndexedDB: database `peach` (v3), object stores derived from `STORE_NAMES` registry in `indexeddb_store.rs`: `pitch_discrimination_records`, `pitch_matching_records`, `rhythm_offset_detection_records`, `continuous_rhythm_matching_records`
 
 **Linting:**
 

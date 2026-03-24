@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
+use crate::records::TrainingRecord;
 use crate::training_discipline::TrainingDiscipline;
 
 const SECS_PER_DAY: f64 = 86_400.0;
@@ -176,12 +176,7 @@ impl ProgressTimeline {
     }
 
     /// Rebuild all per-discipline data from stored records.
-    pub fn rebuild(
-        &mut self,
-        discrimination_records: &[PitchDiscriminationRecord],
-        matching_records: &[PitchMatchingRecord],
-        start_of_today: f64,
-    ) {
+    pub fn rebuild(&mut self, records: &[TrainingRecord], start_of_today: f64) {
         // Reset all disciplines
         for state in self.disciplines.values_mut() {
             state.reset();
@@ -190,20 +185,17 @@ impl ProgressTimeline {
         // Collect (timestamp, metric, discipline) tuples from all records
         let mut points: Vec<(f64, f64, TrainingDiscipline)> = Vec::new();
 
-        for record in discrimination_records {
-            let ts = parse_iso8601_to_epoch(&record.timestamp);
+        for record in records {
+            let ts = parse_iso8601_to_epoch(record.timestamp());
             for discipline in TrainingDiscipline::ALL {
-                if let Some(metric) = discipline.extract_discrimination_metric(record) {
-                    points.push((ts, metric, discipline));
-                }
-            }
-        }
-
-        for record in matching_records {
-            let ts = parse_iso8601_to_epoch(&record.timestamp);
-            for discipline in TrainingDiscipline::ALL {
-                if let Some(metric) = discipline.extract_matching_metric(record) {
-                    points.push((ts, metric, discipline));
+                let metric = match record {
+                    TrainingRecord::PitchDiscrimination(r) => {
+                        discipline.extract_discrimination_metric(r)
+                    }
+                    TrainingRecord::PitchMatching(r) => discipline.extract_matching_metric(r),
+                };
+                if let Some(m) = metric {
+                    points.push((ts, m, discipline));
                 }
             }
         }
@@ -267,26 +259,20 @@ impl ProgressTimeline {
         }
     }
 
-    /// Incrementally update from a new pitch discrimination record.
-    pub fn add_discrimination(&mut self, record: &PitchDiscriminationRecord, start_of_today: f64) {
-        let ts = parse_iso8601_to_epoch(&record.timestamp);
+    /// Incrementally update from a new training record of any type.
+    pub fn add_record(&mut self, record: &TrainingRecord, start_of_today: f64) {
+        let ts = parse_iso8601_to_epoch(record.timestamp());
         for discipline in TrainingDiscipline::ALL {
-            if let Some(metric) = discipline.extract_discrimination_metric(record)
+            let metric = match record {
+                TrainingRecord::PitchDiscrimination(r) => {
+                    discipline.extract_discrimination_metric(r)
+                }
+                TrainingRecord::PitchMatching(r) => discipline.extract_matching_metric(r),
+            };
+            if let Some(m) = metric
                 && let Some(state) = self.disciplines.get_mut(&discipline)
             {
-                state.add_point(ts, metric, start_of_today);
-            }
-        }
-    }
-
-    /// Incrementally update from a new pitch matching record.
-    pub fn add_matching(&mut self, record: &PitchMatchingRecord, start_of_today: f64) {
-        let ts = parse_iso8601_to_epoch(&record.timestamp);
-        for discipline in TrainingDiscipline::ALL {
-            if let Some(metric) = discipline.extract_matching_metric(record)
-                && let Some(state) = self.disciplines.get_mut(&discipline)
-            {
-                state.add_point(ts, metric, start_of_today);
+                state.add_point(ts, m, start_of_today);
             }
         }
     }
@@ -537,12 +523,8 @@ mod tests {
     use super::*;
     use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 
-    fn make_discrimination(
-        interval: u8,
-        cent_offset: f64,
-        timestamp: &str,
-    ) -> PitchDiscriminationRecord {
-        PitchDiscriminationRecord {
+    fn make_discrimination(interval: u8, cent_offset: f64, timestamp: &str) -> TrainingRecord {
+        TrainingRecord::PitchDiscrimination(PitchDiscriminationRecord {
             reference_note: 60,
             target_note: 60 + interval,
             cent_offset,
@@ -550,11 +532,11 @@ mod tests {
             interval,
             tuning_system: "equalTemperament".to_string(),
             timestamp: timestamp.to_string(),
-        }
+        })
     }
 
-    fn make_matching(interval: u8, user_cent_error: f64, timestamp: &str) -> PitchMatchingRecord {
-        PitchMatchingRecord {
+    fn make_matching(interval: u8, user_cent_error: f64, timestamp: &str) -> TrainingRecord {
+        TrainingRecord::PitchMatching(PitchMatchingRecord {
             reference_note: 60,
             target_note: 60 + interval,
             initial_cent_offset: 20.0,
@@ -562,7 +544,7 @@ mod tests {
             interval,
             tuning_system: "equalTemperament".to_string(),
             timestamp: timestamp.to_string(),
-        }
+        })
     }
 
     // Start of today: 2026-03-06T00:00:00Z
@@ -632,7 +614,7 @@ mod tests {
     #[test]
     fn test_rebuild_with_empty_records() {
         let mut tl = ProgressTimeline::new();
-        tl.rebuild(&[], &[], today_epoch());
+        tl.rebuild(&[], today_epoch());
         for discipline in TrainingDiscipline::ALL {
             assert!(!tl.has_data(discipline));
         }
@@ -645,7 +627,7 @@ mod tests {
             make_discrimination(0, 15.0, "2026-03-06T11:00:00Z"),
             make_discrimination(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
-        tl.rebuild(&records, &[], today_epoch());
+        tl.rebuild(&records, today_epoch());
 
         assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
         assert!(!tl.has_data(TrainingDiscipline::IntervalPitchDiscrimination));
@@ -657,7 +639,7 @@ mod tests {
     fn test_rebuild_matching_interval_active() {
         let mut tl = ProgressTimeline::new();
         let records = vec![make_matching(7, 5.0, "2026-03-06T11:00:00Z")];
-        tl.rebuild(&[], &records, today_epoch());
+        tl.rebuild(&records, today_epoch());
 
         assert!(tl.has_data(TrainingDiscipline::IntervalPitchMatching));
         assert!(!tl.has_data(TrainingDiscipline::UnisonPitchMatching));
@@ -673,7 +655,7 @@ mod tests {
             make_discrimination(0, 20.0, "2026-03-06T11:00:00Z"),
             make_discrimination(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
@@ -690,7 +672,7 @@ mod tests {
             make_discrimination(0, 20.0, "2026-03-06T09:00:00Z"),
             make_discrimination(0, 10.0, "2026-03-06T11:30:00Z"),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 2);
@@ -716,7 +698,7 @@ mod tests {
             make_discrimination(0, 20.0, &ts_day),
             make_discrimination(0, 10.0, ts_session),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 3);
@@ -739,7 +721,7 @@ mod tests {
             make_discrimination(0, 20.0, &ts1),
             make_discrimination(0, 10.0, &ts2),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
@@ -761,7 +743,7 @@ mod tests {
             make_discrimination(0, 20.0, &ts1),
             make_discrimination(0, 10.0, &ts2),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 2);
@@ -781,7 +763,7 @@ mod tests {
             make_discrimination(0, 30.0, ts1),
             make_discrimination(0, 20.0, ts2),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
@@ -804,7 +786,7 @@ mod tests {
             make_discrimination(0, 30.0, ts1),
             make_discrimination(0, 20.0, ts2),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 2);
@@ -821,7 +803,7 @@ mod tests {
         let ts = "2026-02-25T12:00:00Z";
 
         let records = vec![make_discrimination(0, 20.0, ts)];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
@@ -846,7 +828,7 @@ mod tests {
             make_discrimination(0, 20.0, "2026-03-06T11:05:00Z"),
             make_discrimination(0, 30.0, "2026-03-06T11:10:00Z"),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
@@ -865,7 +847,7 @@ mod tests {
         let today = today_epoch();
 
         let records = vec![make_discrimination(0, 20.0, "2026-03-06T11:00:00Z")];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets[0].stddev, 0.0);
@@ -879,7 +861,7 @@ mod tests {
         let today = today_epoch();
 
         let record = make_discrimination(0, 15.0, "2026-03-06T11:55:00Z");
-        tl.add_discrimination(&record, today);
+        tl.add_record(&record, today);
 
         assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
         assert!(!tl.has_data(TrainingDiscipline::IntervalPitchDiscrimination));
@@ -893,7 +875,7 @@ mod tests {
         let today = today_epoch();
 
         let record = make_matching(0, 5.0, "2026-03-06T11:55:00Z");
-        tl.add_matching(&record, today);
+        tl.add_record(&record, today);
 
         assert!(tl.has_data(TrainingDiscipline::UnisonPitchMatching));
         assert!(!tl.has_data(TrainingDiscipline::IntervalPitchMatching));
@@ -913,13 +895,13 @@ mod tests {
             make_discrimination(0, 20.0, ts2),
             make_discrimination(0, 30.0, ts3),
         ];
-        tl_rebuild.rebuild(&records, &[], today);
+        tl_rebuild.rebuild(&records, today);
 
         // Incremental path
         let mut tl_incr = ProgressTimeline::new();
-        tl_incr.add_discrimination(&make_discrimination(0, 10.0, ts1), today);
-        tl_incr.add_discrimination(&make_discrimination(0, 20.0, ts2), today);
-        tl_incr.add_discrimination(&make_discrimination(0, 30.0, ts3), today);
+        tl_incr.add_record(&make_discrimination(0, 10.0, ts1), today);
+        tl_incr.add_record(&make_discrimination(0, 20.0, ts2), today);
+        tl_incr.add_record(&make_discrimination(0, 30.0, ts3), today);
 
         let rebuild_buckets =
             tl_rebuild.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
@@ -953,13 +935,13 @@ mod tests {
             make_discrimination(0, 20.0, &ts_day),
             make_discrimination(0, 10.0, ts_session),
         ];
-        tl_rebuild.rebuild(&records, &[], today);
+        tl_rebuild.rebuild(&records, today);
 
         // Incremental path
         let mut tl_incr = ProgressTimeline::new();
-        tl_incr.add_discrimination(&make_discrimination(0, 30.0, ts_month), today);
-        tl_incr.add_discrimination(&make_discrimination(0, 20.0, &ts_day), today);
-        tl_incr.add_discrimination(&make_discrimination(0, 10.0, ts_session), today);
+        tl_incr.add_record(&make_discrimination(0, 30.0, ts_month), today);
+        tl_incr.add_record(&make_discrimination(0, 20.0, &ts_day), today);
+        tl_incr.add_record(&make_discrimination(0, 10.0, ts_session), today);
 
         let rebuild_buckets =
             tl_rebuild.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
@@ -1002,7 +984,7 @@ mod tests {
             make_discrimination(0, 15.0, "2026-03-06T11:00:00Z"),
             make_discrimination(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
         assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
 
         tl.reset();
@@ -1034,7 +1016,7 @@ mod tests {
             make_discrimination(0, 20.0, "2026-01-15T12:00:00Z"),
             make_discrimination(0, 15.0, "2026-02-15T12:00:00Z"),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert!(buckets.iter().all(|b| b.bucket_size == BucketSize::Month));
@@ -1049,7 +1031,7 @@ mod tests {
             make_discrimination(0, 20.0, "2026-03-06T10:00:00Z"),
             make_discrimination(0, 15.0, "2026-03-06T11:00:00Z"),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert!(buckets.iter().all(|b| b.bucket_size == BucketSize::Session));
@@ -1067,7 +1049,7 @@ mod tests {
             make_discrimination(0, 20.0, "2026-03-06T11:05:00Z"),
             make_discrimination(0, 30.0, "2026-03-06T11:10:00Z"),
         ];
-        tl.rebuild(&records, &[], today);
+        tl.rebuild(&records, today);
 
         let stddev = tl.latest_bucket_stddev(TrainingDiscipline::UnisonPitchDiscrimination);
         assert!(stddev.is_some());
