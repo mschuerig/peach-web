@@ -333,7 +333,7 @@ peach-web/
 | Store | Key Convention | Example |
 |---|---|---|
 | localStorage | `peach.` prefix + `snake_case` | `peach.note_range_min`, `peach.tuning_system` |
-| IndexedDB | Database name: `peach` | Object stores: `comparison_records`, `pitch_matching_records` |
+| IndexedDB | Database name: `peach` | Object stores: `comparison_records` (legacy name), `pitch_matching_records` |
 
 **Route Paths:**
 - Lowercase, hyphenated: `/training/pitch-discrimination`, `/training/pitch-matching`, `/profile`, `/settings`, `/info`
@@ -603,7 +603,7 @@ Session calls NotePlayer.play(frequency, duration, velocity, amplitude)
 
 ```
 IndexedDB "peach"
-├── comparison_records    (object store, timestamp index)
+├── comparison_records    (object store, legacy name, timestamp index)
 └── pitch_matching_records (object store, timestamp index)
 
 localStorage

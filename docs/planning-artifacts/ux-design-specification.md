@@ -363,15 +363,15 @@ Peach requires audio output to function. This is a fundamental constraint of the
                     │ [Compare]                │
                     │ [Match]                  │
                     │ ── ── ── ── ── ── ──    │
-                    │ [Compare]                │
-                    │ [Match]                  │
+                    │ [Interval Compare]       │
+                    │ [Interval Match]         │
                     │                          │
                     │ [Settings] [Profile]     │
                     │ [Info]                   │
                     └┬──┬──┬──┬──┬──┬──┬──┬──┘
                      │  │  │  │  │  │  │  │
-        Pitch Discrim──┘  │  │  │  │  │  │  └───Interval PM
-        Pitch Match─────┘  │  │  │  │  └──────Interval PD
+        Compare────────┘  │  │  │  │  │  │  └───Interval Match
+        Match──────────┘  │  │  │  │  └──────Interval Compare
                            │  │  │  │
                     Settings  Profile  Info
 ```

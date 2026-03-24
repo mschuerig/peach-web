@@ -258,7 +258,7 @@ sequenceDiagram
     CV->>S: start_session()
 
     loop Training cycle
-        S->>S: generate_trial()<br/>(Kazez strategy)
+        S->>S: next_pitch_discrimination_trial()
         S->>NP: play(reference_freq)
         Note over NP: Note 1 sounds
         NP-->>S: handle returned

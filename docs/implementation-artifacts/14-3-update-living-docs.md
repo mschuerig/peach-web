@@ -1,6 +1,6 @@
 # Story 14.3: Update Living Documentation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -24,7 +24,7 @@ Stories 14.1–14.3 rename domain types and update CSV format. Living docs must 
 
 5. **AC5 — Project context updated:** `docs/project-context.md` type references updated.
 
-6. **AC6 — Epics doc updated:** `docs/planning-artifacts/epics.md` — add Epic 14 with stories 14.1–14.4.
+6. **AC6 — Epics doc updated:** `docs/planning-artifacts/epics.md` — add Epic 14 with stories 14.1–14.3.
 
 7. **AC7 — Sprint status updated:** `docs/implementation-artifacts/sprint-status.yaml` — add Epic 14 entries (stories 14.1–14.3).
 
