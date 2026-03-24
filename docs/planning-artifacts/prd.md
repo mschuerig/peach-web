@@ -38,11 +38,11 @@ classification:
 
 ## Executive Summary
 
-Peach is a browser-based ear training application that builds a perceptual profile of the user's pitch discrimination ability through adaptive comparison training. Built with Rust compiled to WebAssembly, it reimplements the existing Peach iOS app for the web platform, making the same training approach accessible to anyone with a modern browser — desktop or mobile, any operating system.
+Peach is a browser-based ear training application that builds a perceptual profile of the user's pitch discrimination ability through adaptive pitch discrimination training. Built with Rust compiled to WebAssembly, it reimplements the existing Peach iOS app for the web platform, making the same training approach accessible to anyone with a modern browser — desktop or mobile, any operating system.
 
 The application operates entirely offline after initial page load. There is no server backend, no user accounts, no network dependency. All training data is stored locally in the browser. A static file server delivers the app; the browser does everything else.
 
-Two training modes: **comparison training** (two notes play sequentially, user judges higher or lower) and **pitch matching** (user tunes a note to match a reference by ear). Both modes use an adaptive algorithm that narrows difficulty after correct answers and widens it after incorrect ones, converging on the user's detection threshold. A perceptual profile tracks ability across the full MIDI range using Welford's online statistics.
+Two training disciplines: **pitch discrimination** (two notes play sequentially, user judges higher or lower) and **pitch matching** (user tunes a note to match a reference by ear). Both disciplines use an adaptive algorithm that narrows difficulty after correct answers and widens it after incorrect ones, converging on the user's detection threshold. A perceptual profile tracks ability across the full MIDI range using Welford's online statistics.
 
 The developer's primary motivation is learning Rust, WASM, and browser-native APIs through a real, non-trivial project with a well-understood domain. The secondary goal is a genuinely usable tool.
 
@@ -66,7 +66,7 @@ The web version's differentiator is accessibility, not novelty. Same philosophy,
 ### User Success
 
 - A musician can open Peach in any modern browser (Chrome, Firefox, Safari, Edge) and train their pitch discrimination without installing anything
-- Comparison training feels reflexive — the loop of hear/answer/feedback runs without noticeable delay or UI friction
+- Pitch discrimination training feels reflexive — the loop of hear/answer/feedback runs without noticeable delay or UI friction
 - Pitch matching slider responds in real time with no perceptible lag between drag and pitch change
 - Training data persists across page refreshes, browser restarts, and device reboots — no silent data loss
 - The perceptual profile accurately reflects the user's training history, rebuilt identically from stored records on every launch
@@ -89,18 +89,18 @@ The web version's differentiator is accessibility, not novelty. Same philosophy,
 ### Measurable Outcomes
 
 - All domain algorithms produce identical results to the iOS implementation when given the same inputs (Kazez formulas, Welford's statistics, tuning system conversions)
-- All training modes from the iOS app are functional in the browser: comparison, pitch matching, interval comparison, interval pitch matching
-- Keyboard shortcuts provide a complete hands-free training experience for comparison mode
+- All training disciplines from the iOS app are functional in the browser: pitch discrimination, pitch matching, interval pitch discrimination, interval pitch matching
+- Keyboard shortcuts provide a complete hands-free training experience for pitch discrimination
 
 ## Product Scope
 
 ### Phase 1: Foundation
 
-Project setup (Rust/WASM toolchain, UI framework selection, build pipeline). Domain value types in Rust. Basic oscillator-based NotePlayer (sine wave via Web Audio API). Simple comparison training loop with fixed difficulty. Minimal UI: start button, higher/lower buttons, feedback indicator.
+Project setup (Rust/WASM toolchain, UI framework selection, build pipeline). Domain value types in Rust. Basic oscillator-based NotePlayer (sine wave via Web Audio API). Simple pitch discrimination training loop with fixed difficulty. Minimal UI: start button, higher/lower buttons, feedback indicator.
 
 ### Phase 2: Core Training
 
-Full Kazez adaptive algorithm. Perceptual profile with Welford's algorithm. Persistent storage for comparison records. Profile hydration on startup. Settings screen. TrendAnalyzer and ThresholdTimeline.
+Full Kazez adaptive algorithm. Perceptual profile with Welford's algorithm. Persistent storage for pitch discrimination records. Profile hydration on startup. Settings screen. TrendAnalyzer and ThresholdTimeline.
 
 ### Phase 3: Pitch Matching
 
@@ -108,7 +108,7 @@ PitchMatchingSession state machine. Vertical slider with real-time frequency adj
 
 ### Phase 4: Visualization and Polish
 
-Profile screen with piano keyboard confidence band. Timeline chart. Interval training mode. Keyboard shortcuts. Offline support via Service Worker.
+Profile screen with piano keyboard confidence band. Timeline chart. Interval training disciplines. Keyboard shortcuts. Offline support via Service Worker.
 
 ### Phase 5: Interoperability
 
@@ -118,7 +118,7 @@ Data export/import (JSON format). iOS app matching feature. Cross-platform data 
 
 ### The Musician — First Encounter
 
-A string player opens Peach in their browser. No account, no onboarding, no tutorial. They see training buttons and a profile preview. They click "Comparison." Two notes play. They click "Higher." A brief thumbs-up flashes. The next pair begins. Within seconds they're in the loop — reacting to sounds, not thinking about an app. They close the tab when their rehearsal starts. No session summary, no guilt. Their data is already saved.
+A string player opens Peach in their browser. No account, no onboarding, no tutorial. They see training buttons and a profile preview. They click "Compare." Two notes play. They click "Higher." A brief thumbs-up flashes. The next pair begins. Within seconds they're in the loop — reacting to sounds, not thinking about an app. They close the tab when their rehearsal starts. No session summary, no guilt. Their data is already saved.
 
 ### The Musician — Daily Practice
 
@@ -126,11 +126,11 @@ Same musician, two weeks later. Opens Peach during a coffee break. The profile p
 
 ### The Musician — Pitch Matching
 
-A singer switches to pitch matching mode. A reference note plays, then a tunable note starts at a random offset. They drag the vertical slider by ear — no visual guide, no markings. They release when it sounds right. Feedback shows "+4 cents" with a short green arrow. Next reference plays. The loop is slower and more deliberate than comparison mode, but equally reflexive once familiar.
+A singer switches to pitch matching mode. A reference note plays, then a tunable note starts at a random offset. They drag the vertical slider by ear — no visual guide, no markings. They release when it sounds right. Feedback shows "+4 cents" with a short green arrow. Next reference plays. The loop is slower and more deliberate than pitch discrimination, but equally reflexive once familiar.
 
 ### Edge Cases — Interruption and Recovery
 
-Mid-training, the user switches tabs. The browser suspends the AudioContext. Training stops, incomplete comparison discarded. When they return, they're back at the start page. One click to resume training — the algorithm picks up where their profile left off. After a browser crash, all training records are intact in local storage. After three months away, the app is identical — no "welcome back," no streak reset, just the start page and a profile that remembers everything.
+Mid-training, the user switches tabs. The browser suspends the AudioContext. Training stops, incomplete trial discarded. When they return, they're back at the start page. One click to resume training — the algorithm picks up where their profile left off. After a browser crash, all training records are intact in local storage. After three months away, the app is identical — no "welcome back," no streak reset, just the start page and a profile that remembers everything.
 
 ### Journey Requirements Summary
 
@@ -207,16 +207,16 @@ WCAG 2.1 AA compliance:
 
 ## Functional Requirements
 
-### Comparison Training
+### Pitch Discrimination Training
 
-- FR1: User can start comparison training in unison mode from the start page
-- FR2: User can start comparison training in interval mode from the start page
+- FR1: User can start pitch discrimination training in unison mode from the start page
+- FR2: User can start pitch discrimination training in interval mode from the start page
 - FR3: User can hear two sequential notes played at the configured duration and loudness variation
 - FR4: User can answer "higher" or "lower" as soon as the second note begins playing (early answer)
 - FR5: User can see brief visual feedback (correct/incorrect) after each answer
-- FR6: User can stop comparison training at any time by navigating away
-- FR7: System discards incomplete comparisons silently when training stops
-- FR8: System selects the next comparison using the adaptive algorithm based on user's perceptual profile and last answer
+- FR6: User can stop pitch discrimination training at any time by navigating away
+- FR7: System discards incomplete trials silently when training stops
+- FR8: System selects the next trial using the adaptive algorithm based on user's perceptual profile and last answer
 
 ### Pitch Matching Training
 
@@ -259,7 +259,7 @@ WCAG 2.1 AA compliance:
 
 ### Data Persistence
 
-- FR36: System persists all comparison training records in browser storage
+- FR36: System persists all pitch discrimination training records in browser storage
 - FR37: System persists all pitch matching training records in browser storage
 - FR38: System persists user settings across page refreshes and browser restarts
 - FR39: User can export training records and settings to a file
@@ -267,7 +267,7 @@ WCAG 2.1 AA compliance:
 
 ### Input & Accessibility
 
-- FR41: User can answer comparisons via keyboard shortcuts (Arrow Up/H for higher, Arrow Down/L for lower)
+- FR41: User can answer pitch discrimination trials via keyboard shortcuts (Arrow Up/H for higher, Arrow Down/L for lower)
 - FR42: User can start training via keyboard (Enter/Space)
 - FR43: User can stop training via keyboard (Escape)
 - FR44: User can fine-adjust the pitch slider via keyboard (Arrow Up/Down)

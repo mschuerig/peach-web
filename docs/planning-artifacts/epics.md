@@ -2073,3 +2073,35 @@ Users can tap chart data points to see detailed annotations (date, mean, stddev,
 **Given** the help overlay
 **When** I dismiss it (Done button or equivalent)
 **Then** I return to the profile screen with chart state preserved
+
+---
+
+## Epic 14: iOS Terminology Alignment
+
+Rename domain types and web crate terminology to match iOS/psychoacoustic standards. The iOS sibling app renamed types for music pedagogy and psychoacoustic accuracy: `TrainingMode` → `TrainingDiscipline`, `PitchComparison` → `PitchDiscriminationTrial`, `PitchMatchingChallenge` → `PitchMatchingTrial`, settings drop "Training" suffix. This epic cascades those changes through the web codebase and living documentation.
+
+**Source reference:** `docs/ios-reference/ios-changes-since-f70e3f.md`, section 1
+
+### Story 14.1: Domain Crate Terminology Rename
+
+**As a** developer,
+**I want** all domain crate types renamed to match the iOS terminology alignment,
+**So that** both apps use identical domain language and cross-platform CSV compatibility is maintained.
+
+Key renames: `TrainingMode` → `TrainingDiscipline`, `PitchComparison` → `PitchDiscriminationTrial`, `CompletedPitchComparison` → `CompletedPitchDiscriminationTrial`, `PitchMatchingChallenge` → `PitchMatchingTrial`, `CompletedPitchMatching` → `CompletedPitchMatchingTrial`, `PitchComparisonSession` → `PitchDiscriminationSession`, observer and port trait renames, file renames, slug updates.
+
+### Story 14.2: Web Crate Terminology Rename
+
+**As a** developer,
+**I want** the web crate updated to match the domain terminology from story 14.1,
+**So that** components, routes, bridge adapters, and UI labels use consistent iOS-aligned naming.
+
+Key changes: component file/function renames (`PitchComparisonView` → `PitchDiscriminationView`), route path update (`/training/comparison` → `/training/pitch-discrimination`), bridge adapter renames, localization key updates (`comparison-*` → `discrimination-*`), button labels simplified ("Hear & Compare" → "Compare", "Tune & Match" → "Match").
+
+### Story 14.3: Update Living Documentation
+
+**As a** developer,
+**I want** living documentation updated to reflect the new terminology,
+**So that** planning and architecture docs remain accurate and useful for AI agents and contributors.
+
+Updates architecture.md, prd.md, ux-design-specification.md, arc42-architecture.md, project-context.md, epics.md, and sprint-status.yaml. Historical docs (completed story files, domain blueprint) are NOT updated.

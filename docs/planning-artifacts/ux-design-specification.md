@@ -22,7 +22,7 @@ inputDocuments:
 
 ### Project Vision
 
-Peach is a browser-based ear training application that builds a perceptual profile of the user's pitch discrimination ability through adaptive comparison training. Built as a web reimplementation of the existing Peach iOS app, it brings the same "training, not testing" philosophy to any modern browser — desktop or mobile, any operating system.
+Peach is a browser-based ear training application that builds a perceptual profile of the user's pitch discrimination ability through adaptive pitch discrimination training. Built as a web reimplementation of the existing Peach iOS app, it brings the same "training, not testing" philosophy to any modern browser — desktop or mobile, any operating system.
 
 The interaction is radically simple: two notes play in sequence, the user indicates higher or lower. The intelligence lives entirely in the adaptive algorithm, invisible to the user. No scores, no gamification, no session framing. Every answer is data that improves the model. Wrong answers are information, not failure.
 
@@ -50,7 +50,7 @@ Musicians (singers, string, woodwind, brass players) for whom intonation is a pr
 
 ### Defining Experience
 
-The core experience is the **comparison loop**: two notes play in sequence, the user indicates higher or lower, feedback flashes, the next pair begins. This loop is the entire product. Everything else exists to support or reflect it.
+The core experience is the **pitch discrimination loop**: two notes play in sequence, the user indicates higher or lower, feedback flashes, the next pair begins. This loop is the entire product. Everything else exists to support or reflect it.
 
 The loop must feel **reflexive, not deliberative**. The user should be reacting to sounds, not thinking about an app. If the user is ever thinking about the UI during training, the design has failed.
 
@@ -66,14 +66,14 @@ The secondary mode — **pitch matching** — follows the same philosophy but wi
 ### Effortless Interactions
 
 1. **Start training** — One click/keypress from the start page to hearing the first note. No onboarding, no account, no "welcome back." The training button doubles as the Web Audio API activation gesture.
-2. **Stop training** — One click/keypress, close the tab, or switch tabs. No confirmation dialog, no session summary. Incomplete comparison silently discarded.
-3. **Answer a comparison** — Click a button or press a key. Buttons are enabled the moment the second note begins playing, allowing early answers.
+2. **Stop training** — One click/keypress, close the tab, or switch tabs. No confirmation dialog, no session summary. Incomplete trial silently discarded.
+3. **Answer a trial** — Click a button or press a key. Buttons are enabled the moment the second note begins playing, allowing early answers.
 4. **Resume where you left off** — There is no resume. There are no sessions. The user opens the page and starts training; the algorithm already knows their profile.
 5. **See progress** — The profile preview on the start page provides a glanceable snapshot. Clicking it opens the full profile.
 
 ### Critical Success Moments
 
-1. **First comparison** — User clicks "Comparison," hears two notes, indicates higher or lower, sees brief feedback, next pair begins. Within seconds they are in the loop. One click to first sound is non-negotiable.
+1. **First trial** — User clicks "Compare," hears two notes, indicates higher or lower, sees brief feedback, next pair begins. Within seconds they are in the loop. One click to first sound is non-negotiable.
 2. **First wrong answer** — Brief thumbs-down, same visual weight as thumbs-up, next pair begins. No shame, no special treatment. This is where trust in the "training, not testing" philosophy is built.
 3. **Profile discovery** — After training, the confidence band starts filling in. The user sees their pitch perception visualized. Quiet curiosity, not celebration.
 4. **Audio interruption** — Tab hidden or AudioContext suspended: training stops cleanly. User returns to start page, one click to resume. No error dialogs, no lost data.
@@ -90,7 +90,7 @@ The secondary mode — **pitch matching** — follows the same philosophy but wi
 
 ### Primary Emotional Goals
 
-1. **Calm focus** — Training should feel meditative, not competitive. The rhythmic cadence of the comparison loop creates a flow state.
+1. **Calm focus** — Training should feel meditative, not competitive. The rhythmic cadence of the pitch discrimination loop creates a flow state.
 2. **Quiet confidence** — Over time, a growing inner certainty that hearing is sharpening, confirmed by the data.
 3. **Freedom from judgment** — No answer carries weight. The app never evaluates the user — it trains them.
 
@@ -99,7 +99,7 @@ The secondary mode — **pitch matching** — follows the same philosophy but wi
 | Moment | Desired Feeling | Anti-Pattern to Avoid |
 |---|---|---|
 | **First launch** | Curiosity, ease — "that's it?" | Overwhelm, setup fatigue |
-| **First comparisons** | Playful alertness — like a reflex game | Scoring overhead, distraction |
+| **First trials** | Playful alertness — like a reflex game | Scoring overhead, distraction |
 | **First wrong answer** | Nothing — indicator and the next pair | Shame, "try again" pressure |
 | **Stopping mid-training** | Neutral — like closing a book | Guilt, loss aversion, "are you sure?" |
 | **Checking the profile** | Honest curiosity — "what does my hearing look like?" | Score-driven framing |
@@ -138,7 +138,7 @@ The absence of haptic feedback means the web version relies more on visual feedb
 
 **Interaction: Reflexive Loop**
 
-- The comparison loop runs continuously with no pause between iterations. Feedback is brief (~400ms) and automatic. Next pair begins without user action.
+- The pitch discrimination loop runs continuously with no pause between iterations. Feedback is brief (~400ms) and automatic. Next pair begins without user action.
 - Why it works: Creates a rhythmic cadence that induces flow state. The user stops thinking about the app and starts reacting to sounds.
 
 **Interaction: Early Answer**
@@ -161,11 +161,11 @@ The absence of haptic feedback means the web version relies more on visual feedb
 These patterns are explicitly rejected:
 
 1. **Score-driven design** — Any element that frames outcomes as a score, percentage, or pass/fail.
-2. **Transition theater** — Animated transitions, "preparing next challenge" delays between comparisons. Every second of non-training time is a design failure.
+2. **Transition theater** — Animated transitions, "preparing next challenge" delays between trials. Every second of non-training time is a design failure.
 3. **Engagement guilt mechanics** — Streaks, daily goals, "you haven't trained in X days," declining statistics presented as warnings.
-4. **Complexity creep** — Visible algorithm parameters, per-comparison statistics, or "advanced mode" during training.
+4. **Complexity creep** — Visible algorithm parameters, per-trial statistics, or "advanced mode" during training.
 5. **Onboarding tutorials** — The interaction is self-explanatory. A tutorial implies complexity that doesn't exist.
-6. **Session framing** — No session summaries, no "X comparisons today" counters, no session-complete screens.
+6. **Session framing** — No session summaries, no "X trials today" counters, no session-complete screens.
 7. **Gamification** — No badges, no levels, no achievements, no leaderboards, no confetti.
 
 ### Design Strategy
@@ -227,17 +227,17 @@ This is deliberately minimal: Tailwind provides the spacing scale, responsive ut
 
 ## Interaction Patterns
 
-### Comparison Loop Mechanics
+### Pitch Discrimination Loop Mechanics
 
 The defining interaction: "Hear two notes, indicate higher or lower."
 
-1. **Initiation:** User clicks a training button on the start page. Training view appears. First comparison begins immediately — no countdown, no "get ready." The click also activates the Web Audio API AudioContext.
+1. **Initiation:** User clicks a training button on the start page. Training view appears. First trial begins immediately — no countdown, no "get ready." The click also activates the Web Audio API AudioContext.
 2. **Note 1 plays:** Answer buttons disabled.
 3. **Note 2 plays:** Answer buttons enabled the moment the second note begins. User can answer during or after the note.
 4. **Answer:** User clicks a button or presses a key (Arrow Up/H for higher, Arrow Down/L for lower). Both buttons disable immediately.
 5. **Feedback:** Indicator appears instantly (thumbs up/down). Persists ~400ms. No other information shown.
-6. **Loop:** Indicator clears, next comparison begins. Loop continues indefinitely until the user navigates away.
-7. **Leaving:** User clicks Settings/Profile link, presses Escape, or closes/hides the tab. Incomplete comparison silently discarded. No session summary, no confirmation.
+6. **Loop:** Indicator clears, next trial begins. Loop continues indefinitely until the user navigates away.
+7. **Leaving:** User clicks Settings/Profile link, presses Escape, or closes/hides the tab. Incomplete trial silently discarded. No session summary, no confirmation.
 
 **Timing diagram:**
 
@@ -270,8 +270,8 @@ The secondary interaction: "Tune a note to match a reference by ear."
 
 | Action | Keys | Context |
 |---|---|---|
-| Answer "Higher" | Arrow Up or H | Comparison training |
-| Answer "Lower" | Arrow Down or L | Comparison training |
+| Answer "Higher" | Arrow Up or H | Pitch discrimination training |
+| Answer "Lower" | Arrow Down or L | Pitch discrimination training |
 | Fine pitch adjust | Arrow Up / Arrow Down | Pitch matching (slider focused) |
 | Commit pitch | Enter or Space | Pitch matching |
 | Stop / leave training | Escape | Any training view |
@@ -290,7 +290,7 @@ All interruptions follow the same rule: stop audio, discard incomplete exercise,
 
 ### Web Audio Context Activation
 
-The Web Audio API requires a user gesture to create or resume an AudioContext. The training start button serves as this gesture — clicking "Comparison" or "Pitch Matching" both activates the AudioContext and begins training in one action.
+The Web Audio API requires a user gesture to create or resume an AudioContext. The training start button serves as this gesture — clicking "Compare" or "Match" both activates the AudioContext and begins training in one action.
 
 If the AudioContext becomes suspended (e.g. tab hidden, browser policy), training stops. The user must return to the start page and click a training button again to resume.
 
@@ -342,7 +342,7 @@ Follow WCAG 2.1 AA guidelines. Use semantic HTML, ARIA attributes where needed, 
 
 | Event | Announcement |
 |---|---|
-| Comparison feedback | "Correct" or "Incorrect" |
+| Pitch discrimination feedback | "Correct" or "Incorrect" |
 | Pitch matching feedback | "4 cents sharp" / "27 cents flat" / "Dead center" |
 | Training started | "Training started" |
 | Training stopped | "Training stopped" |
@@ -360,18 +360,18 @@ Peach requires audio output to function. This is a fundamental constraint of the
                     ┌──────────────────────────┐
                     │      Start Page          │
                     │                          │
-                    │ [Comparison]             │
-                    │ [Pitch Matching]         │
+                    │ [Compare]                │
+                    │ [Match]                  │
                     │ ── ── ── ── ── ── ──    │
-                    │ [Interval Comparison]    │
-                    │ [Interval Pitch Matching]│
+                    │ [Compare]                │
+                    │ [Match]                  │
                     │                          │
                     │ [Settings] [Profile]     │
                     │ [Info]                   │
                     └┬──┬──┬──┬──┬──┬──┬──┬──┘
                      │  │  │  │  │  │  │  │
-        Comparison───┘  │  │  │  │  │  │  └───Interval PM
-        Pitch Match─────┘  │  │  │  │  └──────Interval Comp
+        Pitch Discrim──┘  │  │  │  │  │  │  └───Interval PM
+        Pitch Match─────┘  │  │  │  │  └──────Interval PD
                            │  │  │  │
                     Settings  Profile  Info
 ```
@@ -392,8 +392,8 @@ Peach requires audio output to function. This is a fundamental constraint of the
 | Route | View |
 |---|---|
 | `/` | Start Page |
-| `/training/comparison` | Comparison Training (unison) |
-| `/training/comparison?intervals=M3u,M3d,...` | Comparison Training (interval) |
+| `/training/pitch-discrimination` | Pitch Discrimination Training (unison) |
+| `/training/pitch-discrimination?intervals=M3u,M3d,...` | Pitch Discrimination Training (interval) |
 | `/training/pitch-matching` | Pitch Matching Training (unison) |
 | `/training/pitch-matching?intervals=M3u,M3d,...` | Pitch Matching Training (interval) |
 | `/profile` | Profile View |
@@ -404,16 +404,16 @@ Peach requires audio output to function. This is a fundamental constraint of the
 
 ### Start Page
 
-**Purpose:** Hub for all app actions. Profile preview, training mode selection, navigation.
+**Purpose:** Hub for all app actions. Profile preview, training discipline selection, navigation.
 
 **Elements:**
 
 - **Profile Preview** — compact visualization of the perceptual profile. Clickable, navigates to full profile view. Shows cold-start empty state when no data exists.
-- **Comparison button** — primary action, most prominent. Begins comparison training.
-- **Pitch Matching button** — secondary action, less prominent. Begins pitch matching training.
-- **Visual separator** — subtle divider between unison and interval modes.
-- **Interval Comparison button** — secondary action. Begins interval comparison training.
-- **Interval Pitch Matching button** — secondary action. Begins interval pitch matching training.
+- **Compare button** — primary action, most prominent. Begins pitch discrimination training.
+- **Match button** — secondary action, less prominent. Begins pitch matching training.
+- **Visual separator** — subtle divider between unison and interval disciplines.
+- **Interval Compare button** — secondary action. Begins interval pitch discrimination training.
+- **Interval Match button** — secondary action. Begins interval pitch matching training.
 - **Settings link** — navigates to settings view.
 - **Profile link** — navigates to full profile view.
 - **Info link** — navigates to info view.
@@ -422,10 +422,10 @@ Peach requires audio output to function. This is a fundamental constraint of the
 
 | Button | Prominence | Description |
 |---|---|---|
-| Comparison | Primary (most prominent) | Hero action for new and returning users |
-| Pitch Matching | Secondary | Below comparison |
-| Interval Comparison | Secondary | Below separator |
-| Interval Pitch Matching | Secondary | Below separator |
+| Compare | Primary (most prominent) | Hero action for new and returning users |
+| Match | Secondary | Below Compare |
+| Interval Compare | Secondary | Below separator |
+| Interval Match | Secondary | Below separator |
 | Settings, Profile, Info | Tertiary (icon or text link) | Utility navigation |
 
 **Behavior:**
@@ -434,9 +434,9 @@ Peach requires audio output to function. This is a fundamental constraint of the
 - Identical on every visit regardless of time elapsed since last use.
 - No "welcome back," streak, or activity summary.
 
-### Comparison Training View
+### Pitch Discrimination Training View
 
-**Purpose:** The core comparison training loop.
+**Purpose:** The core pitch discrimination training loop.
 
 **Elements:**
 
@@ -532,7 +532,7 @@ Arrow direction indicates sharp (up) or flat (down). Arrow length is categorical
 
 - All changes auto-save to browser storage — no save/cancel buttons.
 - No form validation needed — all controls are bounded.
-- Changes take effect on the next comparison after returning to training.
+- Changes take effect on the next trial after returning to training.
 - Settings persist across page refreshes and browser restarts via localStorage.
 
 ### Info View
@@ -571,7 +571,7 @@ Minimal content. Can be a modal/overlay or a separate page.
 
 **Accessibility:** "Your pitch profile. Click to view details." If data exists: "Your pitch profile. Average threshold: X cents. Click to view details."
 
-### Comparison Feedback Indicator
+### Pitch Discrimination Feedback Indicator
 
 - Thumbs up / thumbs down icon (Unicode or SVG)
 - Green (correct) / red (incorrect)
@@ -583,7 +583,7 @@ Minimal content. Can be a modal/overlay or a separate page.
 
 - Directional arrow (up/down) or dot, colored by proximity band
 - Signed cent offset text alongside
-- Same position, timing, and transition as comparison feedback
+- Same position, timing, and transition as pitch discrimination feedback
 
 ### Vertical Pitch Slider
 
@@ -609,7 +609,7 @@ A musician opens Peach for the first time. No account, no onboarding. They see t
 flowchart TD
     A[Open Peach in browser] --> B[Start Page]
     B --> C{Profile preview empty}
-    C --> D[Click Comparison]
+    C --> D[Click Compare]
     D --> E[AudioContext activates]
     E --> F[Note 1 plays]
     F --> G[Note 2 plays - buttons enabled]
@@ -631,11 +631,11 @@ Returning user, two weeks later. Profile preview shows progress. Trains for a fe
 flowchart TD
     A[Open Peach] --> B[Start Page]
     B --> C{Profile preview shows data}
-    C --> D[Click Comparison]
+    C --> D[Click Compare]
     D --> E[Algorithm targets weak spots]
     E --> F[Training loop runs]
     F --> G[Close tab when done]
-    G --> H[Incomplete comparison discarded]
+    G --> H[Incomplete trial discarded]
     H --> I[All completed data persisted]
 
     C --> J[Click Profile preview]
@@ -688,7 +688,7 @@ flowchart TD
     F --> H
     G --> I[Browser persists completed data]
 
-    H --> J[Discard incomplete comparison]
+    H --> J[Discard incomplete trial]
     J --> K[Return to Start Page]
 
     K --> L[User clicks training button]
@@ -714,10 +714,10 @@ flowchart TD
     G --> F
     F --> H[Navigate back to Start Page]
     H --> I[Click training button]
-    I --> J[New settings take effect on next comparison]
+    I --> J[New settings take effect on next trial]
 ```
 
-**Key UX requirement:** No save/cancel buttons. All changes auto-save. Changes apply on the next comparison, not retroactively.
+**Key UX requirement:** No save/cancel buttons. All changes auto-save. Changes apply on the next trial, not retroactively.
 
 ## Component Strategy
 
@@ -727,7 +727,7 @@ These need no custom implementation — standard HTML elements styled with Tailw
 
 | Component | Usage | Notes |
 |---|---|---|
-| Button (primary) | Comparison start button | Large, prominent, touch-friendly |
+| Button (primary) | Compare start button | Large, prominent, touch-friendly |
 | Button (secondary) | Pitch Matching, Interval modes | Less prominent than primary |
 | Button (action) | Higher / Lower answer buttons | Large, disabled/enabled states |
 | Link (tertiary) | Settings, Profile, Info navigation | Icon or text link |
@@ -743,9 +743,9 @@ These require custom implementation — no standard HTML equivalent:
 
 | Component | Complexity | Phase | Rationale |
 |---|---|---|---|
-| Comparison Feedback Indicator | Low | 1 | Show/hide with icon + color. Simple timer-based visibility toggle |
+| Pitch Discrimination Feedback Indicator | Low | 1 | Show/hide with icon + color. Simple timer-based visibility toggle |
 | Vertical Pitch Slider | High | 3 | Custom drag interaction, vertical orientation, no markings, mouse/touch/keyboard support |
-| Pitch Matching Feedback Indicator | Low | 3 | Arrow direction + color + cent offset text. Same pattern as comparison feedback |
+| Pitch Matching Feedback Indicator | Low | 3 | Arrow direction + color + cent offset text. Same pattern as pitch discrimination feedback |
 | Perceptual Profile Visualization | High | 4 | Canvas or SVG rendering of piano keyboard + confidence band. Three states (empty/sparse/populated) |
 | Profile Preview | Medium | 4 | Miniature of full visualization. Clickable. Empty state handling |
 
@@ -756,7 +756,7 @@ One component per route, composing the above:
 | Component | Route | Composes |
 |---|---|---|
 | `StartPage` | `/` | Profile Preview, training buttons, nav links |
-| `ComparisonView` | `/training/comparison` | Answer buttons, Comparison Feedback Indicator, interval label, nav links |
+| `PitchDiscriminationView` | `/training/pitch-discrimination` | Answer buttons, Pitch Discrimination Feedback Indicator, interval label, nav links |
 | `PitchMatchingView` | `/training/pitch-matching` | Vertical Pitch Slider, PM Feedback Indicator, interval label, nav links |
 | `ProfileView` | `/profile` | Profile Visualization, statistics display, back link |
 | `SettingsView` | `/settings` | Standard form controls, reset button with confirmation |
@@ -767,9 +767,9 @@ One component per route, composing the above:
 Aligned with PRD phases:
 
 **Phase 1 — Foundation:**
-- `StartPage` (Comparison button only)
-- `ComparisonView` (Higher/Lower buttons, feedback indicator)
-- Comparison Feedback Indicator
+- `StartPage` (Compare button only)
+- `PitchDiscriminationView` (Higher/Lower buttons, feedback indicator)
+- Pitch Discrimination Feedback Indicator
 
 **Phase 2 — Core Training:**
 - `SettingsView` (all form controls)

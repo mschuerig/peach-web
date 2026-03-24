@@ -10,7 +10,7 @@ Peach is a browser-based ear training application that builds a perceptual profi
 
 Peach trains pitch discrimination — not through gamified testing, but through meditative, reflexive practice. The core interactions are:
 
-- **Pitch Comparison:** Hear two notes, indicate which is higher.
+- **Pitch Discrimination:** Hear two notes, indicate which is higher.
 - **Pitch Matching:** Hear a reference, adjust a tunable note via slider to match it.
 - **Interval Training:** Same interactions applied to musical intervals rather than single pitches.
 
@@ -199,15 +199,15 @@ graph TB
 | Building Block | Responsibility |
 |---------------|----------------|
 | **types/** | Value types with validation: `MIDINote`, `Frequency`, `Cents`, `DetunedMIDINote`, `Interval`, `DirectedInterval`, `NoteDuration`, `MIDIVelocity`, `AmplitudeDB`, `UnitInterval`, `NoteRange`, `SoundSourceID` |
-| **session/** | `PitchComparisonSession` and `PitchMatchingSession` state machines driving the training loop |
-| **training/** | Result types: `PitchComparison`, `CompletedPitchComparison`, `PitchMatchingChallenge`, `CompletedPitchMatching` |
+| **session/** | `PitchDiscriminationSession` and `PitchMatchingSession` state machines driving the training loop |
+| **training/** | Result types: `PitchDiscriminationTrial`, `CompletedPitchDiscriminationTrial`, `PitchMatchingTrial`, `CompletedPitchMatchingTrial` |
 | **strategy** | `KazezNoteStrategy` — adaptive difficulty algorithm (narrow 5%, widen 9%, square-root scaling) |
 | **profile** | `PerceptualProfile` — 128-element array (one per MIDI note) with Welford's online statistics |
 | **trend** | `TrendAnalyzer` — EWMA-based improving/stable/declining classification |
 | **timeline** | `ThresholdTimeline` — historical performance aggregation with rolling statistics |
 | **tuning** | `TuningSystem` — Equal Temperament / Just Intonation frequency conversion |
-| **ports** | Port trait definitions: `NotePlayer`, `PlaybackHandle`, `UserSettings`, `TrainingDataStore`, `PitchComparisonObserver`, `PitchMatchingObserver`, `Resettable` |
-| **records** | `PitchComparisonRecord`, `PitchMatchingRecord` — flat serializable persistence schemas |
+| **ports** | Port trait definitions: `NotePlayer`, `PlaybackHandle`, `UserSettings`, `TrainingDataStore`, `PitchDiscriminationObserver`, `PitchMatchingObserver`, `Resettable` |
+| **records** | `PitchDiscriminationRecord`, `PitchMatchingRecord` — flat serializable persistence schemas |
 
 ### 5.3 Level 2 — Web Crate
 
@@ -230,7 +230,7 @@ graph TB
 | Building Block | Responsibility |
 |---------------|----------------|
 | **app.rs** | Composition root: creates all shared state, provides Leptos contexts, sets up router |
-| **components/** | UI views: `StartPage`, `PitchComparisonView`, `PitchMatchingView`, `PitchSlider`, `ProfileView`, `SettingsView`, `ProgressCard`, `ProgressChart`, `NavBar`, `AudioGateOverlay`, `InfoView` |
+| **components/** | UI views: `StartPage`, `PitchDiscriminationView`, `PitchMatchingView`, `PitchSlider`, `ProfileView`, `SettingsView`, `ProgressCard`, `ProgressChart`, `NavBar`, `AudioGateOverlay`, `InfoView` |
 | **adapters/** | Browser API implementations: `AudioContextManager`, `OscillatorNotePlayer`, `WorkletBridge` (SoundFont), `IndexedDbStore`, `LocalStorageSettings`, `CsvExportImport` |
 | **bridge.rs** | Observer implementations connecting domain events to UI state: `ProfileObserver`, `DataStoreObserver`, `TrendObserver`, `TimelineObserver`, `ProgressTimelineObserver` |
 
@@ -243,13 +243,13 @@ graph TB
 
 ## 6. Runtime View
 
-### 6.1 Pitch Comparison Training Loop
+### 6.1 Pitch Discrimination Training Loop
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant CV as ComparisonView
-    participant S as ComparisonSession
+    participant CV as PitchDiscriminationView
+    participant S as PitchDiscriminationSession
     participant NP as NotePlayer
     participant O as Observers
 
@@ -258,7 +258,7 @@ sequenceDiagram
     CV->>S: start_session()
 
     loop Training cycle
-        S->>S: generate_comparison()<br/>(Kazez strategy)
+        S->>S: generate_trial()<br/>(Kazez strategy)
         S->>NP: play(reference_freq)
         Note over NP: Note 1 sounds
         NP-->>S: handle returned
@@ -266,7 +266,7 @@ sequenceDiagram
         Note over NP: Note 2 sounds<br/>(buttons enabled)
         U->>CV: "Higher" / "Lower"
         CV->>S: record_answer(answer)
-        S->>O: notify(CompletedComparison)
+        S->>O: notify(CompletedPitchDiscriminationTrial)
         O->>O: ProfileObserver: update profile
         O->>O: DataStoreObserver: persist to IDB
         O->>O: TrendObserver: update trend
@@ -291,7 +291,7 @@ sequenceDiagram
     MV->>S: start_session()
 
     loop Training cycle
-        S->>S: generate_challenge()<br/>(Kazez strategy)
+        S->>S: generate_trial()<br/>(Kazez strategy)
         S->>NP: play(reference_freq)
         Note over NP: Reference sounds<br/>(slider disabled)
         NP-->>S: handle returned
@@ -302,7 +302,7 @@ sequenceDiagram
         Note over H: Pitch changes in real time
         U->>MV: release slider
         MV->>S: record_match(final_freq)
-        S->>O: notify(CompletedPitchMatching)
+        S->>O: notify(CompletedPitchMatchingTrial)
         O->>O: ProfileObserver: update profile
         O->>O: DataStoreObserver: persist to IDB
         O->>O: TrendObserver: update trend
@@ -397,7 +397,7 @@ graph TB
 | `synth-processor.js` | AudioWorklet processor script in assets |
 | SoundFont file (`.sf2`) | Bundled asset, cached by Service Worker |
 | `sw.js` | Service Worker registered by `index.html` |
-| Training records | IndexedDB `peach` database, object stores `comparison_records` and `pitch_matching_records` |
+| Training records | IndexedDB `peach` database, object stores `comparison_records` (legacy name) and `pitch_matching_records` |
 | User settings | `localStorage` key-value pairs |
 
 **Build Pipeline:**
@@ -429,7 +429,7 @@ NotePlayer                   → OscillatorNotePlayer / SoundFontNotePlayer
 PlaybackHandle               → OscillatorHandle / WorkletHandle
 UserSettings                 → LocalStorageSettings
 TrainingDataStore            → IndexedDbStore
-PitchComparisonObserver      → ProfileObserver, DataStoreObserver, TrendObserver, ...
+PitchDiscriminationObserver   → ProfileObserver, DataStoreObserver, TrendObserver, ...
 Resettable                   → Profile, Timeline, TrendAnalyzer (cleared on data reset)
 ```
 
@@ -439,7 +439,7 @@ This enables `cargo test -p domain` without any browser runtime — the domain c
 
 The `PerceptualProfile` is **never persisted directly**. On every application launch:
 
-1. Fetch all `PitchComparisonRecord` and `PitchMatchingRecord` from IndexedDB
+1. Fetch all `PitchDiscriminationRecord` and `PitchMatchingRecord` from IndexedDB
 2. Sort chronologically by timestamp
 3. Replay each record through profile update methods
 
@@ -581,7 +581,7 @@ Quality
 | Term | Definition |
 |------|-----------|
 | **Cents** | Logarithmic unit of pitch interval; 100 cents = 1 semitone in equal temperament |
-| **Comparison** | A training interaction where two pitches are played and the user identifies which is higher |
+| **Pitch discrimination trial** | A training interaction where two pitches are played and the user identifies which is higher |
 | **DetunedMIDINote** | A MIDI note plus a cent offset, representing a pitch that may fall between piano keys |
 | **Equal Temperament** | Tuning system dividing the octave into 12 equal semitones (100 cents each) |
 | **Just Intonation** | Tuning system based on pure frequency ratios (e.g., 3:2 for a perfect fifth) |
@@ -589,7 +589,7 @@ Quality
 | **MIDI note** | Integer 0–127 representing a pitch in the MIDI standard (60 = middle C, 69 = A4) |
 | **OxiSynth** | Rust SoundFont synthesizer (port of FluidSynth) used for instrument-quality audio |
 | **Perceptual profile** | Per-note pitch discrimination thresholds derived from training history via Welford's algorithm |
-| **Pitch matching** | Training mode where user adjusts a slider to match a reference pitch |
+| **Pitch matching** | Training discipline where user adjusts a slider to match a reference pitch |
 | **Profile hydration** | Rebuilding the perceptual profile from stored training records on application startup |
 | **SoundFont (SF2)** | File format containing sampled instrument sounds, rendered by a synthesizer |
 | **Welford's algorithm** | Online algorithm for computing running mean and variance in a single pass |
