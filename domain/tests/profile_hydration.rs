@@ -9,13 +9,16 @@ fn test_profile_hydration_from_comparison_sequence() {
     let offsets = [50.0, 40.0, 45.0, 35.0, 55.0];
     for (i, &offset) in offsets.iter().enumerate() {
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(i as f64 * 1000.0, Cents::new(offset)),
             true,
         );
     }
 
-    assert_eq!(profile.record_count(TrainingMode::UnisonPitchComparison), 5);
+    assert_eq!(
+        profile.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
+        5
+    );
 
     // Manually compute expected mean: (50+40+45+35+55)/5 = 225/5 = 45.0
     let mean = profile.comparison_mean(0).unwrap();
@@ -30,7 +33,7 @@ fn test_profile_hydration_order_independence() {
     let mut profile_forward = PerceptualProfile::new();
     for (i, &offset) in offsets.iter().enumerate() {
         profile_forward.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(i as f64 * 1000.0, Cents::new(offset)),
             true,
         );
@@ -39,7 +42,7 @@ fn test_profile_hydration_order_independence() {
     let mut profile_reverse = PerceptualProfile::new();
     for (i, &offset) in offsets.iter().rev().enumerate() {
         profile_reverse.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(i as f64 * 1000.0, Cents::new(offset)),
             true,
         );
@@ -51,8 +54,8 @@ fn test_profile_hydration_order_independence() {
     // Mean should be identical regardless of order
     assert!((fwd_mean.raw_value - rev_mean.raw_value).abs() < 1e-10);
     assert_eq!(
-        profile_forward.record_count(TrainingMode::UnisonPitchComparison),
-        profile_reverse.record_count(TrainingMode::UnisonPitchComparison),
+        profile_forward.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
+        profile_reverse.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
     );
 }
 
@@ -62,17 +65,20 @@ fn test_profile_filters_incorrect_answers() {
     let mut profile = PerceptualProfile::new();
 
     profile.add_point(
-        TrainingMode::UnisonPitchComparison,
+        TrainingDiscipline::UnisonPitchDiscrimination,
         MetricPoint::new(1000.0, Cents::new(20.0)),
         true,
     );
     profile.add_point(
-        TrainingMode::UnisonPitchComparison,
+        TrainingDiscipline::UnisonPitchDiscrimination,
         MetricPoint::new(2000.0, Cents::new(999.0)),
         false, // incorrect — should be filtered
     );
 
-    assert_eq!(profile.record_count(TrainingMode::UnisonPitchComparison), 1);
+    assert_eq!(
+        profile.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
+        1
+    );
     let mean = profile.comparison_mean(0).unwrap();
     assert!((mean.raw_value - 20.0).abs() < 1e-10);
 }
@@ -86,7 +92,7 @@ fn test_profile_hydration_matching_accumulators() {
     let errors = [3.0, 5.0, 7.0, 2.0, 4.0];
     for (i, &error) in errors.iter().enumerate() {
         profile.add_point(
-            TrainingMode::UnisonMatching,
+            TrainingDiscipline::UnisonPitchMatching,
             MetricPoint::new(i as f64 * 1000.0, Cents::new(error)),
             true,
         );
@@ -104,12 +110,12 @@ fn test_profile_reset_and_rehydrate() {
 
     // First hydration
     profile.add_point(
-        TrainingMode::UnisonPitchComparison,
+        TrainingDiscipline::UnisonPitchDiscrimination,
         MetricPoint::new(1000.0, Cents::new(50.0)),
         true,
     );
     profile.add_point(
-        TrainingMode::UnisonPitchComparison,
+        TrainingDiscipline::UnisonPitchDiscrimination,
         MetricPoint::new(2000.0, Cents::new(30.0)),
         true,
     );
@@ -119,12 +125,12 @@ fn test_profile_reset_and_rehydrate() {
     // Reset and re-hydrate with same data
     profile.reset_all();
     profile.add_point(
-        TrainingMode::UnisonPitchComparison,
+        TrainingDiscipline::UnisonPitchDiscrimination,
         MetricPoint::new(1000.0, Cents::new(50.0)),
         true,
     );
     profile.add_point(
-        TrainingMode::UnisonPitchComparison,
+        TrainingDiscipline::UnisonPitchDiscrimination,
         MetricPoint::new(2000.0, Cents::new(30.0)),
         true,
     );
@@ -142,14 +148,14 @@ fn test_profile_hydration_large_dataset() {
     for i in 0..1000 {
         let offset = 50.0 + (i % 20) as f64; // 50..69 repeating
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(i as f64 * 100.0, Cents::new(offset)),
             true,
         );
     }
 
     assert_eq!(
-        profile.record_count(TrainingMode::UnisonPitchComparison),
+        profile.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
         1000
     );
 
@@ -166,7 +172,7 @@ fn test_profile_rebuild_all() {
     let mut profile = PerceptualProfile::new();
     let mut points = HashMap::new();
     points.insert(
-        TrainingMode::UnisonPitchComparison,
+        TrainingDiscipline::UnisonPitchDiscrimination,
         vec![
             MetricPoint::new(1000.0, Cents::new(20.0)),
             MetricPoint::new(2000.0, Cents::new(40.0)),
@@ -174,7 +180,7 @@ fn test_profile_rebuild_all() {
         ],
     );
     points.insert(
-        TrainingMode::UnisonMatching,
+        TrainingDiscipline::UnisonPitchMatching,
         vec![
             MetricPoint::new(1000.0, Cents::new(5.0)),
             MetricPoint::new(2000.0, Cents::new(10.0)),
@@ -183,10 +189,16 @@ fn test_profile_rebuild_all() {
 
     profile.rebuild_all(points);
 
-    assert_eq!(profile.record_count(TrainingMode::UnisonPitchComparison), 3);
-    assert_eq!(profile.record_count(TrainingMode::UnisonMatching), 2);
     assert_eq!(
-        profile.record_count(TrainingMode::IntervalPitchComparison),
+        profile.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
+        3
+    );
+    assert_eq!(
+        profile.record_count(TrainingDiscipline::UnisonPitchMatching),
+        2
+    );
+    assert_eq!(
+        profile.record_count(TrainingDiscipline::IntervalPitchDiscrimination),
         0
     );
 

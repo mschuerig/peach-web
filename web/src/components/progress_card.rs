@@ -5,7 +5,9 @@ use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsValue;
 
-use domain::{PerceptualProfile, ProgressTimeline, TrainingMode, TrainingModeState, Trend};
+use domain::{
+    PerceptualProfile, ProgressTimeline, TrainingDiscipline, TrainingDisciplineState, Trend,
+};
 use leptos_fluent::{I18n, tr};
 
 fn format_decimal_1(value: f64) -> String {
@@ -48,7 +50,7 @@ fn trend_text(trend: Option<Trend>) -> String {
 }
 
 #[component]
-pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
+pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
     let progress_timeline: SendWrapper<Rc<RefCell<ProgressTimeline>>> =
         use_context().expect("ProgressTimeline context");
     let profile: SendWrapper<Rc<RefCell<PerceptualProfile>>> =
@@ -61,7 +63,7 @@ pub fn ProgressCard(mode: TrainingMode) -> impl IntoView {
     view! {
         {move || {
             let p = profile.borrow();
-            if p.state(mode) == TrainingModeState::NoData {
+            if p.state(mode) == TrainingDisciplineState::NoData {
                 return view! { <div /> }.into_any();
             }
             let ewma = p.current_ewma(mode);

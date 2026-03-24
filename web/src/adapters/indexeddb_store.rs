@@ -4,7 +4,7 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{IdbDatabase, IdbOpenDbRequest, IdbRequest, IdbTransactionMode};
 
 use domain::ports::StorageError;
-use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
+use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 
 const DB_NAME: &str = "peach";
 const DB_VERSION: u32 = 2;
@@ -80,7 +80,7 @@ impl IndexedDbStore {
 
     pub async fn save_pitch_comparison(
         &self,
-        record: &PitchComparisonRecord,
+        record: &PitchDiscriminationRecord,
     ) -> Result<(), StorageError> {
         let transaction = self
             .db
@@ -134,7 +134,7 @@ impl IndexedDbStore {
 
     pub async fn fetch_all_pitch_comparisons(
         &self,
-    ) -> Result<Vec<PitchComparisonRecord>, StorageError> {
+    ) -> Result<Vec<PitchDiscriminationRecord>, StorageError> {
         let transaction = self
             .db
             .transaction_with_str_and_mode(COMPARISON_STORE, IdbTransactionMode::Readonly)
@@ -161,7 +161,7 @@ impl IndexedDbStore {
 
         for i in 0..array.length() {
             let value = array.get(i);
-            let record: PitchComparisonRecord = serde_wasm_bindgen::from_value(value)
+            let record: PitchDiscriminationRecord = serde_wasm_bindgen::from_value(value)
                 .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
             records.push(record);
         }

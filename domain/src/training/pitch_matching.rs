@@ -5,13 +5,13 @@ use crate::types::MIDINote;
 
 /// A pitch matching challenge: user adjusts pitch to match reference.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PitchMatchingChallenge {
+pub struct PitchMatchingTrial {
     reference_note: MIDINote,
     target_note: MIDINote,
     initial_cent_offset: f64,
 }
 
-impl PitchMatchingChallenge {
+impl PitchMatchingTrial {
     pub fn new(reference_note: MIDINote, target_note: MIDINote, initial_cent_offset: f64) -> Self {
         Self {
             reference_note,
@@ -35,7 +35,7 @@ impl PitchMatchingChallenge {
 
 /// A completed pitch matching attempt with the user's error and metadata.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct CompletedPitchMatching {
+pub struct CompletedPitchMatchingTrial {
     reference_note: MIDINote,
     target_note: MIDINote,
     initial_cent_offset: f64,
@@ -44,7 +44,7 @@ pub struct CompletedPitchMatching {
     timestamp: String,
 }
 
-impl CompletedPitchMatching {
+impl CompletedPitchMatchingTrial {
     pub fn new(
         reference_note: MIDINote,
         target_note: MIDINote,
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_pitch_matching_challenge_new() {
-        let challenge = PitchMatchingChallenge::new(MIDINote::new(60), MIDINote::new(67), 15.0);
+        let challenge = PitchMatchingTrial::new(MIDINote::new(60), MIDINote::new(67), 15.0);
         assert_eq!(challenge.reference_note().raw_value(), 60);
         assert_eq!(challenge.target_note().raw_value(), 67);
         assert_eq!(challenge.initial_cent_offset(), 15.0);
@@ -102,13 +102,13 @@ mod tests {
 
     #[test]
     fn test_pitch_matching_challenge_negative_offset() {
-        let challenge = PitchMatchingChallenge::new(MIDINote::new(69), MIDINote::new(69), -18.5);
+        let challenge = PitchMatchingTrial::new(MIDINote::new(69), MIDINote::new(69), -18.5);
         assert_eq!(challenge.initial_cent_offset(), -18.5);
     }
 
     #[test]
     fn test_completed_pitch_matching_new() {
-        let completed = CompletedPitchMatching::new(
+        let completed = CompletedPitchMatchingTrial::new(
             MIDINote::new(60),
             MIDINote::new(67),
             15.0,
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_completed_pitch_matching_negative_error() {
-        let completed = CompletedPitchMatching::new(
+        let completed = CompletedPitchMatchingTrial::new(
             MIDINote::new(60),
             MIDINote::new(60),
             10.0,
@@ -139,15 +139,15 @@ mod tests {
 
     #[test]
     fn test_pitch_matching_challenge_serde_roundtrip() {
-        let challenge = PitchMatchingChallenge::new(MIDINote::new(60), MIDINote::new(67), 15.0);
+        let challenge = PitchMatchingTrial::new(MIDINote::new(60), MIDINote::new(67), 15.0);
         let json = serde_json::to_string(&challenge).unwrap();
-        let parsed: PitchMatchingChallenge = serde_json::from_str(&json).unwrap();
+        let parsed: PitchMatchingTrial = serde_json::from_str(&json).unwrap();
         assert_eq!(challenge, parsed);
     }
 
     #[test]
     fn test_completed_pitch_matching_serde_roundtrip() {
-        let completed = CompletedPitchMatching::new(
+        let completed = CompletedPitchMatchingTrial::new(
             MIDINote::new(60),
             MIDINote::new(67),
             15.0,
@@ -156,7 +156,7 @@ mod tests {
             "2026-03-03T14:00:00Z".to_string(),
         );
         let json = serde_json::to_string(&completed).unwrap();
-        let parsed: CompletedPitchMatching = serde_json::from_str(&json).unwrap();
+        let parsed: CompletedPitchMatchingTrial = serde_json::from_str(&json).unwrap();
         assert_eq!(completed, parsed);
     }
 }

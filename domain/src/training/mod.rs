@@ -1,5 +1,5 @@
-pub mod pitch_comparison;
+pub mod pitch_discrimination;
 pub mod pitch_matching;
 
-pub use pitch_comparison::{CompletedPitchComparison, PitchComparison};
-pub use pitch_matching::{CompletedPitchMatching, PitchMatchingChallenge};
+pub use pitch_discrimination::{CompletedPitchDiscriminationTrial, PitchDiscriminationTrial};
+pub use pitch_matching::{CompletedPitchMatchingTrial, PitchMatchingTrial};

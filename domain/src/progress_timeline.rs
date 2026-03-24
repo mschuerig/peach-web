@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::records::{PitchComparisonRecord, PitchMatchingRecord};
-use crate::training_mode::TrainingMode;
+use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
+use crate::training_discipline::TrainingDiscipline;
 
 const SECS_PER_DAY: f64 = 86_400.0;
 
@@ -25,16 +25,16 @@ pub struct TimeBucket {
 }
 
 /// Internal per-mode display bucket state.
-/// Trend, EWMA, and mode state live in `TrainingModeStatistics` via `PerceptualProfile`.
+/// Trend, EWMA, and mode state live in `TrainingDisciplineStatistics` via `PerceptualProfile`.
 #[derive(Clone, Debug)]
 struct ModeState {
-    mode: TrainingMode,
+    mode: TrainingDiscipline,
     display_buckets: Vec<TimeBucket>,
     record_count: usize,
 }
 
 impl ModeState {
-    fn new(mode: TrainingMode) -> Self {
+    fn new(mode: TrainingDiscipline) -> Self {
         Self {
             mode,
             display_buckets: Vec::new(),
@@ -160,16 +160,16 @@ fn welford_update_bucket(bucket: &mut TimeBucket, timestamp: f64, metric: f64) {
 ///
 /// Buckets training metrics into Session (today), Day (last 7 days),
 /// and Month (older) zones. Trend, EWMA, and mode state are owned by
-/// `TrainingModeStatistics` via `PerceptualProfile`.
+/// `TrainingDisciplineStatistics` via `PerceptualProfile`.
 #[derive(Clone, Debug)]
 pub struct ProgressTimeline {
-    modes: HashMap<TrainingMode, ModeState>,
+    modes: HashMap<TrainingDiscipline, ModeState>,
 }
 
 impl ProgressTimeline {
     pub fn new() -> Self {
         let mut modes = HashMap::new();
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             modes.insert(mode, ModeState::new(mode));
         }
         Self { modes }
@@ -178,7 +178,7 @@ impl ProgressTimeline {
     /// Rebuild all per-mode data from stored records.
     pub fn rebuild(
         &mut self,
-        comparison_records: &[PitchComparisonRecord],
+        comparison_records: &[PitchDiscriminationRecord],
         matching_records: &[PitchMatchingRecord],
         start_of_today: f64,
     ) {
@@ -188,11 +188,11 @@ impl ProgressTimeline {
         }
 
         // Collect (timestamp, metric, mode) tuples from all records
-        let mut points: Vec<(f64, f64, TrainingMode)> = Vec::new();
+        let mut points: Vec<(f64, f64, TrainingDiscipline)> = Vec::new();
 
         for record in comparison_records {
             let ts = parse_iso8601_to_epoch(&record.timestamp);
-            for mode in TrainingMode::ALL {
+            for mode in TrainingDiscipline::ALL {
                 if let Some(metric) = mode.extract_comparison_metric(record) {
                     points.push((ts, metric, mode));
                 }
@@ -201,7 +201,7 @@ impl ProgressTimeline {
 
         for record in matching_records {
             let ts = parse_iso8601_to_epoch(&record.timestamp);
-            for mode in TrainingMode::ALL {
+            for mode in TrainingDiscipline::ALL {
                 if let Some(metric) = mode.extract_matching_metric(record) {
                     points.push((ts, metric, mode));
                 }
@@ -212,7 +212,7 @@ impl ProgressTimeline {
         points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
 
         // Group by mode
-        let mut mode_points: HashMap<TrainingMode, Vec<(f64, f64)>> = HashMap::new();
+        let mut mode_points: HashMap<TrainingDiscipline, Vec<(f64, f64)>> = HashMap::new();
         for (ts, metric, mode) in points {
             mode_points.entry(mode).or_default().push((ts, metric));
         }
@@ -232,7 +232,7 @@ impl ProgressTimeline {
     }
 
     /// Returns three-zone display buckets for the given mode.
-    pub fn display_buckets(&self, mode: TrainingMode) -> Vec<TimeBucket> {
+    pub fn display_buckets(&self, mode: TrainingDiscipline) -> Vec<TimeBucket> {
         self.modes
             .get(&mode)
             .map(|s| s.display_buckets.clone())
@@ -240,7 +240,7 @@ impl ProgressTimeline {
     }
 
     /// Returns the stddev of the last display bucket (for headline ±).
-    pub fn latest_bucket_stddev(&self, mode: TrainingMode) -> Option<f64> {
+    pub fn latest_bucket_stddev(&self, mode: TrainingDiscipline) -> Option<f64> {
         self.modes
             .get(&mode)
             .and_then(|s| s.display_buckets.last())
@@ -248,9 +248,9 @@ impl ProgressTimeline {
     }
 
     /// Incrementally update from a new comparison record.
-    pub fn add_comparison(&mut self, record: &PitchComparisonRecord, start_of_today: f64) {
+    pub fn add_comparison(&mut self, record: &PitchDiscriminationRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             if let Some(metric) = mode.extract_comparison_metric(record)
                 && let Some(state) = self.modes.get_mut(&mode)
             {
@@ -262,7 +262,7 @@ impl ProgressTimeline {
     /// Incrementally update from a new pitch matching record.
     pub fn add_matching(&mut self, record: &PitchMatchingRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             if let Some(metric) = mode.extract_matching_metric(record)
                 && let Some(state) = self.modes.get_mut(&mode)
             {
@@ -272,7 +272,7 @@ impl ProgressTimeline {
     }
 
     /// Whether a mode has any bucketed data.
-    pub fn has_data(&self, mode: TrainingMode) -> bool {
+    pub fn has_data(&self, mode: TrainingDiscipline) -> bool {
         self.modes.get(&mode).is_some_and(|s| s.record_count > 0)
     }
 
@@ -513,10 +513,14 @@ fn is_leap(year: i64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::records::{PitchComparisonRecord, PitchMatchingRecord};
+    use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 
-    fn make_comparison(interval: u8, cent_offset: f64, timestamp: &str) -> PitchComparisonRecord {
-        PitchComparisonRecord {
+    fn make_comparison(
+        interval: u8,
+        cent_offset: f64,
+        timestamp: &str,
+    ) -> PitchDiscriminationRecord {
+        PitchDiscriminationRecord {
             reference_note: 60,
             target_note: 60 + interval,
             cent_offset,
@@ -595,7 +599,7 @@ mod tests {
     #[test]
     fn test_new_creates_empty_timeline() {
         let tl = ProgressTimeline::new();
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             assert!(!tl.has_data(mode));
             assert!(tl.display_buckets(mode).is_empty());
         }
@@ -607,7 +611,7 @@ mod tests {
     fn test_rebuild_with_empty_records() {
         let mut tl = ProgressTimeline::new();
         tl.rebuild(&[], &[], today_epoch());
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             assert!(!tl.has_data(mode));
         }
     }
@@ -621,10 +625,10 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today_epoch());
 
-        assert!(tl.has_data(TrainingMode::UnisonPitchComparison));
-        assert!(!tl.has_data(TrainingMode::IntervalPitchComparison));
-        assert!(!tl.has_data(TrainingMode::UnisonMatching));
-        assert!(!tl.has_data(TrainingMode::IntervalMatching));
+        assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
+        assert!(!tl.has_data(TrainingDiscipline::IntervalPitchDiscrimination));
+        assert!(!tl.has_data(TrainingDiscipline::UnisonPitchMatching));
+        assert!(!tl.has_data(TrainingDiscipline::IntervalPitchMatching));
     }
 
     #[test]
@@ -633,8 +637,8 @@ mod tests {
         let records = vec![make_matching(7, 5.0, "2026-03-06T11:00:00Z")];
         tl.rebuild(&[], &records, today_epoch());
 
-        assert!(tl.has_data(TrainingMode::IntervalMatching));
-        assert!(!tl.has_data(TrainingMode::UnisonMatching));
+        assert!(tl.has_data(TrainingDiscipline::IntervalPitchMatching));
+        assert!(!tl.has_data(TrainingDiscipline::UnisonPitchMatching));
     }
 
     // --- Session gap grouping ---
@@ -649,7 +653,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
         assert_eq!(buckets[0].bucket_size, BucketSize::Session);
         assert_eq!(buckets[0].record_count, 2);
@@ -666,7 +670,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 2);
         assert_eq!(buckets[0].bucket_size, BucketSize::Session);
         assert_eq!(buckets[1].bucket_size, BucketSize::Session);
@@ -692,7 +696,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 3);
         assert_eq!(buckets[0].bucket_size, BucketSize::Month);
         assert_eq!(buckets[1].bucket_size, BucketSize::Day);
@@ -715,7 +719,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
         assert_eq!(buckets[0].bucket_size, BucketSize::Day);
         assert_eq!(buckets[0].record_count, 2);
@@ -737,7 +741,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 2);
         assert_eq!(buckets[0].bucket_size, BucketSize::Day);
         assert_eq!(buckets[1].bucket_size, BucketSize::Day);
@@ -754,7 +758,7 @@ mod tests {
         let records = vec![make_comparison(0, 30.0, ts1), make_comparison(0, 20.0, ts2)];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
         assert_eq!(buckets[0].bucket_size, BucketSize::Month);
         assert_eq!(buckets[0].record_count, 2);
@@ -774,7 +778,7 @@ mod tests {
         let records = vec![make_comparison(0, 30.0, ts1), make_comparison(0, 20.0, ts2)];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 2);
         assert_eq!(buckets[0].bucket_size, BucketSize::Month);
         assert_eq!(buckets[1].bucket_size, BucketSize::Month);
@@ -791,7 +795,7 @@ mod tests {
         let records = vec![make_comparison(0, 20.0, ts)];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
         assert_eq!(buckets[0].bucket_size, BucketSize::Month);
         assert!(
@@ -816,7 +820,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
         let expected_stddev = (200.0_f64 / 3.0).sqrt();
         assert!(
@@ -835,7 +839,7 @@ mod tests {
         let records = vec![make_comparison(0, 20.0, "2026-03-06T11:00:00Z")];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets[0].stddev, 0.0);
     }
 
@@ -849,8 +853,8 @@ mod tests {
         let record = make_comparison(0, 15.0, "2026-03-06T11:55:00Z");
         tl.add_comparison(&record, today);
 
-        assert!(tl.has_data(TrainingMode::UnisonPitchComparison));
-        assert!(!tl.has_data(TrainingMode::IntervalPitchComparison));
+        assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
+        assert!(!tl.has_data(TrainingDiscipline::IntervalPitchDiscrimination));
     }
 
     // --- Incremental matching update ---
@@ -863,8 +867,8 @@ mod tests {
         let record = make_matching(0, 5.0, "2026-03-06T11:55:00Z");
         tl.add_matching(&record, today);
 
-        assert!(tl.has_data(TrainingMode::UnisonMatching));
-        assert!(!tl.has_data(TrainingMode::IntervalMatching));
+        assert!(tl.has_data(TrainingDiscipline::UnisonPitchMatching));
+        assert!(!tl.has_data(TrainingDiscipline::IntervalPitchMatching));
     }
 
     #[test]
@@ -889,8 +893,9 @@ mod tests {
         tl_incr.add_comparison(&make_comparison(0, 20.0, ts2), today);
         tl_incr.add_comparison(&make_comparison(0, 30.0, ts3), today);
 
-        let rebuild_buckets = tl_rebuild.display_buckets(TrainingMode::UnisonPitchComparison);
-        let incr_buckets = tl_incr.display_buckets(TrainingMode::UnisonPitchComparison);
+        let rebuild_buckets =
+            tl_rebuild.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
+        let incr_buckets = tl_incr.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
 
         assert_eq!(rebuild_buckets.len(), incr_buckets.len());
         for (rb, ib) in rebuild_buckets.iter().zip(incr_buckets.iter()) {
@@ -928,8 +933,9 @@ mod tests {
         tl_incr.add_comparison(&make_comparison(0, 20.0, &ts_day), today);
         tl_incr.add_comparison(&make_comparison(0, 10.0, ts_session), today);
 
-        let rebuild_buckets = tl_rebuild.display_buckets(TrainingMode::UnisonPitchComparison);
-        let incr_buckets = tl_incr.display_buckets(TrainingMode::UnisonPitchComparison);
+        let rebuild_buckets =
+            tl_rebuild.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
+        let incr_buckets = tl_incr.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
 
         assert_eq!(
             rebuild_buckets.len(),
@@ -969,10 +975,10 @@ mod tests {
             make_comparison(0, 10.0, "2026-03-06T11:05:00Z"),
         ];
         tl.rebuild(&records, &[], today);
-        assert!(tl.has_data(TrainingMode::UnisonPitchComparison));
+        assert!(tl.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
 
         tl.reset();
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             assert!(!tl.has_data(mode));
             assert!(tl.display_buckets(mode).is_empty());
         }
@@ -1002,7 +1008,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert!(buckets.iter().all(|b| b.bucket_size == BucketSize::Month));
     }
 
@@ -1017,7 +1023,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let buckets = tl.display_buckets(TrainingMode::UnisonPitchComparison);
+        let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert!(buckets.iter().all(|b| b.bucket_size == BucketSize::Session));
     }
 
@@ -1035,7 +1041,7 @@ mod tests {
         ];
         tl.rebuild(&records, &[], today);
 
-        let stddev = tl.latest_bucket_stddev(TrainingMode::UnisonPitchComparison);
+        let stddev = tl.latest_bucket_stddev(TrainingDiscipline::UnisonPitchDiscrimination);
         assert!(stddev.is_some());
         let expected = (200.0_f64 / 3.0).sqrt();
         assert!((stddev.unwrap() - expected).abs() < 1e-10);
@@ -1045,7 +1051,7 @@ mod tests {
     fn test_latest_bucket_stddev_no_data() {
         let tl = ProgressTimeline::new();
         assert_eq!(
-            tl.latest_bucket_stddev(TrainingMode::UnisonPitchComparison),
+            tl.latest_bucket_stddev(TrainingDiscipline::UnisonPitchDiscrimination),
             None
         );
     }

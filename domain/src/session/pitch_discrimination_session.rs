@@ -4,10 +4,10 @@ use std::rc::Rc;
 
 use rand::prelude::IndexedRandom;
 
-use crate::ports::{PitchComparisonObserver, Resettable, UserSettings};
+use crate::ports::{PitchDiscriminationObserver, Resettable, UserSettings};
 use crate::profile::{COLD_START_DIFFICULTY, PerceptualProfile};
-use crate::strategy::{MIN_CENT_DIFFERENCE, TrainingSettings, next_pitch_comparison};
-use crate::training::{CompletedPitchComparison, PitchComparison};
+use crate::strategy::{MIN_CENT_DIFFERENCE, TrainingSettings, next_pitch_discrimination_trial};
+use crate::training::{CompletedPitchDiscriminationTrial, PitchDiscriminationTrial};
 use crate::tuning::TuningSystem;
 use crate::types::{
     AmplitudeDB, Cents, DetunedMIDINote, DirectedInterval, Frequency, MIDINote, NoteDuration,
@@ -22,7 +22,7 @@ pub const AMPLITUDE_VARY_SCALING: f64 = 10.0;
 
 /// State of the comparison session state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PitchComparisonSessionState {
+pub enum PitchDiscriminationSessionState {
     Idle,
     PlayingReferenceNote,
     PlayingTargetNote,
@@ -32,7 +32,7 @@ pub enum PitchComparisonSessionState {
 
 /// Data needed by the web layer to play the current comparison's notes.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PitchComparisonPlaybackData {
+pub struct PitchDiscriminationPlaybackData {
     pub reference_frequency: Frequency,
     pub target_frequency: Frequency,
     pub duration: NoteDuration,
@@ -44,10 +44,10 @@ pub struct PitchComparisonPlaybackData {
 /// Manages the training loop state, comparison generation, answer processing,
 /// and observer notification. No browser dependencies — the web crate drives
 /// the async loop and audio playback.
-pub struct PitchComparisonSession {
-    state: PitchComparisonSessionState,
+pub struct PitchDiscriminationSession {
+    state: PitchDiscriminationSessionState,
     profile: Rc<RefCell<PerceptualProfile>>,
-    observers: Vec<Box<dyn PitchComparisonObserver>>,
+    observers: Vec<Box<dyn PitchDiscriminationObserver>>,
     resettables: Vec<Box<dyn Resettable>>,
 
     // Session-level state (snapshot from settings at start)
@@ -59,9 +59,9 @@ pub struct PitchComparisonSession {
     session_note_range: NoteRange,
 
     // Current comparison state
-    current_comparison: Option<PitchComparison>,
-    current_playback_data: Option<PitchComparisonPlaybackData>,
-    last_completed: Option<CompletedPitchComparison>,
+    current_comparison: Option<PitchDiscriminationTrial>,
+    current_playback_data: Option<PitchDiscriminationPlaybackData>,
+    last_completed: Option<CompletedPitchDiscriminationTrial>,
 
     // Observable feedback state
     show_feedback: bool,
@@ -69,14 +69,14 @@ pub struct PitchComparisonSession {
     session_best_cent_difference: Option<f64>,
 }
 
-impl PitchComparisonSession {
+impl PitchDiscriminationSession {
     pub fn new(
         profile: Rc<RefCell<PerceptualProfile>>,
-        observers: Vec<Box<dyn PitchComparisonObserver>>,
+        observers: Vec<Box<dyn PitchDiscriminationObserver>>,
         resettables: Vec<Box<dyn Resettable>>,
     ) -> Self {
         Self {
-            state: PitchComparisonSessionState::Idle,
+            state: PitchDiscriminationSessionState::Idle,
             profile,
             observers,
             resettables,
@@ -97,7 +97,7 @@ impl PitchComparisonSession {
 
     // --- Observable state accessors ---
 
-    pub fn state(&self) -> PitchComparisonSessionState {
+    pub fn state(&self) -> PitchDiscriminationSessionState {
         self.state
     }
 
@@ -114,9 +114,12 @@ impl PitchComparisonSession {
     }
 
     pub fn last_cent_difference(&self) -> Option<f64> {
-        self.last_completed
-            .as_ref()
-            .map(|c| c.pitch_comparison().target_note().offset.magnitude())
+        self.last_completed.as_ref().map(|c| {
+            c.pitch_discrimination_trial()
+                .target_note()
+                .offset
+                .magnitude()
+        })
     }
 
     pub fn current_interval(&self) -> Option<DirectedInterval> {
@@ -125,7 +128,7 @@ impl PitchComparisonSession {
             .and_then(|c| DirectedInterval::between(c.reference_note(), c.target_note().note).ok())
     }
 
-    pub fn current_playback_data(&self) -> Option<PitchComparisonPlaybackData> {
+    pub fn current_playback_data(&self) -> Option<PitchDiscriminationPlaybackData> {
         self.current_playback_data
     }
 
@@ -138,7 +141,7 @@ impl PitchComparisonSession {
     pub fn start(&mut self, intervals: HashSet<DirectedInterval>, settings: &dyn UserSettings) {
         assert_eq!(
             self.state,
-            PitchComparisonSessionState::Idle,
+            PitchDiscriminationSessionState::Idle,
             "start() requires Idle state"
         );
         assert!(
@@ -161,38 +164,38 @@ impl PitchComparisonSession {
         self.session_best_cent_difference = None;
 
         // Generate first comparison
-        self.generate_next_pitch_comparison();
-        self.state = PitchComparisonSessionState::PlayingReferenceNote;
+        self.generate_next_pitch_discrimination_trial();
+        self.state = PitchDiscriminationSessionState::PlayingReferenceNote;
     }
 
     /// Called when reference note playback finishes. Transitions to PlayingTargetNote.
     pub fn on_reference_note_finished(&mut self) {
         assert_eq!(
             self.state,
-            PitchComparisonSessionState::PlayingReferenceNote,
+            PitchDiscriminationSessionState::PlayingReferenceNote,
             "on_reference_note_finished() requires PlayingReferenceNote state"
         );
-        self.state = PitchComparisonSessionState::PlayingTargetNote;
+        self.state = PitchDiscriminationSessionState::PlayingTargetNote;
     }
 
     /// Called when target note playback finishes. Transitions to AwaitingAnswer.
     pub fn on_target_note_finished(&mut self) {
         assert_eq!(
             self.state,
-            PitchComparisonSessionState::PlayingTargetNote,
+            PitchDiscriminationSessionState::PlayingTargetNote,
             "on_target_note_finished() requires PlayingTargetNote state"
         );
-        self.state = PitchComparisonSessionState::AwaitingAnswer;
+        self.state = PitchDiscriminationSessionState::AwaitingAnswer;
     }
 
     /// Handle the user's answer (higher/lower).
     ///
     /// Valid from PlayingTargetNote (early answer) or AwaitingAnswer.
-    /// Creates CompletedPitchComparison, notifies observers, transitions to ShowingFeedback.
+    /// Creates CompletedPitchDiscriminationTrial, notifies observers, transitions to ShowingFeedback.
     pub fn handle_answer(&mut self, is_higher: bool, timestamp: String) {
         assert!(
-            self.state == PitchComparisonSessionState::PlayingTargetNote
-                || self.state == PitchComparisonSessionState::AwaitingAnswer,
+            self.state == PitchDiscriminationSessionState::PlayingTargetNote
+                || self.state == PitchDiscriminationSessionState::AwaitingAnswer,
             "handle_answer() requires PlayingTargetNote or AwaitingAnswer state"
         );
 
@@ -200,7 +203,7 @@ impl PitchComparisonSession {
             .current_comparison
             .expect("handle_answer() called without a current comparison");
 
-        let completed = CompletedPitchComparison::new(
+        let completed = CompletedPitchDiscriminationTrial::new(
             comparison,
             is_higher,
             self.session_tuning_system,
@@ -241,7 +244,7 @@ impl PitchComparisonSession {
         self.notify_observers(&completed);
 
         self.last_completed = Some(completed);
-        self.state = PitchComparisonSessionState::ShowingFeedback;
+        self.state = PitchDiscriminationSessionState::ShowingFeedback;
     }
 
     /// Called when the feedback display period finishes.
@@ -249,20 +252,20 @@ impl PitchComparisonSession {
     pub fn on_feedback_finished(&mut self) {
         assert_eq!(
             self.state,
-            PitchComparisonSessionState::ShowingFeedback,
+            PitchDiscriminationSessionState::ShowingFeedback,
             "on_feedback_finished() requires ShowingFeedback state"
         );
         self.show_feedback = false;
-        self.generate_next_pitch_comparison();
-        self.state = PitchComparisonSessionState::PlayingReferenceNote;
+        self.generate_next_pitch_discrimination_trial();
+        self.state = PitchDiscriminationSessionState::PlayingReferenceNote;
     }
 
     /// Stop the session and return to Idle.
     pub fn stop(&mut self) {
-        if self.state == PitchComparisonSessionState::Idle {
+        if self.state == PitchDiscriminationSessionState::Idle {
             return;
         }
-        self.state = PitchComparisonSessionState::Idle;
+        self.state = PitchDiscriminationSessionState::Idle;
         self.current_comparison = None;
         self.current_playback_data = None;
         self.last_completed = None;
@@ -284,7 +287,7 @@ impl PitchComparisonSession {
 
     // --- Private helpers ---
 
-    fn generate_next_pitch_comparison(&mut self) {
+    fn generate_next_pitch_discrimination_trial(&mut self) {
         let interval = self.random_interval();
         let profile = self.profile.borrow();
         let training_settings = TrainingSettings::new(
@@ -294,7 +297,7 @@ impl PitchComparisonSession {
             Cents::new(COLD_START_DIFFICULTY),
         );
 
-        let comparison = next_pitch_comparison(
+        let comparison = next_pitch_discrimination_trial(
             &profile,
             &training_settings,
             self.last_completed.as_ref(),
@@ -313,7 +316,7 @@ impl PitchComparisonSession {
         let target_amplitude_db = calculate_target_amplitude(self.session_vary_loudness);
 
         self.current_comparison = Some(comparison);
-        self.current_playback_data = Some(PitchComparisonPlaybackData {
+        self.current_playback_data = Some(PitchDiscriminationPlaybackData {
             reference_frequency,
             target_frequency,
             duration: self.session_note_duration,
@@ -334,7 +337,7 @@ impl PitchComparisonSession {
                 TuningSystem::JustIntonation => "JI",
             };
             log::info!(
-                "PitchComparison: ref={} {:.2}Hz @0.0dB, target {:.2}Hz @{:.1}dB, offset={:.1}, interval={}, tuning={}, higher={}",
+                "PitchDiscriminationTrial: ref={} {:.2}Hz @0.0dB, target {:.2}Hz @{:.1}dB, offset={:.1}, interval={}, tuning={}, higher={}",
                 comparison.reference_note().raw_value(),
                 reference_frequency.raw_value(),
                 target_frequency.raw_value(),
@@ -355,10 +358,10 @@ impl PitchComparisonSession {
             .expect("session_intervals must not be empty")
     }
 
-    fn notify_observers(&mut self, completed: &CompletedPitchComparison) {
+    fn notify_observers(&mut self, completed: &CompletedPitchDiscriminationTrial) {
         for observer in &mut self.observers {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                observer.pitch_comparison_completed(completed);
+                observer.pitch_discrimination_completed(completed);
             }));
             if let Err(e) = result {
                 eprintln!("Observer panicked: {:?}", e);
@@ -387,11 +390,11 @@ mod tests {
     // --- Mock types ---
 
     struct MockObserver {
-        calls: Rc<RefCell<Vec<CompletedPitchComparison>>>,
+        calls: Rc<RefCell<Vec<CompletedPitchDiscriminationTrial>>>,
     }
 
     impl MockObserver {
-        fn new() -> (Self, Rc<RefCell<Vec<CompletedPitchComparison>>>) {
+        fn new() -> (Self, Rc<RefCell<Vec<CompletedPitchDiscriminationTrial>>>) {
             let calls = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
@@ -402,16 +405,22 @@ mod tests {
         }
     }
 
-    impl PitchComparisonObserver for MockObserver {
-        fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
+    impl PitchDiscriminationObserver for MockObserver {
+        fn pitch_discrimination_completed(
+            &mut self,
+            completed: &CompletedPitchDiscriminationTrial,
+        ) {
             self.calls.borrow_mut().push(completed.clone());
         }
     }
 
     struct PanickingObserver;
 
-    impl PitchComparisonObserver for PanickingObserver {
-        fn pitch_comparison_completed(&mut self, _completed: &CompletedPitchComparison) {
+    impl PitchDiscriminationObserver for PanickingObserver {
+        fn pitch_discrimination_completed(
+            &mut self,
+            _completed: &CompletedPitchDiscriminationTrial,
+        ) {
             panic!("PanickingObserver intentionally panicked");
         }
     }
@@ -492,18 +501,18 @@ mod tests {
         set
     }
 
-    fn create_session() -> PitchComparisonSession {
+    fn create_session() -> PitchDiscriminationSession {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        PitchComparisonSession::new(profile, vec![], vec![])
+        PitchDiscriminationSession::new(profile, vec![], vec![])
     }
 
     fn create_session_with_observer() -> (
-        PitchComparisonSession,
-        Rc<RefCell<Vec<CompletedPitchComparison>>>,
+        PitchDiscriminationSession,
+        Rc<RefCell<Vec<CompletedPitchDiscriminationTrial>>>,
     ) {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (observer, calls) = MockObserver::new();
-        let session = PitchComparisonSession::new(profile, vec![Box::new(observer)], vec![]);
+        let session = PitchDiscriminationSession::new(profile, vec![Box::new(observer)], vec![]);
         (session, calls)
     }
 
@@ -512,7 +521,7 @@ mod tests {
     #[test]
     fn test_idle_state_defaults() {
         let session = create_session();
-        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchDiscriminationSessionState::Idle);
         assert!(!session.show_feedback());
         assert!(!session.is_last_answer_correct());
         assert_eq!(session.session_best_cent_difference(), None);
@@ -528,7 +537,7 @@ mod tests {
         session.start(default_intervals(), &DefaultTestSettings);
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::PlayingReferenceNote
+            PitchDiscriminationSessionState::PlayingReferenceNote
         );
     }
 
@@ -577,7 +586,7 @@ mod tests {
         session.on_reference_note_finished();
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::PlayingTargetNote
+            PitchDiscriminationSessionState::PlayingTargetNote
         );
     }
 
@@ -589,7 +598,10 @@ mod tests {
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
         session.on_target_note_finished();
-        assert_eq!(session.state(), PitchComparisonSessionState::AwaitingAnswer);
+        assert_eq!(
+            session.state(),
+            PitchDiscriminationSessionState::AwaitingAnswer
+        );
     }
 
     // --- AC6: Handle answer ---
@@ -603,7 +615,7 @@ mod tests {
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::ShowingFeedback
+            PitchDiscriminationSessionState::ShowingFeedback
         );
         assert!(session.show_feedback());
     }
@@ -619,14 +631,14 @@ mod tests {
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::ShowingFeedback
+            PitchDiscriminationSessionState::ShowingFeedback
         );
     }
 
     // --- AC7: Feedback state ---
 
     #[test]
-    fn test_on_feedback_finished_generates_next_pitch_comparison() {
+    fn test_on_feedback_finished_generates_next_pitch_discrimination_trial() {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
@@ -635,7 +647,7 @@ mod tests {
         session.on_feedback_finished();
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::PlayingReferenceNote
+            PitchDiscriminationSessionState::PlayingReferenceNote
         );
         assert!(!session.show_feedback());
         assert!(session.current_playback_data().is_some());
@@ -648,31 +660,34 @@ mod tests {
         let mut session = create_session();
 
         // Idle
-        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchDiscriminationSessionState::Idle);
 
         // Start → PlayingReferenceNote
         session.start(default_intervals(), &DefaultTestSettings);
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::PlayingReferenceNote
+            PitchDiscriminationSessionState::PlayingReferenceNote
         );
 
         // on_reference_note_finished → PlayingTargetNote
         session.on_reference_note_finished();
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::PlayingTargetNote
+            PitchDiscriminationSessionState::PlayingTargetNote
         );
 
         // on_target_note_finished → AwaitingAnswer
         session.on_target_note_finished();
-        assert_eq!(session.state(), PitchComparisonSessionState::AwaitingAnswer);
+        assert_eq!(
+            session.state(),
+            PitchDiscriminationSessionState::AwaitingAnswer
+        );
 
         // handle_answer → ShowingFeedback
         session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::ShowingFeedback
+            PitchDiscriminationSessionState::ShowingFeedback
         );
         assert!(session.show_feedback());
 
@@ -680,7 +695,7 @@ mod tests {
         session.on_feedback_finished();
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::PlayingReferenceNote
+            PitchDiscriminationSessionState::PlayingReferenceNote
         );
         assert!(!session.show_feedback());
     }
@@ -735,7 +750,7 @@ mod tests {
         session.handle_answer(false, "2026-03-03T14:01:00Z".to_string());
     }
 
-    // --- CompletedPitchComparison correctness ---
+    // --- CompletedPitchDiscriminationTrial correctness ---
 
     #[test]
     fn test_completed_comparison_has_correct_timestamp() {
@@ -788,7 +803,7 @@ mod tests {
     // --- Observer notification ---
 
     #[test]
-    fn test_observer_receives_pitch_comparison_completed() {
+    fn test_observer_receives_pitch_discrimination_completed() {
         let (mut session, calls) = create_session_with_observer();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
@@ -806,7 +821,7 @@ mod tests {
         let (normal_observer, normal_calls) = MockObserver::new();
         let panicking_observer = PanickingObserver;
 
-        let mut session = PitchComparisonSession::new(
+        let mut session = PitchDiscriminationSession::new(
             profile,
             vec![Box::new(panicking_observer), Box::new(normal_observer)],
             vec![],
@@ -821,7 +836,7 @@ mod tests {
         assert_eq!(normal_calls.borrow().len(), 1);
         assert_eq!(
             session.state(),
-            PitchComparisonSessionState::ShowingFeedback
+            PitchDiscriminationSessionState::ShowingFeedback
         );
     }
 
@@ -868,7 +883,7 @@ mod tests {
     #[test]
     fn test_playback_data_amplitude_varies_when_configured() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        let mut session = PitchComparisonSession::new(profile, vec![], vec![]);
+        let mut session = PitchDiscriminationSession::new(profile, vec![], vec![]);
         let settings = LoudnessTestSettings { vary_loudness: 0.5 };
         session.start(default_intervals(), &settings);
         let data = session.current_playback_data().unwrap();
@@ -885,7 +900,7 @@ mod tests {
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
         session.stop();
-        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchDiscriminationSessionState::Idle);
         assert!(session.current_playback_data().is_none());
         assert!(!session.show_feedback());
     }
@@ -914,7 +929,7 @@ mod tests {
     fn test_stop_from_idle_is_noop() {
         let mut session = create_session();
         session.stop(); // Should not panic
-        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchDiscriminationSessionState::Idle);
     }
 
     // --- Session best tracking ---
@@ -1001,29 +1016,29 @@ mod tests {
         let mut session = create_session();
         session.start(default_intervals(), &DefaultTestSettings);
         session.reset_training_data();
-        assert_eq!(session.state(), PitchComparisonSessionState::Idle);
+        assert_eq!(session.state(), PitchDiscriminationSessionState::Idle);
     }
 
     #[test]
     fn test_reset_training_data_resets_profile() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         profile.borrow_mut().add_point(
-            crate::TrainingMode::UnisonPitchComparison,
+            crate::TrainingDiscipline::UnisonPitchDiscrimination,
             crate::MetricPoint::new(1000.0, Cents::new(50.0)),
             true,
         );
         assert!(
             profile
                 .borrow()
-                .has_data(crate::TrainingMode::UnisonPitchComparison)
+                .has_data(crate::TrainingDiscipline::UnisonPitchDiscrimination)
         );
 
-        let mut session = PitchComparisonSession::new(Rc::clone(&profile), vec![], vec![]);
+        let mut session = PitchDiscriminationSession::new(Rc::clone(&profile), vec![], vec![]);
         session.reset_training_data();
         assert!(
             !profile
                 .borrow()
-                .has_data(crate::TrainingMode::UnisonPitchComparison)
+                .has_data(crate::TrainingDiscipline::UnisonPitchDiscrimination)
         );
     }
 
@@ -1031,7 +1046,8 @@ mod tests {
     fn test_reset_training_data_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (resettable, count) = MockResettable::new();
-        let mut session = PitchComparisonSession::new(profile, vec![], vec![Box::new(resettable)]);
+        let mut session =
+            PitchDiscriminationSession::new(profile, vec![], vec![Box::new(resettable)]);
         session.reset_training_data();
         assert_eq!(count.get(), 1);
     }

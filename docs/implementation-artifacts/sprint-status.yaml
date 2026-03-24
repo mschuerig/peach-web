@@ -147,3 +147,7 @@ development_status:
   13-1-chart-tap-annotation: done
   13-2-profile-help-overlay: done
   epic-13-retrospective: optional
+
+  # Epic 14: iOS Terminology Alignment
+  epic-14: in-progress
+  14-1-domain-terminology-rename: review

@@ -7,7 +7,7 @@ use send_wrapper::SendWrapper;
 
 use crate::app::base_href;
 
-use domain::{PerceptualProfile, TrainingMode, TrainingModeState};
+use domain::{PerceptualProfile, TrainingDiscipline, TrainingDisciplineState};
 
 use super::help_content::HelpModal;
 use super::nav_bar::{NavBar, NavIconButton};
@@ -41,9 +41,9 @@ pub fn ProfileView() -> impl IntoView {
                 }
 
                 let p = profile.borrow();
-                let active_names: Vec<String> = TrainingMode::ALL
+                let active_names: Vec<String> = TrainingDiscipline::ALL
                     .iter()
-                    .filter(|&&m| p.state(m) == TrainingModeState::Active)
+                    .filter(|&&m| p.state(m) == TrainingDisciplineState::Active)
                     .map(|&m| i18n.tr(m.config().display_name))
                     .collect();
                 drop(p);
@@ -66,7 +66,7 @@ pub fn ProfileView() -> impl IntoView {
 
                 view! {
                     <div class="mt-6 space-y-4" aria-label=scroll_aria>
-                        {TrainingMode::ALL
+                        {TrainingDiscipline::ALL
                             .iter()
                             .map(|&mode| view! { <ProgressCard mode=mode /> })
                             .collect::<Vec<_>>()}

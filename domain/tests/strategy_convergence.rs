@@ -8,17 +8,18 @@ fn test_kazez_convergence_all_correct() {
     let settings = TrainingSettings::default();
     let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-    let mut last_completed: Option<CompletedPitchComparison> = None;
+    let mut last_completed: Option<CompletedPitchDiscriminationTrial> = None;
     let mut magnitudes = Vec::new();
 
     for i in 0..20 {
-        let comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
+        let comp =
+            next_pitch_discrimination_trial(&profile, &settings, last_completed.as_ref(), interval);
 
         let magnitude = comp.target_note().offset.magnitude();
         magnitudes.push(magnitude);
 
         // Always answer correctly
-        let completed = CompletedPitchComparison::new(
+        let completed = CompletedPitchDiscriminationTrial::new(
             comp,
             comp.is_target_higher(),
             TuningSystem::EqualTemperament,
@@ -27,7 +28,7 @@ fn test_kazez_convergence_all_correct() {
 
         // Update profile with the comparison result
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(i as f64 * 1000.0, Cents::new(magnitude)),
             completed.is_correct(),
         );
@@ -63,17 +64,18 @@ fn test_kazez_divergence_all_incorrect() {
     let settings = TrainingSettings::default();
     let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-    let mut last_completed: Option<CompletedPitchComparison> = None;
+    let mut last_completed: Option<CompletedPitchDiscriminationTrial> = None;
     let mut magnitudes = Vec::new();
 
     for _ in 0..10 {
-        let comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
+        let comp =
+            next_pitch_discrimination_trial(&profile, &settings, last_completed.as_ref(), interval);
 
         let magnitude = comp.target_note().offset.magnitude();
         magnitudes.push(magnitude);
 
         // Always answer incorrectly
-        let completed = CompletedPitchComparison::new(
+        let completed = CompletedPitchDiscriminationTrial::new(
             comp,
             !comp.is_target_higher(),
             TuningSystem::EqualTemperament,
@@ -100,10 +102,11 @@ fn test_kazez_oscillation() {
     let settings = TrainingSettings::default();
     let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-    let mut last_completed: Option<CompletedPitchComparison> = None;
+    let mut last_completed: Option<CompletedPitchDiscriminationTrial> = None;
 
     for i in 0..10 {
-        let comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
+        let comp =
+            next_pitch_discrimination_trial(&profile, &settings, last_completed.as_ref(), interval);
 
         // Alternate correct/incorrect
         let is_correct_answer = i % 2 == 0;
@@ -113,7 +116,7 @@ fn test_kazez_oscillation() {
             !comp.is_target_higher()
         };
 
-        let completed = CompletedPitchComparison::new(
+        let completed = CompletedPitchDiscriminationTrial::new(
             comp,
             user_answered,
             TuningSystem::EqualTemperament,
@@ -124,7 +127,8 @@ fn test_kazez_oscillation() {
     }
 
     // After alternating, we should still have a valid comparison
-    let final_comp = next_pitch_comparison(&profile, &settings, last_completed.as_ref(), interval);
+    let final_comp =
+        next_pitch_discrimination_trial(&profile, &settings, last_completed.as_ref(), interval);
     let mag = final_comp.target_note().offset.magnitude();
     assert!(mag >= settings.min_cent_difference().raw_value);
     assert!(mag <= settings.max_cent_difference().raw_value);
@@ -138,7 +142,7 @@ fn test_convergence_with_perfect_fifth_interval() {
     let interval = DirectedInterval::new(Interval::PerfectFifth, Direction::Up);
 
     for _ in 0..20 {
-        let comp = next_pitch_comparison(&profile, &settings, None, interval);
+        let comp = next_pitch_discrimination_trial(&profile, &settings, None, interval);
 
         // Verify interval transposition is correct
         let ref_val = comp.reference_note().raw_value() as i16;

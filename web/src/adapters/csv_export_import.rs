@@ -4,7 +4,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
 
-use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
+use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord};
 use domain::{Interval, MIDINote};
 
 use super::indexeddb_store::IndexedDbStore;
@@ -38,7 +38,7 @@ const METADATA_LINE: &str = "# peach-export-format:1";
 /// Result of parsing an import CSV file.
 #[derive(Clone, Debug)]
 pub struct ParsedImportData {
-    pub pitch_comparisons: Vec<PitchComparisonRecord>,
+    pub pitch_comparisons: Vec<PitchDiscriminationRecord>,
     pub pitch_matchings: Vec<PitchMatchingRecord>,
     pub warnings: Vec<String>,
 }
@@ -70,7 +70,7 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
 
     // Collect all records with timestamps for chronological sorting
     enum Record<'a> {
-        Comparison(&'a PitchComparisonRecord),
+        Comparison(&'a PitchDiscriminationRecord),
         PitchMatching(&'a PitchMatchingRecord),
     }
 
@@ -269,7 +269,10 @@ fn parse_v1(lines: std::str::Lines) -> Result<ParsedImportData, String> {
     })
 }
 
-fn parse_comparison_row(fields: &[&str], row_num: usize) -> Result<PitchComparisonRecord, String> {
+fn parse_comparison_row(
+    fields: &[&str],
+    row_num: usize,
+) -> Result<PitchDiscriminationRecord, String> {
     let timestamp = fields[1].to_string();
     let reference_note: u8 = fields[2]
         .parse()
@@ -297,7 +300,7 @@ fn parse_comparison_row(fields: &[&str], row_num: usize) -> Result<PitchComparis
         }
     };
 
-    Ok(PitchComparisonRecord {
+    Ok(PitchDiscriminationRecord {
         reference_note,
         target_note,
         cent_offset,

@@ -1,20 +1,20 @@
 use crate::metric_point::MetricPoint;
-use crate::training_mode::TrainingModeConfig;
+use crate::training_discipline::TrainingDisciplineConfig;
 use crate::trend::Trend;
 use crate::types::Cents;
 use crate::welford::WelfordAccumulator;
 
 /// Per-mode statistical engine: Welford accumulator, EWMA, trend, and time-ordered metrics.
-/// Mirrors iOS `TrainingModeStatistics` — each `TrainingMode` gets one instance.
+/// Mirrors iOS `TrainingDisciplineStatistics` — each `TrainingDiscipline` gets one instance.
 #[derive(Clone, Debug, PartialEq)]
-pub struct TrainingModeStatistics {
+pub struct TrainingDisciplineStatistics {
     pub welford: WelfordAccumulator<Cents>,
     pub ewma: Option<f64>,
     pub trend: Option<Trend>,
     pub metrics: Vec<MetricPoint<Cents>>,
 }
 
-impl TrainingModeStatistics {
+impl TrainingDisciplineStatistics {
     pub fn new() -> Self {
         Self {
             welford: WelfordAccumulator::new(),
@@ -31,7 +31,7 @@ impl TrainingModeStatistics {
 
     /// Incremental update: add a single metric point.
     /// Updates Welford, appends to metrics, recomputes EWMA and trend.
-    pub fn add_point(&mut self, point: MetricPoint<Cents>, config: &TrainingModeConfig) {
+    pub fn add_point(&mut self, point: MetricPoint<Cents>, config: &TrainingDisciplineConfig) {
         self.welford.update(point.value);
         self.metrics.push(point);
         self.recompute_ewma(config);
@@ -39,7 +39,7 @@ impl TrainingModeStatistics {
     }
 
     /// Batch rebuild from sorted metric points. Resets state first.
-    pub fn rebuild(&mut self, points: Vec<MetricPoint<Cents>>, config: &TrainingModeConfig) {
+    pub fn rebuild(&mut self, points: Vec<MetricPoint<Cents>>, config: &TrainingDisciplineConfig) {
         self.welford.reset();
         self.metrics.clear();
         self.ewma = None;
@@ -65,7 +65,7 @@ impl TrainingModeStatistics {
     /// Recompute EWMA from session-bucketed metrics.
     /// Groups metrics by session gap, computes per-session means,
     /// then applies exponential decay between sessions.
-    fn recompute_ewma(&mut self, config: &TrainingModeConfig) {
+    fn recompute_ewma(&mut self, config: &TrainingDisciplineConfig) {
         if self.metrics.is_empty() {
             self.ewma = None;
             return;
@@ -153,7 +153,7 @@ impl TrainingModeStatistics {
     }
 }
 
-impl Default for TrainingModeStatistics {
+impl Default for TrainingDisciplineStatistics {
     fn default() -> Self {
         Self::new()
     }
@@ -163,14 +163,14 @@ impl Default for TrainingModeStatistics {
 mod tests {
     use super::*;
 
-    fn default_config() -> &'static TrainingModeConfig {
-        use crate::training_mode::TrainingMode;
-        TrainingMode::UnisonPitchComparison.config()
+    fn default_config() -> &'static TrainingDisciplineConfig {
+        use crate::training_discipline::TrainingDiscipline;
+        TrainingDiscipline::UnisonPitchDiscrimination.config()
     }
 
     #[test]
     fn test_new_is_empty() {
-        let stats = TrainingModeStatistics::new();
+        let stats = TrainingDisciplineStatistics::new();
         assert_eq!(stats.record_count(), 0);
         assert_eq!(stats.ewma, None);
         assert_eq!(stats.trend, None);
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_add_point_updates_welford() {
-        let mut stats = TrainingModeStatistics::new();
+        let mut stats = TrainingDisciplineStatistics::new();
         stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
         assert_eq!(stats.record_count(), 1);
         assert!((stats.welford.mean() - 20.0).abs() < 1e-10);
@@ -187,14 +187,14 @@ mod tests {
 
     #[test]
     fn test_add_point_computes_ewma() {
-        let mut stats = TrainingModeStatistics::new();
+        let mut stats = TrainingDisciplineStatistics::new();
         stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
         assert_eq!(stats.ewma, Some(20.0));
     }
 
     #[test]
     fn test_two_sessions_ewma_between() {
-        let mut stats = TrainingModeStatistics::new();
+        let mut stats = TrainingDisciplineStatistics::new();
         let config = default_config();
         // Two sessions separated by > session_gap (1800s)
         stats.add_point(MetricPoint::new(1000.0, Cents::new(30.0)), config);
@@ -209,14 +209,14 @@ mod tests {
 
     #[test]
     fn test_trend_none_with_one_record() {
-        let mut stats = TrainingModeStatistics::new();
+        let mut stats = TrainingDisciplineStatistics::new();
         stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
         assert_eq!(stats.trend, None);
     }
 
     #[test]
     fn test_trend_improving() {
-        let mut stats = TrainingModeStatistics::new();
+        let mut stats = TrainingDisciplineStatistics::new();
         let config = default_config();
         // Many high values followed by low values
         for i in 0..10 {
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_rebuild_replaces_state() {
-        let mut stats = TrainingModeStatistics::new();
+        let mut stats = TrainingDisciplineStatistics::new();
         let config = default_config();
         stats.add_point(MetricPoint::new(1000.0, Cents::new(99.0)), config);
 
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_reset() {
-        let mut stats = TrainingModeStatistics::new();
+        let mut stats = TrainingDisciplineStatistics::new();
         stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
         stats.reset();
         assert_eq!(stats.record_count(), 0);

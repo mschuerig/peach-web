@@ -28,11 +28,11 @@ use crate::components::help_content::HelpModal;
 use crate::components::nav_bar::{NavBar, NavIconButton};
 use crate::help_sections::COMPARISON_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
-use domain::ports::{NotePlayer, PitchComparisonObserver, UserSettings};
+use domain::ports::{NotePlayer, PitchDiscriminationObserver, UserSettings};
 use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
 use domain::{
-    FEEDBACK_DURATION_SECS, Interval, PerceptualProfile, PitchComparisonSession,
-    PitchComparisonSessionState, ProgressTimeline, TrainingMode, Trend,
+    FEEDBACK_DURATION_SECS, Interval, PerceptualProfile, PitchDiscriminationSession,
+    PitchDiscriminationSessionState, ProgressTimeline, TrainingDiscipline, Trend,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -96,13 +96,13 @@ pub fn PitchComparisonView() -> impl IntoView {
     // Build observers list — DataStoreObserver holds the signal and checks
     // store availability on each call, so it works even if IndexedDB
     // opens after PitchComparisonView mounts.
-    let observers: Vec<Box<dyn PitchComparisonObserver>> = vec![
+    let observers: Vec<Box<dyn PitchDiscriminationObserver>> = vec![
         Box::new(ProfileObserver::new(Rc::clone(&profile))),
         Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
         Box::new(DataStoreObserver::new(db_store, storage_error)),
     ];
 
-    let session = Rc::new(RefCell::new(PitchComparisonSession::new(
+    let session = Rc::new(RefCell::new(PitchDiscriminationSession::new(
         Rc::clone(&profile),
         observers,
         vec![],
@@ -130,9 +130,9 @@ pub fn PitchComparisonView() -> impl IntoView {
 
     // Determine TrainingMode from intervals
     let training_mode = if is_interval_mode {
-        TrainingMode::IntervalPitchComparison
+        TrainingDiscipline::IntervalPitchDiscrimination
     } else {
-        TrainingMode::UnisonPitchComparison
+        TrainingDiscipline::UnisonPitchDiscrimination
     };
 
     // Training stats signals
@@ -154,7 +154,7 @@ pub fn PitchComparisonView() -> impl IntoView {
     // reactive tracking context is not available.
     fn sync_session_to_signals(
         i18n: &I18n,
-        session: &RefCell<PitchComparisonSession>,
+        session: &RefCell<PitchDiscriminationSession>,
         show_feedback: RwSignal<bool>,
         is_last_correct: RwSignal<bool>,
         buttons_enabled: RwSignal<bool>,
@@ -168,8 +168,8 @@ pub fn PitchComparisonView() -> impl IntoView {
             is_last_correct.set(s.is_last_answer_correct());
             let state = s.state();
             buttons_enabled.set(
-                state == PitchComparisonSessionState::PlayingTargetNote
-                    || state == PitchComparisonSessionState::AwaitingAnswer,
+                state == PitchDiscriminationSessionState::PlayingTargetNote
+                    || state == PitchDiscriminationSessionState::AwaitingAnswer,
             );
             if s.show_feedback() {
                 sr_announcement.set(if s.is_last_answer_correct() {
@@ -228,8 +228,8 @@ pub fn PitchComparisonView() -> impl IntoView {
                 return;
             }
             let state = session.borrow().state();
-            if state != PitchComparisonSessionState::PlayingTargetNote
-                && state != PitchComparisonSessionState::AwaitingAnswer
+            if state != PitchDiscriminationSessionState::PlayingTargetNote
+                && state != PitchDiscriminationSessionState::AwaitingAnswer
             {
                 log::info!("User pressed {answer_str} — ignored (state: {state:?})");
                 return;
@@ -614,7 +614,8 @@ pub fn PitchComparisonView() -> impl IntoView {
                             break 'training;
                         }
                         // Detect early answer: answer handler transitions to ShowingFeedback
-                        if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback
+                        if session.borrow().state()
+                            == PitchDiscriminationSessionState::ShowingFeedback
                         {
                             break;
                         }
@@ -626,22 +627,27 @@ pub fn PitchComparisonView() -> impl IntoView {
                     }
 
                     // On early answer, stop target note audio immediately
-                    if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
+                    if session.borrow().state() == PitchDiscriminationSessionState::ShowingFeedback
+                    {
                         note_player.borrow().stop_all();
                     }
 
                     // Transition to AwaitingAnswer if no early answer was given
-                    if session.borrow().state() == PitchComparisonSessionState::PlayingTargetNote {
+                    if session.borrow().state()
+                        == PitchDiscriminationSessionState::PlayingTargetNote
+                    {
                         session.borrow_mut().on_target_note_finished();
                         sync();
                     }
 
                     // === Wait for answer if not already given ===
-                    while session.borrow().state() != PitchComparisonSessionState::ShowingFeedback {
+                    while session.borrow().state()
+                        != PitchDiscriminationSessionState::ShowingFeedback
+                    {
                         if cancelled.get() {
                             break 'training;
                         }
-                        if session.borrow().state() == PitchComparisonSessionState::Idle {
+                        if session.borrow().state() == PitchDiscriminationSessionState::Idle {
                             break 'training;
                         }
                         TimeoutFuture::new(POLL_INTERVAL_MS).await;
@@ -655,7 +661,8 @@ pub fn PitchComparisonView() -> impl IntoView {
                     }
 
                     // End feedback, generate next comparison
-                    if session.borrow().state() == PitchComparisonSessionState::ShowingFeedback {
+                    if session.borrow().state() == PitchDiscriminationSessionState::ShowingFeedback
+                    {
                         session.borrow_mut().on_feedback_finished();
                         sync();
                     }

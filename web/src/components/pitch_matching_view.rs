@@ -34,7 +34,7 @@ use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
 use domain::{
     FEEDBACK_DURATION_SECS, Interval, PITCH_MATCHING_VELOCITY, PerceptualProfile,
-    PitchMatchingSession, PitchMatchingSessionState, ProgressTimeline, TrainingMode, Trend,
+    PitchMatchingSession, PitchMatchingSessionState, ProgressTimeline, TrainingDiscipline, Trend,
 };
 use leptos::reactive::owner::LocalStorage;
 use leptos_router::hooks::use_query_map;
@@ -129,9 +129,9 @@ pub fn PitchMatchingView() -> impl IntoView {
 
     // Determine TrainingMode from intervals
     let training_mode = if is_interval_mode {
-        TrainingMode::IntervalMatching
+        TrainingDiscipline::IntervalPitchMatching
     } else {
-        TrainingMode::UnisonMatching
+        TrainingDiscipline::UnisonPitchMatching
     };
 
     // Training stats signals

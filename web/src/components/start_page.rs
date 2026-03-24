@@ -9,7 +9,7 @@ use super::progress_sparkline::ProgressSparkline;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::app::{SoundFontLoadStatus, base_href};
 use crate::interval_codes::encode_intervals;
-use domain::{Interval, TrainingMode};
+use domain::{Interval, TrainingDiscipline};
 
 fn interval_href(path: &str) -> String {
     let intervals = LocalStorageSettings::get_selected_intervals();
@@ -28,7 +28,7 @@ fn TrainingCard(
     icon: &'static str,
     href: String,
     #[prop(into)] aria_label: Signal<String>,
-    mode: TrainingMode,
+    mode: TrainingDiscipline,
     #[prop(into)] disabled: Signal<bool>,
 ) -> impl IntoView {
     let base_class = "flex w-full items-center gap-3 rounded-xl px-4 py-3 min-h-[4.5rem] text-lg font-medium no-underline transition-opacity duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900";
@@ -131,7 +131,7 @@ pub fn StartPage() -> impl IntoView {
                             icon="\u{1F442}"
                             href=base_href("/training/comparison")
                             aria_label=move_tr!("hear-compare-single-aria")
-                            mode=TrainingMode::UnisonPitchComparison
+                            mode=TrainingDiscipline::UnisonPitchDiscrimination
                             disabled=disabled
                         />
                         <TrainingCard
@@ -139,7 +139,7 @@ pub fn StartPage() -> impl IntoView {
                             icon="\u{1F3AF}"
                             href=base_href("/training/pitch-matching")
                             aria_label=move_tr!("tune-match-single-aria")
-                            mode=TrainingMode::UnisonMatching
+                            mode=TrainingDiscipline::UnisonPitchMatching
                             disabled=disabled
                         />
                     </div>
@@ -154,7 +154,7 @@ pub fn StartPage() -> impl IntoView {
                             icon="\u{1F442}"
                             href=interval_comparison_href
                             aria_label=move_tr!("hear-compare-intervals-aria")
-                            mode=TrainingMode::IntervalPitchComparison
+                            mode=TrainingDiscipline::IntervalPitchDiscrimination
                             disabled=disabled
                         />
                         <TrainingCard
@@ -162,7 +162,7 @@ pub fn StartPage() -> impl IntoView {
                             icon="\u{1F3AF}"
                             href=interval_pitch_matching_href
                             aria_label=move_tr!("tune-match-intervals-aria")
-                            mode=TrainingMode::IntervalMatching
+                            mode=TrainingDiscipline::IntervalPitchMatching
                             disabled=disabled
                         />
                     </div>

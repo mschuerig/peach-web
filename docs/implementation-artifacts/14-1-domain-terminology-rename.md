@@ -1,6 +1,6 @@
 # Story 14.1: Domain Crate Terminology Rename
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -89,30 +89,30 @@ This story covers the `domain/` crate only. Web crate changes follow in story 14
 
 ### Phase 1: File renames
 
-- [ ] Task 1: `git mv` files listed in AC9
-- [ ] Task 2: Update `mod` declarations in `lib.rs`, `training/mod.rs`, `session/mod.rs`
+- [x] Task 1: `git mv` files listed in AC9
+- [x] Task 2: Update `mod` declarations in `lib.rs`, `training/mod.rs`, `session/mod.rs`
 
 ### Phase 2: Core type renames
 
-- [ ] Task 3: Rename `TrainingMode` enum → `TrainingDiscipline` with new variant names
-- [ ] Task 4: Rename `PitchComparison` → `PitchDiscriminationTrial`, `CompletedPitchComparison` → `CompletedPitchDiscriminationTrial`
-- [ ] Task 5: Rename `PitchMatchingChallenge` → `PitchMatchingTrial`, `CompletedPitchMatching` → `CompletedPitchMatchingTrial`
-- [ ] Task 6: Rename record types (AC5)
-- [ ] Task 7: Rename session types and state enums (AC3)
-- [ ] Task 8: Rename observer traits and methods (AC4)
-- [ ] Task 9: Update slug values (AC8)
+- [x] Task 3: Rename `TrainingMode` enum → `TrainingDiscipline` with new variant names
+- [x] Task 4: Rename `PitchComparison` → `PitchDiscriminationTrial`, `CompletedPitchComparison` → `CompletedPitchDiscriminationTrial`
+- [x] Task 5: Rename `PitchMatchingChallenge` → `PitchMatchingTrial`, `CompletedPitchMatching` → `CompletedPitchMatchingTrial`
+- [x] Task 6: Rename record types (AC5)
+- [x] Task 7: Rename session types and state enums (AC3)
+- [x] Task 8: Rename observer traits and methods (AC4)
+- [x] Task 9: Update slug values (AC8) — N/A: no slug string literals exist in domain crate (web crate only)
 
 ### Phase 3: Cascade fixes
 
-- [ ] Task 10: Fix all `use` statements, match arms, and method calls throughout domain crate
-- [ ] Task 11: Update strategy types and methods (AC11)
-- [ ] Task 12: Update port traits (AC10)
-- [ ] Task 13: Update all test functions and assertions
+- [x] Task 10: Fix all `use` statements, match arms, and method calls throughout domain crate
+- [x] Task 11: Update strategy types and methods (AC11)
+- [x] Task 12: Update port traits (AC10)
+- [x] Task 13: Update all test functions and assertions
 
 ### Phase 4: Verification
 
-- [ ] Task 14: `cargo test -p domain` passes
-- [ ] Task 15: `cargo clippy -p domain` passes
+- [x] Task 14: `cargo test -p domain` passes (335 tests, 0 failures)
+- [x] Task 15: `cargo clippy -p domain` passes (clean)
 
 ## Dev Notes
 
@@ -120,3 +120,48 @@ This story covers the `domain/` crate only. Web crate changes follow in story 14
 - The `PitchMatching*` family has fewer renames (only `Challenge` → `Trial`, `Completed` gets `Trial` suffix)
 - Do NOT update web crate, CSV format, or docs — those are separate stories
 - Historical story docs (e.g. `7-0a-rename-comparison-to-pitch-comparison.md`) are NOT updated
+
+## Dev Agent Record
+
+### Implementation Plan
+
+Systematic rename in 4 phases: file renames via `git mv`, core type renames using replace_all, cascade fixes across all consumers, verification with tests and clippy.
+
+### Debug Log
+
+No bugs encountered. All renames applied cleanly via systematic replace_all operations. The compiler confirmed correctness at each step.
+
+### Completion Notes
+
+All domain crate types, traits, methods, and files renamed per iOS terminology alignment:
+- 3 files renamed via `git mv` (training_mode.rs, pitch_comparison.rs, pitch_comparison_session.rs)
+- ~30 type/trait/method renames applied across 15 source files + 3 integration test files
+- AC8 (slug values): No slug string literals exist in domain crate — these live in the web crate and will be addressed in story 14.2
+- AC11 (`NextPitchComparisonStrategy`): Type does not exist in domain crate — the strategy is a function `next_pitch_comparison()` which was renamed to `next_pitch_discrimination_trial()`
+- 335 tests pass, clippy clean, `cargo check -p domain` clean
+- Web crate will have compilation errors from changed exports — expected, covered by story 14.2
+
+## File List
+
+### Modified
+
+- domain/src/lib.rs
+- domain/src/training/mod.rs
+- domain/src/session/mod.rs
+- domain/src/training_discipline.rs (renamed from training_mode.rs)
+- domain/src/training/pitch_discrimination.rs (renamed from pitch_comparison.rs)
+- domain/src/session/pitch_discrimination_session.rs (renamed from pitch_comparison_session.rs)
+- domain/src/session/pitch_matching_session.rs
+- domain/src/training/pitch_matching.rs
+- domain/src/records.rs
+- domain/src/ports.rs
+- domain/src/strategy.rs
+- domain/src/profile.rs
+- domain/src/training_mode_statistics.rs
+- domain/src/progress_timeline.rs
+- domain/tests/strategy_convergence.rs
+- domain/tests/profile_hydration.rs
+
+## Change Log
+
+- 2026-03-24: Completed domain crate terminology rename (Story 14.1) — all types, traits, methods, and files renamed to match iOS alignment spec

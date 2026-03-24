@@ -6,7 +6,7 @@ use rand::prelude::IndexedRandom;
 
 use crate::ports::{PitchMatchingObserver, Resettable, UserSettings};
 use crate::profile::PerceptualProfile;
-use crate::training::{CompletedPitchMatching, PitchMatchingChallenge};
+use crate::training::{CompletedPitchMatchingTrial, PitchMatchingTrial};
 use crate::tuning::TuningSystem;
 use crate::types::Cents;
 use crate::types::{
@@ -64,9 +64,9 @@ pub struct PitchMatchingSession {
     session_vary_loudness: f64,
 
     // Current challenge state
-    current_challenge: Option<PitchMatchingChallenge>,
+    current_challenge: Option<PitchMatchingTrial>,
     current_playback_data: Option<PitchMatchingPlaybackData>,
-    last_completed: Option<CompletedPitchMatching>,
+    last_completed: Option<CompletedPitchMatchingTrial>,
 
     // Target frequency for pitch calculation (the "correct answer" frequency)
     target_frequency: Option<Frequency>,
@@ -110,11 +110,11 @@ impl PitchMatchingSession {
         self.show_feedback
     }
 
-    pub fn last_completed(&self) -> Option<&CompletedPitchMatching> {
+    pub fn last_completed(&self) -> Option<&CompletedPitchMatchingTrial> {
         self.last_completed.as_ref()
     }
 
-    pub fn current_challenge(&self) -> Option<&PitchMatchingChallenge> {
+    pub fn current_challenge(&self) -> Option<&PitchMatchingTrial> {
         self.current_challenge.as_ref()
     }
 
@@ -196,7 +196,7 @@ impl PitchMatchingSession {
 
     /// Commit the pitch when slider is released.
     ///
-    /// Calculates user_cent_error, creates CompletedPitchMatching, notifies observers,
+    /// Calculates user_cent_error, creates CompletedPitchMatchingTrial, notifies observers,
     /// updates profile, transitions to ShowingFeedback.
     pub fn commit_pitch(&mut self, value: f64, timestamp: String) {
         assert_eq!(
@@ -211,7 +211,7 @@ impl PitchMatchingSession {
             .expect("challenge must exist in PlayingTunable");
         let user_cent_error = challenge.initial_cent_offset() + value * PITCH_SLIDER_CENTS_RANGE;
 
-        let completed = CompletedPitchMatching::new(
+        let completed = CompletedPitchMatchingTrial::new(
             challenge.reference_note(),
             challenge.target_note(),
             challenge.initial_cent_offset(),
@@ -297,7 +297,7 @@ impl PitchMatchingSession {
         });
     }
 
-    fn generate_challenge(&self, interval: DirectedInterval) -> PitchMatchingChallenge {
+    fn generate_challenge(&self, interval: DirectedInterval) -> PitchMatchingTrial {
         // Ensure transposed note stays in range
         let (min_raw, max_raw) = match interval.direction {
             Direction::Up => (
@@ -326,7 +326,7 @@ impl PitchMatchingSession {
         let initial_cent_offset =
             rand::random::<f64>() * INITIAL_OFFSET_RANGE - PITCH_SLIDER_CENTS_RANGE; // [-PITCH_SLIDER_CENTS_RANGE, +PITCH_SLIDER_CENTS_RANGE]
 
-        PitchMatchingChallenge::new(reference_note, target_note, initial_cent_offset)
+        PitchMatchingTrial::new(reference_note, target_note, initial_cent_offset)
     }
 
     fn random_interval(&self) -> DirectedInterval {
@@ -349,7 +349,7 @@ impl PitchMatchingSession {
         Frequency::new(target_freq.raw_value() * 2.0_f64.powf(cent_offset / Cents::PER_OCTAVE))
     }
 
-    fn notify_observers(&mut self, completed: &CompletedPitchMatching) {
+    fn notify_observers(&mut self, completed: &CompletedPitchMatchingTrial) {
         for observer in &mut self.observers {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 observer.pitch_matching_completed(completed);
@@ -381,11 +381,11 @@ mod tests {
     // --- Mock types ---
 
     struct MockPitchMatchingObserver {
-        calls: Rc<RefCell<Vec<CompletedPitchMatching>>>,
+        calls: Rc<RefCell<Vec<CompletedPitchMatchingTrial>>>,
     }
 
     impl MockPitchMatchingObserver {
-        fn new() -> (Self, Rc<RefCell<Vec<CompletedPitchMatching>>>) {
+        fn new() -> (Self, Rc<RefCell<Vec<CompletedPitchMatchingTrial>>>) {
             let calls = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
@@ -397,7 +397,7 @@ mod tests {
     }
 
     impl PitchMatchingObserver for MockPitchMatchingObserver {
-        fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
+        fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial) {
             self.calls.borrow_mut().push(completed.clone());
         }
     }
@@ -405,7 +405,7 @@ mod tests {
     struct PanickingPitchMatchingObserver;
 
     impl PitchMatchingObserver for PanickingPitchMatchingObserver {
-        fn pitch_matching_completed(&mut self, _completed: &CompletedPitchMatching) {
+        fn pitch_matching_completed(&mut self, _completed: &CompletedPitchMatchingTrial) {
             panic!("PanickingPitchMatchingObserver intentionally panicked");
         }
     }
@@ -468,7 +468,7 @@ mod tests {
 
     fn create_session_with_observer() -> (
         PitchMatchingSession,
-        Rc<RefCell<Vec<CompletedPitchMatching>>>,
+        Rc<RefCell<Vec<CompletedPitchMatchingTrial>>>,
     ) {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (observer, calls) = MockPitchMatchingObserver::new();
@@ -964,7 +964,7 @@ mod tests {
     fn test_reset_training_data_stops_session_resets_profile_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         profile.borrow_mut().add_point(
-            crate::TrainingMode::UnisonMatching,
+            crate::TrainingDiscipline::UnisonPitchMatching,
             crate::MetricPoint::new(1000.0, Cents::new(5.0)),
             true,
         );

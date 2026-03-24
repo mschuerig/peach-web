@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use crate::records::PitchComparisonRecord;
+use crate::records::PitchDiscriminationRecord;
 use crate::records::PitchMatchingRecord;
-use crate::training::{CompletedPitchComparison, CompletedPitchMatching};
+use crate::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial};
 use crate::tuning::TuningSystem;
 use crate::types::{AmplitudeDB, Frequency, MIDIVelocity, NoteDuration, NoteRange};
 
@@ -31,13 +31,13 @@ pub trait PlaybackHandle {
 }
 
 /// Observer for comparison training events.
-pub trait PitchComparisonObserver {
-    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison);
+pub trait PitchDiscriminationObserver {
+    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial);
 }
 
 /// Observer for pitch matching training events.
 pub trait PitchMatchingObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching);
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial);
 }
 
 /// Trait for components that can be reset when training data is cleared.
@@ -76,8 +76,13 @@ pub enum StorageError {
 /// is inherently asynchronous. The trait remains as the canonical domain
 /// contract — future adapters (e.g. in-memory for testing) can implement it.
 pub trait TrainingDataStore {
-    fn save_pitch_comparison(&self, record: PitchComparisonRecord) -> Result<(), StorageError>;
-    fn fetch_all_pitch_comparisons(&self) -> Result<Vec<PitchComparisonRecord>, StorageError>;
+    fn save_pitch_discrimination(
+        &self,
+        record: PitchDiscriminationRecord,
+    ) -> Result<(), StorageError>;
+    fn fetch_all_pitch_discriminations(
+        &self,
+    ) -> Result<Vec<PitchDiscriminationRecord>, StorageError>;
     fn save_pitch_matching(&self, record: PitchMatchingRecord) -> Result<(), StorageError>;
     fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>;
     fn delete_all(&self) -> Result<(), StorageError>;

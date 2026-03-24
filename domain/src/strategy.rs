@@ -2,8 +2,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::profile::{COLD_START_DIFFICULTY, PerceptualProfile};
-use crate::training::CompletedPitchComparison;
-use crate::training::pitch_comparison::PitchComparison;
+use crate::training::{CompletedPitchDiscriminationTrial, PitchDiscriminationTrial};
 use crate::types::{
     Cents, DetunedMIDINote, DirectedInterval, Direction, Frequency, MIDINote, NoteRange,
 };
@@ -92,21 +91,21 @@ impl Default for TrainingSettings {
 /// 2. Clamp to [min_cent_difference, max_cent_difference]
 /// 3. Random sign (equally likely positive/negative)
 /// 4. Select reference note within range, accounting for interval transposition
-/// 5. Return PitchComparison
-pub fn next_pitch_comparison(
+/// 5. Return PitchDiscriminationTrial
+pub fn next_pitch_discrimination_trial(
     profile: &PerceptualProfile,
     settings: &TrainingSettings,
-    last_pitch_comparison: Option<&CompletedPitchComparison>,
+    last_pitch_discrimination_trial: Option<&CompletedPitchDiscriminationTrial>,
     interval: DirectedInterval,
-) -> PitchComparison {
+) -> PitchDiscriminationTrial {
     let mut rng = rand::rng();
 
     // Step 1: Determine magnitude
-    let raw_magnitude = match last_pitch_comparison {
+    let raw_magnitude = match last_pitch_discrimination_trial {
         Some(completed) => {
             let prev_magnitude = Cents::new(
                 completed
-                    .pitch_comparison()
+                    .pitch_discrimination_trial()
                     .target_note()
                     .offset
                     .magnitude(),
@@ -161,7 +160,7 @@ pub fn next_pitch_comparison(
         offset: Cents::new(cent_offset),
     };
 
-    PitchComparison::new(reference_note, target_note)
+    PitchDiscriminationTrial::new(reference_note, target_note)
 }
 
 #[cfg(test)]
@@ -223,7 +222,7 @@ mod tests {
         let settings = TrainingSettings::default();
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comparison = next_pitch_comparison(&profile, &settings, None, interval);
+        let comparison = next_pitch_discrimination_trial(&profile, &settings, None, interval);
         // Cold start: magnitude defaults to max_cent_difference (100)
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
@@ -237,17 +236,17 @@ mod tests {
     #[test]
     fn test_warm_start_uses_comparison_mean() {
         use crate::metric_point::MetricPoint;
-        use crate::training_mode::TrainingMode;
+        use crate::training_discipline::TrainingDiscipline;
 
         let mut profile = PerceptualProfile::new();
         // Add two unison comparison points to establish a comparison_mean
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(40.0)),
             true,
         );
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(2000.0, Cents::new(60.0)),
             true,
         );
@@ -256,7 +255,7 @@ mod tests {
         let settings = TrainingSettings::default();
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comparison = next_pitch_comparison(&profile, &settings, None, interval);
+        let comparison = next_pitch_discrimination_trial(&profile, &settings, None, interval);
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
             (magnitude - 50.0).abs() < 1e-10,
@@ -267,12 +266,12 @@ mod tests {
     #[test]
     fn test_warm_start_clamped_to_range() {
         use crate::metric_point::MetricPoint;
-        use crate::training_mode::TrainingMode;
+        use crate::training_discipline::TrainingDiscipline;
 
         let mut profile = PerceptualProfile::new();
         // Train with very low mean that would be below min_cent_difference
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(0.01)),
             true,
         );
@@ -281,7 +280,7 @@ mod tests {
         let settings = TrainingSettings::default(); // min = 0.1
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comparison = next_pitch_comparison(&profile, &settings, None, interval);
+        let comparison = next_pitch_discrimination_trial(&profile, &settings, None, interval);
         let magnitude = comparison.target_note().offset.magnitude();
         assert!(
             magnitude >= settings.min_cent_difference.raw_value,
@@ -299,7 +298,7 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
         for _ in 0..100 {
-            let comparison = next_pitch_comparison(&profile, &settings, None, interval);
+            let comparison = next_pitch_discrimination_trial(&profile, &settings, None, interval);
             let ref_val = comparison.reference_note().raw_value();
             assert!(
                 (36..=84).contains(&ref_val),
@@ -315,7 +314,7 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Octave, Direction::Up);
 
         for _ in 0..100 {
-            let comparison = next_pitch_comparison(&profile, &settings, None, interval);
+            let comparison = next_pitch_discrimination_trial(&profile, &settings, None, interval);
             let target_val = comparison.target_note().note.raw_value();
             assert!(
                 target_val <= 127,
@@ -331,7 +330,7 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Octave, Direction::Down);
 
         for _ in 0..100 {
-            let comparison = next_pitch_comparison(&profile, &settings, None, interval);
+            let comparison = next_pitch_discrimination_trial(&profile, &settings, None, interval);
             let ref_val = comparison.reference_note().raw_value();
             let target_val = comparison.target_note().note.raw_value();
             assert!(
@@ -354,17 +353,18 @@ mod tests {
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
         // First comparison: cold start at 100 cents
-        let comp1 = next_pitch_comparison(&profile, &settings, None, interval);
+        let comp1 = next_pitch_discrimination_trial(&profile, &settings, None, interval);
 
         // Simulate correct answer
-        let completed = CompletedPitchComparison::new(
+        let completed = CompletedPitchDiscriminationTrial::new(
             comp1,
             comp1.is_target_higher(),
             crate::TuningSystem::EqualTemperament,
             "2026-03-03T14:00:00Z".to_string(),
         );
 
-        let comp2 = next_pitch_comparison(&profile, &settings, Some(&completed), interval);
+        let comp2 =
+            next_pitch_discrimination_trial(&profile, &settings, Some(&completed), interval);
         let mag2 = comp2.target_note().offset.magnitude();
         // After correct: kazez_narrow(100) = 100*(1 - 0.05*10) ≈ 50
         let expected = kazez_narrow(Cents::new(100.0)).raw_value;
@@ -380,17 +380,18 @@ mod tests {
         let settings = TrainingSettings::default();
         let interval = DirectedInterval::new(Interval::Prime, Direction::Up);
 
-        let comp1 = next_pitch_comparison(&profile, &settings, None, interval);
+        let comp1 = next_pitch_discrimination_trial(&profile, &settings, None, interval);
 
         // Simulate incorrect answer
-        let completed = CompletedPitchComparison::new(
+        let completed = CompletedPitchDiscriminationTrial::new(
             comp1,
             !comp1.is_target_higher(),
             crate::TuningSystem::EqualTemperament,
             "2026-03-03T14:00:00Z".to_string(),
         );
 
-        let comp2 = next_pitch_comparison(&profile, &settings, Some(&completed), interval);
+        let comp2 =
+            next_pitch_discrimination_trial(&profile, &settings, Some(&completed), interval);
         let mag2 = comp2.target_note().offset.magnitude();
         // After incorrect at 100: kazez_widen(100) = 100*(1 + 0.09*10) = 190, clamped to 100
         assert!(
@@ -442,7 +443,7 @@ mod tests {
         let mut pos_count = 0;
         let mut neg_count = 0;
         for _ in 0..200 {
-            let comp = next_pitch_comparison(&profile, &settings, None, interval);
+            let comp = next_pitch_discrimination_trial(&profile, &settings, None, interval);
             if comp.target_note().offset.raw_value > 0.0 {
                 pos_count += 1;
             } else {

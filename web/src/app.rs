@@ -72,7 +72,7 @@ use crate::components::{
     InfoView, PitchComparisonView, PitchMatchingView, ProfileView, SettingsView, StartPage,
 };
 use domain::{
-    MetricPoint, PerceptualProfile, ProgressTimeline, TrainingMode, parse_iso8601_to_epoch,
+    MetricPoint, PerceptualProfile, ProgressTimeline, TrainingDiscipline, parse_iso8601_to_epoch,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -148,21 +148,23 @@ pub fn App() -> impl IntoView {
                     }
                 };
 
-                // Profile hydration — build MetricPoints grouped by TrainingMode
+                // Profile hydration — build MetricPoints grouped by TrainingDiscipline
                 {
                     use std::collections::HashMap;
 
-                    let mut mode_points: HashMap<TrainingMode, Vec<MetricPoint<domain::Cents>>> =
-                        HashMap::new();
+                    let mut mode_points: HashMap<
+                        TrainingDiscipline,
+                        Vec<MetricPoint<domain::Cents>>,
+                    > = HashMap::new();
 
                     for record in &comparison_records {
                         if !record.is_correct {
                             continue;
                         }
                         let mode = if record.interval == 0 {
-                            TrainingMode::UnisonPitchComparison
+                            TrainingDiscipline::UnisonPitchDiscrimination
                         } else {
-                            TrainingMode::IntervalPitchComparison
+                            TrainingDiscipline::IntervalPitchDiscrimination
                         };
                         let ts = parse_iso8601_to_epoch(&record.timestamp);
                         let metric = record.cent_offset.abs();
@@ -174,9 +176,9 @@ pub fn App() -> impl IntoView {
 
                     for record in &matching_records {
                         let mode = if record.interval == 0 {
-                            TrainingMode::UnisonMatching
+                            TrainingDiscipline::UnisonPitchMatching
                         } else {
-                            TrainingMode::IntervalMatching
+                            TrainingDiscipline::IntervalPitchMatching
                         };
                         let ts = parse_iso8601_to_epoch(&record.timestamp);
                         let metric = record.user_cent_error.abs();

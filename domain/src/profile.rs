@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::metric_point::MetricPoint;
-use crate::training_mode::TrainingMode;
-use crate::training_mode_statistics::TrainingModeStatistics;
+use crate::training_discipline::TrainingDiscipline;
+use crate::training_mode_statistics::TrainingDisciplineStatistics;
 use crate::trend::Trend;
 use crate::types::Cents;
 
@@ -11,19 +11,19 @@ pub const COLD_START_DIFFICULTY: f64 = 100.0;
 
 /// Mode-aware perceptual profile — single source of truth for all per-mode statistics.
 ///
-/// Each `TrainingMode` gets its own `TrainingModeStatistics` (Welford accumulator,
+/// Each `TrainingDiscipline` gets its own `TrainingDisciplineStatistics` (Welford accumulator,
 /// EWMA, trend, time-ordered metrics). This aligns with the iOS `PerceptualProfile`
 /// post-Epic-44 architecture.
 #[derive(Clone, Debug)]
 pub struct PerceptualProfile {
-    modes: HashMap<TrainingMode, TrainingModeStatistics>,
+    modes: HashMap<TrainingDiscipline, TrainingDisciplineStatistics>,
 }
 
 impl PerceptualProfile {
     pub fn new() -> Self {
         let mut modes = HashMap::new();
-        for mode in TrainingMode::ALL {
-            modes.insert(mode, TrainingModeStatistics::new());
+        for mode in TrainingDiscipline::ALL {
+            modes.insert(mode, TrainingDisciplineStatistics::new());
         }
         Self { modes }
     }
@@ -31,36 +31,39 @@ impl PerceptualProfile {
     // --- Per-mode query API ---
 
     /// Direct access to a mode's statistics.
-    pub fn statistics(&self, mode: TrainingMode) -> &TrainingModeStatistics {
+    pub fn statistics(&self, mode: TrainingDiscipline) -> &TrainingDisciplineStatistics {
         self.modes.get(&mode).expect("all modes initialized")
     }
 
     /// Whether a mode has any recorded data.
-    pub fn has_data(&self, mode: TrainingMode) -> bool {
+    pub fn has_data(&self, mode: TrainingDiscipline) -> bool {
         self.statistics(mode).record_count() > 0
     }
 
     /// Training mode state (NoData or Active).
-    pub fn state(&self, mode: TrainingMode) -> crate::training_mode::TrainingModeState {
+    pub fn state(
+        &self,
+        mode: TrainingDiscipline,
+    ) -> crate::training_discipline::TrainingDisciplineState {
         if self.has_data(mode) {
-            crate::training_mode::TrainingModeState::Active
+            crate::training_discipline::TrainingDisciplineState::Active
         } else {
-            crate::training_mode::TrainingModeState::NoData
+            crate::training_discipline::TrainingDisciplineState::NoData
         }
     }
 
     /// Trend for a mode (None if < 2 records).
-    pub fn trend(&self, mode: TrainingMode) -> Option<Trend> {
+    pub fn trend(&self, mode: TrainingDiscipline) -> Option<Trend> {
         self.statistics(mode).trend
     }
 
     /// Current EWMA for a mode.
-    pub fn current_ewma(&self, mode: TrainingMode) -> Option<f64> {
+    pub fn current_ewma(&self, mode: TrainingDiscipline) -> Option<f64> {
         self.statistics(mode).ewma
     }
 
     /// Record count for a mode.
-    pub fn record_count(&self, mode: TrainingMode) -> usize {
+    pub fn record_count(&self, mode: TrainingDiscipline) -> usize {
         self.statistics(mode).record_count()
     }
 
@@ -71,9 +74,9 @@ impl PerceptualProfile {
     /// Used by `KazezNoteStrategy` as warm-start difficulty fallback.
     pub fn comparison_mean(&self, interval: u8) -> Option<Cents> {
         let mode = if interval == 0 {
-            TrainingMode::UnisonPitchComparison
+            TrainingDiscipline::UnisonPitchDiscrimination
         } else {
-            TrainingMode::IntervalPitchComparison
+            TrainingDiscipline::IntervalPitchDiscrimination
         };
         let stats = self.statistics(mode);
         if stats.record_count() > 0 {
@@ -85,8 +88,8 @@ impl PerceptualProfile {
 
     /// Weighted matching mean across both matching modes (backward compat for UI).
     pub fn matching_mean(&self) -> Option<Cents> {
-        let unison = self.statistics(TrainingMode::UnisonMatching);
-        let interval = self.statistics(TrainingMode::IntervalMatching);
+        let unison = self.statistics(TrainingDiscipline::UnisonPitchMatching);
+        let interval = self.statistics(TrainingDiscipline::IntervalPitchMatching);
         let u_count = unison.record_count();
         let i_count = interval.record_count();
         let total = u_count + i_count;
@@ -99,8 +102,8 @@ impl PerceptualProfile {
 
     /// Weighted matching std dev across both matching modes.
     pub fn matching_std_dev(&self) -> Option<Cents> {
-        let unison = self.statistics(TrainingMode::UnisonMatching);
-        let interval = self.statistics(TrainingMode::IntervalMatching);
+        let unison = self.statistics(TrainingDiscipline::UnisonPitchMatching);
+        let interval = self.statistics(TrainingDiscipline::IntervalPitchMatching);
         let u_count = unison.record_count();
         let i_count = interval.record_count();
         let total = u_count + i_count;
@@ -130,8 +133,8 @@ impl PerceptualProfile {
 
     /// Total matching sample count across both modes.
     pub fn matching_sample_count(&self) -> usize {
-        self.record_count(TrainingMode::UnisonMatching)
-            + self.record_count(TrainingMode::IntervalMatching)
+        self.record_count(TrainingDiscipline::UnisonPitchMatching)
+            + self.record_count(TrainingDiscipline::IntervalPitchMatching)
     }
 
     // --- Incremental update ---
@@ -139,7 +142,12 @@ impl PerceptualProfile {
     /// Add a single metric point for the given mode.
     /// For comparison modes, `is_correct` filters: only correct answers contribute.
     /// For matching modes, all answers contribute (pass `true`).
-    pub fn add_point(&mut self, mode: TrainingMode, point: MetricPoint<Cents>, is_correct: bool) {
+    pub fn add_point(
+        &mut self,
+        mode: TrainingDiscipline,
+        point: MetricPoint<Cents>,
+        is_correct: bool,
+    ) {
         if !is_correct {
             return;
         }
@@ -151,8 +159,8 @@ impl PerceptualProfile {
     // --- Batch operations ---
 
     /// Rebuild all modes from pre-sorted metric points.
-    pub fn rebuild_all(&mut self, points: HashMap<TrainingMode, Vec<MetricPoint<Cents>>>) {
-        for mode in TrainingMode::ALL {
+    pub fn rebuild_all(&mut self, points: HashMap<TrainingDiscipline, Vec<MetricPoint<Cents>>>) {
+        for mode in TrainingDiscipline::ALL {
             let stats = self.modes.get_mut(&mode).expect("all modes initialized");
             if let Some(mode_points) = points.get(&mode) {
                 stats.rebuild(mode_points.clone(), mode.config());
@@ -183,10 +191,10 @@ mod tests {
     #[test]
     fn test_new_profile_all_modes_empty() {
         let profile = PerceptualProfile::new();
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             assert_eq!(
                 profile.state(mode),
-                crate::training_mode::TrainingModeState::NoData
+                crate::training_discipline::TrainingDisciplineState::NoData
             );
             assert_eq!(profile.trend(mode), None);
             assert_eq!(profile.current_ewma(mode), None);
@@ -198,36 +206,36 @@ mod tests {
     fn test_add_point_updates_correct_mode() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(20.0)),
             true,
         );
-        assert!(profile.has_data(TrainingMode::UnisonPitchComparison));
-        assert!(!profile.has_data(TrainingMode::IntervalPitchComparison));
-        assert!(!profile.has_data(TrainingMode::UnisonMatching));
+        assert!(profile.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
+        assert!(!profile.has_data(TrainingDiscipline::IntervalPitchDiscrimination));
+        assert!(!profile.has_data(TrainingDiscipline::UnisonPitchMatching));
     }
 
     #[test]
     fn test_add_point_filters_incorrect() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(20.0)),
             false, // incorrect — should be filtered
         );
-        assert!(!profile.has_data(TrainingMode::UnisonPitchComparison));
+        assert!(!profile.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
     }
 
     #[test]
     fn test_comparison_mean_unison() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(40.0)),
             true,
         );
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(2000.0, Cents::new(60.0)),
             true,
         );
@@ -239,7 +247,7 @@ mod tests {
     fn test_comparison_mean_interval() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::IntervalPitchComparison,
+            TrainingDiscipline::IntervalPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(30.0)),
             true,
         );
@@ -257,12 +265,12 @@ mod tests {
     fn test_matching_mean_single_mode() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::UnisonMatching,
+            TrainingDiscipline::UnisonPitchMatching,
             MetricPoint::new(1000.0, Cents::new(5.0)),
             true,
         );
         profile.add_point(
-            TrainingMode::UnisonMatching,
+            TrainingDiscipline::UnisonPitchMatching,
             MetricPoint::new(2000.0, Cents::new(15.0)),
             true,
         );
@@ -275,13 +283,13 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         // Unison: 1 sample of 10
         profile.add_point(
-            TrainingMode::UnisonMatching,
+            TrainingDiscipline::UnisonPitchMatching,
             MetricPoint::new(1000.0, Cents::new(10.0)),
             true,
         );
         // Interval: 1 sample of 20
         profile.add_point(
-            TrainingMode::IntervalMatching,
+            TrainingDiscipline::IntervalPitchMatching,
             MetricPoint::new(2000.0, Cents::new(20.0)),
             true,
         );
@@ -294,12 +302,12 @@ mod tests {
     fn test_matching_sample_count() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::UnisonMatching,
+            TrainingDiscipline::UnisonPitchMatching,
             MetricPoint::new(1000.0, Cents::new(5.0)),
             true,
         );
         profile.add_point(
-            TrainingMode::IntervalMatching,
+            TrainingDiscipline::IntervalPitchMatching,
             MetricPoint::new(2000.0, Cents::new(10.0)),
             true,
         );
@@ -311,16 +319,19 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         let mut points = HashMap::new();
         points.insert(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             vec![
                 MetricPoint::new(1000.0, Cents::new(20.0)),
                 MetricPoint::new(2000.0, Cents::new(30.0)),
             ],
         );
         profile.rebuild_all(points);
-        assert_eq!(profile.record_count(TrainingMode::UnisonPitchComparison), 2);
         assert_eq!(
-            profile.record_count(TrainingMode::IntervalPitchComparison),
+            profile.record_count(TrainingDiscipline::UnisonPitchDiscrimination),
+            2
+        );
+        assert_eq!(
+            profile.record_count(TrainingDiscipline::IntervalPitchDiscrimination),
             0
         );
     }
@@ -329,17 +340,17 @@ mod tests {
     fn test_reset_all() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::UnisonPitchComparison,
+            TrainingDiscipline::UnisonPitchDiscrimination,
             MetricPoint::new(1000.0, Cents::new(20.0)),
             true,
         );
         profile.add_point(
-            TrainingMode::UnisonMatching,
+            TrainingDiscipline::UnisonPitchMatching,
             MetricPoint::new(2000.0, Cents::new(10.0)),
             true,
         );
         profile.reset_all();
-        for mode in TrainingMode::ALL {
+        for mode in TrainingDiscipline::ALL {
             assert!(!profile.has_data(mode));
         }
     }
@@ -353,13 +364,13 @@ mod tests {
     fn test_state_active_after_data() {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
-            TrainingMode::IntervalMatching,
+            TrainingDiscipline::IntervalPitchMatching,
             MetricPoint::new(1000.0, Cents::new(5.0)),
             true,
         );
         assert_eq!(
-            profile.state(TrainingMode::IntervalMatching),
-            crate::training_mode::TrainingModeState::Active
+            profile.state(TrainingDiscipline::IntervalPitchMatching),
+            crate::training_discipline::TrainingDisciplineState::Active
         );
     }
 }

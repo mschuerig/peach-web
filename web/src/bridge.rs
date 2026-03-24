@@ -1,11 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use domain::ports::{PitchComparisonObserver, PitchMatchingObserver};
-use domain::records::{PitchComparisonRecord, PitchMatchingRecord};
-use domain::training::{CompletedPitchComparison, CompletedPitchMatching};
+use domain::ports::{PitchDiscriminationObserver, PitchMatchingObserver};
+use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord};
+use domain::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial};
 use domain::{
-    MetricPoint, PerceptualProfile, ProgressTimeline, TrainingMode, parse_iso8601_to_epoch,
+    MetricPoint, PerceptualProfile, ProgressTimeline, TrainingDiscipline, parse_iso8601_to_epoch,
 };
 use leptos::prelude::*;
 use leptos::reactive::owner::LocalStorage;
@@ -23,17 +23,17 @@ impl ProfileObserver {
     }
 }
 
-impl PitchComparisonObserver for ProfileObserver {
-    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
-        let comparison = completed.pitch_comparison();
+impl PitchDiscriminationObserver for ProfileObserver {
+    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
+        let comparison = completed.pitch_discrimination_trial();
         let ref_note = comparison.reference_note().raw_value();
         let target_note = comparison.target_note().note.raw_value();
         let interval = target_note.abs_diff(ref_note);
 
         let mode = if interval == 0 {
-            TrainingMode::UnisonPitchComparison
+            TrainingDiscipline::UnisonPitchDiscrimination
         } else {
-            TrainingMode::IntervalPitchComparison
+            TrainingDiscipline::IntervalPitchDiscrimination
         };
 
         let metric = comparison.target_note().offset.raw_value.abs();
@@ -56,15 +56,15 @@ impl PitchMatchingProfileObserver {
 }
 
 impl PitchMatchingObserver for PitchMatchingProfileObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial) {
         let ref_note = completed.reference_note().raw_value();
         let target_note = completed.target_note().raw_value();
         let interval = target_note.abs_diff(ref_note);
 
         let mode = if interval == 0 {
-            TrainingMode::UnisonMatching
+            TrainingDiscipline::UnisonPitchMatching
         } else {
-            TrainingMode::IntervalMatching
+            TrainingDiscipline::IntervalPitchMatching
         };
 
         let metric = completed.user_cent_error().abs();
@@ -92,8 +92,8 @@ impl DataStoreObserver {
     }
 }
 
-impl PitchComparisonObserver for DataStoreObserver {
-    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
+impl PitchDiscriminationObserver for DataStoreObserver {
+    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
         let store = match self.store_signal.get_untracked() {
             Some(store) => store,
             None => {
@@ -101,7 +101,7 @@ impl PitchComparisonObserver for DataStoreObserver {
                 return;
             }
         };
-        let record = PitchComparisonRecord::from_completed(completed);
+        let record = PitchDiscriminationRecord::from_completed(completed);
         let error_signal = self.error_signal;
 
         spawn_local(async move {
@@ -133,7 +133,7 @@ impl PitchMatchingDataStoreObserver {
 }
 
 impl PitchMatchingObserver for PitchMatchingDataStoreObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial) {
         let store = match self.store_signal.get_untracked() {
             Some(store) => store,
             None => {
@@ -172,16 +172,16 @@ pub(crate) fn compute_start_of_today() -> f64 {
     date.get_time() / 1000.0
 }
 
-impl PitchComparisonObserver for ProgressTimelineObserver {
-    fn pitch_comparison_completed(&mut self, completed: &CompletedPitchComparison) {
-        let record = PitchComparisonRecord::from_completed(completed);
+impl PitchDiscriminationObserver for ProgressTimelineObserver {
+    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
+        let record = PitchDiscriminationRecord::from_completed(completed);
         let start_of_today = compute_start_of_today();
         self.0.borrow_mut().add_comparison(&record, start_of_today);
     }
 }
 
 impl PitchMatchingObserver for ProgressTimelineObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatching) {
+    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial) {
         let record = PitchMatchingRecord::from_completed(completed);
         let start_of_today = compute_start_of_today();
         self.0.borrow_mut().add_matching(&record, start_of_today);
