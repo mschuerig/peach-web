@@ -1,6 +1,6 @@
 # Story 16.1: Generalize TrainingDisciplineStatistics from Cents to f64
 
-Status: review
+Status: done
 
 ## Story
 
