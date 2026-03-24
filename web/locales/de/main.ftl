@@ -214,6 +214,8 @@ training-discipline-hear-discriminate-single = Vergleichen – Einzeltöne
 training-discipline-hear-discriminate-intervals = Vergleichen – Intervalle
 training-discipline-tune-match-single = Treffen – Einzeltöne
 training-discipline-tune-match-intervals = Treffen – Intervalle
+training-mode-compare-timing = Timing vergleichen
+training-mode-fill-the-gap = Lücke füllen
 
 ## Domain - Intervals
 interval-prime = Prime

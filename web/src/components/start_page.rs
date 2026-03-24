@@ -174,7 +174,7 @@ pub fn StartPage() -> impl IntoView {
                     <div class="flex flex-col gap-2.5">
                         <TrainingCard
                             label=move_tr!("compare-timing")
-                            icon="\u{1F3B5}"
+                            icon="\u{1F941}"
                             href=base_href("/training/rhythm-offset-detection")
                             aria_label=move_tr!("compare-timing-aria")
                             mode=TrainingDiscipline::RhythmOffsetDetection
