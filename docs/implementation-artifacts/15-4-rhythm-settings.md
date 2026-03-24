@@ -1,6 +1,6 @@
 # Story 15.4: Rhythm Settings
 
-Status: review
+Status: done
 
 ## Story
 

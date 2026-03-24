@@ -6,14 +6,13 @@ pub struct TempoBPM {
     bpm: u16,
 }
 
-const MIN_BPM: u16 = 40;
-const MAX_BPM: u16 = 200;
-const DEFAULT_BPM: u16 = 80;
-
 impl TempoBPM {
+    pub const MIN: u16 = 40;
+    pub const MAX: u16 = 200;
+    const DEFAULT: u16 = 80;
     /// Create a new TempoBPM. Returns `Err` if value is outside 40–200.
     pub fn try_new(bpm: u16) -> Result<Self, DomainError> {
-        if !(MIN_BPM..=MAX_BPM).contains(&bpm) {
+        if !(Self::MIN..=Self::MAX).contains(&bpm) {
             Err(DomainError::InvalidTempo(bpm))
         } else {
             Ok(Self { bpm })
@@ -39,7 +38,7 @@ impl TempoBPM {
 
 impl Default for TempoBPM {
     fn default() -> Self {
-        Self { bpm: DEFAULT_BPM }
+        Self { bpm: Self::DEFAULT }
     }
 }
 

@@ -642,7 +642,7 @@ pub fn SettingsView() -> impl IntoView {
                         label=move_tr!("tempo-aria")
                         on_decrement=Callback::new(move |_| {
                             let val = tempo_bpm.get();
-                            if val > 40 {
+                            if val > TempoBPM::MIN {
                                 let new_val = val - 1;
                                 tempo_bpm.set(new_val);
                                 LocalStorageSettings::set_tempo_bpm(TempoBPM::new(new_val));
@@ -650,14 +650,14 @@ pub fn SettingsView() -> impl IntoView {
                         })
                         on_increment=Callback::new(move |_| {
                             let val = tempo_bpm.get();
-                            if val < 200 {
+                            if val < TempoBPM::MAX {
                                 let new_val = val + 1;
                                 tempo_bpm.set(new_val);
                                 LocalStorageSettings::set_tempo_bpm(TempoBPM::new(new_val));
                             }
                         })
-                        decrement_disabled=Signal::derive(move || tempo_bpm.get() <= 40)
-                        increment_disabled=Signal::derive(move || tempo_bpm.get() >= 200)
+                        decrement_disabled=Signal::derive(move || tempo_bpm.get() <= TempoBPM::MIN)
+                        increment_disabled=Signal::derive(move || tempo_bpm.get() >= TempoBPM::MAX)
                     />
                 </SettingsRowDynamic>
                 <div class="px-4 py-3">
@@ -706,10 +706,10 @@ pub fn SettingsView() -> impl IntoView {
                         }).collect::<Vec<_>>()}
                     </div>
                 </div>
+                <p class="px-4 mt-1 pb-2 text-xs text-gray-500 dark:text-gray-400">
+                    {move_tr!("gap-positions-hint")}
+                </p>
             </SettingsSection>
-            <p class="px-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {move_tr!("gap-positions-hint")}
-            </p>
 
             // Data section (AC: 1, 8)
             <SettingsSection title=move_tr!("data-section")>
