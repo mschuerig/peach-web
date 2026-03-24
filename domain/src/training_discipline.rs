@@ -1,6 +1,6 @@
-use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord};
+use crate::records::{PitchDiscriminationRecord, PitchMatchingRecord, RhythmOffsetDetectionRecord};
 use crate::statistics_key::StatisticsKey;
-use crate::types::{RhythmDirection, TempoRange};
+use crate::types::{RhythmDirection, RhythmOffset, TempoBPM, TempoRange};
 
 /// The six independent training disciplines tracked by the app.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -138,6 +138,43 @@ impl TrainingDiscipline {
                 } else {
                     None
                 }
+            }
+            _ => None,
+        }
+    }
+
+    /// Extracts the metric (percentage of sixteenth note) from a rhythm offset detection record
+    /// if this is the `RhythmOffsetDetection` discipline.
+    ///
+    /// Returns `None` for all other disciplines.
+    pub fn extract_rhythm_offset_metric(
+        &self,
+        record: &RhythmOffsetDetectionRecord,
+    ) -> Option<f64> {
+        match self {
+            TrainingDiscipline::RhythmOffsetDetection => {
+                let tempo = TempoBPM::try_new(record.tempo_bpm).ok()?;
+                let offset = RhythmOffset::new(record.offset_ms);
+                Some(offset.percentage_of_sixteenth(tempo))
+            }
+            _ => None,
+        }
+    }
+
+    /// Returns the `StatisticsKey` for a rhythm offset detection record,
+    /// combining the discipline with the tempo range and direction extracted from the record.
+    ///
+    /// Returns `None` if this is not the `RhythmOffsetDetection` discipline or the tempo is invalid.
+    pub fn rhythm_offset_statistics_key(
+        &self,
+        record: &RhythmOffsetDetectionRecord,
+    ) -> Option<StatisticsKey> {
+        match self {
+            TrainingDiscipline::RhythmOffsetDetection => {
+                let tempo = TempoBPM::try_new(record.tempo_bpm).ok()?;
+                let direction = RhythmDirection::from_offset_ms(record.offset_ms);
+                let tempo_range = TempoRange::from_bpm(tempo);
+                Some(StatisticsKey::Rhythm(*self, tempo_range, direction))
             }
             _ => None,
         }
@@ -636,5 +673,88 @@ mod tests {
                 "ContinuousRhythmMatching should not match interval {interval}"
             );
         }
+    }
+
+    // --- Rhythm offset metric extraction tests ---
+
+    fn rhythm_record(tempo_bpm: u16, offset_ms: f64) -> RhythmOffsetDetectionRecord {
+        RhythmOffsetDetectionRecord {
+            tempo_bpm,
+            offset_ms,
+            is_correct: true,
+            timestamp: "2026-03-24T12:00:00Z".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_extract_rhythm_offset_metric_correct_discipline() {
+        // 9.375ms at 80 BPM = 5.0%
+        let record = rhythm_record(80, 9.375);
+        let metric =
+            TrainingDiscipline::RhythmOffsetDetection.extract_rhythm_offset_metric(&record);
+        assert!((metric.unwrap() - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_extract_rhythm_offset_metric_negative_offset() {
+        let record = rhythm_record(80, -9.375);
+        let metric =
+            TrainingDiscipline::RhythmOffsetDetection.extract_rhythm_offset_metric(&record);
+        assert!((metric.unwrap() - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_extract_rhythm_offset_metric_wrong_discipline() {
+        let record = rhythm_record(80, 9.375);
+        assert!(
+            TrainingDiscipline::UnisonPitchDiscrimination
+                .extract_rhythm_offset_metric(&record)
+                .is_none()
+        );
+        assert!(
+            TrainingDiscipline::ContinuousRhythmMatching
+                .extract_rhythm_offset_metric(&record)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_rhythm_offset_statistics_key() {
+        // 80 BPM → Medium, negative offset → Early
+        let record = rhythm_record(80, -5.0);
+        let key = TrainingDiscipline::RhythmOffsetDetection.rhythm_offset_statistics_key(&record);
+        assert_eq!(
+            key,
+            Some(StatisticsKey::Rhythm(
+                TrainingDiscipline::RhythmOffsetDetection,
+                TempoRange::Medium,
+                RhythmDirection::Early,
+            ))
+        );
+    }
+
+    #[test]
+    fn test_rhythm_offset_statistics_key_slow_late() {
+        // 60 BPM → Slow, positive offset → Late
+        let record = rhythm_record(60, 10.0);
+        let key = TrainingDiscipline::RhythmOffsetDetection.rhythm_offset_statistics_key(&record);
+        assert_eq!(
+            key,
+            Some(StatisticsKey::Rhythm(
+                TrainingDiscipline::RhythmOffsetDetection,
+                TempoRange::Slow,
+                RhythmDirection::Late,
+            ))
+        );
+    }
+
+    #[test]
+    fn test_rhythm_offset_statistics_key_wrong_discipline() {
+        let record = rhythm_record(80, 5.0);
+        assert!(
+            TrainingDiscipline::UnisonPitchDiscrimination
+                .rhythm_offset_statistics_key(&record)
+                .is_none()
+        );
     }
 }

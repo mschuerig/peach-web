@@ -193,6 +193,9 @@ impl ProgressTimeline {
                         discipline.extract_discrimination_metric(r)
                     }
                     TrainingRecord::PitchMatching(r) => discipline.extract_matching_metric(r),
+                    TrainingRecord::RhythmOffsetDetection(r) => {
+                        discipline.extract_rhythm_offset_metric(r)
+                    }
                 };
                 if let Some(m) = metric {
                     points.push((ts, m, discipline));
@@ -268,6 +271,9 @@ impl ProgressTimeline {
                     discipline.extract_discrimination_metric(r)
                 }
                 TrainingRecord::PitchMatching(r) => discipline.extract_matching_metric(r),
+                TrainingRecord::RhythmOffsetDetection(r) => {
+                    discipline.extract_rhythm_offset_metric(r)
+                }
             };
             if let Some(m) = metric
                 && let Some(state) = self.disciplines.get_mut(&discipline)

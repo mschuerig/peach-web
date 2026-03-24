@@ -167,3 +167,7 @@ development_status:
   16-2-statistics-key-and-profile-redesign: done
   16-3-decouple-observers-with-port-traits: done
   16-4-generalize-store-and-hydration: done
+
+  # Epic 17: Rhythm Offset Detection
+  epic-17: in-progress
+  17-1-rhythm-domain-types-and-records: review

@@ -1,6 +1,6 @@
 # Story 17.1: Rhythm Domain Types, Records, and Observer Ports
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -43,16 +43,51 @@ This story adds the rhythm-specific domain types that the offset detection sessi
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `RhythmOffset` to `domain/src/types/`
-- [ ] Task 2: Add `CompletedRhythmOffsetDetectionTrial` to `domain/src/training/`
-- [ ] Task 3: Add `RhythmOffsetDetectionRecord` to `domain/src/records.rs`
-- [ ] Task 4: Extend `TrainingRecord` enum
-- [ ] Task 5: Add metric extraction for rhythm offset detection
-- [ ] Task 6: Unit tests
-- [ ] Task 7: `cargo test -p domain` passes
+- [x] Task 1: Add `RhythmOffset` to `domain/src/types/`
+- [x] Task 2: Add `CompletedRhythmOffsetDetectionTrial` to `domain/src/training/`
+- [x] Task 3: Add `RhythmOffsetDetectionRecord` to `domain/src/records.rs`
+- [x] Task 4: Extend `TrainingRecord` enum
+- [x] Task 5: Add metric extraction for rhythm offset detection
+- [x] Task 6: Unit tests
+- [x] Task 7: `cargo test -p domain` passes
 
 ## Dev Notes
 
 - `RhythmOffset` is a value type in `types/`, `CompletedRhythmOffsetDetectionTrial` is in `training/`
 - Percentage formula: `abs(offset_ms) / sixteenth_note_duration_ms * 100.0`
 - At 80 BPM, 1 sixteenth = 187.5ms; an offset of 9.375ms = 5%
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Added `RhythmOffset` value type with `direction()`, `abs_ms()`, `percentage_of_sixteenth()` methods
+- Added `CompletedRhythmOffsetDetectionTrial` with `metric_value()` that computes % of sixteenth note
+- Added `RhythmOffsetDetectionRecord` flat persistence struct with `from_completed()` constructor
+- Extended `TrainingRecord` enum with `RhythmOffsetDetection` variant
+- Added `extract_rhythm_offset_metric()` and `rhythm_offset_statistics_key()` to `TrainingDiscipline`
+- Updated all exhaustive matches in domain (progress_timeline) and web (app.rs, indexeddb_store, csv_export_import)
+- Updated `STORE_NAMES` registry to use `RHYTHM_OFFSET_DETECTION_STORE` constant
+- Added fetch logic in `IndexedDbStore::fetch_all_records()` for rhythm records
+
+### Completion Notes
+
+All 6 ACs satisfied. 407 tests pass (392 unit + 15 integration). Zero clippy warnings. `cargo fmt` clean. Web crate compiles with all new match arms handled.
+
+## File List
+
+- domain/src/types/rhythm_offset.rs (new)
+- domain/src/types/mod.rs (modified)
+- domain/src/training/rhythm_offset_detection.rs (new)
+- domain/src/training/mod.rs (modified)
+- domain/src/records.rs (modified)
+- domain/src/training_discipline.rs (modified)
+- domain/src/progress_timeline.rs (modified)
+- domain/src/lib.rs (modified)
+- web/src/app.rs (modified)
+- web/src/adapters/indexeddb_store.rs (modified)
+- web/src/adapters/csv_export_import.rs (modified)
+
+## Change Log
+
+- 2026-03-24: Implemented rhythm domain types, records, and metric extraction (Story 17.1)

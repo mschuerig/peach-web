@@ -163,6 +163,9 @@ pub fn App() -> impl IntoView {
                                 domain::TrainingRecord::PitchMatching(r) => {
                                     discipline.extract_matching_metric(r)
                                 }
+                                domain::TrainingRecord::RhythmOffsetDetection(r) => {
+                                    discipline.extract_rhythm_offset_metric(r)
+                                }
                             };
                             if let Some(m) = metric {
                                 let key = StatisticsKey::Pitch(discipline);

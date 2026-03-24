@@ -25,7 +25,8 @@ pub use profile::{COLD_START_DIFFICULTY, PerceptualProfile};
 pub use progress_timeline::{BucketSize, ProgressTimeline, TimeBucket, parse_iso8601_to_epoch};
 pub use records::{
     PITCH_DISCRIMINATION_STORE, PITCH_MATCHING_STORE, PitchDiscriminationRecord,
-    PitchMatchingRecord, TrainingRecord,
+    PitchMatchingRecord, RHYTHM_OFFSET_DETECTION_STORE, RhythmOffsetDetectionRecord,
+    TrainingRecord,
 };
 pub use session::{
     FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY, PitchDiscriminationPlaybackData,

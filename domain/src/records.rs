@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial};
+use crate::training::{
+    CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial,
+    CompletedRhythmOffsetDetectionTrial,
+};
 use crate::tuning::TuningSystem;
 use crate::types::Interval;
 
@@ -8,12 +11,15 @@ use crate::types::Interval;
 pub const PITCH_DISCRIMINATION_STORE: &str = "pitch_discrimination_records";
 /// IndexedDB object store name for pitch matching records.
 pub const PITCH_MATCHING_STORE: &str = "pitch_matching_records";
+/// IndexedDB object store name for rhythm offset detection records.
+pub const RHYTHM_OFFSET_DETECTION_STORE: &str = "rhythm_offset_detection_records";
 
 /// Enum wrapping all training record types for generic persistence.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrainingRecord {
     PitchDiscrimination(PitchDiscriminationRecord),
     PitchMatching(PitchMatchingRecord),
+    RhythmOffsetDetection(RhythmOffsetDetectionRecord),
 }
 
 impl TrainingRecord {
@@ -22,6 +28,7 @@ impl TrainingRecord {
         match self {
             TrainingRecord::PitchDiscrimination(r) => &r.timestamp,
             TrainingRecord::PitchMatching(r) => &r.timestamp,
+            TrainingRecord::RhythmOffsetDetection(r) => &r.timestamp,
         }
     }
 
@@ -30,6 +37,7 @@ impl TrainingRecord {
         match self {
             TrainingRecord::PitchDiscrimination(_) => PITCH_DISCRIMINATION_STORE,
             TrainingRecord::PitchMatching(_) => PITCH_MATCHING_STORE,
+            TrainingRecord::RhythmOffsetDetection(_) => RHYTHM_OFFSET_DETECTION_STORE,
         }
     }
 }
@@ -118,6 +126,27 @@ impl PitchMatchingRecord {
             interval,
             tuning_system: tuning_system.to_string(),
             timestamp: completed.timestamp().to_string(),
+        }
+    }
+}
+
+/// Flat persistence record for a completed rhythm offset detection trial.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RhythmOffsetDetectionRecord {
+    pub tempo_bpm: u16,
+    pub offset_ms: f64,
+    pub is_correct: bool,
+    pub timestamp: String,
+}
+
+impl RhythmOffsetDetectionRecord {
+    /// Construct a flat persistence record from a completed rhythm offset detection trial.
+    pub fn from_completed(trial: &CompletedRhythmOffsetDetectionTrial) -> Self {
+        Self {
+            tempo_bpm: trial.tempo().bpm(),
+            offset_ms: trial.offset().ms(),
+            is_correct: trial.is_correct(),
+            timestamp: trial.timestamp().to_string(),
         }
     }
 }
@@ -350,5 +379,73 @@ mod tests {
             timestamp: "2026-03-04T10:00:00Z".to_string(),
         });
         assert_eq!(record.store_name(), PITCH_MATCHING_STORE);
+    }
+
+    // --- RhythmOffsetDetectionRecord tests ---
+
+    #[test]
+    fn test_rhythm_record_from_completed() {
+        use crate::types::RhythmOffset;
+        let trial = crate::training::CompletedRhythmOffsetDetectionTrial::new(
+            crate::types::TempoBPM::new(80),
+            RhythmOffset::new(-9.375),
+            true,
+            "2026-03-24T12:00:00Z".to_string(),
+        );
+        let record = RhythmOffsetDetectionRecord::from_completed(&trial);
+        assert_eq!(record.tempo_bpm, 80);
+        assert_eq!(record.offset_ms, -9.375);
+        assert!(record.is_correct);
+        assert_eq!(record.timestamp, "2026-03-24T12:00:00Z");
+    }
+
+    #[test]
+    fn test_rhythm_record_serde_roundtrip() {
+        let record = RhythmOffsetDetectionRecord {
+            tempo_bpm: 120,
+            offset_ms: 12.5,
+            is_correct: false,
+            timestamp: "2026-03-24T12:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&record).unwrap();
+        let parsed: RhythmOffsetDetectionRecord = serde_json::from_str(&json).unwrap();
+        assert_eq!(record, parsed);
+    }
+
+    #[test]
+    fn test_rhythm_record_serde_field_names() {
+        let record = RhythmOffsetDetectionRecord {
+            tempo_bpm: 80,
+            offset_ms: -5.0,
+            is_correct: true,
+            timestamp: "2026-03-24T12:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&record).unwrap();
+        assert!(json.contains("\"tempo_bpm\""));
+        assert!(json.contains("\"offset_ms\""));
+        assert!(json.contains("\"is_correct\""));
+        assert!(json.contains("\"timestamp\""));
+    }
+
+    #[test]
+    fn test_training_record_timestamp_rhythm() {
+        let record = TrainingRecord::RhythmOffsetDetection(RhythmOffsetDetectionRecord {
+            tempo_bpm: 80,
+            offset_ms: 5.0,
+            is_correct: true,
+            timestamp: "2026-03-24T12:00:00Z".to_string(),
+        });
+        assert_eq!(record.timestamp(), "2026-03-24T12:00:00Z");
+    }
+
+    #[test]
+    fn test_training_record_store_name_rhythm() {
+        let record = TrainingRecord::RhythmOffsetDetection(RhythmOffsetDetectionRecord {
+            tempo_bpm: 80,
+            offset_ms: 5.0,
+            is_correct: true,
+            timestamp: "2026-03-24T12:00:00Z".to_string(),
+        });
+        assert_eq!(record.store_name(), RHYTHM_OFFSET_DETECTION_STORE);
     }
 }

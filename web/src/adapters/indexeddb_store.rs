@@ -6,7 +6,8 @@ use web_sys::{IdbDatabase, IdbOpenDbRequest, IdbRequest, IdbTransactionMode};
 use domain::ports::StorageError;
 use domain::records::{
     PITCH_DISCRIMINATION_STORE, PITCH_MATCHING_STORE, PitchDiscriminationRecord,
-    PitchMatchingRecord, TrainingRecord,
+    PitchMatchingRecord, RHYTHM_OFFSET_DETECTION_STORE, RhythmOffsetDetectionRecord,
+    TrainingRecord,
 };
 
 const DB_NAME: &str = "peach";
@@ -19,7 +20,7 @@ const TIMESTAMP_INDEX: &str = "timestamp";
 pub const STORE_NAMES: &[&str] = &[
     PITCH_DISCRIMINATION_STORE,
     PITCH_MATCHING_STORE,
-    "rhythm_offset_detection_records",
+    RHYTHM_OFFSET_DETECTION_STORE,
     "continuous_rhythm_matching_records",
 ];
 
@@ -98,6 +99,7 @@ impl IndexedDbStore {
         let js_value = match record {
             TrainingRecord::PitchDiscrimination(r) => serde_wasm_bindgen::to_value(r),
             TrainingRecord::PitchMatching(r) => serde_wasm_bindgen::to_value(r),
+            TrainingRecord::RhythmOffsetDetection(r) => serde_wasm_bindgen::to_value(r),
         }
         .map_err(|e| StorageError::WriteFailed(format!("Serialization: {e}")))?;
 
@@ -144,7 +146,14 @@ impl IndexedDbStore {
             all.push(TrainingRecord::PitchMatching(record));
         }
 
-        // Future rhythm stores would be fetched here once rhythm record types exist.
+        for value in self
+            .fetch_jsvalues_from_store(RHYTHM_OFFSET_DETECTION_STORE)
+            .await?
+        {
+            let record: RhythmOffsetDetectionRecord = serde_wasm_bindgen::from_value(value)
+                .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
+            all.push(TrainingRecord::RhythmOffsetDetection(record));
+        }
 
         Ok(all)
     }

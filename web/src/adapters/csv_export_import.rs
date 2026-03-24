@@ -113,6 +113,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                     r.user_cent_error,
                 ));
             }
+            TrainingRecord::RhythmOffsetDetection(_) => {
+                // Rhythm CSV export not yet implemented
+            }
         }
     }
 
@@ -369,6 +372,9 @@ pub async fn import_merge(
             }
             TrainingRecord::PitchMatching(r) => {
                 existing_pm_ts.insert(truncate_timestamp_to_second(&r.timestamp));
+            }
+            TrainingRecord::RhythmOffsetDetection(_) => {
+                // Rhythm import deduplication not yet implemented
             }
         }
     }
