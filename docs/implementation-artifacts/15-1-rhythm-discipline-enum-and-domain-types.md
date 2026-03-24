@@ -1,6 +1,6 @@
 # Story 15.1: Rhythm Discipline Enum Cases and Domain Types
 
-Status: review
+Status: done
 
 ## Story
 
