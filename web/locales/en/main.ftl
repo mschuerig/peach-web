@@ -30,6 +30,8 @@ compare-intervals-aria = Compare Intervals
 match-intervals-aria = Match Intervals
 compare-timing-aria = Compare Timing
 fill-the-gap-aria = Fill the Gap
+rhythm-offset-description = Listen to four clicks. One of them is slightly off — decide whether it came early or late.
+continuous-rhythm-description = A steady beat plays with a gap in it. Tap at the right moment to fill the missing beat.
 coming-soon = Coming soon
 
 ## Training

@@ -30,6 +30,8 @@ compare-intervals-aria = Intervalle vergleichen
 match-intervals-aria = Intervalle treffen
 compare-timing-aria = Timing vergleichen
 fill-the-gap-aria = Lücke füllen
+rhythm-offset-description = Höre vier Klicks. Einer davon ist leicht versetzt — entscheide, ob er zu früh oder zu spät kam.
+continuous-rhythm-description = Ein gleichmäßiger Beat spielt mit einer Lücke. Tippe im richtigen Moment, um den fehlenden Schlag zu füllen.
 coming-soon = Demnächst verfügbar
 
 ## Training
