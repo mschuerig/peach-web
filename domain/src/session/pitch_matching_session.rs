@@ -243,18 +243,14 @@ impl PitchMatchingSession {
         let key = StatisticsKey::Pitch(discipline);
         let metric = completed.user_cent_error().abs();
 
-        // Update profile (pitch matching results are always counted)
+        // Update profile (pitch matching results are always counted as correct)
         self.profile_port
-            .update_profile(key, completed.timestamp(), metric);
+            .update_profile(key, completed.timestamp(), metric, true);
 
         // Persist training record
         let record = PitchMatchingRecord::from_completed(&completed);
-        if let Err(e) = self
-            .record_port
-            .save_record(TrainingRecord::PitchMatching(record))
-        {
-            eprintln!("Record save failed: {e}");
-        }
+        self.record_port
+            .save_record(TrainingRecord::PitchMatching(record));
 
         // Update progress timeline
         self.timeline_port
@@ -404,15 +400,14 @@ mod tests {
 
     // --- Mock types ---
 
-    use crate::ports::StorageError;
     use crate::records::TrainingRecord;
 
     struct MockProfilePort {
-        updates: Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>,
+        updates: Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>,
     }
 
     impl MockProfilePort {
-        fn new() -> (Self, Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>) {
+        fn new() -> (Self, Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>) {
             let updates = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
@@ -424,10 +419,16 @@ mod tests {
     }
 
     impl ProfileUpdating for MockProfilePort {
-        fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64) {
+        fn update_profile(
+            &mut self,
+            key: StatisticsKey,
+            timestamp: &str,
+            value: f64,
+            is_correct: bool,
+        ) {
             self.updates
                 .borrow_mut()
-                .push((key, timestamp.to_string(), value));
+                .push((key, timestamp.to_string(), value, is_correct));
         }
     }
 
@@ -448,9 +449,8 @@ mod tests {
     }
 
     impl TrainingRecordPersisting for MockRecordPort {
-        fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError> {
+        fn save_record(&self, record: TrainingRecord) {
             self.records.borrow_mut().push(record);
-            Ok(())
         }
     }
 
@@ -480,14 +480,19 @@ mod tests {
 
     struct NoOpProfilePort;
     impl ProfileUpdating for NoOpProfilePort {
-        fn update_profile(&mut self, _key: StatisticsKey, _timestamp: &str, _value: f64) {}
+        fn update_profile(
+            &mut self,
+            _key: StatisticsKey,
+            _timestamp: &str,
+            _value: f64,
+            _is_correct: bool,
+        ) {
+        }
     }
 
     struct NoOpRecordPort;
     impl TrainingRecordPersisting for NoOpRecordPort {
-        fn save_record(&self, _record: TrainingRecord) -> Result<(), StorageError> {
-            Ok(())
-        }
+        fn save_record(&self, _record: TrainingRecord) {}
     }
 
     struct NoOpTimelinePort;
@@ -564,7 +569,7 @@ mod tests {
     }
 
     struct MockPorts {
-        profile_updates: Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>,
+        profile_updates: Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>,
         records: Rc<RefCell<Vec<TrainingRecord>>>,
         timeline_metrics: Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>,
     }
@@ -893,11 +898,12 @@ mod tests {
         session.adjust_pitch(0.5);
         session.commit_pitch(0.5, "2026-03-04T10:00:00Z".to_string());
 
-        // Profile port called (pitch matching always counts)
+        // Profile port called with is_correct=true (pitch matching always counts)
         assert_eq!(ports.profile_updates.borrow().len(), 1);
-        let (key, ts, _) = &ports.profile_updates.borrow()[0];
+        let (key, ts, _, is_correct) = &ports.profile_updates.borrow()[0];
         assert!(matches!(key, StatisticsKey::Pitch(_)));
         assert_eq!(ts, "2026-03-04T10:00:00Z");
+        assert!(*is_correct);
 
         // Record port called
         assert_eq!(ports.records.borrow().len(), 1);

@@ -258,6 +258,10 @@ impl ProgressTimeline {
         metric: f64,
         start_of_today: f64,
     ) {
+        debug_assert!(
+            self.disciplines.contains_key(&discipline),
+            "ProgressTimeline has no entry for discipline {discipline:?}"
+        );
         if let Some(state) = self.disciplines.get_mut(&discipline) {
             state.add_point(timestamp_secs, metric, start_of_today);
         }

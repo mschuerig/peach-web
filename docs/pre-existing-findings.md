@@ -62,6 +62,14 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Description:** `StatisticsKey`, `TempoRange`, and `RhythmDirection` have no serde derives. Not needed today (profile is rebuilt from records at hydration), but constrains future persistence strategies. `StatisticsKey` as a HashMap key would need a custom `Serialize` impl or string-based representation.
 - **Recommendation:** Add serde derives when a persistence story requires it. No action needed now.
 
+### PEF-009: add_metric_for_discipline silently drops metrics for unregistered disciplines
+
+- **Status:** OPEN
+- **Surfaced:** Story 16.3 code review (2026-03-24)
+- **Location:** `domain/src/progress_timeline.rs` — `add_metric_for_discipline()`
+- **Description:** `if let Some(state) = self.disciplines.get_mut(&discipline)` silently discards metrics when the discipline isn't in the HashMap. Currently safe because `ProgressTimeline::new()` initializes all variants from `TrainingDiscipline::ALL`. A `debug_assert!` was added in the 16.3 review fix, but a log warning for release builds would catch future discipline/initialization mismatches.
+- **Recommendation:** Add `log::warn!` alongside the `debug_assert!` when a discipline key is missing.
+
 ### PEF-008: rebuild_all silently drops mismatched keys
 
 - **Status:** OPEN

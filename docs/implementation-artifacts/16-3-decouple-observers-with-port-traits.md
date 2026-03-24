@@ -1,6 +1,6 @@
 # Story 16.3: Decouple Observers with Port Traits
 
-Status: review
+Status: done
 
 ## Story
 

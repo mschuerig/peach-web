@@ -263,20 +263,18 @@ impl PitchDiscriminationSession {
         let key = StatisticsKey::Pitch(discipline);
         let metric = trial.target_note().offset.raw_value.abs();
 
-        // Update profile (only for correct answers)
-        if completed.is_correct() {
-            self.profile_port
-                .update_profile(key, completed.timestamp(), metric);
-        }
+        // Update profile (only for correct answers — add_point early-returns on is_correct=false)
+        self.profile_port.update_profile(
+            key,
+            completed.timestamp(),
+            metric,
+            completed.is_correct(),
+        );
 
         // Persist training record
         let record = PitchDiscriminationRecord::from_completed(&completed);
-        if let Err(e) = self
-            .record_port
-            .save_record(TrainingRecord::PitchDiscrimination(record))
-        {
-            eprintln!("Record save failed: {e}");
-        }
+        self.record_port
+            .save_record(TrainingRecord::PitchDiscrimination(record));
 
         // Update progress timeline
         self.timeline_port
@@ -415,15 +413,14 @@ mod tests {
 
     // --- Mock types ---
 
-    use crate::ports::StorageError;
     use crate::records::TrainingRecord;
 
     struct MockProfilePort {
-        updates: Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>,
+        updates: Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>,
     }
 
     impl MockProfilePort {
-        fn new() -> (Self, Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>) {
+        fn new() -> (Self, Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>) {
             let updates = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
@@ -435,10 +432,16 @@ mod tests {
     }
 
     impl ProfileUpdating for MockProfilePort {
-        fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64) {
+        fn update_profile(
+            &mut self,
+            key: StatisticsKey,
+            timestamp: &str,
+            value: f64,
+            is_correct: bool,
+        ) {
             self.updates
                 .borrow_mut()
-                .push((key, timestamp.to_string(), value));
+                .push((key, timestamp.to_string(), value, is_correct));
         }
     }
 
@@ -459,9 +462,8 @@ mod tests {
     }
 
     impl TrainingRecordPersisting for MockRecordPort {
-        fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError> {
+        fn save_record(&self, record: TrainingRecord) {
             self.records.borrow_mut().push(record);
-            Ok(())
         }
     }
 
@@ -491,14 +493,19 @@ mod tests {
 
     struct NoOpProfilePort;
     impl ProfileUpdating for NoOpProfilePort {
-        fn update_profile(&mut self, _key: StatisticsKey, _timestamp: &str, _value: f64) {}
+        fn update_profile(
+            &mut self,
+            _key: StatisticsKey,
+            _timestamp: &str,
+            _value: f64,
+            _is_correct: bool,
+        ) {
+        }
     }
 
     struct NoOpRecordPort;
     impl TrainingRecordPersisting for NoOpRecordPort {
-        fn save_record(&self, _record: TrainingRecord) -> Result<(), StorageError> {
-            Ok(())
-        }
+        fn save_record(&self, _record: TrainingRecord) {}
     }
 
     struct NoOpTimelinePort;
@@ -606,7 +613,7 @@ mod tests {
     }
 
     struct MockPorts {
-        profile_updates: Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>,
+        profile_updates: Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>,
         records: Rc<RefCell<Vec<TrainingRecord>>>,
         timeline_metrics: Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>,
     }
@@ -880,11 +887,12 @@ mod tests {
         let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
         session.handle_answer(is_higher, "2026-03-03T14:30:00Z".to_string());
 
-        // Profile port called (correct answer)
+        // Profile port called with is_correct=true
         assert_eq!(ports.profile_updates.borrow().len(), 1);
-        let (key, ts, _) = &ports.profile_updates.borrow()[0];
+        let (key, ts, _, is_correct) = &ports.profile_updates.borrow()[0];
         assert!(matches!(key, StatisticsKey::Pitch(_)));
         assert_eq!(ts, "2026-03-03T14:30:00Z");
+        assert!(*is_correct);
 
         // Record port called
         assert_eq!(ports.records.borrow().len(), 1);
@@ -909,8 +917,10 @@ mod tests {
         // Answer incorrectly
         session.handle_answer(!is_higher, "2026-03-03T14:00:00Z".to_string());
 
-        // Profile NOT called for incorrect answers
-        assert_eq!(ports.profile_updates.borrow().len(), 0);
+        // Profile called with is_correct=false for incorrect answers
+        assert_eq!(ports.profile_updates.borrow().len(), 1);
+        let (_, _, _, is_correct) = &ports.profile_updates.borrow()[0];
+        assert!(!*is_correct);
         // Record and timeline still called
         assert_eq!(ports.records.borrow().len(), 1);
         assert_eq!(ports.timeline_metrics.borrow().len(), 1);

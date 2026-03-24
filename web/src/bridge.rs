@@ -1,9 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use domain::ports::{
-    ProfileUpdating, ProgressTimelineUpdating, StorageError, TrainingRecordPersisting,
-};
+use domain::ports::{ProfileUpdating, ProgressTimelineUpdating, TrainingRecordPersisting};
 use domain::records::TrainingRecord;
 use domain::{
     MetricPoint, PerceptualProfile, ProgressTimeline, StatisticsKey, TrainingDiscipline,
@@ -25,10 +23,16 @@ impl ProfilePort {
 }
 
 impl ProfileUpdating for ProfilePort {
-    fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64) {
+    fn update_profile(
+        &mut self,
+        key: StatisticsKey,
+        timestamp: &str,
+        value: f64,
+        is_correct: bool,
+    ) {
         let timestamp_secs = parse_iso8601_to_epoch(timestamp);
         let point = MetricPoint::new(timestamp_secs, value);
-        self.0.borrow_mut().add_point(key, point, true);
+        self.0.borrow_mut().add_point(key, point, is_correct);
     }
 }
 
@@ -51,12 +55,12 @@ impl RecordPort {
 }
 
 impl TrainingRecordPersisting for RecordPort {
-    fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError> {
+    fn save_record(&self, record: TrainingRecord) {
         let store = match self.store_signal.get_untracked() {
             Some(store) => store,
             None => {
                 log::warn!("IndexedDB not yet available, record not persisted");
-                return Ok(());
+                return;
             }
         };
         let error_signal = self.error_signal;
@@ -73,8 +77,6 @@ impl TrainingRecordPersisting for RecordPort {
                 ));
             }
         });
-
-        Ok(())
     }
 }
 

@@ -35,12 +35,16 @@ pub trait PlaybackHandle {
 
 /// Port trait for updating the perceptual profile with training results.
 pub trait ProfileUpdating {
-    fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64);
+    fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64, is_correct: bool);
 }
 
 /// Port trait for persisting training records.
+///
+/// Returns `()` rather than `Result` because the only production implementation
+/// (WASM/IndexedDB) must spawn an async task and cannot report errors
+/// synchronously. Errors are surfaced via UI signals in the bridge layer.
 pub trait TrainingRecordPersisting {
-    fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError>;
+    fn save_record(&self, record: TrainingRecord);
 }
 
 /// Port trait for updating the progress timeline with training metrics.
