@@ -160,3 +160,7 @@ development_status:
   15-2-start-screen-three-section-layout: done
   15-3-placeholder-rhythm-screens: done
   15-4-rhythm-settings: done
+
+  # Epic 16: Statistics Generalization
+  epic-16: in-progress
+  16-1-generalize-statistics-from-cents-to-f64: review

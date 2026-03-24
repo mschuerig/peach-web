@@ -10,7 +10,7 @@ fn test_profile_hydration_from_discrimination_sequence() {
     for (i, &offset) in offsets.iter().enumerate() {
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 1000.0, Cents::new(offset)),
+            MetricPoint::new(i as f64 * 1000.0, offset),
             true,
         );
     }
@@ -34,7 +34,7 @@ fn test_profile_hydration_order_independence() {
     for (i, &offset) in offsets.iter().enumerate() {
         profile_forward.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 1000.0, Cents::new(offset)),
+            MetricPoint::new(i as f64 * 1000.0, offset),
             true,
         );
     }
@@ -43,7 +43,7 @@ fn test_profile_hydration_order_independence() {
     for (i, &offset) in offsets.iter().rev().enumerate() {
         profile_reverse.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 1000.0, Cents::new(offset)),
+            MetricPoint::new(i as f64 * 1000.0, offset),
             true,
         );
     }
@@ -66,12 +66,12 @@ fn test_profile_filters_incorrect_answers() {
 
     profile.add_point(
         TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(1000.0, Cents::new(20.0)),
+        MetricPoint::new(1000.0, 20.0),
         true,
     );
     profile.add_point(
         TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(2000.0, Cents::new(999.0)),
+        MetricPoint::new(2000.0, 999.0),
         false, // incorrect — should be filtered
     );
 
@@ -93,7 +93,7 @@ fn test_profile_hydration_matching_accumulators() {
     for (i, &error) in errors.iter().enumerate() {
         profile.add_point(
             TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(i as f64 * 1000.0, Cents::new(error)),
+            MetricPoint::new(i as f64 * 1000.0, error),
             true,
         );
     }
@@ -111,12 +111,12 @@ fn test_profile_reset_and_rehydrate() {
     // First hydration
     profile.add_point(
         TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(1000.0, Cents::new(50.0)),
+        MetricPoint::new(1000.0, 50.0),
         true,
     );
     profile.add_point(
         TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(2000.0, Cents::new(30.0)),
+        MetricPoint::new(2000.0, 30.0),
         true,
     );
 
@@ -126,12 +126,12 @@ fn test_profile_reset_and_rehydrate() {
     profile.reset_all();
     profile.add_point(
         TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(1000.0, Cents::new(50.0)),
+        MetricPoint::new(1000.0, 50.0),
         true,
     );
     profile.add_point(
         TrainingDiscipline::UnisonPitchDiscrimination,
-        MetricPoint::new(2000.0, Cents::new(30.0)),
+        MetricPoint::new(2000.0, 30.0),
         true,
     );
 
@@ -149,7 +149,7 @@ fn test_profile_hydration_large_dataset() {
         let offset = 50.0 + (i % 20) as f64; // 50..69 repeating
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(i as f64 * 100.0, Cents::new(offset)),
+            MetricPoint::new(i as f64 * 100.0, offset),
             true,
         );
     }
@@ -174,16 +174,16 @@ fn test_profile_rebuild_all() {
     points.insert(
         TrainingDiscipline::UnisonPitchDiscrimination,
         vec![
-            MetricPoint::new(1000.0, Cents::new(20.0)),
-            MetricPoint::new(2000.0, Cents::new(40.0)),
-            MetricPoint::new(3000.0, Cents::new(30.0)),
+            MetricPoint::new(1000.0, 20.0),
+            MetricPoint::new(2000.0, 40.0),
+            MetricPoint::new(3000.0, 30.0),
         ],
     );
     points.insert(
         TrainingDiscipline::UnisonPitchMatching,
         vec![
-            MetricPoint::new(1000.0, Cents::new(5.0)),
-            MetricPoint::new(2000.0, Cents::new(10.0)),
+            MetricPoint::new(1000.0, 5.0),
+            MetricPoint::new(2000.0, 10.0),
         ],
     );
 

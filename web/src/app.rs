@@ -153,10 +153,8 @@ pub fn App() -> impl IntoView {
                 {
                     use std::collections::HashMap;
 
-                    let mut mode_points: HashMap<
-                        TrainingDiscipline,
-                        Vec<MetricPoint<domain::Cents>>,
-                    > = HashMap::new();
+                    let mut mode_points: HashMap<TrainingDiscipline, Vec<MetricPoint>> =
+                        HashMap::new();
 
                     for record in &discrimination_records {
                         if !record.is_correct {
@@ -172,7 +170,7 @@ pub fn App() -> impl IntoView {
                         mode_points
                             .entry(mode)
                             .or_default()
-                            .push(MetricPoint::new(ts, domain::Cents::new(metric)));
+                            .push(MetricPoint::new(ts, metric));
                     }
 
                     for record in &matching_records {
@@ -186,7 +184,7 @@ pub fn App() -> impl IntoView {
                         mode_points
                             .entry(mode)
                             .or_default()
-                            .push(MetricPoint::new(ts, domain::Cents::new(metric)));
+                            .push(MetricPoint::new(ts, metric));
                     }
 
                     // Sort each mode's points by timestamp

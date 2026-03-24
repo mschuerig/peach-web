@@ -242,12 +242,12 @@ mod tests {
         // Add two unison discrimination points to establish a discrimination_mean
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, Cents::new(40.0)),
+            MetricPoint::new(1000.0, 40.0),
             true,
         );
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(2000.0, Cents::new(60.0)),
+            MetricPoint::new(2000.0, 60.0),
             true,
         );
         // discrimination_mean(0) = 50.0
@@ -272,7 +272,7 @@ mod tests {
         // Train with very low mean that would be below min_cent_difference
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, Cents::new(0.01)),
+            MetricPoint::new(1000.0, 0.01),
             true,
         );
         // discrimination_mean(0) = 0.01

@@ -37,4 +37,4 @@ pub use training_discipline_statistics::TrainingDisciplineStatistics;
 pub use trend::Trend;
 pub use tuning::TuningSystem;
 pub use types::*;
-pub use welford::{WelfordAccumulator, WelfordMeasurement};
+pub use welford::WelfordAccumulator;

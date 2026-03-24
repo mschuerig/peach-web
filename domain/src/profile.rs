@@ -114,10 +114,10 @@ impl PerceptualProfile {
         }
         // For a single mode with data, return its std dev directly
         if u_count == 0 {
-            return interval.welford.typed_std_dev();
+            return interval.welford.population_std_dev().map(Cents::new);
         }
         if i_count == 0 {
-            return unison.welford.typed_std_dev();
+            return unison.welford.population_std_dev().map(Cents::new);
         }
         // Both disciplines have data — use combined population std dev
         let combined_mean = (unison.welford.mean() * u_count as f64
@@ -147,7 +147,7 @@ impl PerceptualProfile {
     pub fn add_point(
         &mut self,
         discipline: TrainingDiscipline,
-        point: MetricPoint<Cents>,
+        point: MetricPoint,
         is_correct: bool,
     ) {
         if !is_correct {
@@ -164,7 +164,7 @@ impl PerceptualProfile {
     // --- Batch operations ---
 
     /// Rebuild all disciplines from pre-sorted metric points.
-    pub fn rebuild_all(&mut self, points: HashMap<TrainingDiscipline, Vec<MetricPoint<Cents>>>) {
+    pub fn rebuild_all(&mut self, points: HashMap<TrainingDiscipline, Vec<MetricPoint>>) {
         for discipline in TrainingDiscipline::ALL {
             let stats = self
                 .disciplines
@@ -215,7 +215,7 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, Cents::new(20.0)),
+            MetricPoint::new(1000.0, 20.0),
             true,
         );
         assert!(profile.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
@@ -228,7 +228,7 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, Cents::new(20.0)),
+            MetricPoint::new(1000.0, 20.0),
             false, // incorrect — should be filtered
         );
         assert!(!profile.has_data(TrainingDiscipline::UnisonPitchDiscrimination));
@@ -239,12 +239,12 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, Cents::new(40.0)),
+            MetricPoint::new(1000.0, 40.0),
             true,
         );
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(2000.0, Cents::new(60.0)),
+            MetricPoint::new(2000.0, 60.0),
             true,
         );
         let mean = profile.discrimination_mean(0).unwrap();
@@ -256,7 +256,7 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::IntervalPitchDiscrimination,
-            MetricPoint::new(1000.0, Cents::new(30.0)),
+            MetricPoint::new(1000.0, 30.0),
             true,
         );
         let mean = profile.discrimination_mean(7).unwrap();
@@ -274,12 +274,12 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(1000.0, Cents::new(5.0)),
+            MetricPoint::new(1000.0, 5.0),
             true,
         );
         profile.add_point(
             TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(2000.0, Cents::new(15.0)),
+            MetricPoint::new(2000.0, 15.0),
             true,
         );
         let mean = profile.matching_mean().unwrap();
@@ -292,13 +292,13 @@ mod tests {
         // Unison: 1 sample of 10
         profile.add_point(
             TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(1000.0, Cents::new(10.0)),
+            MetricPoint::new(1000.0, 10.0),
             true,
         );
         // Interval: 1 sample of 20
         profile.add_point(
             TrainingDiscipline::IntervalPitchMatching,
-            MetricPoint::new(2000.0, Cents::new(20.0)),
+            MetricPoint::new(2000.0, 20.0),
             true,
         );
         let mean = profile.matching_mean().unwrap();
@@ -311,12 +311,12 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(1000.0, Cents::new(5.0)),
+            MetricPoint::new(1000.0, 5.0),
             true,
         );
         profile.add_point(
             TrainingDiscipline::IntervalPitchMatching,
-            MetricPoint::new(2000.0, Cents::new(10.0)),
+            MetricPoint::new(2000.0, 10.0),
             true,
         );
         assert_eq!(profile.matching_sample_count(), 2);
@@ -329,8 +329,8 @@ mod tests {
         points.insert(
             TrainingDiscipline::UnisonPitchDiscrimination,
             vec![
-                MetricPoint::new(1000.0, Cents::new(20.0)),
-                MetricPoint::new(2000.0, Cents::new(30.0)),
+                MetricPoint::new(1000.0, 20.0),
+                MetricPoint::new(2000.0, 30.0),
             ],
         );
         profile.rebuild_all(points);
@@ -349,12 +349,12 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::UnisonPitchDiscrimination,
-            MetricPoint::new(1000.0, Cents::new(20.0)),
+            MetricPoint::new(1000.0, 20.0),
             true,
         );
         profile.add_point(
             TrainingDiscipline::UnisonPitchMatching,
-            MetricPoint::new(2000.0, Cents::new(10.0)),
+            MetricPoint::new(2000.0, 10.0),
             true,
         );
         profile.reset_all();
@@ -373,7 +373,7 @@ mod tests {
         let mut profile = PerceptualProfile::new();
         profile.add_point(
             TrainingDiscipline::IntervalPitchMatching,
-            MetricPoint::new(1000.0, Cents::new(5.0)),
+            MetricPoint::new(1000.0, 5.0),
             true,
         );
         assert_eq!(

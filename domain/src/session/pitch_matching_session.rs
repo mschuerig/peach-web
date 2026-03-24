@@ -977,7 +977,7 @@ mod tests {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         profile.borrow_mut().add_point(
             crate::TrainingDiscipline::UnisonPitchMatching,
-            crate::MetricPoint::new(1000.0, Cents::new(5.0)),
+            crate::MetricPoint::new(1000.0, 5.0),
             true,
         );
         assert!(profile.borrow().matching_mean().is_some());

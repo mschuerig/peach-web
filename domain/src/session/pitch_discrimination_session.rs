@@ -1034,7 +1034,7 @@ mod tests {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         profile.borrow_mut().add_point(
             crate::TrainingDiscipline::UnisonPitchDiscrimination,
-            crate::MetricPoint::new(1000.0, Cents::new(50.0)),
+            crate::MetricPoint::new(1000.0, 50.0),
             true,
         );
         assert!(

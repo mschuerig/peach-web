@@ -38,7 +38,7 @@ impl PitchDiscriminationObserver for ProfileObserver {
 
         let metric = trial.target_note().offset.raw_value.abs();
         let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
-        let point = MetricPoint::new(timestamp_secs, domain::Cents::new(metric));
+        let point = MetricPoint::new(timestamp_secs, metric);
 
         self.0
             .borrow_mut()
@@ -69,7 +69,7 @@ impl PitchMatchingObserver for PitchMatchingProfileObserver {
 
         let metric = completed.user_cent_error().abs();
         let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
-        let point = MetricPoint::new(timestamp_secs, domain::Cents::new(metric));
+        let point = MetricPoint::new(timestamp_secs, metric);
 
         self.0.borrow_mut().add_point(mode, point, true);
     }

@@ -1,17 +1,16 @@
 use crate::metric_point::MetricPoint;
 use crate::training_discipline::TrainingDisciplineConfig;
 use crate::trend::Trend;
-use crate::types::Cents;
 use crate::welford::WelfordAccumulator;
 
 /// Per-discipline statistical engine: Welford accumulator, EWMA, trend, and time-ordered metrics.
 /// Mirrors iOS `TrainingDisciplineStatistics` — each `TrainingDiscipline` gets one instance.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrainingDisciplineStatistics {
-    pub welford: WelfordAccumulator<Cents>,
+    pub welford: WelfordAccumulator,
     pub ewma: Option<f64>,
     pub trend: Option<Trend>,
-    pub metrics: Vec<MetricPoint<Cents>>,
+    pub metrics: Vec<MetricPoint>,
 }
 
 impl TrainingDisciplineStatistics {
@@ -31,7 +30,7 @@ impl TrainingDisciplineStatistics {
 
     /// Incremental update: add a single metric point.
     /// Updates Welford, appends to metrics, recomputes EWMA and trend.
-    pub fn add_point(&mut self, point: MetricPoint<Cents>, config: &TrainingDisciplineConfig) {
+    pub fn add_point(&mut self, point: MetricPoint, config: &TrainingDisciplineConfig) {
         self.welford.update(point.value);
         self.metrics.push(point);
         self.recompute_ewma(config);
@@ -39,7 +38,7 @@ impl TrainingDisciplineStatistics {
     }
 
     /// Batch rebuild from sorted metric points. Resets state first.
-    pub fn rebuild(&mut self, points: Vec<MetricPoint<Cents>>, config: &TrainingDisciplineConfig) {
+    pub fn rebuild(&mut self, points: Vec<MetricPoint>, config: &TrainingDisciplineConfig) {
         self.welford.reset();
         self.metrics.clear();
         self.ewma = None;
@@ -89,7 +88,7 @@ impl TrainingDisciplineStatistics {
                 session_count = 0;
                 session_start = point.timestamp;
             }
-            session_sum += point.statistical_value();
+            session_sum += point.value;
             session_count += 1;
         }
         // Close final session
@@ -131,7 +130,7 @@ impl TrainingDisciplineStatistics {
         };
 
         let latest = match self.metrics.last() {
-            Some(p) => p.statistical_value(),
+            Some(p) => p.value,
             None => {
                 self.trend = None;
                 return;
@@ -180,7 +179,7 @@ mod tests {
     #[test]
     fn test_add_point_updates_welford() {
         let mut stats = TrainingDisciplineStatistics::new();
-        stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
+        stats.add_point(MetricPoint::new(1000.0, 20.0), default_config());
         assert_eq!(stats.record_count(), 1);
         assert!((stats.welford.mean() - 20.0).abs() < 1e-10);
     }
@@ -188,7 +187,7 @@ mod tests {
     #[test]
     fn test_add_point_computes_ewma() {
         let mut stats = TrainingDisciplineStatistics::new();
-        stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
+        stats.add_point(MetricPoint::new(1000.0, 20.0), default_config());
         assert_eq!(stats.ewma, Some(20.0));
     }
 
@@ -197,8 +196,8 @@ mod tests {
         let mut stats = TrainingDisciplineStatistics::new();
         let config = default_config();
         // Two sessions separated by > session_gap (1800s)
-        stats.add_point(MetricPoint::new(1000.0, Cents::new(30.0)), config);
-        stats.add_point(MetricPoint::new(5000.0, Cents::new(10.0)), config);
+        stats.add_point(MetricPoint::new(1000.0, 30.0), config);
+        stats.add_point(MetricPoint::new(5000.0, 10.0), config);
         let ewma = stats.ewma.unwrap();
         assert!(
             ewma > 10.0 && ewma < 30.0,
@@ -210,7 +209,7 @@ mod tests {
     #[test]
     fn test_trend_none_with_one_record() {
         let mut stats = TrainingDisciplineStatistics::new();
-        stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
+        stats.add_point(MetricPoint::new(1000.0, 20.0), default_config());
         assert_eq!(stats.trend, None);
     }
 
@@ -220,16 +219,10 @@ mod tests {
         let config = default_config();
         // Many high values followed by low values
         for i in 0..10 {
-            stats.add_point(
-                MetricPoint::new(i as f64 * 4000.0, Cents::new(50.0)),
-                config,
-            );
+            stats.add_point(MetricPoint::new(i as f64 * 4000.0, 50.0), config);
         }
         for i in 10..20 {
-            stats.add_point(
-                MetricPoint::new(i as f64 * 4000.0, Cents::new(10.0)),
-                config,
-            );
+            stats.add_point(MetricPoint::new(i as f64 * 4000.0, 10.0), config);
         }
         assert_eq!(stats.trend, Some(Trend::Improving));
     }
@@ -238,11 +231,11 @@ mod tests {
     fn test_rebuild_replaces_state() {
         let mut stats = TrainingDisciplineStatistics::new();
         let config = default_config();
-        stats.add_point(MetricPoint::new(1000.0, Cents::new(99.0)), config);
+        stats.add_point(MetricPoint::new(1000.0, 99.0), config);
 
         let points = vec![
-            MetricPoint::new(2000.0, Cents::new(10.0)),
-            MetricPoint::new(3000.0, Cents::new(20.0)),
+            MetricPoint::new(2000.0, 10.0),
+            MetricPoint::new(3000.0, 20.0),
         ];
         stats.rebuild(points, config);
         assert_eq!(stats.record_count(), 2);
@@ -252,7 +245,7 @@ mod tests {
     #[test]
     fn test_reset() {
         let mut stats = TrainingDisciplineStatistics::new();
-        stats.add_point(MetricPoint::new(1000.0, Cents::new(20.0)), default_config());
+        stats.add_point(MetricPoint::new(1000.0, 20.0), default_config());
         stats.reset();
         assert_eq!(stats.record_count(), 0);
         assert_eq!(stats.ewma, None);
