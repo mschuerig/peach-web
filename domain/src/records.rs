@@ -4,6 +4,11 @@ use crate::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingT
 use crate::tuning::TuningSystem;
 use crate::types::Interval;
 
+/// IndexedDB object store name for pitch discrimination records.
+pub const PITCH_DISCRIMINATION_STORE: &str = "pitch_discrimination_records";
+/// IndexedDB object store name for pitch matching records.
+pub const PITCH_MATCHING_STORE: &str = "pitch_matching_records";
+
 /// Enum wrapping all training record types for generic persistence.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrainingRecord {
@@ -23,8 +28,8 @@ impl TrainingRecord {
     /// Returns the IndexedDB object store name for this record type.
     pub fn store_name(&self) -> &'static str {
         match self {
-            TrainingRecord::PitchDiscrimination(_) => "pitch_discrimination_records",
-            TrainingRecord::PitchMatching(_) => "pitch_matching_records",
+            TrainingRecord::PitchDiscrimination(_) => PITCH_DISCRIMINATION_STORE,
+            TrainingRecord::PitchMatching(_) => PITCH_MATCHING_STORE,
         }
     }
 }
@@ -330,7 +335,7 @@ mod tests {
             tuning_system: "equalTemperament".to_string(),
             timestamp: "2026-03-03T14:00:00Z".to_string(),
         });
-        assert_eq!(record.store_name(), "pitch_discrimination_records");
+        assert_eq!(record.store_name(), PITCH_DISCRIMINATION_STORE);
     }
 
     #[test]
@@ -344,6 +349,6 @@ mod tests {
             tuning_system: "equalTemperament".to_string(),
             timestamp: "2026-03-04T10:00:00Z".to_string(),
         });
-        assert_eq!(record.store_name(), "pitch_matching_records");
+        assert_eq!(record.store_name(), PITCH_MATCHING_STORE);
     }
 }

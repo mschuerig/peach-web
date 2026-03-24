@@ -23,7 +23,10 @@ pub use ports::{
 };
 pub use profile::{COLD_START_DIFFICULTY, PerceptualProfile};
 pub use progress_timeline::{BucketSize, ProgressTimeline, TimeBucket, parse_iso8601_to_epoch};
-pub use records::{PitchDiscriminationRecord, PitchMatchingRecord, TrainingRecord};
+pub use records::{
+    PITCH_DISCRIMINATION_STORE, PITCH_MATCHING_STORE, PitchDiscriminationRecord,
+    PitchMatchingRecord, TrainingRecord,
+};
 pub use session::{
     FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY, PitchDiscriminationPlaybackData,
     PitchDiscriminationSession, PitchDiscriminationSessionState, PitchMatchingPlaybackData,

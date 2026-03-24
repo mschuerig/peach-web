@@ -146,15 +146,18 @@ pub fn App() -> impl IntoView {
                     let mut key_points: HashMap<StatisticsKey, Vec<MetricPoint>> = HashMap::new();
 
                     for record in &all_records {
+                        // Skip incorrect discrimination records before entering discipline loop
+                        if let domain::TrainingRecord::PitchDiscrimination(r) = record
+                            && !r.is_correct
+                        {
+                            continue;
+                        }
                         for discipline in TrainingDiscipline::ALL {
                             if discipline.is_rhythm() {
                                 continue; // rhythm hydration not yet implemented
                             }
                             let metric = match record {
                                 domain::TrainingRecord::PitchDiscrimination(r) => {
-                                    if !r.is_correct {
-                                        continue;
-                                    }
                                     discipline.extract_discrimination_metric(r)
                                 }
                                 domain::TrainingRecord::PitchMatching(r) => {

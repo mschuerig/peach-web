@@ -1,6 +1,6 @@
 # Story 16.4: Generalize IndexedDB Store and Hydration
 
-Status: review
+Status: done
 
 ## Story
 

@@ -4,7 +4,10 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{IdbDatabase, IdbOpenDbRequest, IdbRequest, IdbTransactionMode};
 
 use domain::ports::StorageError;
-use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord, TrainingRecord};
+use domain::records::{
+    PITCH_DISCRIMINATION_STORE, PITCH_MATCHING_STORE, PitchDiscriminationRecord,
+    PitchMatchingRecord, TrainingRecord,
+};
 
 const DB_NAME: &str = "peach";
 const DB_VERSION: u32 = 3;
@@ -14,8 +17,8 @@ const TIMESTAMP_INDEX: &str = "timestamp";
 /// New disciplines add their store name here; all store creation, deletion,
 /// and iteration derive from this single source of truth.
 pub const STORE_NAMES: &[&str] = &[
-    "pitch_discrimination_records",
-    "pitch_matching_records",
+    PITCH_DISCRIMINATION_STORE,
+    PITCH_MATCHING_STORE,
     "rhythm_offset_detection_records",
     "continuous_rhythm_matching_records",
 ];
@@ -119,11 +122,15 @@ impl IndexedDbStore {
     }
 
     /// Fetch all training records from all populated stores, wrapped in TrainingRecord.
+    ///
+    /// When adding a new `TrainingRecord` variant, add a corresponding fetch block here.
+    /// The compiler enforces exhaustive matches in `save_record` and `store_name`,
+    /// but this method must be updated manually.
     pub async fn fetch_all_records(&self) -> Result<Vec<TrainingRecord>, StorageError> {
         let mut all = Vec::new();
 
         for value in self
-            .fetch_jsvalues_from_store("pitch_discrimination_records")
+            .fetch_jsvalues_from_store(PITCH_DISCRIMINATION_STORE)
             .await?
         {
             let record: PitchDiscriminationRecord = serde_wasm_bindgen::from_value(value)
@@ -131,10 +138,7 @@ impl IndexedDbStore {
             all.push(TrainingRecord::PitchDiscrimination(record));
         }
 
-        for value in self
-            .fetch_jsvalues_from_store("pitch_matching_records")
-            .await?
-        {
+        for value in self.fetch_jsvalues_from_store(PITCH_MATCHING_STORE).await? {
             let record: PitchMatchingRecord = serde_wasm_bindgen::from_value(value)
                 .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
             all.push(TrainingRecord::PitchMatching(record));
