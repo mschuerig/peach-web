@@ -4,6 +4,13 @@ use crate::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingT
 use crate::tuning::TuningSystem;
 use crate::types::Interval;
 
+/// Enum wrapping all training record types for generic persistence.
+#[derive(Clone, Debug, PartialEq)]
+pub enum TrainingRecord {
+    PitchDiscrimination(PitchDiscriminationRecord),
+    PitchMatching(PitchMatchingRecord),
+}
+
 /// Flat persistence record for a completed pitch discrimination trial.
 /// Blueprint §10.1 — field names match storage schema exactly.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

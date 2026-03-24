@@ -21,14 +21,14 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::create_note_player;
 use crate::app::{SoundFontLoadStatus, WorkletAssets, ensure_worklet_connected};
-use crate::bridge::{DataStoreObserver, ProfileObserver, ProgressTimelineObserver};
+use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
 use crate::components::nav_bar::{NavBar, NavIconButton};
 use crate::help_sections::PITCH_DISCRIMINATION_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
-use domain::ports::{NotePlayer, PitchDiscriminationObserver, UserSettings};
+use domain::ports::{NotePlayer, UserSettings};
 use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
 use domain::{
     FEEDBACK_DURATION_SECS, Interval, PerceptualProfile, PitchDiscriminationSession,
@@ -93,18 +93,11 @@ pub fn PitchDiscriminationView() -> impl IntoView {
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
     let audio_error: RwSignal<Option<String>> = RwSignal::new(None);
 
-    // Build observers list — DataStoreObserver holds the signal and checks
-    // store availability on each call, so it works even if IndexedDB
-    // opens after PitchDiscriminationView mounts.
-    let observers: Vec<Box<dyn PitchDiscriminationObserver>> = vec![
-        Box::new(ProfileObserver::new(Rc::clone(&profile))),
-        Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
-        Box::new(DataStoreObserver::new(db_store, storage_error)),
-    ];
-
     let session = Rc::new(RefCell::new(PitchDiscriminationSession::new(
         Rc::clone(&profile),
-        observers,
+        Box::new(ProfilePort::new(Rc::clone(&profile))),
+        Box::new(RecordPort::new(db_store, storage_error)),
+        Box::new(TimelinePort::new(Rc::clone(&progress_timeline))),
         vec![],
     )));
 

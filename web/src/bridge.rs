@@ -1,9 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use domain::ports::{PitchDiscriminationObserver, PitchMatchingObserver};
-use domain::records::{PitchDiscriminationRecord, PitchMatchingRecord};
-use domain::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial};
+use domain::ports::{
+    ProfileUpdating, ProgressTimelineUpdating, StorageError, TrainingRecordPersisting,
+};
+use domain::records::TrainingRecord;
 use domain::{
     MetricPoint, PerceptualProfile, ProgressTimeline, StatisticsKey, TrainingDiscipline,
     parse_iso8601_to_epoch,
@@ -14,76 +15,30 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::adapters::indexeddb_store::IndexedDbStore;
 
-/// Observer that feeds completed pitch discrimination trials into the profile via `add_point()`.
-/// Determines the training discipline (unison vs interval) from the discrimination interval.
-pub struct ProfileObserver(Rc<RefCell<PerceptualProfile>>);
+/// Generic profile port: updates the perceptual profile with any training result.
+pub struct ProfilePort(Rc<RefCell<PerceptualProfile>>);
 
-impl ProfileObserver {
+impl ProfilePort {
     pub fn new(profile: Rc<RefCell<PerceptualProfile>>) -> Self {
         Self(profile)
     }
 }
 
-impl PitchDiscriminationObserver for ProfileObserver {
-    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
-        let trial = completed.pitch_discrimination_trial();
-        let ref_note = trial.reference_note().raw_value();
-        let target_note = trial.target_note().note.raw_value();
-        let interval = target_note.abs_diff(ref_note);
-
-        let discipline = if interval == 0 {
-            TrainingDiscipline::UnisonPitchDiscrimination
-        } else {
-            TrainingDiscipline::IntervalPitchDiscrimination
-        };
-        let key = StatisticsKey::Pitch(discipline);
-
-        let metric = trial.target_note().offset.raw_value.abs();
-        let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
-        let point = MetricPoint::new(timestamp_secs, metric);
-
-        self.0
-            .borrow_mut()
-            .add_point(key, point, completed.is_correct());
-    }
-}
-
-/// Observer that feeds completed pitch matching results into the profile.
-pub struct PitchMatchingProfileObserver(Rc<RefCell<PerceptualProfile>>);
-
-impl PitchMatchingProfileObserver {
-    pub fn new(profile: Rc<RefCell<PerceptualProfile>>) -> Self {
-        Self(profile)
-    }
-}
-
-impl PitchMatchingObserver for PitchMatchingProfileObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial) {
-        let ref_note = completed.reference_note().raw_value();
-        let target_note = completed.target_note().raw_value();
-        let interval = target_note.abs_diff(ref_note);
-
-        let discipline = if interval == 0 {
-            TrainingDiscipline::UnisonPitchMatching
-        } else {
-            TrainingDiscipline::IntervalPitchMatching
-        };
-        let key = StatisticsKey::Pitch(discipline);
-
-        let metric = completed.user_cent_error().abs();
-        let timestamp_secs = parse_iso8601_to_epoch(completed.timestamp());
-        let point = MetricPoint::new(timestamp_secs, metric);
-
+impl ProfileUpdating for ProfilePort {
+    fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64) {
+        let timestamp_secs = parse_iso8601_to_epoch(timestamp);
+        let point = MetricPoint::new(timestamp_secs, value);
         self.0.borrow_mut().add_point(key, point, true);
     }
 }
 
-pub struct DataStoreObserver {
+/// Generic record persistence port: saves any training record to IndexedDB.
+pub struct RecordPort {
     store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
     error_signal: RwSignal<Option<String>>,
 }
 
-impl DataStoreObserver {
+impl RecordPort {
     pub fn new(
         store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
         error_signal: RwSignal<Option<String>>,
@@ -95,72 +50,38 @@ impl DataStoreObserver {
     }
 }
 
-impl PitchDiscriminationObserver for DataStoreObserver {
-    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
+impl TrainingRecordPersisting for RecordPort {
+    fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError> {
         let store = match self.store_signal.get_untracked() {
             Some(store) => store,
             None => {
                 log::warn!("IndexedDB not yet available, record not persisted");
-                return;
+                return Ok(());
             }
         };
-        let record = PitchDiscriminationRecord::from_completed(completed);
         let error_signal = self.error_signal;
 
         spawn_local(async move {
-            if let Err(e) = store.save_pitch_discrimination(&record).await {
+            let result = match &record {
+                TrainingRecord::PitchDiscrimination(r) => store.save_pitch_discrimination(r).await,
+                TrainingRecord::PitchMatching(r) => store.save_pitch_matching(r).await,
+            };
+            if let Err(e) = result {
                 log::error!("Storage write failed: {e}");
                 error_signal.set(Some(
                     "Training data may not have been saved. Training continues.".to_string(),
                 ));
             }
         });
+
+        Ok(())
     }
 }
 
-pub struct PitchMatchingDataStoreObserver {
-    store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
-    error_signal: RwSignal<Option<String>>,
-}
+/// Generic progress timeline port: updates timeline with any discipline metric.
+pub struct TimelinePort(Rc<RefCell<ProgressTimeline>>);
 
-impl PitchMatchingDataStoreObserver {
-    pub fn new(
-        store_signal: RwSignal<Option<Rc<IndexedDbStore>>, LocalStorage>,
-        error_signal: RwSignal<Option<String>>,
-    ) -> Self {
-        Self {
-            store_signal,
-            error_signal,
-        }
-    }
-}
-
-impl PitchMatchingObserver for PitchMatchingDataStoreObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial) {
-        let store = match self.store_signal.get_untracked() {
-            Some(store) => store,
-            None => {
-                log::warn!("IndexedDB not yet available, pitch matching record not persisted");
-                return;
-            }
-        };
-        let record = PitchMatchingRecord::from_completed(completed);
-        let error_signal = self.error_signal;
-
-        spawn_local(async move {
-            if let Err(e) = store.save_pitch_matching(&record).await {
-                log::error!("Storage write failed: {e}");
-                error_signal.set(Some(
-                    "Training data may not have been saved. Training continues.".to_string(),
-                ));
-            }
-        });
-    }
-}
-
-pub struct ProgressTimelineObserver(Rc<RefCell<ProgressTimeline>>);
-
-impl ProgressTimelineObserver {
+impl TimelinePort {
     pub fn new(timeline: Rc<RefCell<ProgressTimeline>>) -> Self {
         Self(timeline)
     }
@@ -175,20 +96,15 @@ pub(crate) fn compute_start_of_today() -> f64 {
     date.get_time() / 1000.0
 }
 
-impl PitchDiscriminationObserver for ProgressTimelineObserver {
-    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial) {
-        let record = PitchDiscriminationRecord::from_completed(completed);
+impl ProgressTimelineUpdating for TimelinePort {
+    fn add_metric(&mut self, discipline: TrainingDiscipline, timestamp: &str, value: f64) {
+        let timestamp_secs = parse_iso8601_to_epoch(timestamp);
         let start_of_today = compute_start_of_today();
-        self.0
-            .borrow_mut()
-            .add_discrimination(&record, start_of_today);
-    }
-}
-
-impl PitchMatchingObserver for ProgressTimelineObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial) {
-        let record = PitchMatchingRecord::from_completed(completed);
-        let start_of_today = compute_start_of_today();
-        self.0.borrow_mut().add_matching(&record, start_of_today);
+        self.0.borrow_mut().add_metric_for_discipline(
+            discipline,
+            timestamp_secs,
+            value,
+            start_of_today,
+        );
     }
 }

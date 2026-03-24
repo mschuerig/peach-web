@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::time::Duration;
 
-use crate::records::PitchDiscriminationRecord;
-use crate::records::PitchMatchingRecord;
-use crate::training::{CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial};
+use crate::records::TrainingRecord;
+use crate::statistics_key::StatisticsKey;
+use crate::training_discipline::TrainingDiscipline;
 use crate::tuning::TuningSystem;
 use crate::types::{
     AmplitudeDB, Frequency, MIDIVelocity, NoteDuration, NoteRange, StepPosition, TempoBPM,
@@ -33,14 +33,19 @@ pub trait PlaybackHandle {
     fn adjust_frequency(&mut self, frequency: Frequency) -> Result<(), AudioError>;
 }
 
-/// Observer for pitch discrimination training events.
-pub trait PitchDiscriminationObserver {
-    fn pitch_discrimination_completed(&mut self, completed: &CompletedPitchDiscriminationTrial);
+/// Port trait for updating the perceptual profile with training results.
+pub trait ProfileUpdating {
+    fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64);
 }
 
-/// Observer for pitch matching training events.
-pub trait PitchMatchingObserver {
-    fn pitch_matching_completed(&mut self, completed: &CompletedPitchMatchingTrial);
+/// Port trait for persisting training records.
+pub trait TrainingRecordPersisting {
+    fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError>;
+}
+
+/// Port trait for updating the progress timeline with training metrics.
+pub trait ProgressTimelineUpdating {
+    fn add_metric(&mut self, discipline: TrainingDiscipline, timestamp: &str, value: f64);
 }
 
 /// Trait for components that can be reset when training data is cleared.
@@ -81,15 +86,8 @@ pub enum StorageError {
 /// is inherently asynchronous. The trait remains as the canonical domain
 /// contract — future adapters (e.g. in-memory for testing) can implement it.
 pub trait TrainingDataStore {
-    fn save_pitch_discrimination(
-        &self,
-        record: PitchDiscriminationRecord,
-    ) -> Result<(), StorageError>;
-    fn fetch_all_pitch_discriminations(
-        &self,
-    ) -> Result<Vec<PitchDiscriminationRecord>, StorageError>;
-    fn save_pitch_matching(&self, record: PitchMatchingRecord) -> Result<(), StorageError>;
-    fn fetch_all_pitch_matchings(&self) -> Result<Vec<PitchMatchingRecord>, StorageError>;
+    fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError>;
+    fn fetch_all_records(&self) -> Result<Vec<TrainingRecord>, StorageError>;
     fn delete_all(&self) -> Result<(), StorageError>;
 }
 

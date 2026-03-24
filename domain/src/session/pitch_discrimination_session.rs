@@ -4,10 +4,15 @@ use std::rc::Rc;
 
 use rand::prelude::IndexedRandom;
 
-use crate::ports::{PitchDiscriminationObserver, Resettable, UserSettings};
+use crate::ports::{
+    ProfileUpdating, ProgressTimelineUpdating, Resettable, TrainingRecordPersisting, UserSettings,
+};
 use crate::profile::{COLD_START_DIFFICULTY, PerceptualProfile};
+use crate::records::{PitchDiscriminationRecord, TrainingRecord};
+use crate::statistics_key::StatisticsKey;
 use crate::strategy::{MIN_CENT_DIFFERENCE, TrainingSettings, next_pitch_discrimination_trial};
 use crate::training::{CompletedPitchDiscriminationTrial, PitchDiscriminationTrial};
+use crate::training_discipline::TrainingDiscipline;
 use crate::tuning::TuningSystem;
 use crate::types::{
     AmplitudeDB, Cents, DetunedMIDINote, DirectedInterval, Frequency, MIDINote, NoteDuration,
@@ -47,7 +52,9 @@ pub struct PitchDiscriminationPlaybackData {
 pub struct PitchDiscriminationSession {
     state: PitchDiscriminationSessionState,
     profile: Rc<RefCell<PerceptualProfile>>,
-    observers: Vec<Box<dyn PitchDiscriminationObserver>>,
+    profile_port: Box<dyn ProfileUpdating>,
+    record_port: Box<dyn TrainingRecordPersisting>,
+    timeline_port: Box<dyn ProgressTimelineUpdating>,
     resettables: Vec<Box<dyn Resettable>>,
 
     // Session-level state (snapshot from settings at start)
@@ -72,13 +79,17 @@ pub struct PitchDiscriminationSession {
 impl PitchDiscriminationSession {
     pub fn new(
         profile: Rc<RefCell<PerceptualProfile>>,
-        observers: Vec<Box<dyn PitchDiscriminationObserver>>,
+        profile_port: Box<dyn ProfileUpdating>,
+        record_port: Box<dyn TrainingRecordPersisting>,
+        timeline_port: Box<dyn ProgressTimelineUpdating>,
         resettables: Vec<Box<dyn Resettable>>,
     ) -> Self {
         Self {
             state: PitchDiscriminationSessionState::Idle,
             profile,
-            observers,
+            profile_port,
+            record_port,
+            timeline_port,
             resettables,
             session_intervals: HashSet::new(),
             session_tuning_system: TuningSystem::EqualTemperament,
@@ -240,8 +251,36 @@ impl PitchDiscriminationSession {
             },
         );
 
-        // Notify observers with panic isolation
-        self.notify_observers(&completed);
+        // Map trial result to generic port calls (AC7: mapping logic lives in session)
+        let ref_note = trial.reference_note().raw_value();
+        let target_note = trial.target_note().note.raw_value();
+        let interval = target_note.abs_diff(ref_note);
+        let discipline = if interval == 0 {
+            TrainingDiscipline::UnisonPitchDiscrimination
+        } else {
+            TrainingDiscipline::IntervalPitchDiscrimination
+        };
+        let key = StatisticsKey::Pitch(discipline);
+        let metric = trial.target_note().offset.raw_value.abs();
+
+        // Update profile (only for correct answers)
+        if completed.is_correct() {
+            self.profile_port
+                .update_profile(key, completed.timestamp(), metric);
+        }
+
+        // Persist training record
+        let record = PitchDiscriminationRecord::from_completed(&completed);
+        if let Err(e) = self
+            .record_port
+            .save_record(TrainingRecord::PitchDiscrimination(record))
+        {
+            eprintln!("Record save failed: {e}");
+        }
+
+        // Update progress timeline
+        self.timeline_port
+            .add_metric(discipline, completed.timestamp(), metric);
 
         self.last_completed = Some(completed);
         self.state = PitchDiscriminationSessionState::ShowingFeedback;
@@ -355,17 +394,6 @@ impl PitchDiscriminationSession {
             .choose(&mut rng)
             .expect("session_intervals must not be empty")
     }
-
-    fn notify_observers(&mut self, completed: &CompletedPitchDiscriminationTrial) {
-        for observer in &mut self.observers {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                observer.pitch_discrimination_completed(completed);
-            }));
-            if let Err(e) = result {
-                eprintln!("Observer panicked: {:?}", e);
-            }
-        }
-    }
 }
 
 /// Calculate target amplitude variation based on vary_loudness setting.
@@ -387,40 +415,95 @@ mod tests {
 
     // --- Mock types ---
 
-    struct MockObserver {
-        calls: Rc<RefCell<Vec<CompletedPitchDiscriminationTrial>>>,
+    use crate::ports::StorageError;
+    use crate::records::TrainingRecord;
+
+    struct MockProfilePort {
+        updates: Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>,
     }
 
-    impl MockObserver {
-        fn new() -> (Self, Rc<RefCell<Vec<CompletedPitchDiscriminationTrial>>>) {
-            let calls = Rc::new(RefCell::new(Vec::new()));
+    impl MockProfilePort {
+        fn new() -> (Self, Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>) {
+            let updates = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
-                    calls: Rc::clone(&calls),
+                    updates: Rc::clone(&updates),
                 },
-                calls,
+                updates,
             )
         }
     }
 
-    impl PitchDiscriminationObserver for MockObserver {
-        fn pitch_discrimination_completed(
-            &mut self,
-            completed: &CompletedPitchDiscriminationTrial,
-        ) {
-            self.calls.borrow_mut().push(completed.clone());
+    impl ProfileUpdating for MockProfilePort {
+        fn update_profile(&mut self, key: StatisticsKey, timestamp: &str, value: f64) {
+            self.updates
+                .borrow_mut()
+                .push((key, timestamp.to_string(), value));
         }
     }
 
-    struct PanickingObserver;
+    struct MockRecordPort {
+        records: Rc<RefCell<Vec<TrainingRecord>>>,
+    }
 
-    impl PitchDiscriminationObserver for PanickingObserver {
-        fn pitch_discrimination_completed(
-            &mut self,
-            _completed: &CompletedPitchDiscriminationTrial,
-        ) {
-            panic!("PanickingObserver intentionally panicked");
+    impl MockRecordPort {
+        fn new() -> (Self, Rc<RefCell<Vec<TrainingRecord>>>) {
+            let records = Rc::new(RefCell::new(Vec::new()));
+            (
+                Self {
+                    records: Rc::clone(&records),
+                },
+                records,
+            )
         }
+    }
+
+    impl TrainingRecordPersisting for MockRecordPort {
+        fn save_record(&self, record: TrainingRecord) -> Result<(), StorageError> {
+            self.records.borrow_mut().push(record);
+            Ok(())
+        }
+    }
+
+    struct MockTimelinePort {
+        metrics: Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>,
+    }
+
+    impl MockTimelinePort {
+        fn new() -> (Self, Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>) {
+            let metrics = Rc::new(RefCell::new(Vec::new()));
+            (
+                Self {
+                    metrics: Rc::clone(&metrics),
+                },
+                metrics,
+            )
+        }
+    }
+
+    impl ProgressTimelineUpdating for MockTimelinePort {
+        fn add_metric(&mut self, discipline: TrainingDiscipline, timestamp: &str, value: f64) {
+            self.metrics
+                .borrow_mut()
+                .push((discipline, timestamp.to_string(), value));
+        }
+    }
+
+    struct NoOpProfilePort;
+    impl ProfileUpdating for NoOpProfilePort {
+        fn update_profile(&mut self, _key: StatisticsKey, _timestamp: &str, _value: f64) {}
+    }
+
+    struct NoOpRecordPort;
+    impl TrainingRecordPersisting for NoOpRecordPort {
+        fn save_record(&self, _record: TrainingRecord) -> Result<(), StorageError> {
+            Ok(())
+        }
+    }
+
+    struct NoOpTimelinePort;
+    impl ProgressTimelineUpdating for NoOpTimelinePort {
+        fn add_metric(&mut self, _discipline: TrainingDiscipline, _timestamp: &str, _value: f64) {}
     }
 
     struct MockResettable {
@@ -513,17 +596,41 @@ mod tests {
 
     fn create_session() -> PitchDiscriminationSession {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        PitchDiscriminationSession::new(profile, vec![], vec![])
+        PitchDiscriminationSession::new(
+            profile,
+            Box::new(NoOpProfilePort),
+            Box::new(NoOpRecordPort),
+            Box::new(NoOpTimelinePort),
+            vec![],
+        )
     }
 
-    fn create_session_with_observer() -> (
-        PitchDiscriminationSession,
-        Rc<RefCell<Vec<CompletedPitchDiscriminationTrial>>>,
-    ) {
+    struct MockPorts {
+        profile_updates: Rc<RefCell<Vec<(StatisticsKey, String, f64)>>>,
+        records: Rc<RefCell<Vec<TrainingRecord>>>,
+        timeline_metrics: Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>,
+    }
+
+    fn create_session_with_ports() -> (PitchDiscriminationSession, MockPorts) {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        let (observer, calls) = MockObserver::new();
-        let session = PitchDiscriminationSession::new(profile, vec![Box::new(observer)], vec![]);
-        (session, calls)
+        let (profile_port, profile_updates) = MockProfilePort::new();
+        let (record_port, records) = MockRecordPort::new();
+        let (timeline_port, timeline_metrics) = MockTimelinePort::new();
+        let session = PitchDiscriminationSession::new(
+            profile,
+            Box::new(profile_port),
+            Box::new(record_port),
+            Box::new(timeline_port),
+            vec![],
+        );
+        (
+            session,
+            MockPorts {
+                profile_updates,
+                records,
+                timeline_metrics,
+            },
+        )
     }
 
     // --- AC1: Idle state tests ---
@@ -760,94 +867,67 @@ mod tests {
         session.handle_answer(false, "2026-03-03T14:01:00Z".to_string());
     }
 
-    // --- CompletedPitchDiscriminationTrial correctness ---
+    // --- Port notification tests ---
 
     #[test]
-    fn test_completed_comparison_has_correct_timestamp() {
-        let (mut session, calls) = create_session_with_observer();
-        session.start(default_intervals(), &DefaultTestSettings);
-        session.on_reference_note_finished();
-        session.on_target_note_finished();
-        let timestamp = "2026-03-03T14:30:00Z".to_string();
-        session.handle_answer(true, timestamp.clone());
-
-        let completed_calls = calls.borrow();
-        assert_eq!(completed_calls.len(), 1);
-        assert_eq!(completed_calls[0].timestamp(), timestamp);
-    }
-
-    #[test]
-    fn test_completed_comparison_has_snapshot_tuning_system() {
-        let (mut session, calls) = create_session_with_observer();
-        session.start(default_intervals(), &DefaultTestSettings);
-        session.on_reference_note_finished();
-        session.on_target_note_finished();
-        session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-
-        let completed_calls = calls.borrow();
-        assert_eq!(
-            completed_calls[0].tuning_system(),
-            TuningSystem::EqualTemperament
-        );
-    }
-
-    #[test]
-    fn test_completed_comparison_is_correct_derivation() {
-        let (mut session, calls) = create_session_with_observer();
+    fn test_handle_answer_calls_all_ports() {
+        let (mut session, ports) = create_session_with_ports();
         session.start(default_intervals(), &DefaultTestSettings);
         session.on_reference_note_finished();
         session.on_target_note_finished();
 
-        // Get the current trial's target direction
         let data = session.current_playback_data().unwrap();
         let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
+        session.handle_answer(is_higher, "2026-03-03T14:30:00Z".to_string());
 
-        // Answer correctly
+        // Profile port called (correct answer)
+        assert_eq!(ports.profile_updates.borrow().len(), 1);
+        let (key, ts, _) = &ports.profile_updates.borrow()[0];
+        assert!(matches!(key, StatisticsKey::Pitch(_)));
+        assert_eq!(ts, "2026-03-03T14:30:00Z");
+
+        // Record port called
+        assert_eq!(ports.records.borrow().len(), 1);
+        assert!(matches!(
+            &ports.records.borrow()[0],
+            TrainingRecord::PitchDiscrimination(_)
+        ));
+
+        // Timeline port called
+        assert_eq!(ports.timeline_metrics.borrow().len(), 1);
+    }
+
+    #[test]
+    fn test_incorrect_answer_skips_profile_port() {
+        let (mut session, ports) = create_session_with_ports();
+        session.start(default_intervals(), &DefaultTestSettings);
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
+
+        let data = session.current_playback_data().unwrap();
+        let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
+        // Answer incorrectly
+        session.handle_answer(!is_higher, "2026-03-03T14:00:00Z".to_string());
+
+        // Profile NOT called for incorrect answers
+        assert_eq!(ports.profile_updates.borrow().len(), 0);
+        // Record and timeline still called
+        assert_eq!(ports.records.borrow().len(), 1);
+        assert_eq!(ports.timeline_metrics.borrow().len(), 1);
+    }
+
+    #[test]
+    fn test_completed_comparison_has_correct_state() {
+        let (mut session, _ports) = create_session_with_ports();
+        session.start(default_intervals(), &DefaultTestSettings);
+        session.on_reference_note_finished();
+        session.on_target_note_finished();
+
+        let data = session.current_playback_data().unwrap();
+        let is_higher = data.target_frequency.raw_value() > data.reference_frequency.raw_value();
         session.handle_answer(is_higher, "2026-03-03T14:00:00Z".to_string());
 
-        let completed_calls = calls.borrow();
-        assert!(completed_calls[0].is_correct());
         assert!(session.is_last_answer_correct());
-    }
-
-    // --- Observer notification ---
-
-    #[test]
-    fn test_observer_receives_pitch_discrimination_completed() {
-        let (mut session, calls) = create_session_with_observer();
-        session.start(default_intervals(), &DefaultTestSettings);
-        session.on_reference_note_finished();
-        session.on_target_note_finished();
-        session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-
-        assert_eq!(calls.borrow().len(), 1);
-    }
-
-    // --- Observer error isolation ---
-
-    #[test]
-    fn test_observer_panic_does_not_propagate() {
-        let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        let (normal_observer, normal_calls) = MockObserver::new();
-        let panicking_observer = PanickingObserver;
-
-        let mut session = PitchDiscriminationSession::new(
-            profile,
-            vec![Box::new(panicking_observer), Box::new(normal_observer)],
-            vec![],
-        );
-
-        session.start(default_intervals(), &DefaultTestSettings);
-        session.on_reference_note_finished();
-        session.on_target_note_finished();
-        session.handle_answer(true, "2026-03-03T14:00:00Z".to_string());
-
-        // Normal observer should still receive the event despite panicking observer
-        assert_eq!(normal_calls.borrow().len(), 1);
-        assert_eq!(
-            session.state(),
-            PitchDiscriminationSessionState::ShowingFeedback
-        );
     }
 
     // --- AC8: No loudness variation ---
@@ -893,7 +973,13 @@ mod tests {
     #[test]
     fn test_playback_data_amplitude_varies_when_configured() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        let mut session = PitchDiscriminationSession::new(profile, vec![], vec![]);
+        let mut session = PitchDiscriminationSession::new(
+            profile,
+            Box::new(NoOpProfilePort),
+            Box::new(NoOpRecordPort),
+            Box::new(NoOpTimelinePort),
+            vec![],
+        );
         let settings = LoudnessTestSettings { vary_loudness: 0.5 };
         session.start(default_intervals(), &settings);
         let data = session.current_playback_data().unwrap();
@@ -1043,7 +1129,13 @@ mod tests {
                 .has_data(crate::TrainingDiscipline::UnisonPitchDiscrimination)
         );
 
-        let mut session = PitchDiscriminationSession::new(Rc::clone(&profile), vec![], vec![]);
+        let mut session = PitchDiscriminationSession::new(
+            Rc::clone(&profile),
+            Box::new(NoOpProfilePort),
+            Box::new(NoOpRecordPort),
+            Box::new(NoOpTimelinePort),
+            vec![],
+        );
         session.reset_training_data();
         assert!(
             !profile
@@ -1056,8 +1148,13 @@ mod tests {
     fn test_reset_training_data_calls_resettables() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let (resettable, count) = MockResettable::new();
-        let mut session =
-            PitchDiscriminationSession::new(profile, vec![], vec![Box::new(resettable)]);
+        let mut session = PitchDiscriminationSession::new(
+            profile,
+            Box::new(NoOpProfilePort),
+            Box::new(NoOpRecordPort),
+            Box::new(NoOpTimelinePort),
+            vec![Box::new(resettable)],
+        );
         session.reset_training_data();
         assert_eq!(count.get(), 1);
     }

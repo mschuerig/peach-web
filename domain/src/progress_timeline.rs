@@ -250,6 +250,19 @@ impl ProgressTimeline {
             .map(|b| b.stddev)
     }
 
+    /// Add a metric point for a specific discipline.
+    pub fn add_metric_for_discipline(
+        &mut self,
+        discipline: TrainingDiscipline,
+        timestamp_secs: f64,
+        metric: f64,
+        start_of_today: f64,
+    ) {
+        if let Some(state) = self.disciplines.get_mut(&discipline) {
+            state.add_point(timestamp_secs, metric, start_of_today);
+        }
+    }
+
     /// Incrementally update from a new pitch discrimination record.
     pub fn add_discrimination(&mut self, record: &PitchDiscriminationRecord, start_of_today: f64) {
         let ts = parse_iso8601_to_epoch(&record.timestamp);

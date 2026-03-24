@@ -1,6 +1,6 @@
 # Story 16.3: Decouple Observers with Port Traits
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -67,15 +67,15 @@ Each discipline has thin adapter structs that map trial results to these generic
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define `ProfileUpdating`, `TrainingRecordPersisting`, `ProgressTimelineUpdating` in `ports.rs`
-- [ ] Task 2: Define `TrainingRecord` enum wrapping all record types
-- [ ] Task 3: Refactor `PitchDiscriminationSession` to use generic ports
-- [ ] Task 4: Refactor `PitchMatchingSession` to use generic ports
-- [ ] Task 5: Implement generic port traits in web crate (profile, store, timeline)
-- [ ] Task 6: Remove old observer traits and bridge observer classes
-- [ ] Task 7: Update `app.rs` session wiring
-- [ ] Task 8: Update tests
-- [ ] Task 9: `cargo test --workspace` and `cargo clippy --workspace` pass
+- [x] Task 1: Define `ProfileUpdating`, `TrainingRecordPersisting`, `ProgressTimelineUpdating` in `ports.rs`
+- [x] Task 2: Define `TrainingRecord` enum wrapping all record types
+- [x] Task 3: Refactor `PitchDiscriminationSession` to use generic ports
+- [x] Task 4: Refactor `PitchMatchingSession` to use generic ports
+- [x] Task 5: Implement generic port traits in web crate (profile, store, timeline)
+- [x] Task 6: Remove old observer traits and bridge observer classes
+- [x] Task 7: Update view session wiring (pitch_discrimination_view.rs, pitch_matching_view.rs)
+- [x] Task 8: Update tests
+- [x] Task 9: `cargo test --workspace` and `cargo clippy --workspace` pass
 
 ## Dev Notes
 
@@ -83,3 +83,46 @@ Each discipline has thin adapter structs that map trial results to these generic
 - The IndexedDB store's `save_record()` implementation will pattern-match on `TrainingRecord` to determine which object store to write to. This is a single match in one place, vs. the current approach of per-discipline save methods.
 - Consider whether sessions should hold `Rc<RefCell<dyn ProfileUpdating>>` or use a combined trait object. The simplest approach: a single `SessionObserver` struct that holds references to all three and implements a thin dispatch.
 - This story eliminates the biggest coupling multiplier: new disciplines no longer need new observer traits or bridge classes.
+
+## Dev Agent Record
+
+### Implementation Plan
+
+Sessions hold three `Box<dyn Trait>` port fields instead of `Vec<Box<dyn Observer>>`. Each session's
+handle_answer/commit_pitch method computes the discipline, StatisticsKey, and metric internally,
+then calls the three ports directly. The bridge collapses from 5 observer structs to 3 generic port
+structs (ProfilePort, RecordPort, TimelinePort).
+
+### Debug Log
+
+No issues encountered. Clean compilation and all tests pass.
+
+### Completion Notes
+
+- Defined three generic port traits in `domain/src/ports.rs`: `ProfileUpdating`, `TrainingRecordPersisting`, `ProgressTimelineUpdating`
+- Defined `TrainingRecord` enum in `domain/src/records.rs` wrapping `PitchDiscriminationRecord` and `PitchMatchingRecord`
+- Refactored both session state machines to hold `Box<dyn ProfileUpdating>`, `Box<dyn TrainingRecordPersisting>`, `Box<dyn ProgressTimelineUpdating>` instead of observer Vecs
+- Moved mapping logic (discipline determination, StatisticsKey computation, metric extraction) from bridge into session handle_answer/commit_pitch methods
+- Collapsed 5 bridge observer classes (ProfileObserver, PitchMatchingProfileObserver, DataStoreObserver, PitchMatchingDataStoreObserver, ProgressTimelineObserver) into 3 generic port structs (ProfilePort, RecordPort, TimelinePort)
+- Added `ProgressTimeline::add_metric_for_discipline()` to support the generic timeline port
+- Updated `TrainingDataStore` trait to use `TrainingRecord` instead of per-type methods
+- Updated all session tests with mock port implementations (MockProfilePort, MockRecordPort, MockTimelinePort, NoOp variants)
+- Removed observer panic isolation tests (no longer applicable — single port per concern, no multi-observer dispatch)
+- Added new port verification tests (test_handle_answer_calls_all_ports, test_incorrect_answer_skips_profile_port, test_commit_pitch_calls_all_ports)
+- 375 tests pass, zero clippy warnings
+
+## File List
+
+- domain/src/ports.rs (modified — removed old observer traits, added 3 port traits, updated TrainingDataStore)
+- domain/src/records.rs (modified — added TrainingRecord enum)
+- domain/src/lib.rs (modified — updated exports)
+- domain/src/session/pitch_discrimination_session.rs (modified — refactored to use port traits)
+- domain/src/session/pitch_matching_session.rs (modified — refactored to use port traits)
+- domain/src/progress_timeline.rs (modified — added add_metric_for_discipline method)
+- web/src/bridge.rs (modified — collapsed 5 observers to 3 generic port structs)
+- web/src/components/pitch_discrimination_view.rs (modified — updated session wiring)
+- web/src/components/pitch_matching_view.rs (modified — updated session wiring)
+
+## Change Log
+
+- 2026-03-24: Implemented Story 16.3 — replaced discipline-specific observer traits with 3 generic port traits, collapsed 5 bridge observer classes to 3 generic implementations, moved mapping logic into sessions

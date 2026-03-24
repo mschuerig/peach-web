@@ -18,12 +18,12 @@ pub mod welford;
 pub use error::DomainError;
 pub use metric_point::MetricPoint;
 pub use ports::{
-    AudioError, NotePlayer, PitchDiscriminationObserver, PitchMatchingObserver, PlaybackHandle,
-    Resettable, StorageError, TrainingDataStore, UserSettings,
+    AudioError, NotePlayer, PlaybackHandle, ProfileUpdating, ProgressTimelineUpdating, Resettable,
+    StorageError, TrainingDataStore, TrainingRecordPersisting, UserSettings,
 };
 pub use profile::{COLD_START_DIFFICULTY, PerceptualProfile};
 pub use progress_timeline::{BucketSize, ProgressTimeline, TimeBucket, parse_iso8601_to_epoch};
-pub use records::{PitchDiscriminationRecord, PitchMatchingRecord};
+pub use records::{PitchDiscriminationRecord, PitchMatchingRecord, TrainingRecord};
 pub use session::{
     FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY, PitchDiscriminationPlaybackData,
     PitchDiscriminationSession, PitchDiscriminationSessionState, PitchMatchingPlaybackData,

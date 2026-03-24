@@ -20,9 +20,7 @@ use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::note_player::{UnifiedPlaybackHandle, create_note_player};
 use crate::app::{SoundFontLoadStatus, WorkletAssets, ensure_worklet_connected};
-use crate::bridge::{
-    PitchMatchingDataStoreObserver, PitchMatchingProfileObserver, ProgressTimelineObserver,
-};
+use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
 use crate::components::help_content::HelpModal;
@@ -30,7 +28,7 @@ use crate::components::nav_bar::{NavBar, NavIconButton};
 use crate::components::pitch_slider::VerticalPitchSlider;
 use crate::help_sections::PITCH_MATCHING_HELP;
 use crate::interval_codes::{interval_label, parse_intervals_param};
-use domain::ports::{NotePlayer, PitchMatchingObserver, PlaybackHandle};
+use domain::ports::{NotePlayer, PlaybackHandle};
 use domain::types::{AmplitudeDB, MIDIVelocity, SoundSourceID};
 use domain::{
     FEEDBACK_DURATION_SECS, Interval, PITCH_MATCHING_VELOCITY, PerceptualProfile,
@@ -95,15 +93,11 @@ pub fn PitchMatchingView() -> impl IntoView {
     let storage_error: RwSignal<Option<String>> = RwSignal::new(None);
     let audio_error: RwSignal<Option<String>> = RwSignal::new(None);
 
-    let observers: Vec<Box<dyn PitchMatchingObserver>> = vec![
-        Box::new(PitchMatchingProfileObserver::new(Rc::clone(&profile))),
-        Box::new(ProgressTimelineObserver::new(Rc::clone(&progress_timeline))),
-        Box::new(PitchMatchingDataStoreObserver::new(db_store, storage_error)),
-    ];
-
     let session = Rc::new(RefCell::new(PitchMatchingSession::new(
         Rc::clone(&profile),
-        observers,
+        Box::new(ProfilePort::new(Rc::clone(&profile))),
+        Box::new(RecordPort::new(db_store, storage_error)),
+        Box::new(TimelinePort::new(Rc::clone(&progress_timeline))),
         vec![],
     )));
 
