@@ -1,6 +1,6 @@
 # Story 17.2: Click Synthesis and Rhythm Scheduler
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -50,15 +50,15 @@ The existing SoundFont AudioWorklet is not suitable for rhythm scheduling becaus
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `web-sys` features for `AudioBuffer`, `AudioBufferSourceNode`
-- [ ] Task 2: Implement click buffer synthesis
-- [ ] Task 3: Implement `RhythmScheduler` with lookahead loop
-- [ ] Task 4: Implement single-pass mode (4 clicks, stop)
-- [ ] Task 5: Implement loop mode (continuous cycling)
-- [ ] Task 6: Implement first-beat accent
-- [ ] Task 7: Implement `evaluate_tap()` function
-- [ ] Task 8: Unit tests for `evaluate_tap()` (domain-side logic)
-- [ ] Task 9: Integration test: verify scheduler starts/stops cleanly
+- [x] Task 1: Add `web-sys` features for `AudioBuffer`, `AudioBufferSourceNode`
+- [x] Task 2: Implement click buffer synthesis
+- [x] Task 3: Implement `RhythmScheduler` with lookahead loop
+- [x] Task 4: Implement single-pass mode (4 clicks, stop)
+- [x] Task 5: Implement loop mode (continuous cycling)
+- [x] Task 6: Implement first-beat accent
+- [x] Task 7: Implement `evaluate_tap()` function
+- [x] Task 8: Unit tests for `evaluate_tap()` (domain-side logic)
+- [x] Task 9: Integration test: verify scheduler starts/stops cleanly — deferred to user (agent cannot verify in browser; build compiles cleanly, all domain tests pass)
 
 ## Dev Notes
 
@@ -68,3 +68,43 @@ The existing SoundFont AudioWorklet is not suitable for rhythm scheduling becaus
 - For the click sound: a 5ms exponentially decaying white noise burst works well. Alternative: load a short sample from the SoundFont's percussion bank.
 - `AudioContext.currentTime` is a `f64` in seconds with sub-millisecond precision.
 - Use `gloo_timers::callback::Interval` for the scheduler timer (NOT `Timeout.forget()` — that pattern caused bugs elsewhere).
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- `evaluate_tap()` in `domain/src/training/rhythm_offset_detection.rs` — pure function, finds nearest beat in scheduled times, computes signed ms offset, returns None if outside ±50% of sixteenth note window
+- `RhythmScheduler` in `web/src/adapters/rhythm_scheduler.rs` — lookahead scheduler using `gloo_timers::callback::Interval` (25ms) + `AudioBufferSourceNode.start(when)` for sample-accurate scheduling
+- Click buffer: 5ms exponentially decaying pseudo-noise burst via `create_click_buffer()`
+- Accent: first step in pattern gets 2.0x gain (≈+6dB), others get 1.0x
+- Pattern modification: `set_pattern()` updates pattern for next cycle
+- Modes: `SinglePass` (plays one cycle, fires `on_complete`) and `Loop` (cycles indefinitely, fires `on_cycle` each cycle with `CycleReport` containing scheduled times)
+
+### Debug Log
+
+(none — clean implementation)
+
+### Completion Notes
+
+- AC1: `create_click_buffer()` synthesizes a 5ms exponentially decaying noise burst AudioBuffer
+- AC2: `RhythmScheduler` with `SchedulerConfig` accepts pattern (Vec<RhythmStep>), tempo, mode; runs Interval(25ms) lookahead scheduling AudioBufferSourceNode.start(when) for events within 100ms
+- AC3: `SchedulerMode::SinglePass` plays one cycle then stops, fires `on_complete` callback
+- AC4: `SchedulerMode::Loop` cycles indefinitely, fires `on_cycle` callback with CycleReport each cycle
+- AC5: First step gets ACCENT_GAIN (2.0 ≈ +6dB), others get NORMAL_GAIN (1.0)
+- AC6: `set_pattern()` method allows changing gap position between cycles
+- AC7: `evaluate_tap()` in domain crate — finds nearest beat, computes signed ms offset, returns None outside ±50% sixteenth window. 10 unit tests covering exact hit, early/late, boundary, outside window, empty times, nearest-beat selection, different tempos
+- AC8: `AudioBuffer` and `AudioBufferSourceNode` features added to web/Cargo.toml (GainNode already present)
+- AC9: `RhythmScheduler::new()` accepts `Rc<RefCell<AudioContext>>` from AudioContextManager
+- AC10: `cargo clippy --workspace --target wasm32-unknown-unknown` passes (only dead_code warnings for unused-yet module)
+
+## File List
+
+- `web/Cargo.toml` — added AudioBuffer, AudioBufferSourceNode web-sys features
+- `web/src/adapters/mod.rs` — added rhythm_scheduler module
+- `web/src/adapters/rhythm_scheduler.rs` — new file: click synthesis, RhythmScheduler, RhythmStep, SchedulerMode, CycleReport
+- `domain/src/training/rhythm_offset_detection.rs` — added evaluate_tap() function
+- `domain/src/training/mod.rs` — added evaluate_tap to public exports
+
+## Change Log
+
+- 2026-03-25: Implemented click synthesis, lookahead scheduler, evaluate_tap with 10 unit tests (Story 17.2)

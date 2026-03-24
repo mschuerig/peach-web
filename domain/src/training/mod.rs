@@ -4,4 +4,4 @@ pub mod rhythm_offset_detection;
 
 pub use pitch_discrimination::{CompletedPitchDiscriminationTrial, PitchDiscriminationTrial};
 pub use pitch_matching::{CompletedPitchMatchingTrial, PitchMatchingTrial};
-pub use rhythm_offset_detection::CompletedRhythmOffsetDetectionTrial;
+pub use rhythm_offset_detection::{CompletedRhythmOffsetDetectionTrial, evaluate_tap};

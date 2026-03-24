@@ -171,3 +171,4 @@ development_status:
   # Epic 17: Rhythm Offset Detection
   epic-17: in-progress
   17-1-rhythm-domain-types-and-records: done
+  17-2-click-synthesis-and-rhythm-scheduler: review
