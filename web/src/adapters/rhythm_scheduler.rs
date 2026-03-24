@@ -122,11 +122,15 @@ pub struct RhythmScheduler {
 
 impl RhythmScheduler {
     /// Create a new scheduler. Call `start()` to begin playback.
+    ///
+    /// # Panics
+    /// Panics if the pattern is empty.
     pub fn new(
         ctx: Rc<RefCell<AudioContext>>,
         click_buffer: AudioBuffer,
         config: SchedulerConfig,
     ) -> Self {
+        assert!(!config.pattern.is_empty(), "pattern must not be empty");
         let sixteenth_secs = config.tempo.sixteenth_note_duration_secs();
 
         let state = Rc::new(RefCell::new(SchedulerState {
@@ -160,8 +164,14 @@ impl RhythmScheduler {
     }
 
     /// Update the pattern for the next cycle (takes effect at the start of the next cycle).
+    ///
+    /// Resets `current_step` to 0 to prevent out-of-bounds access if the new
+    /// pattern is shorter than the old one.
     pub fn set_pattern(&self, pattern: Vec<RhythmStep>) {
-        self.state.borrow_mut().pattern = pattern;
+        assert!(!pattern.is_empty(), "pattern must not be empty");
+        let mut s = self.state.borrow_mut();
+        s.pattern = pattern;
+        s.current_step = 0;
     }
 
     /// Start the scheduler. Begins the lookahead loop.
@@ -245,13 +255,12 @@ fn schedule_ahead(
                 }
             };
 
-            // Fire cycle callback
-            {
-                let s = state.borrow();
-                if let Some(ref cb) = s.on_cycle {
-                    cb(report);
-                }
+            // Fire cycle callback (take out temporarily to avoid re-entrant borrow panic)
+            let cb = state.borrow_mut().on_cycle.take();
+            if let Some(ref f) = cb {
+                f(report);
             }
+            state.borrow_mut().on_cycle = cb;
 
             let mode = state.borrow().mode;
             match mode {

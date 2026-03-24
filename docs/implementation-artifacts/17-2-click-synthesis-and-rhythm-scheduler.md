@@ -1,6 +1,6 @@
 # Story 17.2: Click Synthesis and Rhythm Scheduler
 
-Status: review
+Status: done
 
 ## Story
 
@@ -108,3 +108,4 @@ The existing SoundFont AudioWorklet is not suitable for rhythm scheduling becaus
 ## Change Log
 
 - 2026-03-25: Implemented click synthesis, lookahead scheduler, evaluate_tap with 10 unit tests (Story 17.2)
+- 2026-03-25: Code review fixes — P1: drop borrow before on_cycle callback to prevent re-entrant panic; P2: reset current_step on set_pattern to prevent OOB; P3: assert non-empty pattern in new() and set_pattern()

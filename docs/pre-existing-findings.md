@@ -77,3 +77,11 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Location:** `domain/src/profile.rs` — `rebuild_all()`
 - **Description:** `rebuild_all` iterates only valid discipline-key combinations. Any entries in the input HashMap with keys that don't match a valid combination are silently ignored. All current callers construct keys correctly.
 - **Recommendation:** Log or `debug_assert!` if input contains unrecognized keys.
+
+### PEF-010: Suspended AudioContext causes click burst on resume
+
+- **Status:** OPEN
+- **Surfaced:** Story 17.2 code review (2026-03-25)
+- **Location:** `web/src/adapters/rhythm_scheduler.rs` — `RhythmScheduler::start()`
+- **Description:** When the `AudioContext` is in `suspended` state (common before user gesture on mobile), `currentTime` is frozen at 0. The scheduler sets `next_step_time = 0 + 0.050` and the lookahead loop schedules all pattern steps immediately since all step times fall within the lookahead window. When the context later resumes, all scheduled clicks fire at once in a burst rather than being spaced out. This is a broader AudioContextManager concern — callers should ensure the context is resumed before starting the scheduler.
+- **Recommendation:** Guard `RhythmScheduler::start()` or the calling code to verify `AudioContext.state() == "running"` before scheduling, or defer scheduling until a resume event.
