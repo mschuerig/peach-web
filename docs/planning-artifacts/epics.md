@@ -2290,6 +2290,56 @@ V3 format: 19 columns covering all 4 training types. Replaces V1 (12 columns, pi
 
 Adds rhythm chart cards to the profile screen with discipline-aware unit labels.
 
+## Epic 21: Rhythm Tap Latency & Audio Doubling
+
+Improve the "Fill the Gap" training experience by reducing tap-to-sound latency and eliminating audio doubling when user taps coincide with scheduled beats. Based on technical research in `docs/planning-artifacts/research/domain-web-audio-tap-latency-research-2026-03-25.md`.
+
+**Prerequisite:** Epic 18 (continuous rhythm matching exists)
+
+**Scope constraint:** Bluetooth keyboards/trackpads are out of scope — their 40-200ms input latency makes rhythm training unviable. Optimizations target mobile touchscreens and wired/built-in input devices.
+
+### Story 21.1: AudioContext latencyHint and Tap Click Overlap Suppression
+
+**As a** user,
+**I want** the audio engine to use minimum-latency settings and not double-play clicks when my tap coincides with a scheduled beat,
+**So that** rhythm training feels responsive and sounds clean.
+
+Two quick wins bundled in one story:
+1. Set `latencyHint: 0` (float) on `AudioContext` construction via `AudioContextOptions` — reduces audio pipeline latency by 5-20ms.
+2. Suppress the tap click when it falls within ±15ms of a non-gap scheduled beat — eliminates the "jittery doubling" artifact at slow tempos.
+
+Requires sharing `beat_times` and `gap_index` with the tap handler (via `Rc<Cell<>>`, following existing `shared_click_buffer` pattern).
+
+### Story 21.2: Tap Timestamp Bridging via getOutputTimestamp
+
+**As a** developer,
+**I want** the tap handler to convert `PointerEvent.timeStamp` to audio clock time using `getOutputTimestamp()`,
+**So that** tap offset measurement is accurate regardless of main-thread delivery delay.
+
+Currently `on_tap` reads `ctx.current_time()` at handler execution time, which is 10-30ms after the physical touch. Using `getOutputTimestamp()` bridges the DOM performance clock to the audio clock, eliminating systematic late bias.
+
+Requires manual `#[wasm_bindgen]` FFI for `getOutputTimestamp()` (not in `web_sys`). Falls back to `current_time()` when unsupported (Safari). The `on_tap` closure must be updated to accept the event timestamp.
+
+### Story 21.3: Output Latency Compensation in Tap Evaluation
+
+**As a** user,
+**I want** my tap accuracy to be evaluated relative to when I *heard* the beat, not when it was scheduled,
+**So that** my timing scores are accurate even when using external speakers or headphones.
+
+Adds `output_latency_secs: f64` parameter to `evaluate_tap()` in the domain crate. The web layer reads `AudioContext.outputLatency` (manual FFI, not in `web_sys`) and passes it in. Compensates for the delay between audio scheduling and physical sound emission — critical for users with USB audio interfaces or wired headphones with non-trivial DAC latency.
+
+Falls back to 0.0 when `outputLatency` is unsupported (Safari) or returns NaN. Domain crate remains pure (no `web_sys` dependency).
+
+### Story 21.4: Immediate Tap Click Playback with start(0)
+
+**As a** user,
+**I want** the tap click to play at the earliest possible moment,
+**So that** I get the most immediate audible feedback when I tap.
+
+Splits `play_click_at` into two variants: `play_click_immediate` (calls `source.start()` with no argument for reactive tap clicks) and `schedule_click_at` (existing `start_with_when(when)` for lookahead-scheduled beats). Avoids edge case where `currentTime` advances between the read and the `start()` call, deferring playback to the next render quantum.
+
+---
+
 ## Epic 20: Training View Refactoring
 
 Extract shared infrastructure from the four training view components to eliminate ~600 lines of duplicated code. Modeled after the iOS app's `SessionLifecycle` + observer/adapter architecture (see `peach-ios/docs/arc42.md` sections 5-8).

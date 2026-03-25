@@ -184,3 +184,15 @@ development_status:
   epic-19: done
   19-1-csv-v3-format-alignment: done
   19-2-rhythm-profile-visualization: done
+
+  # Epic 20: Training View Refactoring
+  epic-20: backlog
+  20-1-extract-shared-training-session-lifecycle: backlog
+  20-2-harden-numerical-guards-in-statistics-pipeline: backlog
+
+  # Epic 21: Rhythm Tap Latency & Audio Doubling
+  epic-21: backlog
+  21-1-audiocontext-latencyhint-and-tap-click-overlap-suppression: ready-for-dev
+  21-2-tap-timestamp-bridging-via-getoutputtimestamp: ready-for-dev
+  21-3-output-latency-compensation-in-tap-evaluation: ready-for-dev
+  21-4-immediate-tap-click-playback-with-start-0: ready-for-dev
