@@ -1,4 +1,5 @@
 pub mod audio_context;
+pub mod audio_latency;
 pub mod audio_oscillator;
 pub mod audio_soundfont;
 pub mod csv_export_import;

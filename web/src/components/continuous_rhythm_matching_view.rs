@@ -13,6 +13,7 @@ use wasm_bindgen_futures::{JsFuture, spawn_local};
 use leptos_fluent::{I18n, move_tr, tr};
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
+use crate::adapters::audio_latency::bridge_event_to_audio_time;
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::rhythm_scheduler::{
@@ -189,13 +190,14 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
     };
 
     // Tap handler — called on pointerdown for lowest latency
+    // Accepts event_timestamp_ms (PointerEvent/KeyboardEvent.timeStamp in performance.now() ms)
     let on_tap = {
         let session = Rc::clone(&session);
         let shared_ctx = Rc::clone(&shared_ctx);
         let shared_click_buffer = Rc::clone(&shared_click_buffer);
         let tap_result = Rc::clone(&tap_result);
         let cancelled = Rc::clone(&cancelled);
-        Rc::new(move || {
+        Rc::new(move |event_timestamp_ms: f64| {
             if cancelled.get() {
                 return;
             }
@@ -209,8 +211,9 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
                 None => return, // Not yet initialized
             };
 
-            // Read audio clock time at the moment of tap
-            let tap_time = ctx_rc.borrow().current_time();
+            // Bridge event timestamp to audio clock time, falling back to currentTime
+            let tap_time = bridge_event_to_audio_time(&ctx_rc, event_timestamp_ms)
+                .unwrap_or_else(|| ctx_rc.borrow().current_time());
 
             // Evaluate tap against session
             let offset = session.borrow_mut().handle_tap(tap_time);
@@ -252,7 +255,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
                 _ if has_modifier => {}
                 " " | "Enter" => {
                     ev.prevent_default();
-                    on_tap();
+                    on_tap(ev.time_stamp());
                 }
                 _ => {}
             }
@@ -607,7 +610,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
         let on_tap = Rc::clone(&on_tap);
         SendWrapper::new(move |ev: web_sys::PointerEvent| {
             ev.prevent_default();
-            on_tap();
+            on_tap(ev.time_stamp());
         })
     };
 

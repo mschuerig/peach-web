@@ -1,6 +1,6 @@
 # Story 21.2: Tap Timestamp Bridging via getOutputTimestamp
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -42,12 +42,12 @@ This recovers the audio-clock-equivalent time of the physical touch.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `web/src/adapters/audio_latency.rs` module with `#[wasm_bindgen]` FFI for `getOutputTimestamp()` and the `bridge_event_to_audio_time()` function
-- [ ] Task 2: Update `on_tap` closure in `continuous_rhythm_matching_view.rs` to accept an `event_timestamp_ms: f64` parameter
-- [ ] Task 3: Update `pointerdown` handler to pass `event.time_stamp()` to `on_tap`
-- [ ] Task 4: Update keyboard handler to pass `event.time_stamp()` to `on_tap`
-- [ ] Task 5: Pass bridged tap time to `session.handle_tap()` instead of raw `current_time()`
-- [ ] Task 6: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `trunk build`
+- [x] Task 1: Create `web/src/adapters/audio_latency.rs` module with `#[wasm_bindgen]` FFI for `getOutputTimestamp()` and the `bridge_event_to_audio_time()` function
+- [x] Task 2: Update `on_tap` closure in `continuous_rhythm_matching_view.rs` to accept an `event_timestamp_ms: f64` parameter
+- [x] Task 3: Update `pointerdown` handler to pass `event.time_stamp()` to `on_tap`
+- [x] Task 4: Update keyboard handler to pass `event.time_stamp()` to `on_tap`
+- [x] Task 5: Pass bridged tap time to `session.handle_tap()` instead of raw `current_time()`
+- [x] Task 6: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `trunk build`
 
 ## Dev Notes
 
@@ -57,3 +57,34 @@ This recovers the audio-clock-equivalent time of the physical touch.
 - Browser support: Chrome 57+, Firefox 70+. Not available in Safari. Feature-detect by checking if `contextTime` is present and non-zero.
 - The bridge math: `audio_time = contextTime + (eventTimestamp - performanceTime) / 1000.0` — note the ms→seconds conversion
 - Consider also applying this bridge in the rhythm offset detection view (`rhythm_offset_detection_view.rs`) for consistency
+
+## Dev Agent Record
+
+### Implementation Plan
+
+Used `js_sys::Reflect::get` to dynamically call `getOutputTimestamp()` on the AudioContext (not available in web-sys). This approach mirrors the existing pattern in `audio_context.rs` for reading `baseLatency`. Feature detection checks that the method exists and is a function, and that returned `contextTime`/`performanceTime` are positive. Falls back to `ctx.current_time()` when unavailable (Safari).
+
+The `rhythm_offset_detection_view.rs` was reviewed but does not use tap timing measurement — it uses early/late answer buttons, so the bridge is not applicable there.
+
+### Debug Log
+
+No issues encountered.
+
+### Completion Notes
+
+- Created `web/src/adapters/audio_latency.rs` with `bridge_event_to_audio_time()` function
+- Changed `on_tap` closure from `Rc<dyn Fn()>` to `Rc<dyn Fn(f64)>` accepting event timestamp
+- Pointerdown handler passes `ev.time_stamp()` to `on_tap`
+- Keyboard handler passes `ev.time_stamp()` to `on_tap`
+- Bridge result feeds into `session.handle_tap()`, with `current_time()` fallback
+- All validations pass: `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain` (480 tests), `trunk build`
+
+## File List
+
+- `web/src/adapters/audio_latency.rs` (new) — FFI bridge function
+- `web/src/adapters/mod.rs` (modified) — added `audio_latency` module export
+- `web/src/components/continuous_rhythm_matching_view.rs` (modified) — updated on_tap signature, pointerdown/keyboard handlers
+
+## Change Log
+
+- 2026-03-26: Implemented tap timestamp bridging via getOutputTimestamp() (Story 21.2)
