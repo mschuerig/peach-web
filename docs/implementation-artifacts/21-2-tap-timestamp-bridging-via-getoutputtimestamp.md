@@ -1,6 +1,6 @@
 # Story 21.2: Tap Timestamp Bridging via getOutputTimestamp
 
-Status: review
+Status: done
 
 ## Story
 

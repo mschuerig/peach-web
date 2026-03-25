@@ -22,7 +22,7 @@ pub fn bridge_event_to_audio_time(
         .ok()
         .filter(|v| v.is_function())?;
 
-    let func: &js_sys::Function = ots.unchecked_ref();
+    let func: &js_sys::Function = ots.dyn_ref()?;
     let result = func.call0(ctx_ref.as_ref()).ok()?;
 
     let context_time = js_sys::Reflect::get(&result, &JsValue::from_str("contextTime"))
@@ -42,11 +42,10 @@ pub fn bridge_event_to_audio_time(
     // Bridge: convert event timestamp from performance.now() ms to audio seconds
     let audio_time = context_time + (event_timestamp_ms - performance_time) / 1000.0;
 
-    Some(audio_time)
-}
+    // Reject nonsensical results (e.g. synthetic events with zero timestamp)
+    if audio_time <= 0.0 {
+        return None;
+    }
 
-#[cfg(test)]
-mod tests {
-    // Bridge function requires a real AudioContext (browser-only).
-    // Unit testing is not feasible for WASM FFI; validated via trunk build + manual test.
+    Some(audio_time)
 }
