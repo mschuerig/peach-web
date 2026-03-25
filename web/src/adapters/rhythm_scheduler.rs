@@ -18,6 +18,7 @@ pub enum SchedulerMode {
     /// Play exactly one cycle of the pattern, then stop.
     SinglePass,
     /// Loop the pattern indefinitely until stopped.
+    #[allow(dead_code)]
     Loop,
 }
 
@@ -27,19 +28,6 @@ pub struct SchedulerConfig {
     pub tempo: TempoBPM,
     pub mode: SchedulerMode,
 }
-
-/// Reports from the scheduler about scheduled click times.
-#[derive(Clone, Debug)]
-pub struct CycleReport {
-    /// Scheduled audio-clock times (seconds) for each Play step in the cycle.
-    pub scheduled_times: Vec<f64>,
-}
-
-/// Callback type for cycle completion reports.
-type CycleCallback = Box<dyn Fn(CycleReport)>;
-
-/// Callback type for when single-pass mode completes.
-type CompletionCallback = Box<dyn FnOnce()>;
 
 /// Lookahead interval in milliseconds (how often the scheduling loop runs).
 const SCHEDULE_INTERVAL_MS: u32 = 25;
@@ -104,8 +92,6 @@ struct SchedulerState {
     mode: SchedulerMode,
     sixteenth_secs: f64,
     cycle_times: Vec<f64>,
-    on_cycle: Option<CycleCallback>,
-    on_complete: Option<CompletionCallback>,
     stopped: bool,
 }
 
@@ -140,8 +126,6 @@ impl RhythmScheduler {
             mode: config.mode,
             sixteenth_secs,
             cycle_times: Vec::new(),
-            on_cycle: None,
-            on_complete: None,
             stopped: false,
         }));
 
@@ -151,27 +135,6 @@ impl RhythmScheduler {
             click_buffer,
             _interval: None,
         }
-    }
-
-    /// Set a callback invoked after each complete cycle with the scheduled times.
-    pub fn on_cycle(&mut self, callback: impl Fn(CycleReport) + 'static) {
-        self.state.borrow_mut().on_cycle = Some(Box::new(callback));
-    }
-
-    /// Set a callback invoked when single-pass mode completes.
-    pub fn on_complete(&mut self, callback: impl FnOnce() + 'static) {
-        self.state.borrow_mut().on_complete = Some(Box::new(callback));
-    }
-
-    /// Update the pattern for the next cycle (takes effect at the start of the next cycle).
-    ///
-    /// Resets `current_step` to 0 to prevent out-of-bounds access if the new
-    /// pattern is shorter than the old one.
-    pub fn set_pattern(&self, pattern: Vec<RhythmStep>) {
-        assert!(!pattern.is_empty(), "pattern must not be empty");
-        let mut s = self.state.borrow_mut();
-        s.pattern = pattern;
-        s.current_step = 0;
     }
 
     /// Start the scheduler. Begins the lookahead loop.
@@ -194,12 +157,6 @@ impl RhythmScheduler {
         });
 
         self._interval = Some(interval);
-    }
-
-    /// Stop the scheduler immediately.
-    pub fn stop(&mut self) {
-        self._interval = None; // dropping Interval cancels it
-        self.state.borrow_mut().stopped = true;
     }
 }
 
@@ -248,30 +205,10 @@ fn schedule_ahead(
 
         if next_step >= pattern_len {
             // End of cycle
-            let report = {
-                let s = state.borrow();
-                CycleReport {
-                    scheduled_times: s.cycle_times.clone(),
-                }
-            };
-
-            // Fire cycle callback (take out temporarily to avoid re-entrant borrow panic)
-            let cb = state.borrow_mut().on_cycle.take();
-            if let Some(ref f) = cb {
-                f(report);
-            }
-            state.borrow_mut().on_cycle = cb;
-
             let mode = state.borrow().mode;
             match mode {
                 SchedulerMode::SinglePass => {
-                    let mut s = state.borrow_mut();
-                    s.stopped = true;
-                    let cb = s.on_complete.take();
-                    drop(s);
-                    if let Some(cb) = cb {
-                        cb();
-                    }
+                    state.borrow_mut().stopped = true;
                     return;
                 }
                 SchedulerMode::Loop => {
