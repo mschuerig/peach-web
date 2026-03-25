@@ -881,8 +881,8 @@ pub fn SettingsView() -> impl IntoView {
                                     };
                                     match result {
                                         Ok(r) => {
-                                            let imported = r.discrimination_imported + r.pitch_matching_imported;
-                                            let skipped = r.discrimination_skipped + r.pitch_matching_skipped;
+                                            let imported = r.discrimination_imported + r.pitch_matching_imported + r.rhythm_offset_imported + r.continuous_rhythm_imported;
+                                            let skipped = r.discrimination_skipped + r.pitch_matching_skipped + r.rhythm_offset_skipped + r.continuous_rhythm_skipped;
                                             let msg = msg_records_merged_tpl
                                                 .replace(PH1, &imported.to_string())
                                                 .replace(PH2, &skipped.to_string());
