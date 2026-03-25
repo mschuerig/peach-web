@@ -2289,3 +2289,27 @@ V3 format: 19 columns covering all 4 training types. Replaces V1 (12 columns, pi
 **So that** I can track improvement across tempos and directions.
 
 Adds rhythm chart cards to the profile screen with discipline-aware unit labels.
+
+## Epic 20: Training View Refactoring
+
+Extract shared infrastructure from the four training view components to eliminate ~600 lines of duplicated code. Modeled after the iOS app's `SessionLifecycle` + observer/adapter architecture (see `peach-ios/docs/arc42.md` sections 5-8).
+
+**Motivation:** Adversarial codebase review (2025-03-25) identified ARV-001/ARV-002 as highest-impact findings — each training view is a 700-854 line monolith that copy-pastes AudioContext state handlers, visibility-change handlers, error auto-dismiss Effects, help-modal coordination, and cancellation/termination flag logic. A bug fix in one view must be manually replicated in three others.
+
+**Prerequisite:** Epics 17-18 (all four training views exist)
+
+### Story 20.1: Extract Shared Training Session Lifecycle
+
+**As a** developer,
+**I want** shared training lifecycle infrastructure extracted from the four training views,
+**So that** cross-cutting behavior (audio interruption, visibility changes, error handling, cleanup) is defined once and reused.
+
+Extracts a `training_common` module with: `SessionLifecycle` (cancellation/termination flags, AudioContext state handler, visibility-change handler, navigation cleanup), error auto-dismiss Effect factory, and help-modal pause coordination. Each training view delegates to shared utilities instead of reimplementing them.
+
+### Story 20.2: Harden Numerical Guards in Statistics Pipeline
+
+**As a** user,
+**I want** the statistics engine to gracefully reject invalid float values at runtime,
+**So that** a single poisoned measurement (NaN, infinity, negative) cannot silently corrupt my training profile.
+
+Promotes `debug_assert!` in `WelfordAccumulator::update()` to a silent early-return guard; changes `MetricPoint::new()` to return `Option<Self>`. Updates all callers.
