@@ -74,6 +74,7 @@ jobs:
           HASH=$(sha256sum dist/*_bg.wasm | head -1 | cut -c1-16)
           if [ -z "$HASH" ]; then echo "::error::No *_bg.wasm found in dist/" && exit 1; fi
           sed -i "s/const CACHE_VERSION = 'peach-v1'/const CACHE_VERSION = 'peach-${HASH}'/" dist/sw.js
+          grep -q "peach-${HASH}" dist/sw.js || { echo "::error::Service worker cache version injection failed — sw.js may have been reformatted"; exit 1; }
           echo "Injected cache version: peach-${HASH}"
 
       - name: Upload Pages artifact
