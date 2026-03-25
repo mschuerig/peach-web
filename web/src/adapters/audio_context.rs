@@ -37,22 +37,24 @@ impl AudioContextManager {
         let opts = AudioContextOptions::new();
         opts.set_latency_hint(&wasm_bindgen::JsValue::from(0.0));
         let ctx = AudioContext::new_with_context_options(&opts)
+            .or_else(|_| AudioContext::new())
             .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
 
         // baseLatency is not exposed by web-sys; read via JS interop
-        let base_latency: f64 = js_sys::Reflect::get(
+        let base_latency_str = js_sys::Reflect::get(
             ctx.as_ref(),
             &wasm_bindgen::JsValue::from_str("baseLatency"),
         )
         .ok()
         .and_then(|v| v.as_f64())
-        .unwrap_or(f64::NAN);
+        .map(|v| format!("{:.4}s", v))
+        .unwrap_or_else(|| "unavailable".to_string());
 
         log::debug!(
-            "[DIAG] AudioContext created — state: {:?}, sampleRate: {}, baseLatency: {:.4}s",
+            "[DIAG] AudioContext created — state: {:?}, sampleRate: {}, baseLatency: {}",
             ctx.state(),
             ctx.sample_rate(),
-            base_latency
+            base_latency_str
         );
 
         let shared = Rc::new(RefCell::new(ctx));

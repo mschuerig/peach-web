@@ -192,7 +192,7 @@ development_status:
 
   # Epic 21: Rhythm Tap Latency & Audio Doubling
   epic-21: in-progress
-  21-1-audiocontext-latencyhint-and-tap-click-overlap-suppression: review
+  21-1-audiocontext-latencyhint-and-tap-click-overlap-suppression: done
   21-2-tap-timestamp-bridging-via-getoutputtimestamp: ready-for-dev
   21-3-output-latency-compensation-in-tap-evaluation: ready-for-dev
   21-4-immediate-tap-click-playback-with-start-0: ready-for-dev
