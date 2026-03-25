@@ -123,7 +123,7 @@ development_status:
   epic-9-retrospective: optional
 
   # Epic 10: CI/CD Pipeline & GitHub Pages Deployment
-  epic-10: in-progress
+  epic-10: done
   10-1-ci-quality-gate: done
   10-2-build-and-deploy-to-github-pages: done
   epic-10-retrospective: optional
@@ -149,38 +149,38 @@ development_status:
   epic-13-retrospective: optional
 
   # Epic 14: iOS Terminology Alignment
-  epic-14: in-progress
+  epic-14: done
   14-1-domain-terminology-rename: done
   14-2-web-terminology-rename: done
   14-3-update-living-docs: done
 
   # Epic 15: Rhythm Discipline Foundation
-  epic-15: in-progress
+  epic-15: done
   15-1-rhythm-discipline-enum-and-domain-types: done
   15-2-start-screen-three-section-layout: done
   15-3-placeholder-rhythm-screens: done
   15-4-rhythm-settings: done
 
   # Epic 16: Statistics Generalization
-  epic-16: in-progress
+  epic-16: done
   16-1-generalize-statistics-from-cents-to-f64: done
   16-2-statistics-key-and-profile-redesign: done
   16-3-decouple-observers-with-port-traits: done
   16-4-generalize-store-and-hydration: done
 
   # Epic 17: Rhythm Offset Detection
-  epic-17: in-progress
+  epic-17: done
   17-1-rhythm-domain-types-and-records: done
   17-2-click-synthesis-and-rhythm-scheduler: done
   17-3-rhythm-offset-detection-session: done
   17-4-rhythm-offset-detection-screen: done
 
   # Epic 18: Continuous Rhythm Matching
-  epic-18: in-progress
+  epic-18: done
   18-1-continuous-rhythm-matching-session: done
   18-2-continuous-rhythm-matching-screen: done
 
   # Epic 19: CSV V3 & Data Portability
-  epic-19: in-progress
+  epic-19: done
   19-1-csv-v3-format-alignment: done
   19-2-rhythm-profile-visualization: done

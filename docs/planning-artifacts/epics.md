@@ -270,6 +270,30 @@ Automated quality checks (fmt, clippy, tests) and deployment to GitHub Pages on 
 ### Epic 11: UI Polish & Sound Level
 Visual polish to match iOS app: audio volume alignment, consistent headline layouts with true title centering, modal behavior standardization, and icon consistency across all pages.
 
+### Epic 12: Profile Progress Charts
+Users can see their training progress over time, with a chart card for each active training mode showing trend lines, variability bands, session dots, baselines, scrollable history, and a headline with EWMA value and trend indicator.
+
+### Epic 13: Chart Exploration & Help
+Tap/click annotations on chart data points with date, mean, stddev, and record count. Help overlay explaining chart elements (trend line, variability band, target baseline, time zones).
+
+### Epic 14: iOS Terminology Alignment
+Rename domain types and web crate terminology to match iOS/psychoacoustic standards: `TrainingMode` → `TrainingDiscipline`, `PitchComparison` → `PitchDiscriminationTrial`, settings drop "Training" suffix. Cascade through living documentation.
+
+### Epic 15: Rhythm Discipline Foundation
+Extend `TrainingDiscipline` with rhythm cases, add rhythm sections to start screen, placeholder rhythm training screens, and rhythm settings (tempo, gap positions).
+
+### Epic 16: Statistics Generalization
+Generalize statistics from cents to f64, introduce `StatisticsKey` for multi-key expansion (tempo range x direction), decouple observers with generic port traits, and generalize IndexedDB store and hydration.
+
+### Epic 17: Rhythm Offset Detection
+Rhythm domain types and records, click synthesis with lookahead scheduler, rhythm offset detection session state machine, and full training screen UI with visual metronome.
+
+### Epic 18: Continuous Rhythm Matching
+Session state machine and step sequencer for continuous rhythm matching ("Fill the Gap"), plus full training screen UI with looping beat and tap interaction.
+
+### Epic 19: CSV V3 & Data Portability
+CSV export/import using V3 format compatible with the iOS app (19 columns, all 4 training types). Rhythm profile visualization on the profile screen.
+
 ## Epic 1: Core Comparison Training
 
 User can open Peach, click "Comparison," hear two notes via oscillator, answer higher/lower via click or keyboard, see feedback, and keep training. Data persists across sessions. The adaptive algorithm targets weak spots from the start.
@@ -2105,3 +2129,163 @@ Key changes: component file/function renames (`PitchComparisonView` → `PitchDi
 **So that** planning and architecture docs remain accurate and useful for AI agents and contributors.
 
 Updates architecture.md, prd.md, ux-design-specification.md, arc42-architecture.md, project-context.md, epics.md, and sprint-status.yaml. Historical docs (completed story files, domain blueprint) are NOT updated.
+
+---
+
+## Epic 15: Rhythm Discipline Foundation
+
+Extend `TrainingDiscipline` with two rhythm cases (Rhythm Offset Detection, Continuous Rhythm Matching), add a three-section layout to the start screen, placeholder rhythm training screens, and rhythm settings (tempo BPM, gap step positions).
+
+**Prerequisite:** Epic 14 (terminology rename complete)
+
+### Story 15.1: Rhythm Discipline Enum Cases and Domain Types
+
+**As a** developer,
+**I want** the `TrainingDiscipline` enum extended with rhythm cases and basic rhythm domain types added,
+**So that** the start screen and routing infrastructure can reference rhythm disciplines.
+
+Adds `RhythmOffsetDetection` and `ContinuousRhythmMatching` variants to `TrainingDiscipline`, plus `TempoBPM` and `StepPosition` domain types.
+
+### Story 15.2: Start Screen Three-Section Layout with Rhythm Routes
+
+**As a** user,
+**I want** to see rhythm training options on the start screen alongside pitch training,
+**So that** I can navigate to rhythm training as soon as it becomes available.
+
+Three sections of 2 buttons each matching the iOS layout, with routes for all 6 training disciplines.
+
+### Story 15.3: Placeholder Rhythm Training Screens
+
+**As a** user,
+**I want** to see informative placeholder screens when navigating to rhythm training,
+**So that** I know the features are coming and can test the navigation flow.
+
+Two placeholder screens with NavBar, title, and description — later replaced by full training UIs.
+
+### Story 15.4: Rhythm Settings
+
+**As a** user,
+**I want** to configure rhythm training parameters in the settings screen,
+**So that** I can adjust tempo and gap positions before rhythm training is fully implemented.
+
+Adds a "Rhythm" section to settings with tempo BPM slider and gap step position selection.
+
+---
+
+## Epic 16: Statistics Generalization
+
+Refactor the statistics and storage architecture so that adding new training disciplines (rhythm) doesn't require new observer traits, store methods, or hydration loops. Generalizes statistics from cents to f64, introduces `StatisticsKey` for multi-key expansion, decouples observers with generic port traits, and generalizes the IndexedDB store.
+
+**Prerequisite:** Epic 15 (rhythm types exist)
+
+### Story 16.1: Generalize TrainingDisciplineStatistics from Cents to f64
+
+**As a** developer,
+**I want** statistics tracking to work with any f64 metric value (not just Cents),
+**So that** rhythm disciplines can use percentage-of-sixteenth-note as their metric unit.
+
+Replaces `Cents` with `f64` in the statistics engine. `WelfordAccumulator` is already generic; needs `MetricPoint<f64>` instead of `MetricPoint<Cents>`.
+
+### Story 16.2: StatisticsKey and Profile Redesign
+
+**As a** developer,
+**I want** the perceptual profile to use typed `StatisticsKey`s instead of `TrainingDiscipline` as map keys,
+**So that** rhythm disciplines can expand to multiple keys (per tempo range x direction) while pitch disciplines keep 1:1 key mapping.
+
+### Story 16.3: Decouple Observers with Port Traits
+
+**As a** developer,
+**I want** discipline-specific observer traits replaced with generic port traits,
+**So that** adding a new discipline doesn't require new observer traits, bridge classes, or profile/store changes.
+
+Two generic port traits that all disciplines use, replacing per-discipline observers.
+
+### Story 16.4: Generalize IndexedDB Store and Hydration
+
+**As a** developer,
+**I want** the IndexedDB store to use a generic record interface and the hydration pipeline to be discipline-driven,
+**So that** adding a rhythm discipline doesn't require new store methods or hydration loops.
+
+---
+
+## Epic 17: Rhythm Offset Detection
+
+Full implementation of the rhythm offset detection training mode: domain types and records, click synthesis with a Web Audio lookahead scheduler, session state machine, and training screen UI with visual metronome.
+
+**Prerequisite:** Epic 16 (architecture refactoring complete)
+
+### Story 17.1: Rhythm Domain Types, Records, and Observer Ports
+
+**As a** developer,
+**I want** rhythm-specific domain types, record structs, and trial types defined,
+**So that** the rhythm offset detection session can be implemented.
+
+Adds rhythm-specific domain types mirroring the iOS domain model.
+
+### Story 17.2: Click Synthesis and Rhythm Scheduler
+
+**As a** developer,
+**I want** a Web Audio lookahead scheduler that plays percussion clicks with sample-accurate timing,
+**So that** rhythm training sessions can present precisely timed audio patterns.
+
+Uses the "two clocks" pattern: main-thread timer looks ahead ~100ms and schedules `AudioBufferSourceNode.start(when)` calls on the audio clock.
+
+### Story 17.3: Rhythm Offset Detection Session State Machine
+
+**As a** developer,
+**I want** a session state machine for rhythm offset detection training,
+**So that** the exercise flow (play pattern → await answer → show feedback → repeat) is managed cleanly.
+
+### Story 17.4: Rhythm Offset Detection Screen UI
+
+**As a** user,
+**I want** to practice rhythm offset detection with a visual metronome, Early/Late buttons, and feedback display,
+**So that** I can train my ability to detect timing deviations.
+
+Replaces the placeholder screen from story 15.3 with the full training UI.
+
+---
+
+## Epic 18: Continuous Rhythm Matching
+
+Full implementation of the continuous rhythm matching ("Fill the Gap") training mode: session state machine with step sequencer, and training screen UI with looping beat and tap interaction.
+
+**Prerequisite:** Story 17.2 (rhythm scheduler with loop mode)
+
+### Story 18.1: Continuous Rhythm Matching Session and Step Sequencer
+
+**As a** developer,
+**I want** a session state machine and step sequencer for continuous rhythm matching,
+**So that** the exercise loop (play pattern with gap → user taps to fill → aggregate → repeat) is managed cleanly.
+
+### Story 18.2: Continuous Rhythm Matching Screen UI
+
+**As a** user,
+**I want** to practice continuous rhythm matching with a looping beat, a tap button, and timing feedback,
+**So that** I can train my ability to maintain steady rhythm and fill gaps accurately.
+
+Replaces the placeholder screen from story 15.3 with the full "Fill the Gap" training UI.
+
+---
+
+## Epic 19: CSV V3 & Data Portability
+
+CSV export/import using the V3 format compatible with the iOS app (19 columns covering all 4 training types), plus rhythm profile visualization on the profile screen.
+
+**Prerequisite:** Epics 17-18 (all rhythm record types exist)
+
+### Story 19.1: CSV V3 Format Alignment
+
+**As a** user,
+**I want** CSV export/import to use the V3 format compatible with the iOS app,
+**So that** I can transfer all training data (pitch and rhythm) between platforms.
+
+V3 format: 19 columns covering all 4 training types. Replaces V1 (12 columns, pitch only).
+
+### Story 19.2: Rhythm Profile Visualization
+
+**As a** user,
+**I want** to see my rhythm training progress on the profile screen,
+**So that** I can track improvement across tempos and directions.
+
+Adds rhythm chart cards to the profile screen with discipline-aware unit labels.
