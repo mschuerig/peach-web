@@ -1,6 +1,6 @@
 # Story 17.4: Rhythm Offset Detection Screen UI
 
-Status: review
+Status: done
 
 ## Story
 
@@ -113,3 +113,4 @@ No issues encountered during implementation.
 ## Change Log
 
 - 2026-03-25: Implemented full rhythm offset detection training screen UI (Story 17.4)
+- 2026-03-25: Fix review findings — abort trial on offset click failure, use difficulty-pct locale key in view, add difficulty % to screen reader announcement. Cataloged D1 (unscoped spawn_local in AudioContext resume) as PEF-011.

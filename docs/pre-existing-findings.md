@@ -78,6 +78,14 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Description:** `rebuild_all` iterates only valid discipline-key combinations. Any entries in the input HashMap with keys that don't match a valid combination are silently ignored. All current callers construct keys correctly.
 - **Recommendation:** Log or `debug_assert!` if input contains unrecognized keys.
 
+### PEF-011: AudioContext resume recovery uses unscoped spawn_local
+
+- **Status:** OPEN
+- **Surfaced:** Story 17.4 code review (2026-03-25)
+- **Location:** `web/src/components/rhythm_offset_detection_view.rs` — audiocontext state change handler, `web/src/components/pitch_discrimination_view.rs` — same pattern
+- **Description:** The `onstatechange` handler for AudioContext `Suspended` state spawns an unscoped `spawn_local` to attempt `resume()` and check recovery. This task is not tied to the component's lifecycle and can fire after the component is fully disposed, potentially calling `navigate()` and signal setters on disposed signals. The `interrupted` guard inside the closure mitigates most cases, but the spawned future itself persists. Shared pattern across both training views.
+- **Recommendation:** Replace with `spawn_local_scoped_with_cancellation` if possible within a `Closure` context, or add a `terminated` guard inside the spawned future.
+
 ### PEF-010: Suspended AudioContext causes click burst on resume
 
 - **Status:** OPEN

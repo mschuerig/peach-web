@@ -126,11 +126,17 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
             buttons_enabled.set(s.state() == RhythmOffsetDetectionSessionState::AwaitingAnswer);
             difficulty_pct_signal.set(s.last_difficulty_pct());
             if s.show_feedback() {
-                sr_announcement.set(if s.is_last_answer_correct() {
+                let result_text = if s.is_last_answer_correct() {
                     i18n.tr("correct")
                 } else {
                     i18n.tr("incorrect")
-                });
+                };
+                let announcement = if let Some(pct) = s.last_difficulty_pct() {
+                    format!("{result_text} — {pct:.0}%")
+                } else {
+                    result_text
+                };
+                sr_announcement.set(announcement);
             } else {
                 sr_announcement.set(String::new());
             }
@@ -487,6 +493,9 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
                         play_click_at(&ctx_rc, &click_buffer, beat_times[2], NORMAL_GAIN)
                     {
                         log::error!("Offset click failed: {e}");
+                        audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
+                        drop(scheduler);
+                        break 'training;
                     }
 
                     // Animate dots based on precomputed beat times
@@ -651,7 +660,7 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
                             } else {
                                 view! { <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500 dark:bg-red-600 text-white font-bold text-lg">{"\u{2718}"}</span> }.into_any()
                             };
-                            let pct_text = difficulty_pct_signal.get().map(|pct| format!("{:.0}%", pct)).unwrap_or_default();
+                            let pct_text = difficulty_pct_signal.get().map(|pct| tr!("difficulty-pct", {"value" => format!("{:.0}", pct)})).unwrap_or_default();
                             view! {
                                 <div class="flex items-center gap-2">
                                     {icon}
