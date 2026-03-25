@@ -205,7 +205,16 @@ impl PerceptualProfile {
     // --- Batch operations ---
 
     /// Rebuild from pre-sorted metric points keyed by StatisticsKey.
+    ///
+    /// # Panics
+    /// Debug-panics if `points` contains keys not matching any valid
+    /// discipline/variant combination (indicates a caller bug).
     pub fn rebuild_all(&mut self, points: HashMap<StatisticsKey, Vec<MetricPoint>>) {
+        debug_assert!(
+            points.keys().all(|k| self.entries.contains_key(k)),
+            "rebuild_all called with unrecognized StatisticsKey(s)"
+        );
+
         for discipline in TrainingDiscipline::ALL {
             for key in discipline.statistics_keys() {
                 let stats = self.entries.get_mut(&key).expect("all keys initialized");
