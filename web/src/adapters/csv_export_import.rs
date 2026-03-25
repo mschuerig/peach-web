@@ -178,6 +178,8 @@ fn trigger_download(content: &str, filename: &str) -> Result<(), String> {
     a.set_download(filename);
     a.click();
 
+    let _ = Url::revoke_object_url(&url);
+
     Ok(())
 }
 
