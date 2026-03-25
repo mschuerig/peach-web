@@ -1,5 +1,6 @@
 pub mod pitch_discrimination_session;
 pub mod pitch_matching_session;
+pub mod rhythm_offset_detection_session;
 
 pub use pitch_discrimination_session::{
     AMPLITUDE_VARY_SCALING, FEEDBACK_DURATION_SECS, PitchDiscriminationPlaybackData,
@@ -8,4 +9,8 @@ pub use pitch_discrimination_session::{
 pub use pitch_matching_session::{
     INITIAL_OFFSET_RANGE, PITCH_MATCHING_VELOCITY, PITCH_SLIDER_CENTS_RANGE,
     PitchMatchingPlaybackData, PitchMatchingSession, PitchMatchingSessionState,
+};
+pub use rhythm_offset_detection_session::{
+    AdaptiveRhythmOffsetStrategy, RHYTHM_FEEDBACK_DURATION_SECS, RhythmOffsetDetectionSession,
+    RhythmOffsetDetectionSessionState, RhythmOffsetDetectionTrialParams,
 };

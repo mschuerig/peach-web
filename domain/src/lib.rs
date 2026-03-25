@@ -29,9 +29,11 @@ pub use records::{
     TrainingRecord,
 };
 pub use session::{
-    FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY, PitchDiscriminationPlaybackData,
-    PitchDiscriminationSession, PitchDiscriminationSessionState, PitchMatchingPlaybackData,
-    PitchMatchingSession, PitchMatchingSessionState,
+    AdaptiveRhythmOffsetStrategy, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
+    PitchDiscriminationPlaybackData, PitchDiscriminationSession, PitchDiscriminationSessionState,
+    PitchMatchingPlaybackData, PitchMatchingSession, PitchMatchingSessionState,
+    RHYTHM_FEEDBACK_DURATION_SECS, RhythmOffsetDetectionSession, RhythmOffsetDetectionSessionState,
+    RhythmOffsetDetectionTrialParams,
 };
 pub use statistics_key::StatisticsKey;
 pub use strategy::{TrainingSettings, kazez_narrow, kazez_widen, next_pitch_discrimination_trial};

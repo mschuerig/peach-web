@@ -1,6 +1,6 @@
 # Story 17.3: Rhythm Offset Detection Session State Machine
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -55,13 +55,13 @@ The rhythm offset detection exercise:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define `RhythmOffsetDetectionSessionState` enum
-- [ ] Task 2: Implement adaptive strategy (per-direction difficulty tracking)
-- [ ] Task 3: Implement `RhythmOffsetDetectionSession` struct with state transitions
-- [ ] Task 4: Wire port trait calls in `submit_answer`
-- [ ] Task 5: Unit tests for adaptive strategy
-- [ ] Task 6: Unit tests for session state transitions
-- [ ] Task 7: `cargo test -p domain` passes
+- [x] Task 1: Define `RhythmOffsetDetectionSessionState` enum
+- [x] Task 2: Implement adaptive strategy (per-direction difficulty tracking)
+- [x] Task 3: Implement `RhythmOffsetDetectionSession` struct with state transitions
+- [x] Task 4: Wire port trait calls in `submit_answer`
+- [x] Task 5: Unit tests for adaptive strategy
+- [x] Task 6: Unit tests for session state transitions
+- [x] Task 7: `cargo test -p domain` passes
 
 ## Dev Notes
 
@@ -69,3 +69,36 @@ The rhythm offset detection exercise:
 - The adaptive strategy can be a simple struct with `early_difficulty_pct: f64` and `late_difficulty_pct: f64`, narrowing by a fixed factor (e.g., ×0.85 on correct, ×1.2 on incorrect), clamped to [min_pct, max_pct]
 - The 3rd note is the offset one (not 4th) per iOS Epic 56 refinement — "user has reference clicks on both sides"
 - Pattern for the scheduler: `[Play, Play, OffsetPlay, Play]` where `OffsetPlay` is scheduled at `beat_time + offset_ms`
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Followed existing session pattern from `PitchDiscriminationSession`
+- `AdaptiveRhythmOffsetStrategy` tracks independent `early_difficulty_pct` / `late_difficulty_pct`
+- Narrowing factor ×0.85 on correct, widening factor ×1.2 on incorrect, clamped to [1%, 20%]
+- Session uses generic port traits (`ProfileUpdating`, `TrainingRecordPersisting`, `ProgressTimelineUpdating`)
+- `StatisticsKey::Rhythm(RhythmOffsetDetection, tempo_range, direction)` used for profile updates
+- `RhythmOffsetDetectionTrialParams` struct exposes trial data to web layer
+
+### Debug Log
+
+No issues encountered during implementation.
+
+### Completion Notes
+
+- Implemented `RhythmOffsetDetectionSessionState` enum with 4 states: Idle, Playing, AwaitingAnswer, ShowingFeedback
+- Implemented `AdaptiveRhythmOffsetStrategy` with per-direction difficulty tracking
+- Implemented `RhythmOffsetDetectionSession` with full state machine and port trait integration
+- 31 unit tests covering: adaptive strategy (10 tests), session state transitions (13 tests), port call verification (2 tests), invalid state transitions (4 tests), trial parameter generation (2 tests)
+- All 439 domain tests pass, clippy clean, cargo fmt applied
+
+## File List
+
+- `domain/src/session/rhythm_offset_detection_session.rs` (new) — Session state machine, adaptive strategy, and tests
+- `domain/src/session/mod.rs` (modified) — Added module declaration and re-exports
+- `domain/src/lib.rs` (modified) — Added public re-exports for new types
+
+## Change Log
+
+- 2026-03-25: Implemented rhythm offset detection session state machine with adaptive per-direction difficulty strategy (Story 17.3)
