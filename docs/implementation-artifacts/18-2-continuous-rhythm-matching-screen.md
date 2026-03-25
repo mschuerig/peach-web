@@ -1,6 +1,6 @@
 # Story 18.2: Continuous Rhythm Matching Screen UI
 
-Status: draft
+Status: done
 
 ## Story
 
@@ -56,17 +56,17 @@ This story replaces the placeholder screen from story 15.3 with the full "Fill t
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Replace placeholder with full component structure
-- [ ] Task 2: Implement cycling dot visualization
-- [ ] Task 3: Implement tap button with `pointerdown` handler
-- [ ] Task 4: Implement tap audio feedback (play click on tap)
-- [ ] Task 5: Implement timing feedback display
-- [ ] Task 6: Implement trial completion indicator
-- [ ] Task 7: Wire session + scheduler (loop mode) + port traits
-- [ ] Task 8: Handle navigation away (stop sequencer, discard incomplete trial)
-- [ ] Task 9: Localization strings
-- [ ] Task 10: Accessibility pass
-- [ ] Task 11: End-to-end smoke test
+- [x] Task 1: Replace placeholder with full component structure
+- [x] Task 2: Implement cycling dot visualization
+- [x] Task 3: Implement tap button with `pointerdown` handler
+- [x] Task 4: Implement tap audio feedback (play click on tap)
+- [x] Task 5: Implement timing feedback display
+- [x] Task 6: Implement trial completion indicator
+- [x] Task 7: Wire session + scheduler (loop mode) + port traits
+- [x] Task 8: Handle navigation away (stop sequencer, discard incomplete trial)
+- [x] Task 9: Localization strings
+- [x] Task 10: Accessibility pass
+- [x] Task 11: End-to-end smoke test — tested by user on desktop (Mac) and mobile (iPhone). Functional but latency issues noted in `docs/future-work.md`
 
 ## Dev Notes
 
@@ -75,3 +75,42 @@ This story replaces the placeholder screen from story 15.3 with the full "Fill t
 - The sequencer loop continues during feedback display — no pausing between trials
 - Handle component cleanup carefully: stop the scheduler's interval timer and the sequencer when the component is disposed (use Leptos `on_cleanup`)
 - Dot animation timing: the scheduler can emit a signal/callback on each step, driving the dot highlight
+
+## Dev Agent Record
+
+### Implementation Plan
+
+Replaced placeholder `ContinuousRhythmMatchingView` component with full training screen following the established pattern from `RhythmOffsetDetectionView`. Architecture:
+
+1. **Session wiring:** Creates `ContinuousRhythmMatchingSession` with `ProfilePort`, `RecordPort`, `TimelinePort`, and `RandomGapSelector`
+2. **Audio lifecycle:** Eagerly creates AudioContext on render (user gesture), uses `ensure_audio_ready` in async loop, shares `ctx_rc` and `click_buffer` via `Rc<RefCell<Option<...>>>` for synchronous tap handler access
+3. **Training loop:** Outer `'session` loop (restarts after help modal), inner `'training` loop (one cycle per iteration). Each cycle: build pattern from gap position, create single-pass scheduler, animate dots, wait for cycle end, call `session.cycle_complete()`
+4. **Tap handling:** `pointerdown` handler reads `audioContext.currentTime`, calls `session.handle_tap()`, stores offset for cycle_complete, plays click sound immediately
+5. **Timing feedback:** Direction arrow + ms offset with green/yellow/red color coding based on percentage of sixteenth note (≤5%, 5-15%, >15%)
+6. **Trial summary:** After 16 cycles, briefly shows hit rate and mean offset in a non-blocking overlay (sequencer continues)
+7. **Dot visualization:** 4 dots with beat-1 accent (larger), gap dot rendered as outline circle
+8. **Lifecycle management:** `on_cleanup` stops session, clears event listeners; visibility change and AudioContext state change handlers navigate home
+
+### Debug Log
+
+No issues encountered during implementation. Clean compilation with no new warnings.
+
+### Completion Notes
+
+- All 13 ACs addressed in a single implementation pass
+- Task 11 (E2E smoke test) deferred to user — agent cannot run browser
+- Pre-existing dead_code warnings in `rhythm_scheduler.rs` unchanged
+- Help modal, training stats, error notifications follow exact patterns from rhythm offset detection view
+- Keyboard support: Space/Enter to tap (matching "large tap area" intent)
+- `touch-manipulation` CSS on tap button prevents browser double-tap-to-zoom delay
+
+## File List
+
+- `web/src/components/continuous_rhythm_matching_view.rs` — Full replacement of placeholder
+- `web/locales/en/main.ftl` — Added Fill the Gap UI strings and help strings
+- `web/locales/de/main.ftl` — Added German translations for Fill the Gap
+- `web/src/help_sections.rs` — Added `CONTINUOUS_RHYTHM_MATCHING_HELP`
+
+## Change Log
+
+- 2026-03-25: Implemented full Fill the Gap training screen (Story 18.2) — replaced placeholder with session-wired training UI including cycling dots, tap button, timing feedback, trial summaries, help modal, accessibility, and localization

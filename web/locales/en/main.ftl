@@ -137,6 +137,14 @@ discrimination-help-title = Pitch Discrimination Training
 rhythm-offset-title = Compare Timing
 rhythm-offset-help-title = Compare Timing Training
 
+## Continuous Rhythm Matching (Fill the Gap)
+fill-the-gap-title = Fill the Gap
+fill-the-gap-help-title = Fill the Gap Training
+tap = Tap
+offset-ms = { $value } ms
+hit-rate-label = { $hits }/{ $total } hits
+mean-offset-label = Avg { $value } ms
+
 ## Pitch Matching
 matching-title = Match
 matching-help-title = Pitch Matching Training
@@ -202,6 +210,14 @@ help-rhythm-offset-controls-title = Controls
 help-rhythm-offset-controls-body = After the four clicks play, the **Early** and **Late** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Left** or **E** for early, **Arrow Right** or **L** for late.
 help-rhythm-offset-feedback-title = Feedback
 help-rhythm-offset-feedback-body = After each answer you'll see a brief **checkmark** (correct) or **X** (incorrect), along with the current difficulty as a percentage. A smaller percentage means a subtler offset — and a harder challenge.
+
+## Help - Fill the Gap
+help-fill-the-gap-goal-title = Goal
+help-fill-the-gap-goal-body = A steady four-beat pattern plays in a loop. One beat is silent — you hear the gap. Your job is to **tap at the right moment** to fill the missing beat. The closer your timing, the better.
+help-fill-the-gap-controls-title = Controls
+help-fill-the-gap-controls-body = Tap the large button (or press **Space**) when the gap beat should sound. Timing is measured from the moment you press — so tap right on the beat. The sequencer keeps looping; no need to wait.
+help-fill-the-gap-feedback-title = Feedback
+help-fill-the-gap-feedback-body = After each tap, a brief indicator shows how early or late you were in milliseconds, with a color code: **green** for close, **yellow** for moderate, and **red** for far off. After 16 cycles, a summary of your hit rate and average offset appears.
 
 ## Help - Pitch Matching
 help-matching-goal-title = Goal

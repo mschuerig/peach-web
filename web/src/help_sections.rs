@@ -42,6 +42,21 @@ pub static RHYTHM_OFFSET_DETECTION_HELP: &[HelpSection] = &[
     },
 ];
 
+pub static CONTINUOUS_RHYTHM_MATCHING_HELP: &[HelpSection] = &[
+    HelpSection {
+        title_key: "help-fill-the-gap-goal-title",
+        body_key: "help-fill-the-gap-goal-body",
+    },
+    HelpSection {
+        title_key: "help-fill-the-gap-controls-title",
+        body_key: "help-fill-the-gap-controls-body",
+    },
+    HelpSection {
+        title_key: "help-fill-the-gap-feedback-title",
+        body_key: "help-fill-the-gap-feedback-body",
+    },
+];
+
 pub static PITCH_DISCRIMINATION_HELP: &[HelpSection] = &[
     HelpSection {
         title_key: "help-discrimination-goal-title",

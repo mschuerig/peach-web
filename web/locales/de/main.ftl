@@ -137,6 +137,14 @@ discrimination-help-title = Tonhöhenunterscheidung
 rhythm-offset-title = Timing vergleichen
 rhythm-offset-help-title = Timing-Training
 
+## Continuous Rhythm Matching (Fill the Gap)
+fill-the-gap-title = Lücke füllen
+fill-the-gap-help-title = Lücke-füllen-Training
+tap = Tippen
+offset-ms = { $value } ms
+hit-rate-label = { $hits }/{ $total } Treffer
+mean-offset-label = Ø { $value } ms
+
 ## Pitch Matching
 matching-title = Treffen
 matching-help-title = Tonhöhen-Training
@@ -202,6 +210,14 @@ help-rhythm-offset-controls-title = Bedienung
 help-rhythm-offset-controls-body = Nachdem die vier Klicks gespielt wurden, werden die Tasten **Zu früh** und **Zu spät** aktiv. Tippe auf die, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil links** oder **E** für zu früh, **Pfeil rechts** oder **L** für zu spät.
 help-rhythm-offset-feedback-title = Feedback
 help-rhythm-offset-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkchen** (richtig) oder ein **X** (falsch), zusammen mit der aktuellen Schwierigkeit als Prozentsatz. Ein kleinerer Prozentsatz bedeutet eine subtilere Abweichung — und eine schwierigere Herausforderung.
+
+## Help - Fill the Gap
+help-fill-the-gap-goal-title = Ziel
+help-fill-the-gap-goal-body = Ein gleichmäßiges Vierer-Muster spielt in einer Schleife. Ein Schlag ist stumm — du hörst die Lücke. Deine Aufgabe ist es, **im richtigen Moment zu tippen**, um den fehlenden Schlag zu füllen. Je genauer dein Timing, desto besser.
+help-fill-the-gap-controls-title = Bedienung
+help-fill-the-gap-controls-body = Tippe auf den großen Button (oder drücke **Leertaste**), wenn der Lückenschlag erklingen sollte. Das Timing wird ab dem Moment des Drückens gemessen — tippe also genau auf den Schlag. Der Sequencer läuft weiter in einer Schleife.
+help-fill-the-gap-feedback-title = Feedback
+help-fill-the-gap-feedback-body = Nach jedem Tippen zeigt ein kurzer Indikator, wie früh oder spät du warst (in Millisekunden), mit Farbcode: **grün** für nah dran, **gelb** für moderat, **rot** für weit daneben. Nach 16 Zyklen erscheint eine Zusammenfassung deiner Trefferquote und mittleren Abweichung.
 
 ## Help - Pitch Matching
 help-matching-goal-title = Ziel
