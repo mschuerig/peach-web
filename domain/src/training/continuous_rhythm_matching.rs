@@ -263,9 +263,13 @@ mod tests {
             cycles[idx] = (pos, CycleResult::Hit(RhythmOffset::new(offset_ms)));
         }
         // Set positions for misses (distribute across positions)
-        for i in 0..CYCLES_PER_TRIAL as usize {
-            if matches!(cycles[i].1, CycleResult::Miss) {
-                cycles[i].0 = StepPosition::ALL[i % 4];
+        for (i, cycle) in cycles
+            .iter_mut()
+            .enumerate()
+            .take(CYCLES_PER_TRIAL as usize)
+        {
+            if matches!(cycle.1, CycleResult::Miss) {
+                cycle.0 = StepPosition::ALL[i % 4];
             }
         }
         cycles

@@ -545,11 +545,6 @@ mod tests {
         parse_iso8601_to_epoch("2026-03-06T00:00:00Z")
     }
 
-    // Epoch for 2026-03-06T12:00:00Z
-    fn now_epoch() -> f64 {
-        parse_iso8601_to_epoch("2026-03-06T12:00:00Z")
-    }
-
     fn epoch_to_iso8601(epoch: f64) -> String {
         let mut remaining = epoch as i64;
         let secs = remaining % 60;

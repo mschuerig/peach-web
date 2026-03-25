@@ -415,12 +415,15 @@ mod tests {
 
     use crate::records::TrainingRecord;
 
+    type ProfileUpdateLog = Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>;
+    type TimelineMetricLog = Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>;
+
     struct MockProfilePort {
-        updates: Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>,
+        updates: ProfileUpdateLog,
     }
 
     impl MockProfilePort {
-        fn new() -> (Self, Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>) {
+        fn new() -> (Self, ProfileUpdateLog) {
             let updates = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
@@ -468,11 +471,11 @@ mod tests {
     }
 
     struct MockTimelinePort {
-        metrics: Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>,
+        metrics: TimelineMetricLog,
     }
 
     impl MockTimelinePort {
-        fn new() -> (Self, Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>) {
+        fn new() -> (Self, TimelineMetricLog) {
             let metrics = Rc::new(RefCell::new(Vec::new()));
             (
                 Self {
@@ -613,9 +616,9 @@ mod tests {
     }
 
     struct MockPorts {
-        profile_updates: Rc<RefCell<Vec<(StatisticsKey, String, f64, bool)>>>,
+        profile_updates: ProfileUpdateLog,
         records: Rc<RefCell<Vec<TrainingRecord>>>,
-        timeline_metrics: Rc<RefCell<Vec<(TrainingDiscipline, String, f64)>>>,
+        timeline_metrics: TimelineMetricLog,
     }
 
     fn create_session_with_ports() -> (PitchDiscriminationSession, MockPorts) {

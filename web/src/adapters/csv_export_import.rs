@@ -1282,7 +1282,7 @@ mod tests {
 
     #[test]
     fn test_format_optional_f64_some() {
-        assert_eq!(format_optional_f64(Some(3.14)), "3.14");
+        assert_eq!(format_optional_f64(Some(3.15)), "3.15");
     }
 
     #[test]

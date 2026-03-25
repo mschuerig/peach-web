@@ -371,14 +371,14 @@ mod tests {
         }
     }
 
-    fn make_session_with_selector(
-        selector: Box<dyn GapPositionSelector>,
-    ) -> (
+    type SessionWithCounters = (
         ContinuousRhythmMatchingSession,
         Rc<Cell<usize>>,
         Rc<Cell<usize>>,
         Rc<Cell<usize>>,
-    ) {
+    );
+
+    fn make_session_with_selector(selector: Box<dyn GapPositionSelector>) -> SessionWithCounters {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
         let profile_calls = Rc::new(Cell::new(0usize));
         let record_calls = Rc::new(Cell::new(0usize));
@@ -713,7 +713,7 @@ mod tests {
 
     #[test]
     fn test_per_position_breakdown_with_rotating_gaps() {
-        let positions = vec![
+        let positions = [
             StepPosition::First,
             StepPosition::Second,
             StepPosition::Third,
