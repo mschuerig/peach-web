@@ -121,9 +121,6 @@ pub struct RhythmOffsetDetectionSession {
     // Adaptive difficulty
     strategy: AdaptiveRhythmOffsetStrategy,
 
-    // Session-level state (snapshot from settings at start)
-    session_tempo: TempoBPM,
-
     // Current trial state
     current_trial_params: Option<RhythmOffsetDetectionTrialParams>,
     last_completed: Option<CompletedRhythmOffsetDetectionTrial>,
@@ -149,7 +146,6 @@ impl RhythmOffsetDetectionSession {
             timeline_port,
             resettables,
             strategy: AdaptiveRhythmOffsetStrategy::new(),
-            session_tempo: TempoBPM::default(),
             current_trial_params: None,
             last_completed: None,
             show_feedback: false,
@@ -200,8 +196,6 @@ impl RhythmOffsetDetectionSession {
             "start_trial() requires Idle state"
         );
 
-        self.session_tempo = tempo;
-
         // Choose direction: 50/50 early or late
         let direction = if rand::rng().random_bool(0.5) {
             RhythmDirection::Early
@@ -231,12 +225,11 @@ impl RhythmOffsetDetectionSession {
     }
 
     /// Called when the click pattern finishes playing. Transitions to AwaitingAnswer.
+    /// No-op if not in Playing state (tolerates deferred callbacks after stop).
     pub fn pattern_finished(&mut self) {
-        assert_eq!(
-            self.state,
-            RhythmOffsetDetectionSessionState::Playing,
-            "pattern_finished() requires Playing state"
-        );
+        if self.state != RhythmOffsetDetectionSessionState::Playing {
+            return;
+        }
         self.state = RhythmOffsetDetectionSessionState::AwaitingAnswer;
     }
 
@@ -302,12 +295,11 @@ impl RhythmOffsetDetectionSession {
     }
 
     /// Called when the feedback display period finishes. Transitions to Idle (ready for next trial).
+    /// No-op if not in ShowingFeedback state (tolerates deferred callbacks after stop).
     pub fn feedback_complete(&mut self) {
-        assert_eq!(
-            self.state,
-            RhythmOffsetDetectionSessionState::ShowingFeedback,
-            "feedback_complete() requires ShowingFeedback state"
-        );
+        if self.state != RhythmOffsetDetectionSessionState::ShowingFeedback {
+            return;
+        }
         self.show_feedback = false;
         self.state = RhythmOffsetDetectionSessionState::Idle;
     }
@@ -444,62 +436,51 @@ mod tests {
 
     // --- Mock port implementations for session tests ---
 
-    struct MockProfilePort {
-        calls: Vec<(StatisticsKey, String, f64, bool)>,
-    }
+    struct MockProfilePort;
 
     impl MockProfilePort {
         fn new() -> Self {
-            Self { calls: Vec::new() }
+            Self
         }
     }
 
     impl ProfileUpdating for MockProfilePort {
         fn update_profile(
             &mut self,
-            key: StatisticsKey,
-            timestamp: &str,
-            value: f64,
-            is_correct: bool,
+            _key: StatisticsKey,
+            _timestamp: &str,
+            _value: f64,
+            _is_correct: bool,
         ) {
-            self.calls
-                .push((key, timestamp.to_string(), value, is_correct));
         }
     }
 
     struct MockRecordPort {
-        calls: Vec<TrainingRecord>,
+        call_count: Rc<Cell<usize>>,
     }
 
     impl MockRecordPort {
-        fn new() -> Self {
-            Self { calls: Vec::new() }
+        fn new(call_count: Rc<Cell<usize>>) -> Self {
+            Self { call_count }
         }
     }
 
     impl TrainingRecordPersisting for MockRecordPort {
-        fn save_record(&self, record: TrainingRecord) {
-            // Use interior mutability for testing since trait takes &self
-            // For simplicity in tests, we just verify the call compiles.
-            // Real verification is done via session state.
-            let _ = record;
+        fn save_record(&self, _record: TrainingRecord) {
+            self.call_count.set(self.call_count.get() + 1);
         }
     }
 
-    struct MockTimelinePort {
-        calls: Vec<(TrainingDiscipline, String, f64)>,
-    }
+    struct MockTimelinePort;
 
     impl MockTimelinePort {
         fn new() -> Self {
-            Self { calls: Vec::new() }
+            Self
         }
     }
 
     impl ProgressTimelineUpdating for MockTimelinePort {
-        fn add_metric(&mut self, discipline: TrainingDiscipline, timestamp: &str, value: f64) {
-            self.calls.push((discipline, timestamp.to_string(), value));
-        }
+        fn add_metric(&mut self, _discipline: TrainingDiscipline, _timestamp: &str, _value: f64) {}
     }
 
     fn make_session() -> RhythmOffsetDetectionSession {
@@ -507,7 +488,7 @@ mod tests {
         RhythmOffsetDetectionSession::new(
             profile,
             Box::new(MockProfilePort::new()),
-            Box::new(MockRecordPort::new()),
+            Box::new(MockRecordPort::new(Rc::new(Cell::new(0)))),
             Box::new(MockTimelinePort::new()),
             Vec::new(),
         )
@@ -673,10 +654,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "pattern_finished() requires Playing state")]
-    fn test_pattern_finished_from_idle_panics() {
+    fn test_pattern_finished_from_idle_is_noop() {
         let mut session = make_session();
-        session.pattern_finished();
+        session.pattern_finished(); // Should not panic
+        assert_eq!(session.state(), RhythmOffsetDetectionSessionState::Idle);
     }
 
     #[test]
@@ -687,10 +668,32 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "feedback_complete() requires ShowingFeedback state")]
-    fn test_feedback_complete_from_idle_panics() {
+    fn test_feedback_complete_from_idle_is_noop() {
         let mut session = make_session();
-        session.feedback_complete();
+        session.feedback_complete(); // Should not panic
+        assert_eq!(session.state(), RhythmOffsetDetectionSessionState::Idle);
+    }
+
+    #[test]
+    fn test_pattern_finished_after_stop_is_noop() {
+        let mut session = make_session();
+        session.start_trial(TempoBPM::new(80));
+        session.stop();
+        session.pattern_finished(); // Deferred callback after stop — should not panic
+        assert_eq!(session.state(), RhythmOffsetDetectionSessionState::Idle);
+    }
+
+    #[test]
+    fn test_feedback_complete_after_stop_is_noop() {
+        let mut session = make_session();
+        session.start_trial(TempoBPM::new(80));
+        session.pattern_finished();
+        let params = session.current_trial_params().unwrap();
+        let is_early = params.direction == RhythmDirection::Early;
+        session.submit_answer(is_early, "2026-03-25T12:00:00Z".to_string());
+        session.stop();
+        session.feedback_complete(); // Deferred callback after stop — should not panic
+        assert_eq!(session.state(), RhythmOffsetDetectionSessionState::Idle);
     }
 
     #[test]
@@ -735,20 +738,20 @@ mod tests {
         assert!((params.offset.abs_ms() - expected_offset_ms).abs() < 1e-10);
     }
 
-    // --- Port call verification using interior mutability ---
+    // --- Port call verification using shared Rc<Cell> state ---
 
     use std::cell::Cell;
 
     struct TrackingProfilePort {
-        call_count: Cell<usize>,
-        last_key: Cell<Option<StatisticsKey>>,
+        call_count: Rc<Cell<usize>>,
+        last_key: Rc<Cell<Option<StatisticsKey>>>,
     }
 
     impl TrackingProfilePort {
-        fn new() -> Self {
+        fn new(call_count: Rc<Cell<usize>>, last_key: Rc<Cell<Option<StatisticsKey>>>) -> Self {
             Self {
-                call_count: Cell::new(0),
-                last_key: Cell::new(None),
+                call_count,
+                last_key,
             }
         }
     }
@@ -767,14 +770,12 @@ mod tests {
     }
 
     struct TrackingRecordPort {
-        call_count: Cell<usize>,
+        call_count: Rc<Cell<usize>>,
     }
 
     impl TrackingRecordPort {
-        fn new() -> Self {
-            Self {
-                call_count: Cell::new(0),
-            }
+        fn new(call_count: Rc<Cell<usize>>) -> Self {
+            Self { call_count }
         }
     }
 
@@ -785,15 +786,18 @@ mod tests {
     }
 
     struct TrackingTimelinePort {
-        call_count: Cell<usize>,
-        last_discipline: Cell<Option<TrainingDiscipline>>,
+        call_count: Rc<Cell<usize>>,
+        last_discipline: Rc<Cell<Option<TrainingDiscipline>>>,
     }
 
     impl TrackingTimelinePort {
-        fn new() -> Self {
+        fn new(
+            call_count: Rc<Cell<usize>>,
+            last_discipline: Rc<Cell<Option<TrainingDiscipline>>>,
+        ) -> Self {
             Self {
-                call_count: Cell::new(0),
-                last_discipline: Cell::new(None),
+                call_count,
+                last_discipline,
             }
         }
     }
@@ -808,19 +812,24 @@ mod tests {
     #[test]
     fn test_submit_answer_calls_all_ports() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        let profile_port = Box::new(TrackingProfilePort::new());
-        let record_port = Box::new(TrackingRecordPort::new());
-        let timeline_port = Box::new(TrackingTimelinePort::new());
 
-        let profile_port_ptr = &*profile_port as *const TrackingProfilePort;
-        let record_port_ptr = &*record_port as *const TrackingRecordPort;
-        let timeline_port_ptr = &*timeline_port as *const TrackingTimelinePort;
+        let profile_calls = Rc::new(Cell::new(0usize));
+        let profile_key = Rc::new(Cell::new(None::<StatisticsKey>));
+        let record_calls = Rc::new(Cell::new(0usize));
+        let timeline_calls = Rc::new(Cell::new(0usize));
+        let timeline_discipline = Rc::new(Cell::new(None::<TrainingDiscipline>));
 
         let mut session = RhythmOffsetDetectionSession::new(
             profile,
-            profile_port,
-            record_port,
-            timeline_port,
+            Box::new(TrackingProfilePort::new(
+                Rc::clone(&profile_calls),
+                Rc::clone(&profile_key),
+            )),
+            Box::new(TrackingRecordPort::new(Rc::clone(&record_calls))),
+            Box::new(TrackingTimelinePort::new(
+                Rc::clone(&timeline_calls),
+                Rc::clone(&timeline_discipline),
+            )),
             Vec::new(),
         );
 
@@ -830,40 +839,39 @@ mod tests {
         let is_early = params.direction == RhythmDirection::Early;
         session.submit_answer(is_early, "2026-03-25T12:00:00Z".to_string());
 
-        // SAFETY: The session owns the ports, and we're in the same test function.
-        // The pointers are valid because the session (and its ports) are still alive.
-        unsafe {
-            assert_eq!((*profile_port_ptr).call_count.get(), 1);
-            assert_eq!((*record_port_ptr).call_count.get(), 1);
-            assert_eq!((*timeline_port_ptr).call_count.get(), 1);
+        assert_eq!(profile_calls.get(), 1);
+        assert_eq!(record_calls.get(), 1);
+        assert_eq!(timeline_calls.get(), 1);
 
-            // Verify correct StatisticsKey variant
-            let key = (*profile_port_ptr).last_key.get().unwrap();
-            match key {
-                StatisticsKey::Rhythm(discipline, _tempo_range, _direction) => {
-                    assert_eq!(discipline, TrainingDiscipline::RhythmOffsetDetection);
-                }
-                _ => panic!("Expected Rhythm StatisticsKey"),
+        // Verify correct StatisticsKey variant
+        let key = profile_key.get().unwrap();
+        match key {
+            StatisticsKey::Rhythm(discipline, _tempo_range, _direction) => {
+                assert_eq!(discipline, TrainingDiscipline::RhythmOffsetDetection);
             }
-
-            // Verify timeline uses correct discipline
-            assert_eq!(
-                (*timeline_port_ptr).last_discipline.get().unwrap(),
-                TrainingDiscipline::RhythmOffsetDetection
-            );
+            _ => panic!("Expected Rhythm StatisticsKey"),
         }
+
+        // Verify timeline uses correct discipline
+        assert_eq!(
+            timeline_discipline.get().unwrap(),
+            TrainingDiscipline::RhythmOffsetDetection
+        );
     }
 
     #[test]
     fn test_statistics_key_uses_correct_tempo_range() {
         let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
-        let profile_port = Box::new(TrackingProfilePort::new());
-        let profile_port_ptr = &*profile_port as *const TrackingProfilePort;
+
+        let profile_key = Rc::new(Cell::new(None::<StatisticsKey>));
 
         let mut session = RhythmOffsetDetectionSession::new(
             profile,
-            profile_port,
-            Box::new(MockRecordPort::new()),
+            Box::new(TrackingProfilePort::new(
+                Rc::new(Cell::new(0)),
+                Rc::clone(&profile_key),
+            )),
+            Box::new(MockRecordPort::new(Rc::new(Cell::new(0)))),
             Box::new(MockTimelinePort::new()),
             Vec::new(),
         );
@@ -875,14 +883,62 @@ mod tests {
         let is_early = params.direction == RhythmDirection::Early;
         session.submit_answer(is_early, "2026-03-25T12:00:00Z".to_string());
 
-        unsafe {
-            let key = (*profile_port_ptr).last_key.get().unwrap();
-            match key {
-                StatisticsKey::Rhythm(_, tempo_range, _) => {
-                    assert_eq!(tempo_range, TempoRange::Fast);
-                }
-                _ => panic!("Expected Rhythm StatisticsKey"),
+        let key = profile_key.get().unwrap();
+        match key {
+            StatisticsKey::Rhythm(_, tempo_range, _) => {
+                assert_eq!(tempo_range, TempoRange::Fast);
             }
+            _ => panic!("Expected Rhythm StatisticsKey"),
         }
+    }
+
+    #[test]
+    fn test_last_difficulty_pct_returns_correct_value() {
+        let mut session = make_session();
+        let tempo = TempoBPM::new(80);
+        session.start_trial(tempo);
+
+        let pct = session.last_difficulty_pct().unwrap();
+        // Default difficulty is 10%
+        assert!((pct - 10.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_last_difficulty_pct_is_none_before_first_trial() {
+        let session = make_session();
+        assert!(session.last_difficulty_pct().is_none());
+    }
+
+    struct MockResettable {
+        reset_count: Rc<Cell<usize>>,
+    }
+
+    impl MockResettable {
+        fn new(reset_count: Rc<Cell<usize>>) -> Self {
+            Self { reset_count }
+        }
+    }
+
+    impl Resettable for MockResettable {
+        fn reset(&mut self) {
+            self.reset_count.set(self.reset_count.get() + 1);
+        }
+    }
+
+    #[test]
+    fn test_reset_training_data_calls_resettables() {
+        let profile = Rc::new(RefCell::new(PerceptualProfile::new()));
+        let reset_count = Rc::new(Cell::new(0usize));
+
+        let mut session = RhythmOffsetDetectionSession::new(
+            profile,
+            Box::new(MockProfilePort::new()),
+            Box::new(MockRecordPort::new(Rc::new(Cell::new(0)))),
+            Box::new(MockTimelinePort::new()),
+            vec![Box::new(MockResettable::new(Rc::clone(&reset_count)))],
+        );
+
+        session.reset_training_data();
+        assert_eq!(reset_count.get(), 1);
     }
 }

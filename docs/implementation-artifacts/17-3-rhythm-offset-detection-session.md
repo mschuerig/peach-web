@@ -1,6 +1,6 @@
 # Story 17.3: Rhythm Offset Detection Session State Machine
 
-Status: review
+Status: done
 
 ## Story
 
