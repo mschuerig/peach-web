@@ -1,6 +1,6 @@
 # Story 21.1: AudioContext latencyHint and Tap Click Overlap Suppression
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,26 +24,52 @@ Two independent issues bundled because both are small, high-impact changes:
 
 1. **AC1 — latencyHint set:** `AudioContext` is created with `AudioContextOptions` and `latency_hint_f64(0.0)`. Verified by logging `ctx.baseLatency` (via JS interop if needed) at creation time.
 
-2. **AC2 — Overlap suppression:** When a user taps within ±15ms of a non-gap scheduled beat, the tap click is suppressed (not played). The scheduled beat's click provides the audible feedback instead.
+2. **AC2 — Overlap suppression:** ~~When a user taps within ±15ms of a non-gap scheduled beat, the tap click is suppressed (not played).~~ **Descoped** — event dispatch latency (30-90ms) makes `currentTime`-based suppression unreliable. Requires bridged timestamps from Story 21.2 to work correctly.
 
-3. **AC3 — Gap beats not suppressed:** Taps near the gap beat position are never suppressed — the gap beat has no scheduled click, so the tap click must always play for gap positions.
+3. **AC3 — Gap beats not suppressed:** Descoped with AC2.
 
-4. **AC4 — Beat times shared to tap handler:** The current cycle's `beat_times` and `gap_index` are accessible to the tap handler via shared state (e.g., `Rc<Cell<>>` following the `shared_click_buffer` pattern).
+4. **AC4 — Beat times shared to tap handler:** Descoped with AC2.
 
 5. **AC5 — No regression:** Existing rhythm training flow works end-to-end. `cargo test -p domain` passes. `cargo clippy --workspace` clean. `trunk build` succeeds.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `AudioContextOptions` with `latency_hint_f64(0.0)` to `AudioContextManager::get_or_create()` in `web/src/adapters/audio_context.rs`
-- [ ] Task 2: Enable `AudioContextOptions` and `AudioContextLatencyCategory` features in `web/Cargo.toml` if not already present
-- [ ] Task 3: Share `beat_times` and `gap_index` with the tap handler — add `Rc<Cell<[f64; 4]>>` and `Rc<Cell<Option<usize>>>` following the `shared_click_buffer` pattern in `continuous_rhythm_matching_view.rs`
-- [ ] Task 4: Add overlap check in tap handler before `play_click_at` — suppress if any non-gap beat is within 15ms of current time
-- [ ] Task 5: Verify doubling is eliminated via manual test at 80 BPM
-- [ ] Task 6: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `trunk build`
+- [x] Task 1: Add `AudioContextOptions` with `latency_hint_f64(0.0)` to `AudioContextManager::get_or_create()` in `web/src/adapters/audio_context.rs`
+- [x] Task 2: Enable `AudioContextOptions` feature in `web/Cargo.toml`
+- [N/A] Task 3: Share `beat_times` and `gap_index` — descoped (overlap suppression removed)
+- [N/A] Task 4: Add overlap check in tap handler — descoped (overlap suppression removed)
+- [N/A] Task 5: Verify doubling is eliminated — descoped (overlap suppression removed)
+- [x] Task 6: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `trunk build`
 
 ## Dev Notes
 
-- The 15ms threshold is well below the smallest sixteenth note at max tempo (125ms at 120 BPM) — no risk of suppressing valid tap clicks
-- `AudioContextOptions::new()` + `opts.set_latency_hint_f64(0.0)` + `AudioContext::new_with_context_options(&opts)` — all stable in `web_sys`
-- Two sounds within 15ms are perceptually fused; suppressing one does not change the user's experience except by eliminating the doubling artifact
-- The `shared_click_buffer` pattern at `continuous_rhythm_matching_view.rs:130-137` is the model for sharing beat_times/gap_index
+- `AudioContextOptions::new()` + `opts.set_latency_hint(&JsValue::from(0.0))` + `AudioContext::new_with_context_options(&opts)` — stable in `web_sys`
+- Overlap suppression was implemented and tested but removed: event dispatch latency causes `currentTime` in the tap handler to lag the physical tap by 30-90ms, making a `currentTime`-vs-beat-time comparison unreliable. Proper suppression requires the bridged `PointerEvent.timeStamp` from Story 21.2.
+
+## Dev Agent Record
+
+### Implementation Plan
+
+1. **latencyHint (AC1):** Replace `AudioContext::new()` with `AudioContext::new_with_context_options(&opts)` where opts has `latency_hint` set to `0.0` via `set_latency_hint(&JsValue::from(0.0))`. Log `baseLatency` via `js_sys::Reflect` since web-sys doesn't expose it natively.
+
+### Debug Log
+
+- `web_sys::AudioContextOptions::latency_hint()` is deprecated — used `set_latency_hint()` instead
+- `web_sys::AudioContext` does not expose `base_latency()` — used `js_sys::Reflect::get()` with `"baseLatency"` key for logging
+- Only `AudioContextOptions` feature needed in Cargo.toml (not `AudioContextLatencyCategory` since we use the f64 variant)
+- Overlap suppression implemented then removed: on-device testing showed min distance of 30-90ms between `currentTime` and scheduled beat times, far exceeding the 15ms threshold. Root cause: event dispatch pipeline adds 30+ ms before JS handler runs.
+
+### Completion Notes
+
+- AC1: AudioContext now created with `latencyHint: 0.0` — baseLatency logged at creation via JS interop
+- AC2-AC4: Descoped — overlap suppression requires bridged timestamps (Story 21.2)
+- AC5: `cargo clippy --workspace` clean, `cargo test -p domain` all pass, `trunk build` succeeds
+
+## File List
+
+- `web/Cargo.toml` — added `AudioContextOptions` web-sys feature
+- `web/src/adapters/audio_context.rs` — AudioContext created with latencyHint 0.0, baseLatency logged
+
+## Change Log
+
+- 2026-03-25: Implemented latencyHint (Story 21.1); overlap suppression descoped after on-device testing

@@ -5,7 +5,7 @@ use domain::AudioError;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::AudioContext;
+use web_sys::{AudioContext, AudioContextOptions};
 
 /// Manages the singleton AudioContext lifecycle.
 ///
@@ -34,13 +34,25 @@ impl AudioContextManager {
             return Ok(Rc::clone(ctx));
         }
 
-        let ctx =
-            AudioContext::new().map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
+        let opts = AudioContextOptions::new();
+        opts.set_latency_hint(&wasm_bindgen::JsValue::from(0.0));
+        let ctx = AudioContext::new_with_context_options(&opts)
+            .map_err(|e| AudioError::EngineStartFailed(format!("{:?}", e)))?;
+
+        // baseLatency is not exposed by web-sys; read via JS interop
+        let base_latency: f64 = js_sys::Reflect::get(
+            ctx.as_ref(),
+            &wasm_bindgen::JsValue::from_str("baseLatency"),
+        )
+        .ok()
+        .and_then(|v| v.as_f64())
+        .unwrap_or(f64::NAN);
 
         log::debug!(
-            "[DIAG] AudioContext created — state: {:?}, sampleRate: {}",
+            "[DIAG] AudioContext created — state: {:?}, sampleRate: {}, baseLatency: {:.4}s",
             ctx.state(),
-            ctx.sample_rate()
+            ctx.sample_rate(),
+            base_latency
         );
 
         let shared = Rc::new(RefCell::new(ctx));
