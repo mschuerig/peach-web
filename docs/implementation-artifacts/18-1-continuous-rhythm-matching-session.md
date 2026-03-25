@@ -1,6 +1,6 @@
 # Story 18.1: Continuous Rhythm Matching Session and Step Sequencer
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -78,15 +78,15 @@ Continuous rhythm matching differs fundamentally from offset detection:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `CompletedContinuousRhythmMatchingTrial` and record type
-- [ ] Task 2: Extend `TrainingRecord` enum
-- [ ] Task 3: Implement cycle tracking and gap position selection
-- [ ] Task 4: Implement tap evaluation with acceptance window
-- [ ] Task 5: Implement 16-cycle trial aggregation
-- [ ] Task 6: Implement session state machine
-- [ ] Task 7: Wire port trait calls on trial completion
-- [ ] Task 8: Unit tests for cycle tracking, tap evaluation, aggregation
-- [ ] Task 9: `cargo test -p domain` passes
+- [x] Task 1: Add `CompletedContinuousRhythmMatchingTrial` and record type
+- [x] Task 2: Extend `TrainingRecord` enum
+- [x] Task 3: Implement cycle tracking and gap position selection
+- [x] Task 4: Implement tap evaluation with acceptance window
+- [x] Task 5: Implement 16-cycle trial aggregation
+- [x] Task 6: Implement session state machine
+- [x] Task 7: Wire port trait calls on trial completion
+- [x] Task 8: Unit tests for cycle tracking, tap evaluation, aggregation
+- [x] Task 9: `cargo test -p domain` passes
 
 ## Dev Notes
 
@@ -94,3 +94,46 @@ Continuous rhythm matching differs fundamentally from offset detection:
 - Gap position randomization: use `js_sys::Math::random()` in web, or accept a `rand`-like trait for testability in domain.
 - The metric for profile/timeline is `mean_offset_ms` converted to percentage of 16th note.
 - The "Fill the Gap" metaphor: silence on the gap position, user's tap fills it. If the tap plays a click sound (Epic 57 refinement), the user literally fills the gap audibly.
+
+## Dev Agent Record
+
+### Implementation Plan
+
+Implemented the continuous rhythm matching ("Fill the Gap") session state machine following the same patterns as `RhythmOffsetDetectionSession`:
+
+1. **CompletedContinuousRhythmMatchingTrial** — immutable trial result with tempo, mean_offset_ms, hit_rate, per-position breakdown, cycle_count, timestamp. Includes `metric_value()` for profile metric extraction.
+2. **CycleResult** enum — `Hit(RhythmOffset)` or `Miss` for per-cycle tracking.
+3. **aggregate_trial()** — pure function aggregating 16 `(StepPosition, CycleResult)` pairs into a completed trial. Handles all-misses case (0% hit rate, 0 mean offset).
+4. **ContinuousRhythmMatchingRecord** — flat persistence record with serde support.
+5. **TrainingRecord::ContinuousRhythmMatching** variant — added to enum with timestamp(), store_name(), and all match arms updated across the workspace.
+6. **ContinuousRhythmMatchingSession** — state machine with Idle/Running states, cycle tracking, gap position selection (via injectable `GapPositionSelector` trait for testability), tap evaluation reusing `evaluate_tap()`, and port trait calls on trial completion.
+7. **TrainingDiscipline** — added `extract_continuous_rhythm_metric()` and `continuous_rhythm_statistics_key()` methods for hydration/replay.
+8. **IndexedDB** — `CONTINUOUS_RHYTHM_MATCHING_STORE` constant, fetch/save support in `indexeddb_store.rs`.
+
+### Completion Notes
+
+- 24 new tests added (480 total domain lib tests pass)
+- Clippy clean, no new warnings
+- Gap position randomization uses injectable `GapPositionSelector` trait (production: `RandomGapSelector` using `rand` crate; tests: `FixedGapSelector` for determinism)
+- Incomplete trials discarded on stop (AC10)
+- Web crate CSV export/import gracefully logs unsupported rhythm record types
+
+### Debug Log
+
+No issues encountered during implementation.
+
+## File List
+
+- `domain/src/training/continuous_rhythm_matching.rs` (new)
+- `domain/src/training/mod.rs` (modified)
+- `domain/src/session/continuous_rhythm_matching_session.rs` (new)
+- `domain/src/session/mod.rs` (modified)
+- `domain/src/records.rs` (modified)
+- `domain/src/training_discipline.rs` (modified)
+- `domain/src/lib.rs` (modified)
+- `web/src/adapters/indexeddb_store.rs` (modified)
+- `web/src/adapters/csv_export_import.rs` (modified)
+
+## Change Log
+
+- 2026-03-25: Implemented continuous rhythm matching session state machine, trial types, records, and persistence integration (Story 18.1)

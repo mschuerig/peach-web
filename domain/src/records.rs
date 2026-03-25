@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::training::{
-    CompletedPitchDiscriminationTrial, CompletedPitchMatchingTrial,
-    CompletedRhythmOffsetDetectionTrial,
+    CompletedContinuousRhythmMatchingTrial, CompletedPitchDiscriminationTrial,
+    CompletedPitchMatchingTrial, CompletedRhythmOffsetDetectionTrial,
 };
 use crate::tuning::TuningSystem;
 use crate::types::Interval;
@@ -13,6 +13,8 @@ pub const PITCH_DISCRIMINATION_STORE: &str = "pitch_discrimination_records";
 pub const PITCH_MATCHING_STORE: &str = "pitch_matching_records";
 /// IndexedDB object store name for rhythm offset detection records.
 pub const RHYTHM_OFFSET_DETECTION_STORE: &str = "rhythm_offset_detection_records";
+/// IndexedDB object store name for continuous rhythm matching records.
+pub const CONTINUOUS_RHYTHM_MATCHING_STORE: &str = "continuous_rhythm_matching_records";
 
 /// Enum wrapping all training record types for generic persistence.
 #[derive(Clone, Debug, PartialEq)]
@@ -20,6 +22,7 @@ pub enum TrainingRecord {
     PitchDiscrimination(PitchDiscriminationRecord),
     PitchMatching(PitchMatchingRecord),
     RhythmOffsetDetection(RhythmOffsetDetectionRecord),
+    ContinuousRhythmMatching(ContinuousRhythmMatchingRecord),
 }
 
 impl TrainingRecord {
@@ -29,6 +32,7 @@ impl TrainingRecord {
             TrainingRecord::PitchDiscrimination(r) => &r.timestamp,
             TrainingRecord::PitchMatching(r) => &r.timestamp,
             TrainingRecord::RhythmOffsetDetection(r) => &r.timestamp,
+            TrainingRecord::ContinuousRhythmMatching(r) => &r.timestamp,
         }
     }
 
@@ -38,6 +42,7 @@ impl TrainingRecord {
             TrainingRecord::PitchDiscrimination(_) => PITCH_DISCRIMINATION_STORE,
             TrainingRecord::PitchMatching(_) => PITCH_MATCHING_STORE,
             TrainingRecord::RhythmOffsetDetection(_) => RHYTHM_OFFSET_DETECTION_STORE,
+            TrainingRecord::ContinuousRhythmMatching(_) => CONTINUOUS_RHYTHM_MATCHING_STORE,
         }
     }
 }
@@ -146,6 +151,31 @@ impl RhythmOffsetDetectionRecord {
             tempo_bpm: trial.tempo().bpm(),
             offset_ms: trial.offset().ms(),
             is_correct: trial.is_correct(),
+            timestamp: trial.timestamp().to_string(),
+        }
+    }
+}
+
+/// Flat persistence record for a completed continuous rhythm matching trial.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ContinuousRhythmMatchingRecord {
+    pub tempo_bpm: u16,
+    pub mean_offset_ms: f64,
+    pub hit_rate: f64,
+    pub per_position_mean_ms: [Option<f64>; 4],
+    pub cycle_count: u16,
+    pub timestamp: String,
+}
+
+impl ContinuousRhythmMatchingRecord {
+    /// Construct a flat persistence record from a completed continuous rhythm matching trial.
+    pub fn from_completed(trial: &CompletedContinuousRhythmMatchingTrial) -> Self {
+        Self {
+            tempo_bpm: trial.tempo().bpm(),
+            mean_offset_ms: trial.mean_offset_ms(),
+            hit_rate: trial.hit_rate(),
+            per_position_mean_ms: trial.per_position_mean_ms(),
+            cycle_count: trial.cycle_count(),
             timestamp: trial.timestamp().to_string(),
         }
     }

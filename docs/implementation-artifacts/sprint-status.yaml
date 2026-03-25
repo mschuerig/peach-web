@@ -174,3 +174,7 @@ development_status:
   17-2-click-synthesis-and-rhythm-scheduler: done
   17-3-rhythm-offset-detection-session: done
   17-4-rhythm-offset-detection-screen: done
+
+  # Epic 18: Continuous Rhythm Matching
+  epic-18: in-progress
+  18-1-continuous-rhythm-matching-session: review

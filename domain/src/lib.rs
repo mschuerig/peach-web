@@ -24,15 +24,17 @@ pub use ports::{
 pub use profile::{COLD_START_DIFFICULTY, PerceptualProfile};
 pub use progress_timeline::{BucketSize, ProgressTimeline, TimeBucket, parse_iso8601_to_epoch};
 pub use records::{
-    PITCH_DISCRIMINATION_STORE, PITCH_MATCHING_STORE, PitchDiscriminationRecord,
-    PitchMatchingRecord, RHYTHM_OFFSET_DETECTION_STORE, RhythmOffsetDetectionRecord,
-    TrainingRecord,
+    CONTINUOUS_RHYTHM_MATCHING_STORE, ContinuousRhythmMatchingRecord, PITCH_DISCRIMINATION_STORE,
+    PITCH_MATCHING_STORE, PitchDiscriminationRecord, PitchMatchingRecord,
+    RHYTHM_OFFSET_DETECTION_STORE, RhythmOffsetDetectionRecord, TrainingRecord,
 };
 pub use session::{
-    AdaptiveRhythmOffsetStrategy, FEEDBACK_DURATION_SECS, PITCH_MATCHING_VELOCITY,
-    PitchDiscriminationPlaybackData, PitchDiscriminationSession, PitchDiscriminationSessionState,
-    PitchMatchingPlaybackData, PitchMatchingSession, PitchMatchingSessionState,
-    RHYTHM_FEEDBACK_DURATION_SECS, RhythmOffsetDetectionSession, RhythmOffsetDetectionSessionState,
+    AdaptiveRhythmOffsetStrategy, ContinuousRhythmMatchingSession,
+    ContinuousRhythmMatchingSessionState, FEEDBACK_DURATION_SECS, GapPositionSelector,
+    PITCH_MATCHING_VELOCITY, PitchDiscriminationPlaybackData, PitchDiscriminationSession,
+    PitchDiscriminationSessionState, PitchMatchingPlaybackData, PitchMatchingSession,
+    PitchMatchingSessionState, RHYTHM_FEEDBACK_DURATION_SECS, RandomGapSelector,
+    RhythmOffsetDetectionSession, RhythmOffsetDetectionSessionState,
     RhythmOffsetDetectionTrialParams,
 };
 pub use statistics_key::StatisticsKey;

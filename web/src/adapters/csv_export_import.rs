@@ -116,6 +116,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
             TrainingRecord::RhythmOffsetDetection(_) => {
                 log::warn!("Rhythm offset detection records are not yet included in CSV export");
             }
+            TrainingRecord::ContinuousRhythmMatching(_) => {
+                log::warn!("Continuous rhythm matching records are not yet included in CSV export");
+            }
         }
     }
 
@@ -376,6 +379,11 @@ pub async fn import_merge(
             TrainingRecord::RhythmOffsetDetection(_) => {
                 log::warn!(
                     "Rhythm offset detection records are not yet included in CSV import deduplication"
+                );
+            }
+            TrainingRecord::ContinuousRhythmMatching(_) => {
+                log::warn!(
+                    "Continuous rhythm matching records are not yet included in CSV import deduplication"
                 );
             }
         }

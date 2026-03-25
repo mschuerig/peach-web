@@ -1,5 +1,6 @@
 use crate::records::{
-    PitchDiscriminationRecord, PitchMatchingRecord, RhythmOffsetDetectionRecord, TrainingRecord,
+    ContinuousRhythmMatchingRecord, PitchDiscriminationRecord, PitchMatchingRecord,
+    RhythmOffsetDetectionRecord, TrainingRecord,
 };
 use crate::statistics_key::StatisticsKey;
 use crate::types::{RhythmDirection, RhythmOffset, TempoBPM, TempoRange};
@@ -188,6 +189,49 @@ impl TrainingDiscipline {
         }
     }
 
+    /// Extracts the metric (percentage of sixteenth note) from a continuous rhythm matching record
+    /// if this is the `ContinuousRhythmMatching` discipline.
+    ///
+    /// Returns `None` for all other disciplines.
+    pub fn extract_continuous_rhythm_metric(
+        &self,
+        record: &ContinuousRhythmMatchingRecord,
+    ) -> Option<f64> {
+        match self {
+            TrainingDiscipline::ContinuousRhythmMatching => {
+                let tempo = TempoBPM::try_new(record.tempo_bpm).ok()?;
+                if !record.mean_offset_ms.is_finite() {
+                    return None;
+                }
+                let offset = RhythmOffset::new(record.mean_offset_ms);
+                Some(offset.percentage_of_sixteenth(tempo))
+            }
+            _ => None,
+        }
+    }
+
+    /// Returns the `StatisticsKey` for a continuous rhythm matching record,
+    /// combining the discipline with the tempo range and direction extracted from the record.
+    ///
+    /// Returns `None` if this is not the `ContinuousRhythmMatching` discipline or the tempo is invalid.
+    pub fn continuous_rhythm_statistics_key(
+        &self,
+        record: &ContinuousRhythmMatchingRecord,
+    ) -> Option<StatisticsKey> {
+        match self {
+            TrainingDiscipline::ContinuousRhythmMatching => {
+                let tempo = TempoBPM::try_new(record.tempo_bpm).ok()?;
+                if !record.mean_offset_ms.is_finite() {
+                    return None;
+                }
+                let direction = RhythmDirection::from_offset_ms(record.mean_offset_ms);
+                let tempo_range = TempoRange::from_bpm(tempo);
+                Some(StatisticsKey::Rhythm(*self, tempo_range, direction))
+            }
+            _ => None,
+        }
+    }
+
     /// Extracts the metric value and corresponding `StatisticsKey` from any training record.
     ///
     /// Returns `None` if this discipline does not match the record type/content.
@@ -202,6 +246,11 @@ impl TrainingDiscipline {
             TrainingRecord::RhythmOffsetDetection(r) => {
                 let metric = self.extract_rhythm_offset_metric(r)?;
                 let key = self.rhythm_offset_statistics_key(r)?;
+                Some((metric, key))
+            }
+            TrainingRecord::ContinuousRhythmMatching(r) => {
+                let metric = self.extract_continuous_rhythm_metric(r)?;
+                let key = self.continuous_rhythm_statistics_key(r)?;
                 Some((metric, key))
             }
         }

@@ -5,9 +5,9 @@ use web_sys::{IdbDatabase, IdbOpenDbRequest, IdbRequest, IdbTransactionMode};
 
 use domain::ports::StorageError;
 use domain::records::{
-    PITCH_DISCRIMINATION_STORE, PITCH_MATCHING_STORE, PitchDiscriminationRecord,
-    PitchMatchingRecord, RHYTHM_OFFSET_DETECTION_STORE, RhythmOffsetDetectionRecord,
-    TrainingRecord,
+    CONTINUOUS_RHYTHM_MATCHING_STORE, ContinuousRhythmMatchingRecord, PITCH_DISCRIMINATION_STORE,
+    PITCH_MATCHING_STORE, PitchDiscriminationRecord, PitchMatchingRecord,
+    RHYTHM_OFFSET_DETECTION_STORE, RhythmOffsetDetectionRecord, TrainingRecord,
 };
 
 const DB_NAME: &str = "peach";
@@ -21,7 +21,7 @@ pub const STORE_NAMES: &[&str] = &[
     PITCH_DISCRIMINATION_STORE,
     PITCH_MATCHING_STORE,
     RHYTHM_OFFSET_DETECTION_STORE,
-    "continuous_rhythm_matching_records",
+    CONTINUOUS_RHYTHM_MATCHING_STORE,
 ];
 
 /// Legacy store names from DB versions 1-2. Deleted on upgrade to v3.
@@ -100,6 +100,7 @@ impl IndexedDbStore {
             TrainingRecord::PitchDiscrimination(r) => serde_wasm_bindgen::to_value(r),
             TrainingRecord::PitchMatching(r) => serde_wasm_bindgen::to_value(r),
             TrainingRecord::RhythmOffsetDetection(r) => serde_wasm_bindgen::to_value(r),
+            TrainingRecord::ContinuousRhythmMatching(r) => serde_wasm_bindgen::to_value(r),
         }
         .map_err(|e| StorageError::WriteFailed(format!("Serialization: {e}")))?;
 
@@ -153,6 +154,15 @@ impl IndexedDbStore {
             let record: RhythmOffsetDetectionRecord = serde_wasm_bindgen::from_value(value)
                 .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
             all.push(TrainingRecord::RhythmOffsetDetection(record));
+        }
+
+        for value in self
+            .fetch_jsvalues_from_store(CONTINUOUS_RHYTHM_MATCHING_STORE)
+            .await?
+        {
+            let record: ContinuousRhythmMatchingRecord = serde_wasm_bindgen::from_value(value)
+                .map_err(|e| StorageError::ReadFailed(format!("Deserialization: {e}")))?;
+            all.push(TrainingRecord::ContinuousRhythmMatching(record));
         }
 
         Ok(all)
