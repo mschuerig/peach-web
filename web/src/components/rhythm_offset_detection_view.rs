@@ -16,8 +16,7 @@ use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::rhythm_scheduler::{
-    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, SchedulerMode, create_click_buffer,
-    play_click_at,
+    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer, play_click_at,
 };
 use crate::app::base_href;
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
@@ -491,7 +490,6 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
                                 RhythmStep::Play,
                             ],
                             tempo,
-                            mode: SchedulerMode::SinglePass,
                         },
                     );
                     scheduler.start();

@@ -12,21 +12,10 @@ pub enum RhythmStep {
     Silent,
 }
 
-/// Mode of scheduler operation.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SchedulerMode {
-    /// Play exactly one cycle of the pattern, then stop.
-    SinglePass,
-    /// Loop the pattern indefinitely until stopped.
-    #[allow(dead_code)]
-    Loop,
-}
-
 /// Scheduler configuration.
 pub struct SchedulerConfig {
     pub pattern: Vec<RhythmStep>,
     pub tempo: TempoBPM,
-    pub mode: SchedulerMode,
 }
 
 /// Lookahead interval in milliseconds (how often the scheduling loop runs).
@@ -89,7 +78,6 @@ struct SchedulerState {
     next_step_time: f64,
     current_step: usize,
     pattern: Vec<RhythmStep>,
-    mode: SchedulerMode,
     sixteenth_secs: f64,
     cycle_times: Vec<f64>,
     stopped: bool,
@@ -123,7 +111,6 @@ impl RhythmScheduler {
             next_step_time: 0.0,
             current_step: 0,
             pattern: config.pattern,
-            mode: config.mode,
             sixteenth_secs,
             cycle_times: Vec::new(),
             stopped: false,
@@ -218,20 +205,9 @@ fn schedule_ahead(
         let next_step = step_index + 1;
 
         if next_step >= pattern_len {
-            // End of cycle
-            let mode = state.borrow().mode;
-            match mode {
-                SchedulerMode::SinglePass => {
-                    state.borrow_mut().stopped = true;
-                    return;
-                }
-                SchedulerMode::Loop => {
-                    let mut s = state.borrow_mut();
-                    s.current_step = 0;
-                    s.next_step_time = next_time + sixteenth;
-                    s.cycle_times.clear();
-                }
-            }
+            // End of cycle — single pass, stop.
+            state.borrow_mut().stopped = true;
+            return;
         } else {
             let mut s = state.borrow_mut();
             s.current_step = next_step;
