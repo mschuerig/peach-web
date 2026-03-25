@@ -8,7 +8,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-001: NaN/infinity propagation through WelfordAccumulator
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit d0050b9 (2026-03-25)
 - **Surfaced:** Story 16.1 code review (2026-03-24)
 - **Location:** `domain/src/welford.rs` — `WelfordAccumulator::update()`
 - **Description:** If a NaN or infinity `f64` is passed to `update()`, it permanently poisons `mean`, `m2`, and all downstream statistics (EWMA, trend, std dev). Callers currently pass values derived from `.abs()` on known-finite fields, but there is no guard in the accumulator itself.
@@ -16,7 +16,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-002: NaN timestamp from parse_iso8601_to_epoch breaks session bucketing
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit e33e458 (2026-03-25)
 - **Surfaced:** Story 16.1 code review (2026-03-24)
 - **Location:** `domain/src/training_discipline_statistics.rs:82`, `web/src/app.rs`
 - **Description:** If `parse_iso8601_to_epoch` returns NaN (e.g., malformed timestamp from IndexedDB), the session gap comparison `point.timestamp - prev.timestamp >= session_gap` evaluates to `false`, silently merging bad points into sessions. The `partial_cmp` sort also swallows NaN via `unwrap_or(Equal)`.
@@ -24,7 +24,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-003: No non-negative validation on MetricPoint::value
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit 9ce4e1f (2026-03-25)
 - **Surfaced:** Story 16.1 code review (2026-03-24)
 - **Location:** `domain/src/metric_point.rs`
 - **Description:** The statistics engine assumes values represent absolute errors (non-negative). Callers do call `.abs()` before constructing points, but `MetricPoint::new` accepts any `f64` including negative values. No compile-time or runtime signal that negative inputs are a logic error.
@@ -32,7 +32,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-004: WelfordAccumulator::mean() returns 0.0 on empty accumulator
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit f54c0dc (2026-03-25)
 - **Surfaced:** Story 16.1 code review (2026-03-24)
 - **Location:** `domain/src/welford.rs` — `mean()`
 - **Description:** `mean()` returns `0.0` when `count == 0` rather than `Option<f64>`. All current callers guard with `count > 0` checks, but the public API is a footgun for future callers.
@@ -48,7 +48,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-006: merged_statistics accepts cross-discipline key slices
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit b60d117 (2026-03-25)
 - **Surfaced:** Story 16.2 code review (2026-03-24)
 - **Location:** `domain/src/profile.rs` — `merged_statistics()`
 - **Description:** The public `merged_statistics` API accepts arbitrary `&[StatisticsKey]`. If keys from different disciplines are passed, the config from whichever key has data first wins, producing wrong EWMA/trend parameters. No current caller does this.
@@ -64,7 +64,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-009: add_metric_for_discipline silently drops metrics for unregistered disciplines
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit 2b59c1d (2026-03-25)
 - **Surfaced:** Story 16.3 code review (2026-03-24)
 - **Location:** `domain/src/progress_timeline.rs` — `add_metric_for_discipline()`
 - **Description:** `if let Some(state) = self.disciplines.get_mut(&discipline)` silently discards metrics when the discipline isn't in the HashMap. Currently safe because `ProgressTimeline::new()` initializes all variants from `TrainingDiscipline::ALL`. A `debug_assert!` was added in the 16.3 review fix, but a log warning for release builds would catch future discipline/initialization mismatches.
@@ -72,7 +72,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-008: rebuild_all silently drops mismatched keys
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit f0b394f (2026-03-25)
 - **Surfaced:** Story 16.2 code review (2026-03-24)
 - **Location:** `domain/src/profile.rs` — `rebuild_all()`
 - **Description:** `rebuild_all` iterates only valid discipline-key combinations. Any entries in the input HashMap with keys that don't match a valid combination are silently ignored. All current callers construct keys correctly.
@@ -112,7 +112,7 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-014: Blob URL never revoked after CSV export download
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in commit 5d4f6cd (2026-03-25)
 - **Surfaced:** Story 19.1 code review (2026-03-25)
 - **Location:** `web/src/adapters/csv_export_import.rs` — `trigger_download()`
 - **Description:** `Url::create_object_url_with_blob` creates a blob URL for the CSV download, but `Url::revoke_object_url` is never called. Each export leaks a blob reference in browser memory. Cleaned up on page navigation, but repeated exports in a long session accumulate.
