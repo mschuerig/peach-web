@@ -138,8 +138,22 @@ impl RhythmScheduler {
     }
 
     /// Start the scheduler. Begins the lookahead loop.
+    ///
+    /// # Panics
+    /// Panics if the `AudioContext` is not in the `running` state. Callers must
+    /// resume the context before starting the scheduler — a suspended context
+    /// has `currentTime` frozen at 0, which causes all steps to be scheduled
+    /// in a single burst.
     pub fn start(&mut self) {
-        let current_time = self.ctx.borrow().current_time();
+        let ctx_ref = self.ctx.borrow();
+        assert!(
+            ctx_ref.state() == web_sys::AudioContextState::Running,
+            "RhythmScheduler::start() called with AudioContext in {:?} state — \
+             resume the context first to avoid click burst",
+            ctx_ref.state()
+        );
+        let current_time = ctx_ref.current_time();
+        drop(ctx_ref);
         {
             let mut state = self.state.borrow_mut();
             state.next_step_time = current_time + 0.050; // small lead-in
