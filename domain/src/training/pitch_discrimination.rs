@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::tuning::TuningSystem;
-use crate::types::{Cents, DetunedMIDINote, MIDINote};
+use crate::types::{DetunedMIDINote, MIDINote};
 
 /// A pitch discrimination trial: a reference note and a detuned target note.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -26,17 +26,13 @@ impl PitchDiscriminationTrial {
         self.target_note
     }
 
-    /// Whether the target is tuned higher than the reference.
+    /// Whether the target is tuned sharp (higher) relative to the correct interval.
     ///
-    /// Accounts for both the interval (MIDI note difference) and the
-    /// microtonal detuning offset. The semitone difference is converted
-    /// to cents and combined with the offset to determine the overall
-    /// pitch direction.
+    /// Only considers the microtonal detuning offset, not the interval itself.
+    /// The user's task is to judge whether the target note is sharp or flat
+    /// compared to where the interval should place it.
     pub fn is_target_higher(&self) -> bool {
-        let semitone_cents = (self.target_note.note.raw_value() as f64
-            - self.reference_note.raw_value() as f64)
-            * Cents::PER_SEMITONE_ET;
-        semitone_cents + self.target_note.offset.raw_value > 0.0
+        self.target_note.offset.raw_value > 0.0
     }
 
     /// Whether the user's answer (higher/lower) is correct.
@@ -135,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_is_target_higher_interval_up_with_negative_offset() {
-        // Major third up (4 semitones = 400 cents) with -50 cent offset = +350 cents net
+        // Major third up with -50 cent offset → target is flat (not higher)
         let comp = PitchDiscriminationTrial::new(
             MIDINote::new(79),
             DetunedMIDINote {
@@ -143,12 +139,12 @@ mod tests {
                 offset: Cents::new(-50.0),
             },
         );
-        assert!(comp.is_target_higher());
+        assert!(!comp.is_target_higher());
     }
 
     #[test]
     fn test_is_target_higher_interval_down_with_positive_offset() {
-        // Perfect fifth down (7 semitones = -700 cents) with +50 cent offset = -650 cents net
+        // Perfect fifth down with +50 cent offset → target is sharp (higher)
         let comp = PitchDiscriminationTrial::new(
             MIDINote::new(67),
             DetunedMIDINote {
@@ -156,7 +152,7 @@ mod tests {
                 offset: Cents::new(50.0),
             },
         );
-        assert!(!comp.is_target_higher());
+        assert!(comp.is_target_higher());
     }
 
     #[test]
