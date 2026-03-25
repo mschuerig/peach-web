@@ -96,8 +96,24 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 
 ### PEF-012: CSV export/import silently drops rhythm training records
 
-- **Status:** OPEN
+- **Status:** CLOSED — fixed in Story 19.1 (commit fd8f656, 2026-03-25)
 - **Surfaced:** Story 17.3 implementation (2026-03-25), confirmed in Story 18.1 code review (2026-03-25)
 - **Location:** `web/src/adapters/csv_export_import.rs` — `export_all_data()` and `import_merge()`
 - **Description:** Both `RhythmOffsetDetection` and `ContinuousRhythmMatching` record variants emit `log::warn!` and are silently skipped during CSV export and import deduplication. Users exporting data lose these records with no UI indication. The pattern was introduced in Story 17.3 and extended in Story 18.1.
 - **Recommendation:** Add CSV serialization support for rhythm record types, or surface a user-visible warning in the export UI.
+
+### PEF-013: Merge import dedup uses timestamp-only key, losing sub-second records
+
+- **Status:** OPEN
+- **Surfaced:** Story 19.1 code review (2026-03-25)
+- **Location:** `web/src/adapters/csv_export_import.rs` — `import_merge()`
+- **Description:** Merge deduplication keys on `truncate_timestamp_to_second(&timestamp)` only. Two distinct records of the same training type within the same calendar second share a key, so the second is silently skipped as a duplicate. Affects all 4 record types.
+- **Recommendation:** Use a composite dedup key including distinguishing fields (e.g., reference_note, target_note for pitch; tempo_bpm, offset_ms for rhythm).
+
+### PEF-014: Blob URL never revoked after CSV export download
+
+- **Status:** OPEN
+- **Surfaced:** Story 19.1 code review (2026-03-25)
+- **Location:** `web/src/adapters/csv_export_import.rs` — `trigger_download()`
+- **Description:** `Url::create_object_url_with_blob` creates a blob URL for the CSV download, but `Url::revoke_object_url` is never called. Each export leaks a blob reference in browser memory. Cleaned up on page navigation, but repeated exports in a long session accumulate.
+- **Recommendation:** Add `let _ = Url::revoke_object_url(&url);` after `a.click()`.
