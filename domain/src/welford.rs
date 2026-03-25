@@ -37,7 +37,10 @@ impl WelfordAccumulator {
         self.count
     }
 
-    /// Raw mean as f64.
+    /// Running mean. Returns `0.0` when the accumulator is empty (`count == 0`).
+    ///
+    /// Callers that need to distinguish "no data" from "mean is zero" should
+    /// check `count() > 0` first.
     pub fn mean(&self) -> f64 {
         self.mean
     }
