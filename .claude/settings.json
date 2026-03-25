@@ -6,7 +6,7 @@
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
     "excludedCommands": ["gh", "trunk"],
-    "allowUnsandboxedCommands": true,
+    "allowUnsandboxedCommands": false,
     "filesystem": {
       "denyRead": [
         "~/.ssh",
