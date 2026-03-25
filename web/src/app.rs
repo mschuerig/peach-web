@@ -161,6 +161,13 @@ pub fn App() -> impl IntoView {
                         for discipline in TrainingDiscipline::ALL {
                             if let Some((m, key)) = discipline.extract_metric_and_key(record) {
                                 let ts = parse_iso8601_to_epoch(record.timestamp());
+                                if !ts.is_finite() {
+                                    log::warn!(
+                                        "Skipping record with non-finite timestamp: {:?}",
+                                        record.timestamp()
+                                    );
+                                    continue;
+                                }
                                 key_points
                                     .entry(key)
                                     .or_default()
