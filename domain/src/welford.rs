@@ -17,7 +17,15 @@ impl WelfordAccumulator {
     }
 
     /// Add one measurement to the accumulator.
+    ///
+    /// # Panics
+    /// Debug-panics if `value` is NaN or infinity — these poison the running
+    /// mean and variance irreversibly.
     pub fn update(&mut self, value: f64) {
+        debug_assert!(
+            value.is_finite(),
+            "WelfordAccumulator::update called with non-finite value: {value}"
+        );
         self.count += 1;
         let delta = value - self.mean;
         self.mean += delta / self.count as f64;
