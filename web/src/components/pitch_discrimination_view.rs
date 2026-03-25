@@ -369,6 +369,7 @@ pub fn PitchDiscriminationView() -> impl IntoView {
     // AudioContext state change handler — attempts resume on Suspended, interrupts on Closed
     let audiocontext_handler = Closure::<dyn FnMut(web_sys::Event)>::new({
         let interrupt = Rc::clone(&interrupt_and_navigate);
+        let terminated = Rc::clone(&terminated);
         move |event: web_sys::Event| {
             if let Some(target) = event.target()
                 && let Some(base_ctx) = target.dyn_ref::<web_sys::BaseAudioContext>()
@@ -387,10 +388,17 @@ pub fn PitchDiscriminationView() -> impl IntoView {
                             match audio_ctx.resume() {
                                 Ok(promise) => {
                                     let interrupt = Rc::clone(&interrupt);
+                                    let terminated = Rc::clone(&terminated);
                                     let target = target.clone();
                                     spawn_local(async move {
                                         let _ = JsFuture::from(promise).await;
+                                        if terminated.get() {
+                                            return;
+                                        }
                                         TimeoutFuture::new(500).await;
+                                        if terminated.get() {
+                                            return;
+                                        }
                                         if let Some(ctx) =
                                             target.dyn_ref::<web_sys::BaseAudioContext>()
                                             && ctx.state() != web_sys::AudioContextState::Running
