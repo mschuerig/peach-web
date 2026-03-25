@@ -250,6 +250,11 @@ impl ProgressTimeline {
         );
         if let Some(state) = self.disciplines.get_mut(&discipline) {
             state.add_point(timestamp_secs, metric, start_of_today);
+        } else {
+            #[cfg(feature = "training-log")]
+            log::warn!(
+                "ProgressTimeline: dropping metric for unregistered discipline {discipline:?}"
+            );
         }
     }
 
