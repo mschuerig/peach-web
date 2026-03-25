@@ -27,6 +27,21 @@ pub static SETTINGS_HELP: &[HelpSection] = &[
     },
 ];
 
+pub static RHYTHM_OFFSET_DETECTION_HELP: &[HelpSection] = &[
+    HelpSection {
+        title_key: "help-rhythm-offset-goal-title",
+        body_key: "help-rhythm-offset-goal-body",
+    },
+    HelpSection {
+        title_key: "help-rhythm-offset-controls-title",
+        body_key: "help-rhythm-offset-controls-body",
+    },
+    HelpSection {
+        title_key: "help-rhythm-offset-feedback-title",
+        body_key: "help-rhythm-offset-feedback-body",
+    },
+];
+
 pub static PITCH_DISCRIMINATION_HELP: &[HelpSection] = &[
     HelpSection {
         title_key: "help-discrimination-goal-title",

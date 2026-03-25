@@ -48,10 +48,10 @@ const SCHEDULE_INTERVAL_MS: u32 = 25;
 const LOOKAHEAD_SECS: f64 = 0.100;
 
 /// Accent gain for the first beat: +6dB ≈ 2.0x amplitude.
-const ACCENT_GAIN: f32 = 2.0;
+pub const ACCENT_GAIN: f32 = 2.0;
 
 /// Normal (non-accented) gain.
-const NORMAL_GAIN: f32 = 1.0;
+pub const NORMAL_GAIN: f32 = 1.0;
 
 /// Duration of the click buffer in seconds.
 const CLICK_DURATION_SECS: f64 = 0.005;
@@ -290,6 +290,19 @@ fn schedule_ahead(
 }
 
 /// Schedule a single click at the given audio-clock time with the specified gain.
+///
+/// Public so that training views can schedule individual clicks outside the scheduler's
+/// pattern (e.g. the offset click in rhythm offset detection).
+pub fn play_click_at(
+    ctx: &Rc<RefCell<AudioContext>>,
+    buffer: &AudioBuffer,
+    when: f64,
+    gain_value: f32,
+) -> Result<(), String> {
+    schedule_click(ctx, buffer, when, gain_value)
+}
+
+/// Internal click-scheduling used by the lookahead loop.
 fn schedule_click(
     ctx: &Rc<RefCell<AudioContext>>,
     buffer: &AudioBuffer,

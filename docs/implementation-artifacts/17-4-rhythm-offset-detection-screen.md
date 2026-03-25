@@ -1,6 +1,6 @@
 # Story 17.4: Rhythm Offset Detection Screen UI
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -48,14 +48,14 @@ This story replaces the placeholder screen from story 15.3 with the full trainin
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Replace placeholder with full component structure
-- [ ] Task 2: Implement dot visualization with light-up animation
-- [ ] Task 3: Implement Early/Late buttons with state-dependent enable/disable
-- [ ] Task 4: Implement feedback display with auto-advance timer
-- [ ] Task 5: Wire session + scheduler + port traits
-- [ ] Task 6: Add localization strings
-- [ ] Task 7: Accessibility pass
-- [ ] Task 8: End-to-end smoke test
+- [x] Task 1: Replace placeholder with full component structure
+- [x] Task 2: Implement dot visualization with light-up animation
+- [x] Task 3: Implement Early/Late buttons with state-dependent enable/disable
+- [x] Task 4: Implement feedback display with auto-advance timer
+- [x] Task 5: Wire session + scheduler + port traits
+- [x] Task 6: Add localization strings
+- [x] Task 7: Accessibility pass
+- [ ] Task 8: End-to-end smoke test — deferred to user; agent cannot verify in browser
 
 ## Dev Notes
 
@@ -63,3 +63,53 @@ This story replaces the placeholder screen from story 15.3 with the full trainin
 - Use `spawn_local_scoped_with_cancellation` for the feedback timer (NOT `Timeout.forget()` — see memory about disposed signal panics)
 - The scheduler should start playing as soon as the component mounts (after a brief delay for the audio context to be ready)
 - Keep the visual design simple — circles with color transitions, similar to the pitch training feedback indicators
+
+## Dev Agent Record
+
+### Implementation Plan
+
+The view follows the same architectural patterns as PitchDiscriminationView:
+- Session + port traits (ProfilePort, RecordPort, TimelinePort) wired in component init
+- UI signals bridge domain state to Leptos reactivity via `sync_session_to_signals()`
+- `cancelled`/`terminated` flags for lifecycle management
+- `spawn_local` async training loop with `'session`/`'training` nested loops
+- Event listeners (keydown, visibilitychange, audiocontext state) with cleanup
+
+Key design decisions:
+1. **Dot animation driven by audio clock polling**: Instead of spawning separate timeout tasks per dot, the training loop polls at 20ms intervals and computes which dot should be lit based on precomputed beat times vs. current AudioContext time. This avoids spawn_local disposal issues.
+2. **Scheduler + manual offset click**: RhythmScheduler plays beats 1, 2, 4 with pattern [Play, Play, Silent, Play]. Beat 3 (the offset click) is scheduled manually via `play_click_at()` at the offset time. This cleanly separates the regular metronome from the training-specific offset.
+3. **Beat times computed upfront**: All 4 beat times are calculated before playback starts, enabling both audio scheduling and visual animation from the same source of truth.
+4. **3rd dot ring indicator**: The offset dot (index 2) has a subtle ring border to visually distinguish it as the beat being tested, matching the iOS overlapping-circle pattern.
+
+### Debug Log
+
+No issues encountered during implementation.
+
+### Completion Notes
+
+- Replaced placeholder "coming soon" screen with full training UI
+- 4-dot visual metronome with accent on first dot and ring on offset dot (3rd)
+- Early/Late buttons with state-dependent enable/disable (only in AwaitingAnswer)
+- Feedback display: checkmark/X icon + difficulty percentage
+- Auto-play loop: Idle → Playing → AwaitingAnswer → ShowingFeedback → repeat
+- NavBar with back button, title "Compare Timing", help/settings/profile icons
+- Help modal with 3 sections (Goal, Controls, Feedback)
+- Keyboard shortcuts: Arrow Left/E for Early, Arrow Right/L for Late
+- Tempo display below nav bar
+- Screen reader live region for feedback announcements
+- All strings localized in en/main.ftl and de/main.ftl
+- Visibility change and AudioContext state change handlers for interruption
+- Proper cleanup on component unmount (event listeners, session stop)
+- Training stats component wired with difficulty percentage tracking
+
+## File List
+
+- `web/src/components/rhythm_offset_detection_view.rs` — Complete rewrite: full training UI
+- `web/src/adapters/rhythm_scheduler.rs` — Added `pub play_click_at()`, made `ACCENT_GAIN`/`NORMAL_GAIN` public
+- `web/locales/en/main.ftl` — Added: early, late, bpm-label, difficulty-pct, rhythm-offset-title, rhythm-offset-help-title, help-rhythm-offset-* strings
+- `web/locales/de/main.ftl` — Added: German translations for all new strings
+- `web/src/help_sections.rs` — Added `RHYTHM_OFFSET_DETECTION_HELP` static
+
+## Change Log
+
+- 2026-03-25: Implemented full rhythm offset detection training screen UI (Story 17.4)

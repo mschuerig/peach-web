@@ -39,10 +39,14 @@ training-started = Training started
 training-stopped = Training stopped
 higher = Higher
 lower = Lower
+early = Early
+late = Late
 correct = Correct
 incorrect = Incorrect
 tap-to-start = Tap to Start Training
 pitch-adjustment = Pitch adjustment
+bpm-label = { $value } BPM
+difficulty-pct = { $value }%
 
 ## Training - Pitch Matching
 dead-center = Dead center
@@ -129,6 +133,10 @@ language-label = Language
 discrimination-title = Compare
 discrimination-help-title = Pitch Discrimination Training
 
+## Rhythm Offset Detection
+rhythm-offset-title = Compare Timing
+rhythm-offset-help-title = Compare Timing Training
+
 ## Pitch Matching
 matching-title = Match
 matching-help-title = Pitch Matching Training
@@ -186,6 +194,14 @@ help-discrimination-difficulty-title = Difficulty
 help-discrimination-difficulty-body = The number at the top shows the **cent difference** between the two notes – a smaller number means a harder comparison. Your **session best** tracks the smallest difference you answered correctly.
 help-discrimination-intervals-title = Intervals
 help-discrimination-intervals-body = In interval mode, the two notes are separated by a specific **musical interval** (like a fifth or an octave) instead of a small pitch difference. You still decide which note is higher — but now you're training your sense of musical distance.
+
+## Help - Rhythm Offset Detection
+help-rhythm-offset-goal-title = Goal
+help-rhythm-offset-goal-body = You'll hear four clicks like a metronome. One of them — the third — is slightly **early or late**. Your job is to decide which one it was. The smaller the offset, the sharper your timing perception.
+help-rhythm-offset-controls-title = Controls
+help-rhythm-offset-controls-body = After the four clicks play, the **Early** and **Late** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Left** or **E** for early, **Arrow Right** or **L** for late.
+help-rhythm-offset-feedback-title = Feedback
+help-rhythm-offset-feedback-body = After each answer you'll see a brief **checkmark** (correct) or **X** (incorrect), along with the current difficulty as a percentage. A smaller percentage means a subtler offset — and a harder challenge.
 
 ## Help - Pitch Matching
 help-matching-goal-title = Goal

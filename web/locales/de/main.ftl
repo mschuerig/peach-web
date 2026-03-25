@@ -39,10 +39,14 @@ training-started = Training gestartet
 training-stopped = Training beendet
 higher = Höher
 lower = Tiefer
+early = Zu früh
+late = Zu spät
 correct = Richtig
 incorrect = Falsch
 tap-to-start = Zum Starten tippen
 pitch-adjustment = Tonhöhenregler
+bpm-label = { $value } BPM
+difficulty-pct = { $value }%
 
 ## Training - Pitch Matching
 dead-center = Volltreffer
@@ -129,6 +133,10 @@ language-label = Sprache
 discrimination-title = Vergleichen
 discrimination-help-title = Tonhöhenunterscheidung
 
+## Rhythm Offset Detection
+rhythm-offset-title = Timing vergleichen
+rhythm-offset-help-title = Timing-Training
+
 ## Pitch Matching
 matching-title = Treffen
 matching-help-title = Tonhöhen-Training
@@ -186,6 +194,14 @@ help-discrimination-difficulty-title = Schwierigkeit
 help-discrimination-difficulty-body = Die Zahl oben zeigt den **Cent-Unterschied** zwischen den beiden Tönen – eine kleinere Zahl bedeutet einen schwierigeren Vergleich. Dein **Sitzungsbestwert** zeigt den kleinsten Unterschied, den du korrekt beantwortet hast.
 help-discrimination-intervals-title = Intervalle
 help-discrimination-intervals-body = Im Intervallmodus sind die beiden Töne durch ein bestimmtes **musikalisches Intervall** getrennt (z. B. eine Quinte oder Oktave) statt durch einen kleinen Tonhöhenunterschied. Du entscheidest weiterhin, welcher Ton höher ist — aber du trainierst jetzt dein Gespür für musikalische Abstände.
+
+## Help - Rhythm Offset Detection
+help-rhythm-offset-goal-title = Ziel
+help-rhythm-offset-goal-body = Du hörst vier Klicks wie ein Metronom. Einer davon — der dritte — kommt leicht **zu früh oder zu spät**. Deine Aufgabe ist es, zu entscheiden, welches es war. Je kleiner die Abweichung, desto schärfer ist deine Zeitwahrnehmung.
+help-rhythm-offset-controls-title = Bedienung
+help-rhythm-offset-controls-body = Nachdem die vier Klicks gespielt wurden, werden die Tasten **Zu früh** und **Zu spät** aktiv. Tippe auf die, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil links** oder **E** für zu früh, **Pfeil rechts** oder **L** für zu spät.
+help-rhythm-offset-feedback-title = Feedback
+help-rhythm-offset-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkchen** (richtig) oder ein **X** (falsch), zusammen mit der aktuellen Schwierigkeit als Prozentsatz. Ein kleinerer Prozentsatz bedeutet eine subtilere Abweichung — und eine schwierigere Herausforderung.
 
 ## Help - Pitch Matching
 help-matching-goal-title = Ziel
