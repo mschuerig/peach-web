@@ -6,7 +6,16 @@ pub struct MetricPoint {
 }
 
 impl MetricPoint {
+    /// Create a new metric point.
+    ///
+    /// # Panics
+    /// Debug-panics if `value` is negative — the statistics engine assumes
+    /// absolute-error (non-negative) values.
     pub fn new(timestamp: f64, value: f64) -> Self {
+        debug_assert!(
+            value >= 0.0,
+            "MetricPoint::new called with negative value: {value}"
+        );
         Self { timestamp, value }
     }
 }
