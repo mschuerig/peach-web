@@ -45,7 +45,16 @@ pub fn TrainingStats(
     latest_value: Signal<Option<f64>>,
     session_best: Signal<Option<f64>>,
     trend: Signal<Option<Trend>>,
+    #[prop(optional)] is_rhythm: bool,
 ) -> impl IntoView {
+    let format_value = move |v: f64| {
+        let formatted = format_cents(v);
+        if is_rhythm {
+            tr!("value-percent-16th", {"value" => formatted})
+        } else {
+            tr!("value-cents", {"value" => formatted})
+        }
+    };
     view! {
         <div class="text-left mb-4">
             // Latest value
@@ -60,7 +69,7 @@ pub fn TrainingStats(
             >
                 <span>{move_tr!("latest")}</span>
                 <span class="font-medium dark:text-gray-300">
-                    {move || latest_value.get().map(|v| tr!("value-cents", {"value" => format_cents(v)})).unwrap_or_default()}
+                    {move || latest_value.get().map(format_value).unwrap_or_default()}
                 </span>
                 // Trend arrow
                 {move || {
@@ -86,7 +95,7 @@ pub fn TrainingStats(
             >
                 <span>{move_tr!("best")}</span>
                 <span>
-                    {move || session_best.get().map(|v| tr!("value-cents", {"value" => format_cents(v)})).unwrap_or_default()}
+                    {move || session_best.get().map(format_value).unwrap_or_default()}
                 </span>
             </div>
         </div>

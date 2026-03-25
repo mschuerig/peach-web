@@ -60,6 +60,7 @@ flat-label = flat
 latest = Latest:
 best = Best:
 value-cents = { $value } cents
+value-percent-16th = { $value } % of 16th
 trend-improving = Improving
 trend-stable = Stable
 trend-declining = Declining
@@ -154,11 +155,11 @@ profile-title = Profile
 no-training-data = No training data yet. Start training to build your profile.
 profile-no-data-aria = Profile. No training data available.
 profile-showing-progress = Profile showing progress for: { $modes }
-progress-for = Progress for { $name }: { $ewma } cents, { $trend }
+progress-for = Progress for { $name }: { $ewma } { $unit }, { $trend }
 progress-chart-for = Progress chart for { $name }
 chart-today = Today
-current-trend = Current: { $ewma } cents, trend: { $trend }
-value-trend = { $ewma } cents, trend { $trend }
+current-trend = Current: { $ewma } { $unit }, trend: { $trend }
+value-trend = { $ewma } { $unit }, trend { $trend }
 
 ## Info
 version-label = Version { $number }

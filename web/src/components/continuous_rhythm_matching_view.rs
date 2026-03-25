@@ -639,6 +639,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
                     latest_value=latest_difficulty.into()
                     session_best=stats_session_best.into()
                     trend=stats_trend.into()
+                    is_rhythm=true
                 />
                 // Right: timing feedback indicator
                 <div class="text-right" aria-hidden="true">

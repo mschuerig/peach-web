@@ -83,6 +83,7 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
             });
             let value_aria = tr!("current-trend", {
                 "ewma" => ewma_str.clone(),
+                "unit" => config.unit_label,
                 "trend" => trend_label
             });
 

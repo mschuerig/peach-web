@@ -84,7 +84,14 @@ pub fn ProgressSparkline(mode: TrainingDiscipline) -> impl IntoView {
             let points = compute_points(&values);
             let stroke_color = trend_stroke_color(trend);
 
-            let ewma_str = ewma.map(|v| tr!("value-cents", {"value" => format!("{v:.1}")})).unwrap_or_default();
+            let ewma_str = ewma.map(|v| {
+                let formatted = format!("{v:.1}");
+                if mode.is_rhythm() {
+                    tr!("value-percent-16th", {"value" => formatted})
+                } else {
+                    tr!("value-cents", {"value" => formatted})
+                }
+            }).unwrap_or_default();
             let trend_str = trend_label(trend);
             let mode_name = i18n.tr(mode.config().display_name);
 

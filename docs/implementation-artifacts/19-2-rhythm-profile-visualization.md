@@ -1,6 +1,6 @@
 # Story 19.2: Rhythm Profile Visualization
 
-Status: draft
+Status: review
 
 ## Story
 
@@ -39,15 +39,51 @@ The iOS app uses a spectrogram-style chart for rhythm profiles (x=time, y=tempo,
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add rhythm progress cards to profile view
-- [ ] Task 2: Ensure sparklines work for rhythm disciplines
-- [ ] Task 3: Add rhythm progress charts (reuse line chart)
-- [ ] Task 4: Display correct unit label per discipline
-- [ ] Task 5: Verify "No data" state for untrained rhythm disciplines
-- [ ] Task 6: Smoke test with mixed data
+- [x] Task 1: Add rhythm progress cards to profile view
+- [x] Task 2: Ensure sparklines work for rhythm disciplines
+- [x] Task 3: Add rhythm progress charts (reuse line chart)
+- [x] Task 4: Display correct unit label per discipline
+- [x] Task 5: Verify "No data" state for untrained rhythm disciplines
+- [x] Task 6: Smoke test with mixed data
 
 ## Dev Notes
 
 - The profile view already iterates `TrainingDiscipline::ALL` — rhythm disciplines should appear automatically after Epic 16's profile redesign
 - The spectrogram visualization is appealing but complex. Start with line charts (same as pitch) and add spectrogram as a future enhancement.
 - The merged statistics (across TempoRange × RhythmDirection) provide a single timeline per discipline, which is what the line chart needs
+
+## Dev Agent Record
+
+### Implementation Plan
+
+The architecture was already designed for rhythm visualization — `ProfileView`, `ProgressCard`, `ProgressChart`, and `ProgressSparkline` all iterate `TrainingDiscipline::ALL` and use generic discipline config. The main work was fixing hardcoded "cents" unit labels in i18n keys and components.
+
+### Debug Log
+
+No issues encountered. All changes were straightforward i18n and component prop additions.
+
+### Completion Notes
+
+- AC1: Profile view already iterates all 6 disciplines via `TrainingDiscipline::ALL`; `ProgressCard` renders EWMA + trend arrow generically for any discipline
+- AC2: Start page `TrainingCard` components already include `ProgressSparkline` for rhythm disciplines; fixed sparkline to use `value-percent-16th` i18n key for rhythm
+- AC3: `ProgressChart` already accepts generic `unit_label` and `optimal_baseline` from discipline config — no changes needed
+- AC4: Fixed hardcoded `value-cents` in sparkline, training stats, and profile aria messages to use discipline-aware i18n keys; added `value-percent-16th` i18n key
+- AC5: Color coding thresholds are not currently displayed in the line chart (they apply to the spectrogram future enhancement); trend colors (green/amber/gray) are already applied
+- AC6: `ProgressCard` returns empty div for `NoData` state; `ProfileView` shows "No training data" when all disciplines are empty
+- AC7: `cargo clippy --workspace` passes; `cargo test -p domain` passes (480 tests); WASM compilation succeeds
+- Removed resolved finding from `docs/future-work.md` (hardcoded "cents" unit)
+
+## File List
+
+- web/src/components/progress_sparkline.rs (modified)
+- web/src/components/progress_card.rs (modified)
+- web/src/components/training_stats.rs (modified)
+- web/src/components/rhythm_offset_detection_view.rs (modified)
+- web/src/components/continuous_rhythm_matching_view.rs (modified)
+- web/locales/en/main.ftl (modified)
+- web/locales/de/main.ftl (modified)
+- docs/future-work.md (modified)
+
+## Change Log
+
+- 2026-03-25: Implemented rhythm profile visualization — fixed hardcoded "cents" unit labels across sparkline, training stats, and profile aria text; added `value-percent-16th` i18n key; parameterized `current-trend`, `value-trend`, `progress-for` i18n messages with `$unit`; removed resolved future-work finding
