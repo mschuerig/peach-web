@@ -62,10 +62,27 @@ impl PerceptualProfile {
 
     /// Merge statistics from multiple keys by collecting all metrics chronologically
     /// and rebuilding Welford/EWMA/trend from scratch.
+    ///
+    /// # Panics
+    /// Debug-panics if `keys` span more than one discipline — mixed-discipline
+    /// merges produce wrong EWMA/trend parameters.
     pub fn merged_statistics(
         &self,
         keys: &[StatisticsKey],
     ) -> Option<TrainingDisciplineStatistics> {
+        debug_assert!(
+            {
+                let disciplines: std::collections::HashSet<_> = keys
+                    .iter()
+                    .map(|k| match k {
+                        StatisticsKey::Pitch(d) | StatisticsKey::Rhythm(d, _, _) => *d,
+                    })
+                    .collect();
+                disciplines.len() <= 1
+            },
+            "merged_statistics called with keys spanning multiple disciplines"
+        );
+
         // Collect all metrics from the requested keys
         let mut all_metrics: Vec<MetricPoint> = Vec::new();
         let mut config = None;
