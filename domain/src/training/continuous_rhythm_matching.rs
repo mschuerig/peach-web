@@ -81,7 +81,8 @@ pub const CYCLES_PER_TRIAL: u16 = 16;
 
 /// Aggregate 16 cycle results into a completed trial.
 ///
-/// Returns `None` if there are no hits (mean offset undefined).
+/// Returns `None` if there are no hits — all-miss trials are discarded
+/// (matching iOS behavior where trials with zero hits are silently skipped).
 /// The mean_offset_ms is the mean of signed hit offsets.
 pub fn aggregate_trial(
     tempo: TempoBPM,
@@ -113,15 +114,8 @@ pub fn aggregate_trial(
     }
 
     if total_hits == 0 {
-        // All misses — still a valid trial with 0% hit rate, mean offset = 0
-        return Some(CompletedContinuousRhythmMatchingTrial::new(
-            tempo,
-            0.0,
-            0.0,
-            [None, None, None, None],
-            CYCLES_PER_TRIAL,
-            timestamp,
-        ));
+        // All misses — discard trial (no meaningful metric to record)
+        return None;
     }
 
     let mean_offset_ms = total_offset_ms / total_hits as f64;
@@ -302,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aggregate_all_misses() {
+    fn test_aggregate_all_misses_returns_none() {
         let cycles: Vec<(StepPosition, CycleResult)> = (0..16)
             .map(|i| (StepPosition::ALL[i % 4], CycleResult::Miss))
             .collect();
@@ -310,13 +304,8 @@ mod tests {
             TempoBPM::new(80),
             &cycles,
             "2026-03-25T12:00:00Z".to_string(),
-        )
-        .unwrap();
-        assert_eq!(trial.hit_rate(), 0.0);
-        assert_eq!(trial.mean_offset_ms(), 0.0);
-        for mean in trial.per_position_mean_ms() {
-            assert!(mean.is_none());
-        }
+        );
+        assert!(trial.is_none(), "all-miss trials should be discarded");
     }
 
     #[test]

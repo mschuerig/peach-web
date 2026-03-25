@@ -1,6 +1,6 @@
 # Story 18.1: Continuous Rhythm Matching Session and Step Sequencer
 
-Status: review
+Status: done
 
 ## Story
 

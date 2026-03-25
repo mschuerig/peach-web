@@ -160,9 +160,7 @@ impl ContinuousRhythmMatchingSession {
         }
 
         let tempo = self.tempo.expect("tempo must be set when running");
-        let gap_time = self
-            .current_gap_scheduled_time
-            .expect("gap scheduled time must be set when running");
+        let gap_time = self.current_gap_scheduled_time?;
 
         // Use evaluate_tap with just the gap position's scheduled time
         evaluate_tap(tap_time, &[gap_time], tempo)
@@ -200,7 +198,6 @@ impl ContinuousRhythmMatchingSession {
 
             if let Some(ref completed) = trial {
                 self.on_trial_completed(completed, &timestamp);
-                self.last_completed = trial.clone();
             }
 
             // Reset for next trial
@@ -211,6 +208,7 @@ impl ContinuousRhythmMatchingSession {
             self.current_gap_position = Some(self.gap_selector.select(&self.enabled_positions));
             self.current_gap_scheduled_time = None;
 
+            self.last_completed = trial.clone();
             return trial;
         }
 
@@ -261,8 +259,9 @@ impl ContinuousRhythmMatchingSession {
         );
         let metric = completed.metric_value();
 
-        // For continuous matching, is_correct is based on hit_rate > 0
-        let is_correct = completed.hit_rate() > 0.0;
+        // Per iOS: all persisted trials (≥1 hit) are valid — no correctness threshold.
+        // All-miss trials are already discarded by aggregate_trial().
+        let is_correct = true;
 
         // Update profile
         self.profile_port
@@ -573,21 +572,24 @@ mod tests {
     }
 
     #[test]
-    fn test_all_misses_produces_trial() {
-        let mut session = make_session();
+    fn test_all_misses_discards_trial() {
+        let (mut session, profile_calls, record_calls, timeline_calls) =
+            make_session_with_selector(Box::new(FixedGapSelector::single(StepPosition::First)));
         session.start(TempoBPM::new(80), enabled_all());
 
         for i in 0..16 {
             session.set_gap_scheduled_time(1.0 + i as f64 * 0.1875);
             let trial = session.cycle_complete(None, "2026-03-25T12:00:00Z".to_string());
-            if i < 15 {
-                assert!(trial.is_none());
-            } else {
-                let t = trial.unwrap();
-                assert_eq!(t.hit_rate(), 0.0);
-                assert_eq!(t.mean_offset_ms(), 0.0);
-            }
+            assert!(trial.is_none(), "all-miss trial should be discarded");
         }
+
+        // No ports should have been called (trial was discarded)
+        assert_eq!(profile_calls.get(), 0);
+        assert_eq!(record_calls.get(), 0);
+        assert_eq!(timeline_calls.get(), 0);
+
+        // Session should reset for next trial
+        assert_eq!(session.current_cycle_index(), 0);
     }
 
     #[test]
