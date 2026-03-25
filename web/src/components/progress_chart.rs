@@ -211,7 +211,7 @@ fn format_decimal_1_chart(value: f64) -> String {
 pub fn ProgressChart(
     buckets: Vec<TimeBucket>,
     optimal_baseline: f64,
-    unit_label: &'static str,
+    #[prop(into)] unit_label: String,
     #[prop(into)] chart_label: String,
 ) -> impl IntoView {
     if buckets.len() <= 1 {
@@ -729,6 +729,7 @@ pub fn ProgressChart(
 
     // Task 10: Accessibility — live region content
     let buckets_for_a11y = buckets.clone();
+    let unit_label_for_a11y = unit_label.clone();
     let live_region_text = move || {
         selected_bucket
             .get()
@@ -741,7 +742,7 @@ pub fn ProgressChart(
                     leptos_fluent::tr!("chart-annotation-summary", {
                         "date" => date_str,
                         "mean" => mean_str,
-                        "unit" => unit_label,
+                        "unit" => unit_label_for_a11y.clone(),
                         "stddev" => stddev_str,
                         "count" => bucket.record_count
                     })

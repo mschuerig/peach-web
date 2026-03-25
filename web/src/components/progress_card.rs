@@ -77,13 +77,14 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
             let (arrow, arrow_color) = trend_arrow(trend);
             let trend_label = trend_text(trend);
             let display_name = i18n.tr(config.display_name);
+            let unit_str = i18n.tr(config.unit_label);
 
             let card_aria = tr!("progress-chart-for", {
                 "name" => display_name.clone()
             });
             let value_aria = tr!("current-trend", {
                 "ewma" => ewma_str.clone(),
-                "unit" => config.unit_label,
+                "unit" => unit_str.clone(),
                 "trend" => trend_label
             });
 
@@ -101,6 +102,7 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
                         </span>
                         <span class="flex items-baseline gap-1.5">
                             <span class="text-xl font-bold dark:text-white">{ewma_str}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{unit_str.clone()}</span>
                             <span class="text-xs text-gray-500 dark:text-gray-400">{stddev_str}</span>
                             <span class=format!("text-lg {arrow_color}") aria-hidden="true">{arrow}</span>
                         </span>
@@ -109,7 +111,7 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
                     <super::progress_chart::ProgressChart
                         buckets=buckets
                         optimal_baseline=config.optimal_baseline
-                        unit_label=config.unit_label
+                        unit_label=unit_str
                         chart_label=card_aria.clone()
                     />
                 </div>

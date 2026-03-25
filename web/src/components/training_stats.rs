@@ -1,9 +1,9 @@
 use leptos::prelude::*;
 use leptos_fluent::{move_tr, tr};
 
-use domain::Trend;
+use domain::{TrainingDiscipline, Trend};
 
-pub fn format_cents(value: f64) -> String {
+pub fn format_decimal_1(value: f64) -> String {
     format!("{value:.1}")
 }
 
@@ -12,11 +12,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_format_cents_one_decimal() {
-        assert_eq!(format_cents(12.34), "12.3");
-        assert_eq!(format_cents(0.0), "0.0");
-        assert_eq!(format_cents(5.0), "5.0");
-        assert_eq!(format_cents(99.99), "100.0");
+    fn test_format_decimal_1() {
+        assert_eq!(format_decimal_1(12.34), "12.3");
+        assert_eq!(format_decimal_1(0.0), "0.0");
+        assert_eq!(format_decimal_1(5.0), "5.0");
+        assert_eq!(format_decimal_1(99.99), "100.0");
     }
 }
 
@@ -45,11 +45,11 @@ pub fn TrainingStats(
     latest_value: Signal<Option<f64>>,
     session_best: Signal<Option<f64>>,
     trend: Signal<Option<Trend>>,
-    #[prop(optional)] is_rhythm: bool,
+    discipline: TrainingDiscipline,
 ) -> impl IntoView {
     let format_value = move |v: f64| {
-        let formatted = format_cents(v);
-        if is_rhythm {
+        let formatted = format_decimal_1(v);
+        if discipline.is_rhythm() {
             tr!("value-percent-16th", {"value" => formatted})
         } else {
             tr!("value-cents", {"value" => formatted})

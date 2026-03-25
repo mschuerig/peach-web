@@ -769,6 +769,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                     latest_value=latest_cent_error.into()
                     session_best=stats_session_best.into()
                     trend=stats_trend.into()
+                    discipline=training_discipline
                 />
                 // Right: signed cent deviation feedback
                 <div class="text-right" aria-hidden="true">

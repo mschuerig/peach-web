@@ -759,6 +759,7 @@ pub fn PitchDiscriminationView() -> impl IntoView {
                     latest_value=latest_cent_difference.into()
                     session_best=stats_session_best.into()
                     trend=stats_trend.into()
+                    discipline=training_discipline
                 />
                 // Right: checkmark/X feedback indicator
                 <div class="text-right" aria-hidden="true">

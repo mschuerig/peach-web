@@ -1,6 +1,6 @@
 # Story 19.2: Rhythm Profile Visualization
 
-Status: review
+Status: done
 
 ## Story
 

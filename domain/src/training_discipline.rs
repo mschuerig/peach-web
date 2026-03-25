@@ -38,7 +38,7 @@ const SESSION_GAP_SECS: f64 = 1_800.0; // 30 minutes
 
 static UNISON_PITCH_DISCRIMINATION_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
     display_name: "training-discipline-hear-discriminate-single",
-    unit_label: "cents",
+    unit_label: "unit-cents",
     optimal_baseline: 8.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
@@ -46,7 +46,7 @@ static UNISON_PITCH_DISCRIMINATION_CONFIG: TrainingDisciplineConfig = TrainingDi
 
 static INTERVAL_PITCH_DISCRIMINATION_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
     display_name: "training-discipline-hear-discriminate-intervals",
-    unit_label: "cents",
+    unit_label: "unit-cents",
     optimal_baseline: 12.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
@@ -54,7 +54,7 @@ static INTERVAL_PITCH_DISCRIMINATION_CONFIG: TrainingDisciplineConfig = Training
 
 static UNISON_PITCH_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
     display_name: "training-discipline-tune-match-single",
-    unit_label: "cents",
+    unit_label: "unit-cents",
     optimal_baseline: 5.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
@@ -62,7 +62,7 @@ static UNISON_PITCH_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDiscipli
 
 static INTERVAL_PITCH_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
     display_name: "training-discipline-tune-match-intervals",
-    unit_label: "cents",
+    unit_label: "unit-cents",
     optimal_baseline: 8.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
@@ -70,7 +70,7 @@ static INTERVAL_PITCH_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDiscip
 
 static RHYTHM_OFFSET_DETECTION_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
     display_name: "training-mode-compare-timing",
-    unit_label: "% of 16th",
+    unit_label: "unit-percent-16th",
     optimal_baseline: 5.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
@@ -78,7 +78,7 @@ static RHYTHM_OFFSET_DETECTION_CONFIG: TrainingDisciplineConfig = TrainingDiscip
 
 static CONTINUOUS_RHYTHM_MATCHING_CONFIG: TrainingDisciplineConfig = TrainingDisciplineConfig {
     display_name: "training-mode-fill-the-gap",
-    unit_label: "% of 16th",
+    unit_label: "unit-percent-16th",
     optimal_baseline: 5.0,
     ewma_halflife_secs: EWMA_HALFLIFE_SECS,
     session_gap_secs: SESSION_GAP_SECS,
@@ -327,7 +327,7 @@ mod tests {
             cfg.display_name,
             "training-discipline-hear-discriminate-single"
         );
-        assert_eq!(cfg.unit_label, "cents");
+        assert_eq!(cfg.unit_label, "unit-cents");
         assert_eq!(cfg.optimal_baseline, 8.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
         assert_eq!(cfg.session_gap_secs, 1_800.0);
@@ -340,7 +340,7 @@ mod tests {
             cfg.display_name,
             "training-discipline-hear-discriminate-intervals"
         );
-        assert_eq!(cfg.unit_label, "cents");
+        assert_eq!(cfg.unit_label, "unit-cents");
         assert_eq!(cfg.optimal_baseline, 12.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
         assert_eq!(cfg.session_gap_secs, 1_800.0);
@@ -350,7 +350,7 @@ mod tests {
     fn test_unison_matching_config() {
         let cfg = TrainingDiscipline::UnisonPitchMatching.config();
         assert_eq!(cfg.display_name, "training-discipline-tune-match-single");
-        assert_eq!(cfg.unit_label, "cents");
+        assert_eq!(cfg.unit_label, "unit-cents");
         assert_eq!(cfg.optimal_baseline, 5.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
         assert_eq!(cfg.session_gap_secs, 1_800.0);
@@ -360,7 +360,7 @@ mod tests {
     fn test_interval_matching_config() {
         let cfg = TrainingDiscipline::IntervalPitchMatching.config();
         assert_eq!(cfg.display_name, "training-discipline-tune-match-intervals");
-        assert_eq!(cfg.unit_label, "cents");
+        assert_eq!(cfg.unit_label, "unit-cents");
         assert_eq!(cfg.optimal_baseline, 8.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
         assert_eq!(cfg.session_gap_secs, 1_800.0);
@@ -587,7 +587,7 @@ mod tests {
     fn test_rhythm_offset_detection_config() {
         let cfg = TrainingDiscipline::RhythmOffsetDetection.config();
         assert_eq!(cfg.display_name, "training-mode-compare-timing");
-        assert_eq!(cfg.unit_label, "% of 16th");
+        assert_eq!(cfg.unit_label, "unit-percent-16th");
         assert_eq!(cfg.optimal_baseline, 5.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
         assert_eq!(cfg.session_gap_secs, 1_800.0);
@@ -597,7 +597,7 @@ mod tests {
     fn test_continuous_rhythm_matching_config() {
         let cfg = TrainingDiscipline::ContinuousRhythmMatching.config();
         assert_eq!(cfg.display_name, "training-mode-fill-the-gap");
-        assert_eq!(cfg.unit_label, "% of 16th");
+        assert_eq!(cfg.unit_label, "unit-percent-16th");
         assert_eq!(cfg.optimal_baseline, 5.0);
         assert_eq!(cfg.ewma_halflife_secs, 604_800.0);
         assert_eq!(cfg.session_gap_secs, 1_800.0);
