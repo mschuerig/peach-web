@@ -11,6 +11,7 @@ pub fn evaluate_tap(
     tap_time: f64,
     scheduled_times: &[f64],
     tempo: TempoBPM,
+    output_latency_secs: f64,
 ) -> Option<RhythmOffset> {
     if scheduled_times.is_empty() {
         return None;
@@ -36,8 +37,10 @@ pub fn evaluate_tap(
         return None;
     }
 
-    // Signed offset: positive = late, negative = early
-    let offset_ms = (tap_time - nearest_time) * 1000.0;
+    // Signed offset: positive = late, negative = early.
+    // Compare against heard time (scheduled + output latency), not scheduled time.
+    let heard_time = nearest_time + output_latency_secs;
+    let offset_ms = (tap_time - heard_time) * 1000.0;
     Some(RhythmOffset::new(offset_ms))
 }
 
@@ -155,7 +158,7 @@ mod tests {
     fn test_evaluate_tap_exact_hit() {
         let times = vec![1.0, 1.1875, 1.375, 1.5625];
         let tempo = TempoBPM::new(80);
-        let result = evaluate_tap(1.1875, &times, tempo);
+        let result = evaluate_tap(1.1875, &times, tempo, 0.0);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - 0.0).abs() < 1e-10);
     }
@@ -165,7 +168,7 @@ mod tests {
         let times = vec![1.0, 1.1875, 1.375, 1.5625];
         let tempo = TempoBPM::new(80);
         // Tap 20ms early relative to second beat
-        let result = evaluate_tap(1.1875 - 0.020, &times, tempo);
+        let result = evaluate_tap(1.1875 - 0.020, &times, tempo, 0.0);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - (-20.0)).abs() < 1e-10);
     }
@@ -175,7 +178,7 @@ mod tests {
         let times = vec![1.0, 1.1875, 1.375, 1.5625];
         let tempo = TempoBPM::new(80);
         // Tap 30ms late relative to first beat
-        let result = evaluate_tap(1.0 + 0.030, &times, tempo);
+        let result = evaluate_tap(1.0 + 0.030, &times, tempo, 0.0);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - 30.0).abs() < 1e-10);
     }
@@ -185,7 +188,7 @@ mod tests {
         let times = vec![1.0, 1.1875, 1.375, 1.5625];
         let tempo = TempoBPM::new(80);
         // Tap 100ms after last beat — window is ±93.75ms, so outside
-        let result = evaluate_tap(1.5625 + 0.100, &times, tempo);
+        let result = evaluate_tap(1.5625 + 0.100, &times, tempo, 0.0);
         assert!(result.is_none());
     }
 
@@ -194,7 +197,7 @@ mod tests {
         let times = vec![1.0];
         let tempo = TempoBPM::new(80);
         // Exactly at boundary: 93.75ms = 0.09375s
-        let result = evaluate_tap(1.0 + 0.09375, &times, tempo);
+        let result = evaluate_tap(1.0 + 0.09375, &times, tempo, 0.0);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - 93.75).abs() < 1e-10);
     }
@@ -204,14 +207,14 @@ mod tests {
         let times = vec![1.0];
         let tempo = TempoBPM::new(80);
         // Slightly beyond boundary
-        let result = evaluate_tap(1.0 + 0.09376, &times, tempo);
+        let result = evaluate_tap(1.0 + 0.09376, &times, tempo, 0.0);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_evaluate_tap_empty_scheduled_times() {
         let tempo = TempoBPM::new(80);
-        let result = evaluate_tap(1.0, &[], tempo);
+        let result = evaluate_tap(1.0, &[], tempo, 0.0);
         assert!(result.is_none());
     }
 
@@ -220,7 +223,7 @@ mod tests {
         let times = vec![1.0, 1.1875, 1.375, 1.5625];
         let tempo = TempoBPM::new(80);
         // Tap closer to third beat (1.375) than second (1.1875)
-        let result = evaluate_tap(1.30, &times, tempo);
+        let result = evaluate_tap(1.30, &times, tempo, 0.0);
         assert!(result.is_some());
         // offset = 1.30 - 1.375 = -0.075s = -75ms
         assert!((result.unwrap().ms() - (-75.0)).abs() < 1e-10);
@@ -232,7 +235,7 @@ mod tests {
         let times = vec![2.0, 2.125, 2.250, 2.375];
         let tempo = TempoBPM::new(120);
         // Tap 50ms late on first beat — within window
-        let result = evaluate_tap(2.050, &times, tempo);
+        let result = evaluate_tap(2.050, &times, tempo, 0.0);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - 50.0).abs() < 1e-10);
     }
@@ -241,8 +244,41 @@ mod tests {
     fn test_evaluate_tap_single_scheduled_time() {
         let times = vec![5.0];
         let tempo = TempoBPM::new(80);
-        let result = evaluate_tap(5.010, &times, tempo);
+        let result = evaluate_tap(5.010, &times, tempo, 0.0);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - 10.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_evaluate_tap_with_output_latency() {
+        // Beat scheduled at 1.0s, output latency 50ms → heard at 1.050s.
+        // Tap at exactly 1.050s should be a perfect hit (0ms offset).
+        let times = vec![1.0];
+        let tempo = TempoBPM::new(80);
+        let result = evaluate_tap(1.050, &times, tempo, 0.050);
+        assert!(result.is_some());
+        assert!((result.unwrap().ms() - 0.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_evaluate_tap_with_output_latency_shifts_offset() {
+        // Beat scheduled at 1.0s, output latency 50ms → heard at 1.050s.
+        // Tap at 1.030s is 20ms early relative to heard time.
+        let times = vec![1.0];
+        let tempo = TempoBPM::new(80);
+        let result = evaluate_tap(1.030, &times, tempo, 0.050);
+        assert!(result.is_some());
+        assert!((result.unwrap().ms() - (-20.0)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_evaluate_tap_with_output_latency_late() {
+        // Beat scheduled at 1.0s, output latency 50ms → heard at 1.050s.
+        // Tap at 1.080s is 30ms late relative to heard time.
+        let times = vec![1.0];
+        let tempo = TempoBPM::new(80);
+        let result = evaluate_tap(1.080, &times, tempo, 0.050);
+        assert!(result.is_some());
+        assert!((result.unwrap().ms() - 30.0).abs() < 1e-10);
     }
 }

@@ -1,6 +1,6 @@
 # Story 21.3: Output Latency Compensation in Tap Evaluation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -38,13 +38,13 @@ The fix is simple: when evaluating whether a tap was early or late, compare the 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `output_latency` FFI binding to `web/src/adapters/audio_latency.rs` (create module if 21.2 not done yet, or extend it)
-- [ ] Task 2: Add `output_latency_secs: f64` parameter to `evaluate_tap()` in `domain/src/training/rhythm_offset_detection.rs`
-- [ ] Task 3: Update offset calculation: `let offset_ms = (tap_time - (nearest_time + output_latency_secs)) * 1000.0;`
-- [ ] Task 4: Update all existing test calls to pass `0.0` for the new parameter
-- [ ] Task 5: Add new test: `evaluate_tap` with `output_latency_secs = 0.050` — verify offset shifts by -50ms
-- [ ] Task 6: Update callers in `continuous_rhythm_matching_view.rs` and `rhythm_offset_detection_view.rs` to read and pass `outputLatency`
-- [ ] Task 7: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `trunk build`
+- [x] Task 1: Add `output_latency` FFI binding to `web/src/adapters/audio_latency.rs` (create module if 21.2 not done yet, or extend it)
+- [x] Task 2: Add `output_latency_secs: f64` parameter to `evaluate_tap()` in `domain/src/training/rhythm_offset_detection.rs`
+- [x] Task 3: Update offset calculation: `let offset_ms = (tap_time - (nearest_time + output_latency_secs)) * 1000.0;`
+- [x] Task 4: Update all existing test calls to pass `0.0` for the new parameter
+- [x] Task 5: Add new test: `evaluate_tap` with `output_latency_secs = 0.050` — verify offset shifts by -50ms
+- [x] Task 6: Update callers in `continuous_rhythm_matching_view.rs` and `rhythm_offset_detection_view.rs` to read and pass `outputLatency`
+- [x] Task 7: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `trunk build`
 
 ## Dev Notes
 
@@ -53,3 +53,40 @@ The fix is simple: when evaluating whether a tap was early or late, compare the 
 - `outputLatency` can change over time (e.g., if the OS resizes audio buffers) — re-read it per evaluation, don't cache
 - The domain function signature change is a breaking API change — update both training views (continuous rhythm matching and rhythm offset detection)
 - The `handle_tap()` method in `ContinuousRhythmMatchingSession` calls `evaluate_tap` — it also needs the output latency parameter threaded through
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- Add `get_output_latency()` helper to `audio_latency.rs` using JS reflection (same pattern as `bridge_event_to_audio_time`)
+- Add `output_latency_secs: f64` parameter to `evaluate_tap()` and thread through `handle_tap()` in `ContinuousRhythmMatchingSession`
+- Update offset calculation: `heard_time = nearest_time + output_latency_secs`
+- Update all existing test calls with `0.0`, add 3 new tests with 50ms latency
+- Read `outputLatency` per-tap in the continuous rhythm matching view
+
+### Debug Log
+
+No issues encountered.
+
+### Completion Notes
+
+- AC1/AC2: `get_output_latency()` added to `web/src/adapters/audio_latency.rs` using `js_sys::Reflect` (consistent with existing `bridge_event_to_audio_time` pattern). Returns `0.0` for unsupported/NaN/negative values.
+- AC3: `evaluate_tap()` now takes `output_latency_secs: f64`. Offset computed as `tap_time - (nearest_time + output_latency_secs)`.
+- AC4: `handle_tap()` in `ContinuousRhythmMatchingSession` threads the parameter through. View reads `get_output_latency(&ctx_rc)` per tap. All domain tests pass `0.0`.
+- AC5: Domain crate remains pure Rust — latency passed as plain `f64`.
+- AC6: All 10 existing `evaluate_tap` tests updated with `0.0` and still pass. 3 new tests verify output latency shifts (perfect hit, early, late with 50ms latency).
+- AC7: `cargo test -p domain` — 483 tests pass. `cargo clippy --workspace` — clean. `trunk build` — success.
+- Note: `rhythm_offset_detection_view.rs` does not call `evaluate_tap` (different training mode — user identifies offset beats, no tap timing). Only `continuous_rhythm_matching_view.rs` was updated.
+
+## File List
+
+- `web/src/adapters/audio_latency.rs` — added `get_output_latency()` function
+- `domain/src/training/rhythm_offset_detection.rs` — added `output_latency_secs` parameter to `evaluate_tap()`, updated offset calculation, updated all test calls, added 3 new tests
+- `domain/src/session/continuous_rhythm_matching_session.rs` — added `output_latency_secs` parameter to `handle_tap()`, updated 3 test calls
+- `web/src/components/continuous_rhythm_matching_view.rs` — imported `get_output_latency`, reads output latency per tap and passes to `handle_tap()`
+- `docs/implementation-artifacts/21-3-output-latency-compensation-in-tap-evaluation.md` — updated status and tasks
+- `docs/implementation-artifacts/sprint-status.yaml` — updated story status
+
+## Change Log
+
+- 2026-03-26: Implemented output latency compensation — `evaluate_tap()` and `handle_tap()` accept `output_latency_secs`, web layer reads `AudioContext.outputLatency` per tap, 3 new tests added.

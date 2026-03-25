@@ -5,6 +5,22 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use web_sys::AudioContext;
 
+/// Returns `AudioContext.outputLatency` in seconds, or `0.0` if unsupported.
+///
+/// `outputLatency` reports the delay between audio sample rendering and actual
+/// speaker output.  Not in `web_sys` — read via JS reflection.
+/// Chrome 64+, Firefox 70+.  Safari does not support it (returns `undefined`).
+pub fn get_output_latency(ctx: &Rc<RefCell<AudioContext>>) -> f64 {
+    let ctx_ref = ctx.borrow();
+    let val = js_sys::Reflect::get(ctx_ref.as_ref(), &JsValue::from_str("outputLatency"))
+        .ok()
+        .and_then(|v| v.as_f64());
+    match val {
+        Some(v) if v.is_finite() && v >= 0.0 => v,
+        _ => 0.0,
+    }
+}
+
 /// Converts a `PointerEvent.timeStamp` or `KeyboardEvent.timeStamp` (ms, in
 /// `performance.now()` coordinates) to audio-clock time (seconds) using
 /// `AudioContext.getOutputTimestamp()`.

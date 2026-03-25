@@ -13,7 +13,7 @@ use wasm_bindgen_futures::{JsFuture, spawn_local};
 use leptos_fluent::{I18n, move_tr, tr};
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
-use crate::adapters::audio_latency::bridge_event_to_audio_time;
+use crate::adapters::audio_latency::{bridge_event_to_audio_time, get_output_latency};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::rhythm_scheduler::{
@@ -215,8 +215,11 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
             let tap_time = bridge_event_to_audio_time(&ctx_rc, event_timestamp_ms)
                 .unwrap_or_else(|| ctx_rc.borrow().current_time());
 
+            // Read output latency (re-read per tap — value can change at runtime)
+            let output_latency = get_output_latency(&ctx_rc);
+
             // Evaluate tap against session
-            let offset = session.borrow_mut().handle_tap(tap_time);
+            let offset = session.borrow_mut().handle_tap(tap_time, output_latency);
 
             if let Some(ref rhythm_offset) = offset {
                 // Store tap offset for cycle_complete

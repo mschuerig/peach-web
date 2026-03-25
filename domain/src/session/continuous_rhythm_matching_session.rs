@@ -153,8 +153,11 @@ impl ContinuousRhythmMatchingSession {
 
     /// Handle a user tap. Returns the offset if the tap was within the acceptance window.
     ///
+    /// `output_latency_secs` is the `AudioContext.outputLatency` value — the delay
+    /// between sample rendering and speaker output.  Pass `0.0` when unsupported.
+    ///
     /// If the tap is outside the window, returns `None` (ignored, not a miss).
-    pub fn handle_tap(&mut self, tap_time: f64) -> Option<RhythmOffset> {
+    pub fn handle_tap(&mut self, tap_time: f64, output_latency_secs: f64) -> Option<RhythmOffset> {
         if self.state != ContinuousRhythmMatchingSessionState::Running {
             return None;
         }
@@ -163,7 +166,7 @@ impl ContinuousRhythmMatchingSession {
         let gap_time = self.current_gap_scheduled_time?;
 
         // Use evaluate_tap with just the gap position's scheduled time
-        evaluate_tap(tap_time, &[gap_time], tempo)
+        evaluate_tap(tap_time, &[gap_time], tempo, output_latency_secs)
     }
 
     /// Called when a cycle completes (the sequencer has moved to the next cycle).
@@ -495,7 +498,7 @@ mod tests {
         // Gap at time 1.0
         session.set_gap_scheduled_time(1.0);
         // Tap 10ms late
-        let result = session.handle_tap(1.010);
+        let result = session.handle_tap(1.010, 0.0);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - 10.0).abs() < 1e-10);
     }
@@ -506,14 +509,14 @@ mod tests {
         session.start(TempoBPM::new(80), enabled_all());
         session.set_gap_scheduled_time(1.0);
         // At 80 BPM: window = ±93.75ms = ±0.09375s. Tap 100ms late = outside
-        let result = session.handle_tap(1.1);
+        let result = session.handle_tap(1.1, 0.0);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_handle_tap_when_idle_returns_none() {
         let mut session = make_session();
-        let result = session.handle_tap(1.0);
+        let result = session.handle_tap(1.0, 0.0);
         assert!(result.is_none());
     }
 
