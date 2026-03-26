@@ -16,6 +16,7 @@ use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::audio_latency::{bridge_event_to_audio_time, get_output_latency};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
+use crate::adapters::midi_input;
 use crate::adapters::rhythm_scheduler::{
     NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer,
     play_click_immediate,
@@ -340,6 +341,12 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
         .set_state_change_handler(audiocontext_handler.as_ref().unchecked_ref());
     let _audiocontext_closure = StoredValue::new_local(audiocontext_handler);
 
+    // MIDI cleanup handle — populated by training loop if MIDI setup succeeds
+    let midi_cleanup_handle: StoredValue<
+        Option<SendWrapper<midi_input::MidiCleanupHandle>>,
+        LocalStorage,
+    > = StoredValue::new_local(None);
+
     // Cleanup on component unmount
     {
         let cleanup_state = SendWrapper::new((
@@ -366,6 +373,11 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
                     visibility_fn.unchecked_ref(),
                 );
             }
+            midi_cleanup_handle.update_value(|opt| {
+                if let Some(handle) = opt.take() {
+                    handle.take().cleanup();
+                }
+            });
         });
     }
 
@@ -382,6 +394,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
         let enabled_positions = enabled_positions.clone();
         let shared_ctx_for_loop = Rc::clone(&shared_ctx);
         let shared_click_buffer_for_loop = Rc::clone(&shared_click_buffer);
+        let on_tap_for_loop = Rc::clone(&on_tap);
         spawn_local(async move {
             // Ensure AudioContext is created and running
             let ctx_rc = match ensure_audio_ready(
@@ -412,6 +425,19 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
             // Share audio resources with the tap handler
             *shared_ctx_for_loop.borrow_mut() = Some(Rc::clone(&ctx_rc));
             *shared_click_buffer_for_loop.borrow_mut() = Some(click_buffer.clone());
+
+            // Wire MIDI input as an additional tap source (progressive enhancement)
+            if midi_input::is_midi_available() {
+                let on_tap_for_midi = Rc::clone(&on_tap_for_loop);
+                match midi_input::setup_midi_listeners(move |ts| on_tap_for_midi(ts)).await {
+                    Ok(handle) => {
+                        midi_cleanup_handle.set_value(Some(SendWrapper::new(handle)));
+                    }
+                    Err(e) => {
+                        log::warn!("MIDI setup failed (non-fatal): {:?}", e);
+                    }
+                }
+            }
 
             let sixteenth_secs = tempo.sixteenth_note_duration_secs();
 

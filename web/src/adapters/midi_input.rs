@@ -1,5 +1,3 @@
-#![allow(dead_code)] // Wired in Story 22.2
-
 use wasm_bindgen::prelude::*;
 use web_sys::{MidiAccess, MidiInput, MidiMessageEvent, MidiOptions};
 

@@ -1,6 +1,6 @@
 # Story 22.2: Wire MIDI Input into Continuous Rhythm Matching View
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -38,13 +38,13 @@ Technical research: `docs/planning-artifacts/research/technical-web-midi-input-r
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Remove `#![allow(dead_code)]` from `web/src/adapters/midi_input.rs` (AC: 6)
-- [ ] Task 2: Wire MIDI into `web/src/components/continuous_rhythm_matching_view.rs` (AC: 1-5)
-  - [ ] Add `use crate::adapters::midi_input;` import
-  - [ ] Create `StoredValue<Option<SendWrapper<midi_input::MidiCleanupHandle>>>` for cleanup handle storage, before the `on_cleanup` block
-  - [ ] In the async training loop, after `ensure_audio_ready` succeeds and shared resources are set (after line ~414), add MIDI setup block: check `is_midi_available()`, spawn async task to call `setup_midi_listeners(on_tap_clone)`, store handle on success, log warning on failure
-  - [ ] In the `on_cleanup` closure, add MIDI cleanup: take the handle from `StoredValue` and call `.cleanup()` if `Some`
-- [ ] Task 3: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `cargo test -p web` (AC: 7, 8)
+- [x] Task 1: Remove `#![allow(dead_code)]` from `web/src/adapters/midi_input.rs` (AC: 6)
+- [x] Task 2: Wire MIDI into `web/src/components/continuous_rhythm_matching_view.rs` (AC: 1-5)
+  - [x] Add `use crate::adapters::midi_input;` import
+  - [x] Create `StoredValue<Option<SendWrapper<midi_input::MidiCleanupHandle>>>` for cleanup handle storage, before the `on_cleanup` block
+  - [x] In the async training loop, after `ensure_audio_ready` succeeds and shared resources are set (after line ~414), add MIDI setup block: check `is_midi_available()`, spawn async task to call `setup_midi_listeners(on_tap_clone)`, store handle on success, log warning on failure
+  - [x] In the `on_cleanup` closure, add MIDI cleanup: take the handle from `StoredValue` and call `.cleanup()` if `Some`
+- [x] Task 3: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `cargo test -p web` (AC: 7, 8)
 
 ## Dev Notes
 
@@ -140,10 +140,30 @@ Recent commits show Story 22.1 was implemented and reviewed (3 commits: create s
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- `SendWrapper::into_inner()` does not exist in send_wrapper 0.6 — use `.take()` instead to unwrap the inner value for explicit `cleanup()` call.
+- `StoredValue::try_get_value()` requires `Clone` on the inner type — use `update_value(|opt| opt.take())` pattern for non-Clone types like `MidiCleanupHandle`.
+- `on_tap` (Rc) must be cloned before the `spawn_local(async move {})` block since it's also used later for the button handler.
+
 ### Completion Notes List
 
+- Removed `#![allow(dead_code)]` from `midi_input.rs` — module now has callers (AC6)
+- Added MIDI setup as progressive enhancement in the training loop: checks `is_midi_available()`, awaits `setup_midi_listeners()` inline, stores handle on success, logs warning on failure (AC1-4)
+- Added MIDI cleanup in `on_cleanup` via `StoredValue::update_value` + `SendWrapper::take()` + explicit `cleanup()` (AC5)
+- Domain crate unchanged — 485 tests pass (AC7)
+- Zero clippy warnings (AC8)
+- All 70 web tests pass
+
+### Change Log
+
+- 2026-03-26: Implemented Story 22.2 — wired MIDI input into continuous rhythm matching view
+
 ### File List
+
+- `web/src/adapters/midi_input.rs` — removed `#![allow(dead_code)]`
+- `web/src/components/continuous_rhythm_matching_view.rs` — added MIDI import, setup, and cleanup
+- `docs/implementation-artifacts/sprint-status.yaml` — status update
+- `docs/implementation-artifacts/22-2-wire-midi-input-into-continuous-rhythm-matching-view.md` — story file updates
