@@ -216,11 +216,11 @@ fn schedule_ahead(
     }
 }
 
-/// Play a click at the earliest possible moment (no `when` argument).
+/// Play a click as soon as possible (no `when` argument).
 ///
 /// Used for reactive tap clicks where minimal latency matters.
-/// Calls `source.start()` which tells the browser to begin playback
-/// at the next render quantum rather than scheduling at a specific time.
+/// Calls `source.start()` — equivalent to `start(0)` per the Web Audio spec —
+/// which begins playback immediately, clamped to `currentTime`.
 pub fn play_click_immediate(
     ctx: &Rc<RefCell<AudioContext>>,
     buffer: &AudioBuffer,

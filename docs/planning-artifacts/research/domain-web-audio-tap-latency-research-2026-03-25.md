@@ -194,7 +194,7 @@ Analysis of the current codebase reveals these relevant implementation details:
 
 | Component | Implementation | Location |
 |-----------|---------------|----------|
-| Tap handler | `pointerdown` → `ctx.current_time()` → `play_click_at()` | `continuous_rhythm_matching_view.rs:191-244` |
+| Tap handler | `pointerdown` → `play_click_immediate()` (no `when` arg) | `continuous_rhythm_matching_view.rs:191-244` |
 | Click buffer | `create_click_buffer()` — 5ms noise burst, called per-scheduler-start | `rhythm_scheduler.rs:37-63` |
 | Scheduler | 25ms interval, 100ms lookahead, two-clocks pattern | `rhythm_scheduler.rs:86-217` |
 | Tap evaluation | ±50% sixteenth-note acceptance window | `rhythm_offset_detection.rs:10-42` |
@@ -203,7 +203,7 @@ Analysis of the current codebase reveals these relevant implementation details:
 
 **Key observations:**
 - The tap handler reads `currentTime` at handler execution time, missing the `PointerEvent.timeStamp` → audio clock bridge
-- Click buffer is created once per scheduler start and shared (good), but `play_click_at()` creates a new `AudioBufferSourceNode` + `GainNode` per tap (acceptable — these are lightweight)
+- Click buffer is created once per scheduler start and shared (good), but `play_click_immediate()` creates a new `AudioBufferSourceNode` + `GainNode` per tap (acceptable — these are lightweight)
 - No `outputLatency` or `baseLatency` compensation exists
 - No overlap detection between tap clicks and scheduled beats
 - `latencyHint` is not set when creating the AudioContext
@@ -255,7 +255,7 @@ After a tap, mark the nearest future scheduled beat as "already clicked by user.
 **Strategy C — Cancel already-scheduled audio:**
 Web Audio's `AudioBufferSourceNode.stop()` can cancel a scheduled-but-not-yet-played source. If the scheduler stores references to upcoming source nodes, it can cancel them when a tap lands nearby. However, this adds complexity and `stop()` may still produce a brief click artifact.
 
-**Recommended for peach-web:** Strategy A (suppress tap click near scheduled beats) is simplest and sufficient. The tap handler already knows the cycle's beat times. A proximity check before `play_click_at()` prevents doubling with minimal code change.
+**Recommended for peach-web:** Strategy A (suppress tap click near scheduled beats) is simplest and sufficient. The tap handler already knows the cycle's beat times. A proximity check before `play_click_immediate()` prevents doubling with minimal code change.
 
 _Confidence: HIGH for Strategy A (simple, proven). MEDIUM for B/C (more complex, less common)._
 _Source: [MDN — Web Audio Best Practices](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices), [web.dev — Audio Scheduling](https://web.dev/articles/audio-scheduling)_
@@ -294,7 +294,7 @@ The existing peach-web AudioWorklet (for SoundFont synthesis) uses `MessagePort.
 
 | Pattern | Latency | Complexity | Use case |
 |---------|---------|-----------|----------|
-| **Direct main-thread scheduling** | Handler execution time + output latency | Low | Current approach — `play_click_at()` |
+| **Direct main-thread scheduling** | Handler execution time + output latency | Low | Current approach — `play_click_immediate()` |
 | **MessagePort to worklet** | Handler time + message delivery (~1-5ms) + next quantum | Medium | Trigger worklet-generated click |
 | **SharedArrayBuffer flag** | Handler time + next quantum (~2.67ms) | High | Lock-free signal from main thread to worklet |
 | **Pre-scheduled click cancellation** | Zero (already scheduled) | Medium | Schedule click, cancel if no tap |
@@ -395,7 +395,7 @@ Based on the research, here is a prioritized set of architectural improvements r
 - Impact: 5-20ms reduction in audio pipeline latency
 
 **1b. Overlap suppression for tap clicks**
-- Before `play_click_at()` in the tap handler, check if any non-gap beat is scheduled within ±15ms of `ctx.current_time()`
+- Before `play_click_immediate()` in the tap handler, check if any non-gap beat is scheduled within ±15ms of `ctx.current_time()`
 - If so, skip the tap click — the scheduled beat provides audible feedback
 - Eliminates the "jittery doubling" on slow tempos
 - Impact: eliminates doubling artifact entirely
@@ -500,7 +500,7 @@ _Source: [jefftk.com — AudioWorklet Latency](https://www.jefftk.com/p/audiowor
 The tap handler at `continuous_rhythm_matching_view.rs:238-242` plays a click unconditionally. Add a proximity check against the current cycle's non-gap beat times:
 
 ```rust
-// In the tap handler, before play_click_at:
+// In the tap handler, before play_click_immediate:
 let tap_time = ctx_rc.borrow().current_time();
 let suppress_threshold_secs = 0.015; // 15ms
 
@@ -512,7 +512,7 @@ let should_suppress = beat_times.iter().enumerate().any(|(i, &bt)| {
 
 if !should_suppress {
     if let Some(ref buf) = *shared_click_buffer.borrow() {
-        let _ = play_click_at(&ctx_rc, buf, tap_time, NORMAL_GAIN);
+        let _ = play_click_immediate(&ctx_rc, buf, NORMAL_GAIN);
     }
 }
 ```
@@ -634,7 +634,7 @@ For reactive (tap) clicks specifically, call `start()` with no argument (equival
 source.start().map_err(|e| format!("start failed: {:?}", e))?;
 ```
 
-This requires splitting `play_click_at` into two variants or adding a parameter to distinguish immediate vs scheduled playback. The scheduled beat path must continue using `start_with_when(when)` for sample-accurate lookahead scheduling.
+This was implemented in Story 21.4 by splitting into `play_click_immediate()` (tap clicks) and `schedule_click_at()` (pre-scheduled beats). The scheduled beat path continues using `start_with_when(when)` for sample-accurate lookahead scheduling.
 
 ### Implementation Summary: Dependency Graph
 

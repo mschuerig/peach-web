@@ -1,6 +1,6 @@
 # Story 21.4: Immediate Tap Click Playback with start(0)
 
-Status: review
+Status: done
 
 ## Story
 

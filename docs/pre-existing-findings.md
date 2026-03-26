@@ -30,6 +30,14 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Description:** When `bridge_event_to_audio_time` returns `None` (e.g., during AudioContext startup when `contextTime` or `performanceTime` is 0), the tap time falls back to `AudioContext.currentTime()` (render clock). If `outputLatency` is simultaneously available and non-zero (Chrome/Firefox), the offset calculation subtracts output latency from a time that already reflects the render clock position — effectively double-counting the latency. On Safari, `outputLatency` returns `undefined` → `0.0`, so the two errors cancel. The window where this can occur is extremely narrow (AudioContext startup before `getOutputTimestamp` is populated) and unlikely to coincide with real user taps.
 - **Recommendation:** Guard the output latency read: only pass non-zero `output_latency` when `bridge_event_to_audio_time` succeeded (returned `Some`). When the fallback fires, pass `0.0`.
 
+### PEF-015: AudioContext RefCell borrow held across Web Audio API calls
+
+- **Status:** WONT-FIX — safe in single-threaded WASM; no re-entrant borrow paths exist today. Revisit if AudioContext usage becomes async or multi-threaded.
+- **Surfaced:** Story 21.4 code review (2026-03-26)
+- **Location:** `web/src/adapters/rhythm_scheduler.rs` — `play_click_immediate()`, `schedule_click_at()`, `schedule_click()`
+- **Description:** These functions call `ctx.borrow()` and hold the `Ref<AudioContext>` for their entire scope, including through multiple Web Audio JS interop calls (`create_buffer_source`, `create_gain`, `connect_with_audio_node`, `start`). If any of those JS calls ever triggered a synchronous re-entrant Rust callback that attempted to borrow the same `Rc<RefCell<AudioContext>>`, it would panic at runtime. In practice this is safe: WASM is single-threaded, the Web Audio calls are synchronous, and no event callbacks re-enter these paths.
+- **Recommendation:** No action needed unless the architecture changes. If AudioContext is ever shared across async tasks or event listeners that could nest, consider extracting a raw `&AudioContext` reference before the interop calls.
+
 ### PEF-013: Merge import dedup uses timestamp-only key, losing sub-second records
 
 - **Status:** WONT-FIX — the training loop physically cannot produce two records of the same type within one second (each round involves listening, thinking, answering). The coarse timestamp key correctly deduplicates re-imports without needing field-by-field matching.
