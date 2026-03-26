@@ -199,5 +199,5 @@ development_status:
 
   # Epic 22: MIDI Input for Rhythm Training
   epic-22: in-progress
-  22-1-midi-adapter-module-with-note-on-detection: ready-for-dev
+  22-1-midi-adapter-module-with-note-on-detection: review
   22-2-wire-midi-input-into-continuous-rhythm-matching-view: backlog

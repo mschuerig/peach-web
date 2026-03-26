@@ -6,6 +6,7 @@ pub mod csv_export_import;
 pub mod default_settings;
 pub mod indexeddb_store;
 pub mod localstorage_settings;
+pub mod midi_input;
 pub mod note_player;
 pub mod rhythm_scheduler;
 pub mod sound_preview;

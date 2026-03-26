@@ -1,6 +1,6 @@
 # Story 22.1: MIDI Adapter Module with Note-On Detection
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -40,23 +40,23 @@ Key insight: `MIDIMessageEvent.timeStamp` uses the same `performance.now()` coor
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add web-sys MIDI feature flags to `web/Cargo.toml` (AC: 1)
-  - [ ] Add all 8 features: `Navigator`, `MidiOptions`, `MidiAccess`, `MidiInputMap`, `MidiInput`, `MidiMessageEvent`, `MidiPort`, `MidiConnectionEvent`
-  - [ ] Keep features sorted alphabetically with existing entries
-- [ ] Task 2: Create `web/src/adapters/midi_input.rs` and register in `web/src/adapters/mod.rs` (AC: 2-7)
-  - [ ] Add `pub mod midi_input;` to `web/src/adapters/mod.rs`
-  - [ ] Implement `is_midi_available()` — check `Navigator` for `requestMIDIAccess` presence via JS reflection
-  - [ ] Implement `is_note_on(data: &[u8]) -> bool` — pure function, no web-sys needed
-  - [ ] Implement `setup_midi_listeners(on_note_on: impl Fn(f64) + 'static) -> Result<MidiCleanupHandle, JsValue>` — async function using `requestMIDIAccess({ sysex: false })`
-  - [ ] Implement `MidiCleanupHandle` struct that stores listener closures and removes them on `cleanup()`
-- [ ] Task 3: Write unit tests for `is_note_on` (AC: 8)
-  - [ ] `test_note_on_channel_1` — status `0x90`, note 60, velocity 100
-  - [ ] `test_note_on_channel_16` — status `0x9F`, note 60, velocity 100
-  - [ ] `test_velocity_zero_is_not_note_on` — status `0x90`, note 60, velocity 0
-  - [ ] `test_note_off_is_not_note_on` — status `0x80`, note 60, velocity 64
-  - [ ] `test_control_change_is_not_note_on` — status `0xB0`, control 64, value 127
-  - [ ] `test_truncated_message_is_not_note_on` — 2-byte and 1-byte messages
-- [ ] Task 4: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p web` (AC: 8, 9)
+- [x] Task 1: Add web-sys MIDI feature flags to `web/Cargo.toml` (AC: 1)
+  - [x] Add all 8 features: `Navigator`, `MidiOptions`, `MidiAccess`, `MidiInputMap`, `MidiInput`, `MidiMessageEvent`, `MidiPort`, `MidiConnectionEvent`
+  - [x] Keep features sorted alphabetically with existing entries
+- [x] Task 2: Create `web/src/adapters/midi_input.rs` and register in `web/src/adapters/mod.rs` (AC: 2-7)
+  - [x] Add `pub mod midi_input;` to `web/src/adapters/mod.rs`
+  - [x] Implement `is_midi_available()` — check `Navigator` for `requestMIDIAccess` presence via JS reflection
+  - [x] Implement `is_note_on(data: &[u8]) -> bool` — pure function, no web-sys needed
+  - [x] Implement `setup_midi_listeners(on_note_on: impl Fn(f64) + 'static) -> Result<MidiCleanupHandle, JsValue>` — async function using `requestMIDIAccess({ sysex: false })`
+  - [x] Implement `MidiCleanupHandle` struct that stores listener closures and removes them on `cleanup()`
+- [x] Task 3: Write unit tests for `is_note_on` (AC: 8)
+  - [x] `test_note_on_channel_1` — status `0x90`, note 60, velocity 100
+  - [x] `test_note_on_channel_16` — status `0x9F`, note 60, velocity 100
+  - [x] `test_velocity_zero_is_not_note_on` — status `0x90`, note 60, velocity 0
+  - [x] `test_note_off_is_not_note_on` — status `0x80`, note 60, velocity 64
+  - [x] `test_control_change_is_not_note_on` — status `0xB0`, control 64, value 127
+  - [x] `test_truncated_message_is_not_note_on` — 2-byte and 1-byte messages
+- [x] Task 4: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p web` (AC: 8, 9)
 
 ## Dev Notes
 
@@ -146,8 +146,33 @@ Note: `Navigator` may already be transitively available but must be explicitly l
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- `MidiMessageEvent.data()` returns `Result<Vec<u8>, JsValue>` (not `Option`) — fixed after initial compile check
+- `MidiOptions::sysex()` deprecated in favor of `set_sysex()` — fixed after clippy warning
+- `MidiInputMap` iterated via JS iterator protocol: `.values().next()` with `done`/`value` property checks via `js_sys::Reflect`
+- Added `#![allow(dead_code)]` to module since nothing calls it yet (Story 22.2 wires it in)
 
 ### Completion Notes List
 
+- AC1: 8 web-sys MIDI features added to `web/Cargo.toml`, alphabetically sorted with existing entries
+- AC2-3: `is_midi_available()` uses `js_sys::Reflect::get` to check for `requestMIDIAccess` on navigator without triggering permission prompt
+- AC4-5: `is_note_on(&[u8]) -> bool` checks 3-byte length, status `0x90-0x9F`, and velocity > 0
+- AC6: `setup_midi_listeners()` async function requests MIDI access with `sysex: false`, iterates all inputs, attaches `midimessage` listeners that filter for note-on and call `on_note_on(timestamp_ms)`
+- AC7: `MidiCleanupHandle::cleanup()` removes all listeners via `remove_event_listener_with_callback`, then drops closures
+- AC8: 6 unit tests for `is_note_on` — all pass with `cargo test -p web` (70 total tests, 0 failures)
+- AC9: `cargo clippy --workspace` produces zero warnings
+
+### Change Log
+
+- 2026-03-26: Story 22.1 implemented — MIDI adapter module with feature detection, note-on parsing, listener setup/cleanup, and 6 unit tests
+
 ### File List
+
+- web/Cargo.toml (modified — added 8 web-sys MIDI feature flags)
+- web/src/adapters/mod.rs (modified — added `pub mod midi_input;`)
+- web/src/adapters/midi_input.rs (new — MIDI adapter: `is_midi_available`, `is_note_on`, `setup_midi_listeners`, `MidiCleanupHandle`)
+- docs/implementation-artifacts/22-1-midi-adapter-module-with-note-on-detection.md (modified — task checkboxes, status, dev agent record)
+- docs/implementation-artifacts/sprint-status.yaml (modified — story status updated)
