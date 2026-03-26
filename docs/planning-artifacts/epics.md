@@ -2495,3 +2495,35 @@ Users with a connected MIDI controller can tap rhythm training beats using any M
 **Given** the complete implementation
 **When** `cargo clippy --workspace` is run
 **Then** no warnings are produced
+
+### Story 22.4: Update Planning Docs for MIDI Features
+
+**As a** developer,
+**I want** living documentation updated to reflect the MIDI input features added in Epic 22,
+**So that** planning and architecture docs remain accurate for AI agents and contributors.
+
+**Acceptance Criteria:**
+
+**Given** the MIDI features implemented in Stories 22.1–22.3
+**When** the PRD is reviewed
+**Then** it includes functional requirements for MIDI note-on tap input and pitch bend slider control
+
+**Given** the MIDI adapter module at `web/src/adapters/midi_input.rs`
+**When** the architecture doc is reviewed
+**Then** it documents the adapter in the file tree, Web MIDI API as a dependency, MIDI event flow, web-sys feature flags, and `MidiCleanupHandle` cleanup pattern
+
+**Given** MIDI is a progressive enhancement input method
+**When** the UX design spec is reviewed
+**Then** it mentions MIDI as an additional input for rhythm training and pitch matching with no new screens
+
+**Given** the MIDI adapter implementation
+**When** the arc42 doc is reviewed
+**Then** it includes the MIDI adapter in the building block view and a runtime sequence diagram for MIDI event flow
+
+**Given** the project context doc
+**When** it is reviewed
+**Then** it lists Web MIDI API in the technology stack and documents MIDI-specific patterns
+
+**Given** Story 22.3 was implemented but not documented in the epics file
+**When** the epics doc is reviewed
+**Then** Story 22.3 appears with full BDD acceptance criteria

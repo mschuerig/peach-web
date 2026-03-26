@@ -230,8 +230,8 @@ graph TB
 | Building Block | Responsibility |
 |---------------|----------------|
 | **app.rs** | Composition root: creates all shared state, provides Leptos contexts, sets up router |
-| **components/** | UI views: `StartPage`, `PitchDiscriminationView`, `PitchMatchingView`, `PitchSlider`, `ProfileView`, `SettingsView`, `ProgressCard`, `ProgressChart`, `NavBar`, `AudioGateOverlay`, `InfoView` |
-| **adapters/** | Browser API implementations: `AudioContextManager`, `OscillatorNotePlayer`, `WorkletBridge` (SoundFont), `IndexedDbStore`, `LocalStorageSettings`, `CsvExportImport`, `MidiInput` (Web MIDI API — note-on detection, pitch bend parsing, feature detection; progressive enhancement) |
+| **components/** | UI views: `StartPage`, `PitchDiscriminationView`, `PitchMatchingView`, `PitchSlider`, `ProfileView`, `SettingsView`, `ProgressCard`, `ProgressChart`, `ProgressSparkline`, `TrainingStats`, `NavBar`, `AudioGateOverlay`, `InfoView`, `HelpContent`, `ContinuousRhythmMatchingView`, `RhythmOffsetDetectionView` |
+| **adapters/** | Browser API implementations: `AudioContextManager`, `OscillatorNotePlayer`, `WorkletBridge` (SoundFont), `IndexedDbStore`, `LocalStorageSettings`, `CsvExportImport`, `NotePlayer` (unified player facade), `SoundPreview`, `DefaultSettings`, `AudioLatency`, `RhythmScheduler`, `MidiInput` (Web MIDI API — note-on detection, pitch bend parsing, feature detection; progressive enhancement) |
 | **bridge.rs** | Observer implementations connecting domain events to UI state: `ProfileObserver`, `DataStoreObserver`, `TrendObserver`, `TimelineObserver`, `ProgressTimelineObserver` |
 
 ### 5.4 Level 2 — Synth Worklet
@@ -349,7 +349,7 @@ sequenceDiagram
     Note over TV: Training view mounts,<br/>AudioContext resumed
     TV->>MA: is_midi_available()?
     alt MIDI available
-        TV->>MA: setup_midi_listeners(on_tap) / setup_midi_pitch_bend_listeners(on_bend)
+        TV->>MA: await setup_midi_listeners(on_tap) / setup_midi_pitch_bend_listeners(on_bend)
         MA-->>TV: MidiCleanupHandle
         MC->>WM: MIDI message
         WM->>MA: midimessage event

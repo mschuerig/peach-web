@@ -226,6 +226,7 @@ For training views, direct URL entry means no prior user gesture has occurred �
 - **Adapter:** `web/src/adapters/midi_input.rs` encapsulates all MIDI parsing and listener management
 - **Event flow:** `midimessage` event → adapter parsing (`is_note_on`, `is_pitch_bend`, `parse_pitch_bend`) → existing tap/slider pipeline
 - **Cleanup:** `MidiCleanupHandle` removes all `midimessage` listeners on drop/cleanup, stored in `StoredValue::new_local(SendWrapper::new(handle))`
+- **Pitch bend commit:** return-to-center detection uses ±3.125% dead-zone (±1/32 of full range) to trigger answer commit
 - **Failure handling:** MIDI setup failure → `log::warn!`, training continues with pointer/keyboard only. No error UI.
 - **`web-sys` MIDI feature flags:** `MidiAccess`, `MidiInput`, `MidiInputMap`, `MidiMessageEvent`, `MidiOptions`, `MidiPort`, `MidiConnectionEvent`
 
@@ -537,6 +538,11 @@ peach-web/
 │   │   │   ├── audio_context.rs       # AudioContext lifecycle management
 │   │   │   ├── indexeddb_store.rs     # IndexedDB TrainingDataStore implementation
 │   │   │   ├── localstorage_settings.rs  # localStorage UserSettings implementation
+│   │   │   ├── default_settings.rs   # Default UserSettings values
+│   │   │   ├── note_player.rs        # Unified NotePlayer facade (oscillator + SoundFont)
+│   │   │   ├── sound_preview.rs      # Sound source preview playback
+│   │   │   ├── audio_latency.rs      # AudioContext output latency helpers
+│   │   │   ├── rhythm_scheduler.rs   # Click track scheduling for rhythm training
 │   │   │   └── midi_input.rs         # Web MIDI API adapter (note-on, pitch bend, feature detection)
 │   │   │
 │   │   ├── bridge.rs                  # UIObserver: domain observers → Leptos signals
@@ -552,7 +558,12 @@ peach-web/
 │   │   │   ├── profile_visualization.rs  # Canvas/SVG piano keyboard + confidence band
 │   │   │   ├── profile_preview.rs     # Compact clickable profile miniature
 │   │   │   ├── feedback_indicator.rs  # Thumbs up/down (comparison) + arrow/cents (matching)
-│   │   │   └── pitch_slider.rs        # Vertical pitch adjustment slider
+│   │   │   ├── pitch_slider.rs        # Vertical pitch adjustment slider
+│   │   │   ├── continuous_rhythm_matching_view.rs  # ContinuousRhythmMatchingView: rhythm tap training
+│   │   │   ├── rhythm_offset_detection_view.rs  # RhythmOffsetDetectionView: offset measurement
+│   │   │   ├── progress_sparkline.rs  # Compact inline sparkline charts
+│   │   │   ├── training_stats.rs      # Training statistics display
+│   │   │   └── help_content.rs        # HelpContent: context-aware help overlay
 │   │   │
 │   │   └── signals.rs                 # Shared signal type definitions and context providers
 │   │

@@ -1,6 +1,6 @@
 # Story 22.4: Update Planning Docs for MIDI Features
 
-Status: review
+Status: done
 
 ## Story
 
