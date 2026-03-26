@@ -1,6 +1,6 @@
 # Story 22.2: Wire MIDI Input into Continuous Rhythm Matching View
 
-Status: review
+Status: done
 
 ## Story
 
@@ -105,8 +105,8 @@ if let Some(handle) = midi_cleanup_handle.try_get_value().flatten() {
 - Do NOT create a separate `on_midi_tap` closure — reuse the existing `on_tap` closure. MIDI timestamps are in the same coordinate space.
 - Do NOT add MIDI status indicators to the UI — this is progressive enhancement, invisible to the user.
 - Do NOT modify the domain crate — MIDI is a web-only input concern.
-- Do NOT use `spawn_local` or `spawn_local_scoped_with_cancellation` for MIDI setup — the training loop is already async, so `.await` the setup directly inline.
-- Do NOT add a second `on_cleanup` block — add MIDI cleanup to the existing one by including the `StoredValue` handle in the cleanup tuple.
+- MIDI setup MUST use a separate `spawn_local` to avoid blocking training on the browser's MIDI permission prompt. Use a separate `StoredValue` for the async-populated handle and guard the completion path with the `terminated` flag to handle the unmount-during-permission race.
+- Do NOT add a second `on_cleanup` block — add MIDI cleanup to the existing `on_cleanup` closure (not as a separate `on_cleanup` registration).
 
 ### Project Structure Notes
 
