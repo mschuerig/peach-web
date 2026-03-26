@@ -196,3 +196,8 @@ development_status:
   21-2-tap-timestamp-bridging-via-getoutputtimestamp: done
   21-3-output-latency-compensation-in-tap-evaluation: done
   21-4-immediate-tap-click-playback-with-start-0: done
+
+  # Epic 22: MIDI Input for Rhythm Training
+  epic-22: in-progress
+  22-1-midi-adapter-module-with-note-on-detection: ready-for-dev
+  22-2-wire-midi-input-into-continuous-rhythm-matching-view: backlog
