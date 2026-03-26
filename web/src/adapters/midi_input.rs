@@ -47,12 +47,15 @@ pub struct MidiCleanupHandle {
 impl MidiCleanupHandle {
     /// Remove all `midimessage` event listeners that were attached by
     /// [`setup_midi_listeners`].
-    pub fn cleanup(self) {
-        // Drop impl handles the actual removal
+    ///
+    /// This is equivalent to dropping the handle, but makes the intent explicit
+    /// at the call site. Safe to call even if the handle has already been cleaned up.
+    pub fn cleanup(mut self) {
+        self.remove_listeners();
     }
 
     fn remove_listeners(&mut self) {
-        for (input, closure) in &self.listeners {
+        for (input, closure) in self.listeners.drain(..) {
             if let Err(e) = input.remove_event_listener_with_callback(
                 "midimessage",
                 closure.as_ref().unchecked_ref(),

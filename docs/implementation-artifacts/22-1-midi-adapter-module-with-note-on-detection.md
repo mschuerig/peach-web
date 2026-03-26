@@ -1,6 +1,6 @@
 # Story 22.1: MIDI Adapter Module with Note-On Detection
 
-Status: review
+Status: done
 
 ## Story
 
