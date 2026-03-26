@@ -198,10 +198,11 @@ development_status:
   21-4-immediate-tap-click-playback-with-start-0: done
 
   # Epic 22: MIDI Input for Rhythm Training
-  epic-22: done
+  epic-22: in-progress
   22-1-midi-adapter-module-with-note-on-detection: done
   22-2-wire-midi-input-into-continuous-rhythm-matching-view: done
   22-3-midi-pitch-bend-for-pitch-matching: done
+  22-4-update-planning-docs-for-midi-features: ready-for-dev
 
   # Epic 23: Help Text & Documentation Updates
   epic-23: in-progress
