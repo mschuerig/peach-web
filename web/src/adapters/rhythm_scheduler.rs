@@ -216,11 +216,47 @@ fn schedule_ahead(
     }
 }
 
+/// Play a click at the earliest possible moment (no `when` argument).
+///
+/// Used for reactive tap clicks where minimal latency matters.
+/// Calls `source.start()` which tells the browser to begin playback
+/// at the next render quantum rather than scheduling at a specific time.
+pub fn play_click_immediate(
+    ctx: &Rc<RefCell<AudioContext>>,
+    buffer: &AudioBuffer,
+    gain_value: f32,
+) -> Result<(), String> {
+    let ctx_ref = ctx.borrow();
+
+    let source: AudioBufferSourceNode = ctx_ref
+        .create_buffer_source()
+        .map_err(|e| format!("create_buffer_source failed: {:?}", e))?;
+    source.set_buffer(Some(buffer));
+
+    let gain_node: GainNode = ctx_ref
+        .create_gain()
+        .map_err(|e| format!("create_gain failed: {:?}", e))?;
+    gain_node.gain().set_value(gain_value);
+
+    source
+        .connect_with_audio_node(&gain_node)
+        .map_err(|e| format!("source→gain connect failed: {:?}", e))?;
+    gain_node
+        .connect_with_audio_node(&ctx_ref.destination())
+        .map_err(|e| format!("gain→destination connect failed: {:?}", e))?;
+
+    source
+        .start()
+        .map_err(|e| format!("start failed: {:?}", e))?;
+
+    Ok(())
+}
+
 /// Schedule a single click at the given audio-clock time with the specified gain.
 ///
 /// Public so that training views can schedule individual clicks outside the scheduler's
 /// pattern (e.g. the offset click in rhythm offset detection).
-pub fn play_click_at(
+pub fn schedule_click_at(
     ctx: &Rc<RefCell<AudioContext>>,
     buffer: &AudioBuffer,
     when: f64,

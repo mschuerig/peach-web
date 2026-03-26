@@ -16,7 +16,8 @@ use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::rhythm_scheduler::{
-    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer, play_click_at,
+    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer,
+    schedule_click_at,
 };
 use crate::app::base_href;
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
@@ -496,7 +497,7 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
 
                     // Schedule the offset click (beat 3) manually
                     if let Err(e) =
-                        play_click_at(&ctx_rc, &click_buffer, beat_times[2], NORMAL_GAIN)
+                        schedule_click_at(&ctx_rc, &click_buffer, beat_times[2], NORMAL_GAIN)
                     {
                         log::error!("Offset click failed: {e}");
                         audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));

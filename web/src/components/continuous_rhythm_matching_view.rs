@@ -17,7 +17,8 @@ use crate::adapters::audio_latency::{bridge_event_to_audio_time, get_output_late
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::rhythm_scheduler::{
-    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer, play_click_at,
+    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer,
+    play_click_immediate,
 };
 use crate::app::base_href;
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
@@ -243,8 +244,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
 
             // Play click at tap moment for audible fill (reuse shared buffer)
             if let Some(ref buf) = *shared_click_buffer.borrow() {
-                let now = ctx_rc.borrow().current_time();
-                let _ = play_click_at(&ctx_rc, buf, now, NORMAL_GAIN);
+                let _ = play_click_immediate(&ctx_rc, buf, NORMAL_GAIN);
             }
         })
     };

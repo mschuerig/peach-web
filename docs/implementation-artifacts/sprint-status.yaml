@@ -195,4 +195,4 @@ development_status:
   21-1-audiocontext-latencyhint-and-tap-click-overlap-suppression: done
   21-2-tap-timestamp-bridging-via-getoutputtimestamp: done
   21-3-output-latency-compensation-in-tap-evaluation: done
-  21-4-immediate-tap-click-playback-with-start-0: ready-for-dev
+  21-4-immediate-tap-click-playback-with-start-0: review
