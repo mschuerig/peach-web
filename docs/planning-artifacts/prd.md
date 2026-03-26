@@ -42,7 +42,7 @@ Peach is a browser-based ear training application that builds a perceptual profi
 
 The application operates entirely offline after initial page load. There is no server backend, no user accounts, no network dependency. All training data is stored locally in the browser. A static file server delivers the app; the browser does everything else.
 
-Two training disciplines: **pitch discrimination** (two notes play sequentially, user judges higher or lower) and **pitch matching** (user tunes a note to match a reference by ear). Both disciplines use an adaptive algorithm that narrows difficulty after correct answers and widens it after incorrect ones, converging on the user's detection threshold. A perceptual profile tracks ability across the full MIDI range using Welford's online statistics.
+Two training disciplines: **pitch discrimination** (two notes play sequentially, user judges higher or lower) and **pitch matching** (user tunes a note to match a reference by ear). Both disciplines use an adaptive algorithm that narrows difficulty after correct answers and widens it after incorrect ones, converging on the user's detection threshold. A perceptual profile tracks ability across the full MIDI range using Welford's online statistics. MIDI controller input is supported as progressive enhancement — note-on events for rhythm tapping, pitch bend for pitch matching — falling back silently to pointer/keyboard when unavailable.
 
 The developer's primary motivation is learning Rust, WASM, and browser-native APIs through a real, non-trivial project with a well-understood domain. The secondary goal is a genuinely usable tool.
 
@@ -140,7 +140,7 @@ All journeys require the same core capabilities:
 - **Adaptive algorithm** — targets user's actual ability level without manual configuration
 - **Profile visualization** — glanceable progress without scores or gamification
 - **AudioContext lifecycle management** — graceful handling of browser audio policies and tab suspension
-- **Multi-input support** — mouse, keyboard, and touch for all interactions
+- **Multi-input support** — mouse, keyboard, touch, and MIDI controller for all interactions (MIDI via progressive enhancement)
 
 ## Web Application Requirements
 
@@ -273,6 +273,9 @@ WCAG 2.1 AA compliance:
 - FR44: User can fine-adjust the pitch slider via keyboard (Arrow Up/Down)
 - FR45: User can commit pitch via keyboard (Enter/Space)
 - FR46: System provides screen reader announcements for training feedback events
+- FR50: User can tap rhythm training beats via MIDI note-on events from any connected MIDI controller (progressive enhancement — pointer/keyboard input always available)
+- FR51: User can control the pitch matching slider via MIDI pitch bend wheel, with auto-start on first deflection and commit on return-to-center (progressive enhancement)
+- FR52: System detects Web MIDI API availability and silently falls back to pointer/keyboard when MIDI is unavailable or permission is denied
 
 ### Navigation
 

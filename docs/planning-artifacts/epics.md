@@ -2451,3 +2451,47 @@ Users with a connected MIDI controller can tap rhythm training beats using any M
 **Given** the complete implementation
 **When** `cargo clippy --workspace` is run
 **Then** no warnings are produced
+
+### Story 22.3: MIDI Pitch Bend for Pitch Matching
+
+**As a** user with a MIDI controller,
+**I want** my pitch bend wheel to control the pitch matching slider,
+**So that** I can practice pitch matching with a physical controller for a more tactile experience.
+
+**Acceptance Criteria:**
+
+**Given** a 3-byte MIDI message with status byte `0xE0`–`0xEF`
+**When** `is_pitch_bend(data)` is called
+**Then** it returns `true`
+
+**Given** a valid pitch bend message
+**When** `parse_pitch_bend(data)` is called
+**Then** it returns a 14-bit value normalized to `[-1.0, +1.0]`
+
+**Given** the pitch matching view is active and MIDI is available
+**When** `setup_midi_pitch_bend_listeners(on_pitch_bend)` is called
+**Then** a `MidiCleanupHandle` is returned and pitch bend events drive the slider pipeline
+
+**Given** the user deflects the pitch bend wheel from center
+**When** the first deflection is detected
+**Then** the tunable note auto-starts (same as first slider interaction)
+
+**Given** the user returns the pitch bend wheel to center (within ±3.125% dead-zone)
+**When** the return-to-center is detected
+**Then** the current pitch is committed as the answer
+
+**Given** `VerticalPitchSlider` component
+**When** an `external_value: Option<Signal<f64>>` prop is provided
+**Then** the slider position tracks the external signal value
+
+**Given** MIDI pitch bend setup fails or is unavailable
+**When** the pitch matching view mounts
+**Then** the slider works normally with pointer/keyboard input — no error UI
+
+**Given** the complete implementation
+**When** `cargo test -p domain` is run
+**Then** all existing domain tests pass unchanged (domain crate is not modified)
+
+**Given** the complete implementation
+**When** `cargo clippy --workspace` is run
+**Then** no warnings are produced

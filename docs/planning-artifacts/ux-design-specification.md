@@ -37,7 +37,7 @@ Musicians (singers, string, woodwind, brass players) for whom intonation is a pr
 1. **Invisible intelligence** — The adaptive algorithm is the core value, but users cannot see it working. The UX must make adaptive behavior feel purposeful, not random.
 2. **Sparse-data visualization** — On first use, the perceptual profile has almost no data. The profile must look meaningful and inviting even when mostly empty.
 3. **No-session training model** — Start and stop must feel natural without conventional session framing. No guilt mechanics, no summaries, no confirmation dialogs.
-4. **Multi-input interaction** — The browser must support mouse, keyboard, and touch equally for the core training loop. Keyboard shortcuts are the power-user path.
+4. **Multi-input interaction** — The browser must support mouse, keyboard, touch, and MIDI controller equally for the core training loop. Keyboard shortcuts are the power-user path. MIDI controller input is progressive enhancement — note-on for rhythm tapping, pitch bend for pitch matching — with silent fallback when unavailable.
 5. **Web audio constraints** — AudioContext activation requires a user gesture; tab suspension kills audio. The UX must handle these transitions gracefully without breaking the training flow.
 
 ### Design Opportunities
@@ -59,7 +59,7 @@ The secondary mode — **pitch matching** — follows the same philosophy but wi
 ### Platform Strategy
 
 - **Web SPA** (Rust/WASM + Leptos), statically deployed, no backend, fully offline after initial load
-- **Multi-input:** Mouse click, keyboard shortcuts (Arrow Up/H for higher, Arrow Down/L for lower, Escape to stop), and touch — all equally supported for the core training loop
+- **Multi-input:** Mouse click, keyboard shortcuts (Arrow Up/H for higher, Arrow Down/L for lower, Escape to stop), touch, and MIDI controller (note-on for rhythm tap, pitch bend for pitch matching) — all equally supported for the core training loop. MIDI is progressive enhancement: no new UI, no settings, silent fallback when unavailable
 - **Desktop primary, mobile supported** — keyboard shortcuts are the power-user path; touch targets meet 44x44px minimum
 - **Sensory hierarchy (web-adapted):** Ears > eyes (feedback) > keyboard/mouse. Haptic feedback is unavailable on web. Visual feedback compensates by being clear but emotionally neutral — same visual weight for correct and incorrect
 
@@ -275,6 +275,12 @@ The secondary interaction: "Tune a note to match a reference by ear."
 | Fine pitch adjust | Arrow Up / Arrow Down | Pitch matching (slider focused) |
 | Commit pitch | Enter or Space | Pitch matching |
 | Stop / leave training | Escape | Any training view |
+| MIDI note-on (any key) | — | Rhythm training: tap input (progressive enhancement) |
+| MIDI pitch bend wheel | — | Pitch matching: slider control, auto-start on deflection, commit on return-to-center (progressive enhancement) |
+
+**MIDI Controller Input (Progressive Enhancement):**
+
+MIDI input requires no new UI, no settings, and no user-visible configuration. When a MIDI controller is connected and the browser supports Web MIDI API, MIDI events feed into the same pipelines as pointer/keyboard input. When MIDI is unavailable or permission is denied, the app falls back silently — no error messages, no missing-feature indicators.
 
 ### Interruption Handling
 

@@ -81,7 +81,7 @@ graph LR
 
 | Neighbor | Input | Output |
 |----------|-------|--------|
-| Musician | Training answers (higher/lower, slider position), settings changes | Audio playback, visual feedback, profile visualization |
+| Musician | Training answers (higher/lower, slider position, MIDI controller events), settings changes | Audio playback, visual feedback, profile visualization |
 | Browser APIs | Stored records (IndexedDB), settings (localStorage), audio output (Web Audio) | Write requests, audio commands |
 | SoundFont file | SF2 instrument preset data (bundled) | — |
 | GitHub Pages | HTML, JS, WASM, CSS, assets (initial load only) | — |
@@ -231,7 +231,7 @@ graph TB
 |---------------|----------------|
 | **app.rs** | Composition root: creates all shared state, provides Leptos contexts, sets up router |
 | **components/** | UI views: `StartPage`, `PitchDiscriminationView`, `PitchMatchingView`, `PitchSlider`, `ProfileView`, `SettingsView`, `ProgressCard`, `ProgressChart`, `NavBar`, `AudioGateOverlay`, `InfoView` |
-| **adapters/** | Browser API implementations: `AudioContextManager`, `OscillatorNotePlayer`, `WorkletBridge` (SoundFont), `IndexedDbStore`, `LocalStorageSettings`, `CsvExportImport` |
+| **adapters/** | Browser API implementations: `AudioContextManager`, `OscillatorNotePlayer`, `WorkletBridge` (SoundFont), `IndexedDbStore`, `LocalStorageSettings`, `CsvExportImport`, `MidiInput` (Web MIDI API — note-on detection, pitch bend parsing, feature detection; progressive enhancement) |
 | **bridge.rs** | Observer implementations connecting domain events to UI state: `ProfileObserver`, `DataStoreObserver`, `TrendObserver`, `TimelineObserver`, `ProgressTimelineObserver` |
 
 ### 5.4 Level 2 — Synth Worklet
@@ -336,7 +336,38 @@ sequenceDiagram
     end
 ```
 
-### 6.4 Application Startup & Profile Hydration
+### 6.4 MIDI Input Event Flow (Progressive Enhancement)
+
+```mermaid
+sequenceDiagram
+    participant MC as MIDI Controller
+    participant WM as Web MIDI API
+    participant MA as midi_input.rs
+    participant TV as Training View
+    participant S as Domain Session
+
+    Note over TV: Training view mounts,<br/>AudioContext resumed
+    TV->>MA: is_midi_available()?
+    alt MIDI available
+        TV->>MA: setup_midi_listeners(on_tap) / setup_midi_pitch_bend_listeners(on_bend)
+        MA-->>TV: MidiCleanupHandle
+        MC->>WM: MIDI message
+        WM->>MA: midimessage event
+        alt Note-on (rhythm tap)
+            MA->>MA: is_note_on(data)?
+            MA->>TV: on_tap(timestamp_ms)
+            TV->>S: evaluate_tap(audio_time)
+        else Pitch bend
+            MA->>MA: parse_pitch_bend(data) → [-1.0, +1.0]
+            MA->>TV: on_bend(value)
+            TV->>S: adjust_pitch(value)
+        end
+    else MIDI unavailable
+        Note over TV: Skip MIDI setup,<br/>training continues with<br/>pointer/keyboard only
+    end
+```
+
+### 6.5 Application Startup & Profile Hydration
 
 ```mermaid
 sequenceDiagram

@@ -31,6 +31,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 | `anyhow` | latest | Error aggregation (web crate only) |
 | OxiSynth | latest | SoundFont synthesis (Phase 2+) |
 | `leptos_router` | 0.8.x | Client-side routing |
+| Web MIDI API | — | MIDI controller input (progressive enhancement, not required) |
 
 **Version Constraints:**
 
@@ -170,7 +171,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - One public type per file when substantial (e.g. `profile.rs` for `PerceptualProfile`)
 - Related small types can share a file (e.g. `types/midi.rs`, `types/cents.rs`)
 - `mod.rs` only for module directories, not as a dumping ground
-- One file per adapter: `audio_oscillator.rs`, `indexeddb_store.rs`, etc.
+- One file per adapter: `audio_oscillator.rs`, `indexeddb_store.rs`, `midi_input.rs`, etc.
 
 **Storage Key Conventions:**
 
@@ -249,6 +250,15 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Two-phase worklet init: Phase 1 (fetch assets at app mount, no AudioContext) and Phase 2 (connect worklet at training start, after `ensure_running()`). The worklet bridge is `None` until Phase 2 completes — any code using SF2 playback must handle the cold-start case
 - User-gesture chain: switching from `<button onclick>` to `<A href>` breaks gesture propagation. Any navigation that leads to AudioContext creation must preserve the gesture chain
 - Entry paths: users can reach training views via Start Page click, direct URL, bookmark, or page refresh. All paths must handle AudioContext gesture requirements (the `AudioGateOverlay` pattern)
+
+**MIDI Input (Progressive Enhancement):**
+
+- `midi_input.rs` adapter: `is_midi_available()` guard, `is_note_on()`, `is_pitch_bend()`, `parse_pitch_bend()`, `setup_midi_listeners()`, `setup_midi_pitch_bend_listeners()`
+- `MidiCleanupHandle`: returned from setup functions, removes all `midimessage` listeners on cleanup. Stored in `StoredValue::new_local(SendWrapper::new(handle))`
+- Setup via `spawn_local` after AudioContext resume (non-blocking)
+- Failure → `log::warn!`, training continues without MIDI — no error UI
+- `web-sys` MIDI feature flags: `MidiAccess`, `MidiInput`, `MidiInputMap`, `MidiMessageEvent`, `MidiOptions`, `MidiPort`, `MidiConnectionEvent`
+- All MIDI code is web-layer only — no domain crate changes
 
 **Disabled Interactive Elements:**
 

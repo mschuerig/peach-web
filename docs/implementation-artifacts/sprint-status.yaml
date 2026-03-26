@@ -202,7 +202,7 @@ development_status:
   22-1-midi-adapter-module-with-note-on-detection: done
   22-2-wire-midi-input-into-continuous-rhythm-matching-view: done
   22-3-midi-pitch-bend-for-pitch-matching: done
-  22-4-update-planning-docs-for-midi-features: ready-for-dev
+  22-4-update-planning-docs-for-midi-features: review
 
   # Epic 23: Help Text & Documentation Updates
   epic-23: in-progress

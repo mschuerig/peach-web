@@ -1,6 +1,6 @@
 # Story 22.4: Update Planning Docs for MIDI Features
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -49,40 +49,40 @@ Key features implemented that docs must reflect:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update `docs/planning-artifacts/prd.md` (AC: 1)
-  - [ ] 1.1 Add MIDI controller input to the Input & Accessibility FRs (FR41–FR46 area)
-  - [ ] 1.2 Add FR for MIDI note-on as rhythm tap input (progressive enhancement)
-  - [ ] 1.3 Add FR for MIDI pitch bend as pitch matching input
-  - [ ] 1.4 Mention MIDI in product scope or any relevant phase descriptions
+- [x] Task 1: Update `docs/planning-artifacts/prd.md` (AC: 1)
+  - [x] 1.1 Add MIDI controller input to the Input & Accessibility FRs (FR41–FR46 area)
+  - [x] 1.2 Add FR for MIDI note-on as rhythm tap input (progressive enhancement)
+  - [x] 1.3 Add FR for MIDI pitch bend as pitch matching input
+  - [x] 1.4 Mention MIDI in product scope or any relevant phase descriptions
 
-- [ ] Task 2: Update `docs/planning-artifacts/architecture.md` (AC: 2)
-  - [ ] 2.1 Add `midi_input.rs` to the project directory structure listing under `web/src/adapters/`
-  - [ ] 2.2 Document Web MIDI API as a browser dependency (feature-detected)
-  - [ ] 2.3 Add `web-sys` MIDI feature flags to any dependency listing
-  - [ ] 2.4 Document MIDI event flow (adapter → existing tap/slider pipeline)
-  - [ ] 2.5 Add `MidiCleanupHandle` to cleanup/lifecycle patterns if documented
-  - [ ] 2.6 Update FR-to-file mapping if new MIDI FRs are added in Task 1
+- [x] Task 2: Update `docs/planning-artifacts/architecture.md` (AC: 2)
+  - [x] 2.1 Add `midi_input.rs` to the project directory structure listing under `web/src/adapters/`
+  - [x] 2.2 Document Web MIDI API as a browser dependency (feature-detected)
+  - [x] 2.3 Add `web-sys` MIDI feature flags to any dependency listing
+  - [x] 2.4 Document MIDI event flow (adapter → existing tap/slider pipeline)
+  - [x] 2.5 Add `MidiCleanupHandle` to cleanup/lifecycle patterns if documented
+  - [x] 2.6 Update FR-to-file mapping if new MIDI FRs are added in Task 1
 
-- [ ] Task 3: Update `docs/planning-artifacts/ux-design-specification.md` (AC: 3)
-  - [ ] 3.1 Add MIDI to multi-input interaction design challenge
-  - [ ] 3.2 Mention MIDI controller input in rhythm training and pitch matching sections
-  - [ ] 3.3 Note progressive enhancement — no new UI needed, no MIDI settings
+- [x] Task 3: Update `docs/planning-artifacts/ux-design-specification.md` (AC: 3)
+  - [x] 3.1 Add MIDI to multi-input interaction design challenge
+  - [x] 3.2 Mention MIDI controller input in rhythm training and pitch matching sections
+  - [x] 3.3 Note progressive enhancement — no new UI needed, no MIDI settings
 
-- [ ] Task 4: Update `docs/arc42-architecture.md` (AC: 4)
-  - [ ] 4.1 Add MIDI adapter to building block view / adapter listing
-  - [ ] 4.2 Update runtime view to mention MIDI event flow where relevant
+- [x] Task 4: Update `docs/arc42-architecture.md` (AC: 4)
+  - [x] 4.1 Add MIDI adapter to building block view / adapter listing
+  - [x] 4.2 Update runtime view to mention MIDI event flow where relevant
 
-- [ ] Task 5: Update `docs/project-context.md` (AC: 5)
-  - [ ] 5.1 Add Web MIDI API to technology stack (with progressive enhancement note)
-  - [ ] 5.2 Add `midi_input.rs` to any module/file listings
-  - [ ] 5.3 Add MIDI patterns: `MidiCleanupHandle`, `is_midi_available()` guard, non-blocking setup
+- [x] Task 5: Update `docs/project-context.md` (AC: 5)
+  - [x] 5.1 Add Web MIDI API to technology stack (with progressive enhancement note)
+  - [x] 5.2 Add `midi_input.rs` to any module/file listings
+  - [x] 5.3 Add MIDI patterns: `MidiCleanupHandle`, `is_midi_available()` guard, non-blocking setup
 
-- [ ] Task 6: Add Story 22.3 to `docs/planning-artifacts/epics.md` (AC: 6)
-  - [ ] 6.1 Add Story 22.3 (MIDI Pitch Bend for Pitch Matching) to Epic 22 section, following the BDD format of existing stories
+- [x] Task 6: Add Story 22.3 to `docs/planning-artifacts/epics.md` (AC: 6)
+  - [x] 6.1 Add Story 22.3 (MIDI Pitch Bend for Pitch Matching) to Epic 22 section, following the BDD format of existing stories
 
-- [ ] Task 7: Update sprint status (AC: 7)
-  - [ ] 7.1 Add `22-4-update-planning-docs-for-midi-features` entry to sprint-status.yaml
-  - [ ] 7.2 Re-open `epic-22` status to `in-progress`
+- [x] Task 7: Update sprint status (AC: 7)
+  - [x] 7.1 Add `22-4-update-planning-docs-for-midi-features` entry to sprint-status.yaml
+  - [x] 7.2 Re-open `epic-22` status to `in-progress`
 
 ## Dev Notes
 
@@ -158,10 +158,34 @@ Progressive enhancement: `is_midi_available()` → setup or skip. Failure → wa
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None — documentation-only story, no code changes.
+
 ### Completion Notes List
 
+- Updated PRD with FR50-52 (MIDI note-on tap, pitch bend slider, feature detection fallback) and MIDI mention in executive summary and journey requirements
+- Updated architecture doc: added `midi_input.rs` to file tree, new "Web MIDI API" section documenting feature detection, adapter, event flow, cleanup pattern, and feature flags. Added MIDI FR-to-file mapping row.
+- Updated UX design spec: expanded multi-input design challenge and platform strategy to include MIDI controller, added MIDI keyboard shortcuts table entries and progressive enhancement note
+- Updated arc42: added MIDI adapter to building block view, new runtime sequence diagram (6.4) for MIDI event flow, updated business context
+- Updated project-context.md: Web MIDI API in tech stack, `midi_input.rs` in adapter listing, full MIDI patterns section with cleanup handle, guard, feature flags
+- Added Story 22.3 (MIDI Pitch Bend for Pitch Matching) to epics.md with full BDD acceptance criteria
+- Sprint status entry already existed; epic-22 already in-progress
+- AC8 verified: no changes to ios-reference, completed stories, or research docs
+
+### Change Log
+
+- 2026-03-27: All 7 tasks completed — living docs updated for Epic 22 MIDI features
+
 ### File List
+
+- docs/planning-artifacts/prd.md (modified)
+- docs/planning-artifacts/architecture.md (modified)
+- docs/planning-artifacts/ux-design-specification.md (modified)
+- docs/arc42-architecture.md (modified)
+- docs/project-context.md (modified)
+- docs/planning-artifacts/epics.md (modified)
+- docs/implementation-artifacts/sprint-status.yaml (modified)
+- docs/implementation-artifacts/22-4-update-planning-docs-for-midi-features.md (modified)
