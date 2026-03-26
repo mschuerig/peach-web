@@ -194,5 +194,5 @@ development_status:
   epic-21: in-progress
   21-1-audiocontext-latencyhint-and-tap-click-overlap-suppression: done
   21-2-tap-timestamp-bridging-via-getoutputtimestamp: done
-  21-3-output-latency-compensation-in-tap-evaluation: review
+  21-3-output-latency-compensation-in-tap-evaluation: done
   21-4-immediate-tap-click-playback-with-start-0: ready-for-dev

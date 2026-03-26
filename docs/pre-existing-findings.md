@@ -22,6 +22,14 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Description:** `StatisticsKey`, `TempoRange`, and `RhythmDirection` have no serde derives. Not needed today (profile is rebuilt from records at hydration), but constrains future persistence strategies. `StatisticsKey` as a HashMap key would need a custom `Serialize` impl or string-based representation.
 - **Recommendation:** Add serde derives when a persistence story requires it. No action needed now.
 
+### PEF-014: bridge_event_to_audio_time fallback may over-correct with output latency
+
+- **Status:** OPEN — narrow transient window, low practical impact.
+- **Surfaced:** Story 21.3 code review (2026-03-26)
+- **Location:** `web/src/components/continuous_rhythm_matching_view.rs` — tap handler fallback path
+- **Description:** When `bridge_event_to_audio_time` returns `None` (e.g., during AudioContext startup when `contextTime` or `performanceTime` is 0), the tap time falls back to `AudioContext.currentTime()` (render clock). If `outputLatency` is simultaneously available and non-zero (Chrome/Firefox), the offset calculation subtracts output latency from a time that already reflects the render clock position — effectively double-counting the latency. On Safari, `outputLatency` returns `undefined` → `0.0`, so the two errors cancel. The window where this can occur is extremely narrow (AudioContext startup before `getOutputTimestamp` is populated) and unlikely to coincide with real user taps.
+- **Recommendation:** Guard the output latency read: only pass non-zero `output_latency` when `bridge_event_to_audio_time` succeeded (returned `Some`). When the fallback fires, pass `0.0`.
+
 ### PEF-013: Merge import dedup uses timestamp-only key, losing sub-second records
 
 - **Status:** WONT-FIX — the training loop physically cannot produce two records of the same type within one second (each round involves listening, thinking, answering). The coarse timestamp key correctly deduplicates re-imports without needing field-by-field matching.

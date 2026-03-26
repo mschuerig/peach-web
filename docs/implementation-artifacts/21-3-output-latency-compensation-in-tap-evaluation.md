@@ -1,6 +1,6 @@
 # Story 21.3: Output Latency Compensation in Tap Evaluation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -18,11 +18,11 @@ When the scheduler plays a beat at `scheduled_time` on the audio clock, the user
 
 The fix is simple: when evaluating whether a tap was early or late, compare the tap time against `scheduled_time + outputLatency` rather than `scheduled_time` alone.
 
-`AudioContext.outputLatency` is not in `web_sys` — manual `#[wasm_bindgen]` FFI is required (can share the module created in story 21.2).
+`AudioContext.outputLatency` is not in `web_sys` — read via `js_sys::Reflect` (same pattern as story 21.2).
 
 ## Acceptance Criteria
 
-1. **AC1 — FFI binding:** A `#[wasm_bindgen]` extern block provides `output_latency` getter on `AudioContext`, returning `f64`.
+1. **AC1 — FFI access:** `outputLatency` is read from `AudioContext` via `js_sys::Reflect` (not in `web_sys`), returning `f64`.
 
 2. **AC2 — Helper function:** A `get_output_latency(ctx) -> f64` function returns `outputLatency` or `0.0` if unsupported (NaN check).
 
@@ -43,7 +43,7 @@ The fix is simple: when evaluating whether a tap was early or late, compare the 
 - [x] Task 3: Update offset calculation: `let offset_ms = (tap_time - (nearest_time + output_latency_secs)) * 1000.0;`
 - [x] Task 4: Update all existing test calls to pass `0.0` for the new parameter
 - [x] Task 5: Add new test: `evaluate_tap` with `output_latency_secs = 0.050` — verify offset shifts by -50ms
-- [x] Task 6: Update callers in `continuous_rhythm_matching_view.rs` and `rhythm_offset_detection_view.rs` to read and pass `outputLatency`
+- [x] Task 6: Update callers in `continuous_rhythm_matching_view.rs` to read and pass `outputLatency` (`rhythm_offset_detection_view.rs` does not call `evaluate_tap`)
 - [x] Task 7: Run `cargo fmt`, `cargo clippy --workspace`, `cargo test -p domain`, `trunk build`
 
 ## Dev Notes
@@ -51,7 +51,7 @@ The fix is simple: when evaluating whether a tap was early or late, compare the 
 - `outputLatency` is available in Chrome 64+ and Firefox 70+. Not available in Safari — feature-detect via NaN check, fall back to 0.0
 - Some audio drivers report incorrect values (known Windows `GetStreamLatency` issue). On macOS/iOS this is reliable.
 - `outputLatency` can change over time (e.g., if the OS resizes audio buffers) — re-read it per evaluation, don't cache
-- The domain function signature change is a breaking API change — update both training views (continuous rhythm matching and rhythm offset detection)
+- The domain function signature change is a breaking API change — update callers (only `continuous_rhythm_matching_view.rs`; `rhythm_offset_detection_view.rs` does not call `evaluate_tap`)
 - The `handle_tap()` method in `ContinuousRhythmMatchingSession` calls `evaluate_tap` — it also needs the output latency parameter threaded through
 
 ## Dev Agent Record

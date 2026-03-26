@@ -17,15 +17,17 @@ pub fn evaluate_tap(
         return None;
     }
 
-    // Find the nearest scheduled beat
-    let mut nearest_time = scheduled_times[0];
-    let mut min_abs_diff = (tap_time - nearest_time).abs();
+    // Find the nearest scheduled beat, compensated for output latency.
+    // heard_time = scheduled_time + output_latency: when the user actually hears the beat.
+    let mut nearest_heard = scheduled_times[0] + output_latency_secs;
+    let mut min_abs_diff = (tap_time - nearest_heard).abs();
 
     for &t in &scheduled_times[1..] {
-        let abs_diff = (tap_time - t).abs();
+        let heard = t + output_latency_secs;
+        let abs_diff = (tap_time - heard).abs();
         if abs_diff < min_abs_diff {
             min_abs_diff = abs_diff;
-            nearest_time = t;
+            nearest_heard = heard;
         }
     }
 
@@ -38,9 +40,7 @@ pub fn evaluate_tap(
     }
 
     // Signed offset: positive = late, negative = early.
-    // Compare against heard time (scheduled + output latency), not scheduled time.
-    let heard_time = nearest_time + output_latency_secs;
-    let offset_ms = (tap_time - heard_time) * 1000.0;
+    let offset_ms = (tap_time - nearest_heard) * 1000.0;
     Some(RhythmOffset::new(offset_ms))
 }
 
@@ -280,5 +280,28 @@ mod tests {
         let result = evaluate_tap(1.080, &times, tempo, 0.050);
         assert!(result.is_some());
         assert!((result.unwrap().ms() - 30.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_evaluate_tap_with_output_latency_window_boundary() {
+        // At 80 BPM: window = ±93.75ms = ±0.09375s.
+        // Beat scheduled at 1.0s, output latency 50ms → heard at 1.050s.
+        // Tap at heard_time + 0.09375 = 1.14375s → exactly at window boundary → accepted.
+        let times = vec![1.0];
+        let tempo = TempoBPM::new(80);
+        let result = evaluate_tap(1.14375, &times, tempo, 0.050);
+        assert!(result.is_some());
+        assert!((result.unwrap().ms() - 93.75).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_evaluate_tap_with_output_latency_outside_window() {
+        // At 80 BPM: window = ±93.75ms.
+        // Beat scheduled at 1.0s, output latency 50ms → heard at 1.050s.
+        // Tap at heard_time + 0.09376 = 1.14376s → just outside window → rejected.
+        let times = vec![1.0];
+        let tempo = TempoBPM::new(80);
+        let result = evaluate_tap(1.14376, &times, tempo, 0.050);
+        assert!(result.is_none());
     }
 }
