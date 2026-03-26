@@ -1,6 +1,6 @@
 # Story 22.3: MIDI Pitch Bend for Pitch Matching
 
-Status: review
+Status: done
 
 ## Story
 
