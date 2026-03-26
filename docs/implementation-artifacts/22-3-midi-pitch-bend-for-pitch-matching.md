@@ -1,6 +1,6 @@
 # Story 22.3: MIDI Pitch Bend for Pitch Matching
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,24 +23,24 @@ so that I can use a familiar physical control instead of dragging an on-screen s
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Extend MIDI adapter with pitch bend parsing (AC: 1, 2)
-  - [ ] 1.1 Add `is_pitch_bend(data: &[u8]) -> bool` — status `0xE0`–`0xEF`, requires 3 bytes
-  - [ ] 1.2 Add `parse_pitch_bend(data: &[u8]) -> f64` — combine LSB (data[1]) + MSB (data[2]) into 14-bit value, normalize to `[-1.0, +1.0]`
-  - [ ] 1.3 Add unit tests: center (0x00, 0x40) → 0.0, full down (0x00, 0x00) → −1.0, full up (0x7F, 0x7F) → +1.0, channels 1-16, truncated messages, non-pitch-bend status bytes
-- [ ] Task 2: Add pitch bend listener setup (AC: 1, 7, 8)
-  - [ ] 2.1 Add `setup_midi_pitch_bend_listeners(on_pitch_bend: impl Fn(f64) + 'static) -> Result<MidiCleanupHandle, JsValue>` that attaches `midimessage` listeners filtering for pitch bend messages and calling `on_pitch_bend` with the normalized value
-  - [ ] 2.2 Reuse existing `MidiCleanupHandle` pattern — share the single MIDI access request or call `request_midi_access` once for both note-on and pitch bend
-- [ ] Task 3: Make slider externally drivable (AC: 3)
-  - [ ] 3.1 Add optional `external_value: Option<Signal<f64>>` prop to `VerticalPitchSlider`
-  - [ ] 3.2 When `external_value` changes, update internal `value` signal and thumb position (but do NOT call `on_change` — the MIDI handler calls session methods directly)
-  - [ ] 3.3 Ensure pointer drag still works when external_value is also set (pointer takes priority during active drag)
-- [ ] Task 4: Wire pitch bend into pitch matching view (AC: 4, 5, 6, 7, 8, 10)
-  - [ ] 4.1 After AudioContext resume, call `setup_midi_pitch_bend_listeners` (same timing as Story 22.2's note-on setup)
-  - [ ] 4.2 In the pitch bend callback: call `slider_on_change` callback with normalized value to drive session + start note
-  - [ ] 4.3 Update slider external_value signal so thumb tracks pitch bend position
-  - [ ] 4.4 Detect return-to-center: if in `PlayingTunable` state and value enters dead-zone → call `on_commit` with last deflected value
-  - [ ] 4.5 Store `MidiCleanupHandle` in `StoredValue` for cleanup on unmount
-  - [ ] 4.6 Guard with `is_midi_available()` check; log warning on setup failure, do not block training
+- [x] Task 1: Extend MIDI adapter with pitch bend parsing (AC: 1, 2)
+  - [x] 1.1 Add `is_pitch_bend(data: &[u8]) -> bool` — status `0xE0`–`0xEF`, requires 3 bytes
+  - [x] 1.2 Add `parse_pitch_bend(data: &[u8]) -> f64` — combine LSB (data[1]) + MSB (data[2]) into 14-bit value, normalize to `[-1.0, +1.0]`
+  - [x] 1.3 Add unit tests: center (0x00, 0x40) → 0.0, full down (0x00, 0x00) → −1.0, full up (0x7F, 0x7F) → +1.0, channels 1-16, truncated messages, non-pitch-bend status bytes
+- [x] Task 2: Add pitch bend listener setup (AC: 1, 7, 8)
+  - [x] 2.1 Add `setup_midi_pitch_bend_listeners(on_pitch_bend: impl Fn(f64) + 'static) -> Result<MidiCleanupHandle, JsValue>` that attaches `midimessage` listeners filtering for pitch bend messages and calling `on_pitch_bend` with the normalized value
+  - [x] 2.2 Reuse existing `MidiCleanupHandle` pattern — share the single MIDI access request or call `request_midi_access` once for both note-on and pitch bend
+- [x] Task 3: Make slider externally drivable (AC: 3)
+  - [x] 3.1 Add optional `external_value: Option<Signal<f64>>` prop to `VerticalPitchSlider`
+  - [x] 3.2 When `external_value` changes, update internal `value` signal and thumb position (but do NOT call `on_change` — the MIDI handler calls session methods directly)
+  - [x] 3.3 Ensure pointer drag still works when external_value is also set (pointer takes priority during active drag)
+- [x] Task 4: Wire pitch bend into pitch matching view (AC: 4, 5, 6, 7, 8, 10)
+  - [x] 4.1 After AudioContext resume, call `setup_midi_pitch_bend_listeners` (same timing as Story 22.2's note-on setup)
+  - [x] 4.2 In the pitch bend callback: call `slider_on_change` callback with normalized value to drive session + start note
+  - [x] 4.3 Update slider external_value signal so thumb tracks pitch bend position
+  - [x] 4.4 Detect return-to-center: if in `PlayingTunable` state and value enters dead-zone → call `on_commit` with last deflected value
+  - [x] 4.5 Store `MidiCleanupHandle` in `StoredValue` for cleanup on unmount
+  - [x] 4.6 Guard with `is_midi_available()` check; log warning on setup failure, do not block training
 
 ## Dev Notes
 
@@ -109,8 +109,27 @@ Use a dead-zone of ±256 (out of 8192) for center detection, i.e. values in `[-0
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — clean implementation, no debugging needed.
 
 ### Completion Notes List
 
+- Task 1: Added `is_pitch_bend()` and `parse_pitch_bend()` to `midi_input.rs` with 9 unit tests covering center, full-down, full-up, channel independence, non-pitch-bend rejection, and truncated messages.
+- Task 2: Added `setup_midi_pitch_bend_listeners()` following the same pattern as `setup_midi_listeners()` — independent `request_midi_access` call, filters for pitch bend messages, returns `MidiCleanupHandle`.
+- Task 3: Added optional `external_value: Option<Signal<f64>>` prop to `VerticalPitchSlider`. An `Effect` syncs the internal `value` signal when not actively dragging. Existing pointer/keyboard handling unchanged.
+- Task 4: Wired pitch bend into `pitch_matching_view.rs`. Extracted `on_change_inner` as shared `Rc<dyn Fn(f64)>` used by both slider and MIDI callbacks. MIDI pitch bend callback: auto-starts note on first message (per user's AC4 change), drives `adjust_pitch` continuously, commits on return-to-center (dead-zone ±3.125%). Cleanup handle stored in `StoredValue`, cleaned up on unmount. Progressive enhancement with `is_midi_available()` guard and non-blocking `spawn_local`.
+
+### Change Log
+
+- 2026-03-26: Implemented Story 22.3 — MIDI pitch bend for pitch matching (all 4 tasks)
+
 ### File List
+
+- web/src/adapters/midi_input.rs (modified) — pitch bend parsing + listener setup
+- web/src/components/pitch_slider.rs (modified) — external_value prop
+- web/src/components/pitch_matching_view.rs (modified) — MIDI pitch bend wiring
+- docs/implementation-artifacts/sprint-status.yaml (modified) — status updates
+- docs/implementation-artifacts/22-3-midi-pitch-bend-for-pitch-matching.md (modified) — story file updates

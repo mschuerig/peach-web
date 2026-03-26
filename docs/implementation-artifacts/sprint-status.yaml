@@ -201,4 +201,4 @@ development_status:
   epic-22: in-progress
   22-1-midi-adapter-module-with-note-on-detection: done
   22-2-wire-midi-input-into-continuous-rhythm-matching-view: done
-  22-3-midi-pitch-bend-for-pitch-matching: ready-for-dev
+  22-3-midi-pitch-bend-for-pitch-matching: review

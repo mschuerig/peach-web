@@ -29,6 +29,10 @@ pub fn VerticalPitchSlider(
     on_commit: Callback<f64>,
     /// Increment this signal to reset the slider to center (0.0).
     reset_trigger: Signal<u32>,
+    /// Optional external value (e.g. from MIDI pitch bend) that drives the
+    /// thumb position. Ignored while the user is actively dragging.
+    #[prop(optional)]
+    external_value: Option<Signal<f64>>,
 ) -> impl IntoView {
     let value = RwSignal::new(0.0_f64);
     let dragging = RwSignal::new(false);
@@ -48,6 +52,16 @@ pub fn VerticalPitchSlider(
         }
         prev_enabled.set(is_enabled);
     });
+
+    // Sync from external value (e.g. MIDI pitch bend) when not dragging
+    if let Some(ext) = external_value {
+        Effect::new(move || {
+            let ext_val = ext.get();
+            if !dragging.get_untracked() {
+                value.set(ext_val);
+            }
+        });
+    }
 
     // Thumb position: +1.0 → 0%, 0.0 → 50%, -1.0 → 100%
     let thumb_pct = move || (1.0 - value.get()) / 2.0 * 100.0;

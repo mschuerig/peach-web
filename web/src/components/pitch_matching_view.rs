@@ -18,6 +18,7 @@ use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
+use crate::adapters::midi_input;
 use crate::adapters::note_player::{UnifiedPlaybackHandle, create_note_player};
 use crate::app::{SoundFontLoadStatus, WorkletAssets, ensure_worklet_connected};
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
@@ -141,6 +142,9 @@ pub fn PitchMatchingView() -> impl IntoView {
     let feedback_arrow = RwSignal::new(String::new());
     let sr_announcement = RwSignal::new(String::new());
     let reset_trigger = RwSignal::new(0u32);
+
+    // External value signal for MIDI pitch bend → slider thumb sync
+    let midi_pitch_bend_value: RwSignal<f64> = RwSignal::new(0.0);
 
     // Tunable note handle for real-time frequency adjustment
     let tunable_handle: Rc<RefCell<Option<UnifiedPlaybackHandle>>> = Rc::new(RefCell::new(None));
@@ -306,45 +310,52 @@ pub fn PitchMatchingView() -> impl IntoView {
         })
     };
 
-    // Slider on_change handler — SendWrapper bridges Rc<RefCell> (non-Send) into
+    // Shared on_change logic — used by both slider drag and MIDI pitch bend.
+    // Rc closure so it can be shared without Send+Sync.
+    let on_change_inner: Rc<dyn Fn(f64)> = {
+        let session = Rc::clone(&session);
+        let tunable_handle = Rc::clone(&tunable_handle);
+        let note_player = Rc::clone(&note_player);
+        Rc::new(move |value: f64| {
+            let was_awaiting =
+                session.borrow().state() == PitchMatchingSessionState::AwaitingSliderTouch;
+            // Extract result so the RefMut is dropped before any further borrows
+            let freq = session.borrow_mut().adjust_pitch(value);
+            if let Some(freq) = freq {
+                if was_awaiting {
+                    // First touch: start the tunable note with target amplitude
+                    let amplitude = session
+                        .borrow()
+                        .current_playback_data()
+                        .map(|d| d.target_amplitude_db)
+                        .unwrap_or(AmplitudeDB::new(0.0));
+                    match note_player.borrow().play(
+                        freq,
+                        MIDIVelocity::new(PITCH_MATCHING_VELOCITY),
+                        amplitude,
+                    ) {
+                        Ok(handle) => {
+                            tunable_handle.borrow_mut().replace(handle);
+                        }
+                        Err(e) => {
+                            log::error!("Tunable note playback failed: {e}");
+                        }
+                    }
+                } else if let Some(ref mut h) = *tunable_handle.borrow_mut()
+                    && let Err(e) = h.adjust_frequency(freq)
+                {
+                    log::warn!("Failed to adjust frequency: {e}");
+                }
+            }
+        })
+    };
+
+    // Slider on_change handler — SendWrapper bridges Rc (non-Send) into
     // Callback's Send+Sync requirement. Safe because WASM is single-threaded.
     let slider_on_change = {
         let handler = SendWrapper::new({
-            let session = Rc::clone(&session);
-            let tunable_handle = Rc::clone(&tunable_handle);
-            let note_player = Rc::clone(&note_player);
-            move |value: f64| {
-                let was_awaiting =
-                    session.borrow().state() == PitchMatchingSessionState::AwaitingSliderTouch;
-                // Extract result so the RefMut is dropped before any further borrows
-                let freq = session.borrow_mut().adjust_pitch(value);
-                if let Some(freq) = freq {
-                    if was_awaiting {
-                        // First touch: start the tunable note with target amplitude
-                        let amplitude = session
-                            .borrow()
-                            .current_playback_data()
-                            .map(|d| d.target_amplitude_db)
-                            .unwrap_or(AmplitudeDB::new(0.0));
-                        match note_player.borrow().play(
-                            freq,
-                            MIDIVelocity::new(PITCH_MATCHING_VELOCITY),
-                            amplitude,
-                        ) {
-                            Ok(handle) => {
-                                tunable_handle.borrow_mut().replace(handle);
-                            }
-                            Err(e) => {
-                                log::error!("Tunable note playback failed: {e}");
-                            }
-                        }
-                    } else if let Some(ref mut h) = *tunable_handle.borrow_mut()
-                        && let Err(e) = h.adjust_frequency(freq)
-                    {
-                        log::warn!("Failed to adjust frequency: {e}");
-                    }
-                }
-            }
+            let on_change_inner = Rc::clone(&on_change_inner);
+            move |value: f64| on_change_inner(value)
         });
         Callback::new(move |value: f64| {
             handler(value);
@@ -500,6 +511,12 @@ pub fn PitchMatchingView() -> impl IntoView {
         .set_state_change_handler(audiocontext_handler.as_ref().unchecked_ref());
     let _audiocontext_closure = StoredValue::new_local(audiocontext_handler);
 
+    // MIDI pitch bend cleanup handle — populated by training loop if MIDI setup succeeds
+    let midi_pb_cleanup: StoredValue<
+        Option<SendWrapper<midi_input::MidiCleanupHandle>>,
+        LocalStorage,
+    > = StoredValue::new_local(None);
+
     // Cleanup on component unmount
     {
         let cleanup_state = SendWrapper::new((
@@ -536,6 +553,11 @@ pub fn PitchMatchingView() -> impl IntoView {
                     visibility_fn.unchecked_ref(),
                 );
             }
+            midi_pb_cleanup.update_value(|opt| {
+                if let Some(handle) = opt.take() {
+                    handle.take().cleanup();
+                }
+            });
         });
     }
 
@@ -551,6 +573,10 @@ pub fn PitchMatchingView() -> impl IntoView {
         let terminated = Rc::clone(&terminated);
         let audio_ctx_for_loop = Rc::clone(&audio_ctx);
         let sync = sync_signals.clone();
+        let on_change_for_midi = Rc::clone(&on_change_inner);
+        let on_commit_for_midi = Rc::clone(&on_commit);
+        let session_for_midi = Rc::clone(&session);
+        let cancelled_for_midi = Rc::clone(&cancelled);
         spawn_local(async move {
             // Ensure AudioContext is created and running (waits for gesture if needed)
             let ctx_rc = match ensure_audio_ready(
@@ -603,6 +629,70 @@ pub fn PitchMatchingView() -> impl IntoView {
                 worklet_bridge.get_untracked(),
                 sf_gain_node.get_untracked(),
             );
+
+            // Wire MIDI pitch bend input (progressive enhancement, non-blocking)
+            if midi_input::is_midi_available() {
+                let terminated_for_midi = Rc::clone(&terminated);
+                spawn_local(async move {
+                    // Dead-zone threshold: ±0.03125 normalized (±256 out of 8192)
+                    const DEAD_ZONE: f64 = 256.0 / 8192.0;
+
+                    let was_deflected = Rc::new(Cell::new(false));
+                    let last_value = Rc::new(Cell::new(0.0_f64));
+                    let on_change = on_change_for_midi;
+                    let on_commit = on_commit_for_midi;
+                    let session = session_for_midi;
+                    let cancelled = cancelled_for_midi;
+
+                    let was_deflected_cb = Rc::clone(&was_deflected);
+                    let last_value_cb = Rc::clone(&last_value);
+                    match midi_input::setup_midi_pitch_bend_listeners(move |value: f64| {
+                        if cancelled.get() {
+                            return;
+                        }
+
+                        // Update slider thumb via external_value signal
+                        midi_pitch_bend_value.set(value);
+
+                        let in_dead_zone = value.abs() <= DEAD_ZONE;
+                        let state = session.borrow().state();
+
+                        // Auto-start: first pitch bend message while awaiting triggers note start
+                        if state == PitchMatchingSessionState::AwaitingSliderTouch {
+                            on_change(value);
+                            was_deflected_cb.set(!in_dead_zone);
+                            last_value_cb.set(value);
+                            return;
+                        }
+
+                        // Continuous pitch adjustment while playing
+                        if state == PitchMatchingSessionState::PlayingTunable {
+                            if !in_dead_zone {
+                                was_deflected_cb.set(true);
+                                last_value_cb.set(value);
+                                on_change(value);
+                            } else if was_deflected_cb.get() {
+                                // Return to center after deflection → commit
+                                was_deflected_cb.set(false);
+                                on_commit(last_value_cb.get());
+                            }
+                        }
+                    })
+                    .await
+                    {
+                        Ok(handle) => {
+                            if terminated_for_midi.get() {
+                                handle.cleanup();
+                            } else {
+                                midi_pb_cleanup.set_value(Some(SendWrapper::new(handle)));
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("MIDI pitch bend setup failed (non-fatal): {:?}", e);
+                        }
+                    }
+                });
+            }
 
             let feedback_ms = (FEEDBACK_DURATION_SECS * 1000.0) as u32;
 
@@ -815,6 +905,7 @@ pub fn PitchMatchingView() -> impl IntoView {
                     on_change=slider_on_change
                     on_commit=slider_on_commit
                     reset_trigger=reset_trigger.into()
+                    external_value=Signal::from(midi_pitch_bend_value)
                 />
             </div>
 

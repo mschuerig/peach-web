@@ -31,6 +31,32 @@ pub fn is_note_on(data: &[u8]) -> bool {
     (0x90..=0x9F).contains(&status) && velocity > 0
 }
 
+/// Return `true` if `data` is a MIDI pitch bend message.
+///
+/// MIDI pitch bend: 3 bytes, status `0xE0`-`0xEF` (channels 1-16).
+pub fn is_pitch_bend(data: &[u8]) -> bool {
+    if data.len() < 3 {
+        return false;
+    }
+    (0xE0..=0xEF).contains(&data[0])
+}
+
+/// Parse a MIDI pitch bend message into a normalized `[-1.0, +1.0]` value.
+///
+/// The 14-bit value is formed from LSB (data[1]) and MSB (data[2]):
+/// `(MSB << 7) | LSB` → range 0–16383, center 8192.
+/// Normalized: `(combined - 8192) / 8192.0`.
+///
+/// # Panics
+///
+/// Panics if `data.len() < 3`. Call [`is_pitch_bend`] first.
+pub fn parse_pitch_bend(data: &[u8]) -> f64 {
+    let lsb = data[1] as u16 & 0x7F;
+    let msb = data[2] as u16 & 0x7F;
+    let combined = (msb << 7) | lsb;
+    (combined as f64 - 8192.0) / 8192.0
+}
+
 type MidiListener = (MidiInput, Closure<dyn FnMut(MidiMessageEvent)>);
 
 /// Stores MIDI event listener closures so they can be removed on cleanup.
@@ -140,6 +166,74 @@ pub async fn setup_midi_listeners(
     })
 }
 
+/// Request MIDI access and attach `midimessage` listeners that filter for
+/// pitch bend messages on every connected input.
+///
+/// For each pitch bend event, `on_pitch_bend` is called with the normalized
+/// value in `[-1.0, +1.0]` (see [`parse_pitch_bend`]).
+///
+/// Returns a [`MidiCleanupHandle`] that must be kept alive. Dropping it
+/// removes all listeners.
+pub async fn setup_midi_pitch_bend_listeners(
+    on_pitch_bend: impl Fn(f64) + 'static,
+) -> Result<MidiCleanupHandle, JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
+    let navigator = window.navigator();
+
+    let options = MidiOptions::new();
+    options.set_sysex(false);
+
+    let promise = navigator.request_midi_access_with_options(&options)?;
+    let midi_access: MidiAccess = wasm_bindgen_futures::JsFuture::from(promise).await?.into();
+
+    let input_map = midi_access.inputs();
+
+    let on_pitch_bend = std::rc::Rc::new(on_pitch_bend);
+    let mut listeners: Vec<MidiListener> = Vec::new();
+
+    let values = input_map.values();
+    loop {
+        let next = match values.next() {
+            Ok(n) => n,
+            Err(_) => break,
+        };
+        if js_sys::Reflect::get(&next, &JsValue::from_str("done")).map_or(true, |v| v.is_truthy()) {
+            break;
+        }
+        let port_result = (|| -> Result<(), JsValue> {
+            let value = js_sys::Reflect::get(&next, &JsValue::from_str("value"))?;
+            let midi_input: MidiInput = value.dyn_into()?;
+
+            let cb = on_pitch_bend.clone();
+            let closure =
+                Closure::<dyn FnMut(MidiMessageEvent)>::new(move |event: MidiMessageEvent| {
+                    if let Ok(data) = event.data()
+                        && is_pitch_bend(&data)
+                    {
+                        cb(parse_pitch_bend(&data));
+                    }
+                });
+
+            midi_input.add_event_listener_with_callback(
+                "midimessage",
+                closure.as_ref().unchecked_ref(),
+            )?;
+
+            listeners.push((midi_input, closure));
+            Ok(())
+        })();
+
+        if let Err(e) = port_result {
+            web_sys::console::warn_1(&e);
+        }
+    }
+
+    Ok(MidiCleanupHandle {
+        _midi_access: midi_access,
+        listeners,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,5 +267,62 @@ mod tests {
     fn test_truncated_message_is_not_note_on() {
         assert!(!is_note_on(&[0x90, 60]));
         assert!(!is_note_on(&[0x90]));
+    }
+
+    // --- Pitch bend tests ---
+
+    #[test]
+    fn test_pitch_bend_channel_1() {
+        assert!(is_pitch_bend(&[0xE0, 0x00, 0x40]));
+    }
+
+    #[test]
+    fn test_pitch_bend_channel_16() {
+        assert!(is_pitch_bend(&[0xEF, 0x00, 0x40]));
+    }
+
+    #[test]
+    fn test_note_on_is_not_pitch_bend() {
+        assert!(!is_pitch_bend(&[0x90, 60, 100]));
+    }
+
+    #[test]
+    fn test_control_change_is_not_pitch_bend() {
+        assert!(!is_pitch_bend(&[0xB0, 64, 127]));
+    }
+
+    #[test]
+    fn test_truncated_message_is_not_pitch_bend() {
+        assert!(!is_pitch_bend(&[0xE0, 0x00]));
+        assert!(!is_pitch_bend(&[0xE0]));
+    }
+
+    #[test]
+    fn test_parse_pitch_bend_center() {
+        // Center: LSB=0x00, MSB=0x40 → combined = 8192 → 0.0
+        let val = parse_pitch_bend(&[0xE0, 0x00, 0x40]);
+        assert!((val - 0.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_parse_pitch_bend_full_down() {
+        // Full down: LSB=0x00, MSB=0x00 → combined = 0 → -1.0
+        let val = parse_pitch_bend(&[0xE0, 0x00, 0x00]);
+        assert!((val - (-1.0)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_parse_pitch_bend_full_up() {
+        // Full up: LSB=0x7F, MSB=0x7F → combined = 16383 → ~+1.0
+        let val = parse_pitch_bend(&[0xE0, 0x7F, 0x7F]);
+        assert!((val - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_parse_pitch_bend_channel_independent() {
+        // Same data on different channels should produce same value
+        let val_ch1 = parse_pitch_bend(&[0xE0, 0x00, 0x40]);
+        let val_ch16 = parse_pitch_bend(&[0xEF, 0x00, 0x40]);
+        assert!((val_ch1 - val_ch16).abs() < 1e-10);
     }
 }
