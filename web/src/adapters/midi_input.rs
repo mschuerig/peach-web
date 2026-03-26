@@ -36,7 +36,11 @@ pub fn is_note_on(data: &[u8]) -> bool {
 type MidiListener = (MidiInput, Closure<dyn FnMut(MidiMessageEvent)>);
 
 /// Stores MIDI event listener closures so they can be removed on cleanup.
+///
+/// Dropping the handle automatically removes all listeners. Call [`cleanup`](Self::cleanup)
+/// for explicit early cleanup with warning logs on failure.
 pub struct MidiCleanupHandle {
+    _midi_access: MidiAccess,
     listeners: Vec<MidiListener>,
 }
 
@@ -44,13 +48,24 @@ impl MidiCleanupHandle {
     /// Remove all `midimessage` event listeners that were attached by
     /// [`setup_midi_listeners`].
     pub fn cleanup(self) {
+        // Drop impl handles the actual removal
+    }
+
+    fn remove_listeners(&mut self) {
         for (input, closure) in &self.listeners {
-            let _ = input.remove_event_listener_with_callback(
+            if let Err(e) = input.remove_event_listener_with_callback(
                 "midimessage",
                 closure.as_ref().unchecked_ref(),
-            );
+            ) {
+                web_sys::console::warn_1(&e);
+            }
         }
-        // Closures are dropped here
+    }
+}
+
+impl Drop for MidiCleanupHandle {
+    fn drop(&mut self) {
+        self.remove_listeners();
     }
 }
 
@@ -80,32 +95,48 @@ pub async fn setup_midi_listeners(
     let mut listeners: Vec<MidiListener> = Vec::new();
 
     // Iterate the MidiInputMap via its JS iterator protocol.
+    // Per-port errors are logged and skipped so one bad port doesn't block the rest.
     let values = input_map.values();
     loop {
-        let next = values.next()?;
-        if js_sys::Reflect::get(&next, &JsValue::from_str("done"))?.is_truthy() {
+        let next = match values.next() {
+            Ok(n) => n,
+            Err(_) => break,
+        };
+        if js_sys::Reflect::get(&next, &JsValue::from_str("done")).map_or(true, |v| v.is_truthy()) {
             break;
         }
-        let value = js_sys::Reflect::get(&next, &JsValue::from_str("value"))?;
-        let midi_input: MidiInput = value.dyn_into()?;
+        let port_result = (|| -> Result<(), JsValue> {
+            let value = js_sys::Reflect::get(&next, &JsValue::from_str("value"))?;
+            let midi_input: MidiInput = value.dyn_into()?;
 
-        let cb = on_note_on.clone();
-        let closure =
-            Closure::<dyn FnMut(MidiMessageEvent)>::new(move |event: MidiMessageEvent| {
-                if let Ok(data) = event.data()
-                    && is_note_on(&data)
-                {
-                    cb(event.time_stamp());
-                }
-            });
+            let cb = on_note_on.clone();
+            let closure =
+                Closure::<dyn FnMut(MidiMessageEvent)>::new(move |event: MidiMessageEvent| {
+                    if let Ok(data) = event.data()
+                        && is_note_on(&data)
+                    {
+                        cb(event.time_stamp());
+                    }
+                });
 
-        midi_input
-            .add_event_listener_with_callback("midimessage", closure.as_ref().unchecked_ref())?;
+            midi_input.add_event_listener_with_callback(
+                "midimessage",
+                closure.as_ref().unchecked_ref(),
+            )?;
 
-        listeners.push((midi_input, closure));
+            listeners.push((midi_input, closure));
+            Ok(())
+        })();
+
+        if let Err(e) = port_result {
+            web_sys::console::warn_1(&e);
+        }
     }
 
-    Ok(MidiCleanupHandle { listeners })
+    Ok(MidiCleanupHandle {
+        _midi_access: midi_access,
+        listeners,
+    })
 }
 
 #[cfg(test)]
