@@ -2363,3 +2363,91 @@ Extracts a `training_common` module with: `SessionLifecycle` (cancellation/termi
 **So that** a single poisoned measurement (NaN, infinity, negative) cannot silently corrupt my training profile.
 
 Promotes `debug_assert!` in `WelfordAccumulator::update()` to a silent early-return guard; changes `MetricPoint::new()` to return `Option<Self>`. Updates all callers.
+
+---
+
+## Epic 22: MIDI Input for Rhythm Training
+
+Users with a connected MIDI controller can tap rhythm training beats using any MIDI note-on event, automatically and alongside existing pointer/keyboard input. Progressive enhancement — the app works identically when MIDI is unavailable. Based on technical research in `docs/planning-artifacts/research/technical-web-midi-input-research-2026-03-26.md`.
+
+**Prerequisites:** Epic 18 (continuous rhythm matching exists), Epic 21 (tap latency pipeline with `bridge_event_to_audio_time`)
+
+### Story 22.1: MIDI Adapter Module with Note-On Detection
+
+**As a** developer,
+**I want** a `midi_input.rs` adapter that handles Web MIDI API access, feature detection, and note-on event listening,
+**So that** MIDI input is encapsulated in a single module following the existing adapter pattern.
+
+**Acceptance Criteria:**
+
+**Given** the `web/Cargo.toml` dependency on `web-sys`
+**When** the MIDI feature flags are added
+**Then** `MidiAccess`, `MidiInput`, `MidiInputMap`, `MidiMessageEvent`, `MidiOptions`, `MidiPort`, `MidiConnectionEvent`, and `Navigator` features are enabled
+
+**Given** a browser that supports Web MIDI API
+**When** `is_midi_available()` is called
+**Then** it returns `true`
+
+**Given** a browser that does not support Web MIDI API (e.g., Safari)
+**When** `is_midi_available()` is called
+**Then** it returns `false`
+
+**Given** a 3-byte MIDI message with status byte `0x90`–`0x9F` and velocity > 0
+**When** `is_note_on(data)` is called
+**Then** it returns `true`
+
+**Given** a MIDI message with velocity 0, a note-off status (`0x80`–`0x8F`), a control change, or fewer than 3 bytes
+**When** `is_note_on(data)` is called
+**Then** it returns `false`
+
+**Given** MIDI access is granted and one or more MIDI inputs are connected
+**When** `setup_midi_listeners(on_note_on)` is called
+**Then** a `midimessage` event listener is attached to each input that calls `on_note_on(timestamp_ms)` for note-on events
+
+**Given** a `MidiCleanupHandle` returned from `setup_midi_listeners`
+**When** `cleanup()` is called
+**Then** all `midimessage` listeners are removed from their respective `MidiInput` targets
+
+**Given** the `is_note_on` function
+**When** `cargo test -p web` is run
+**Then** unit tests pass covering: note-on channel 1, note-on channel 16, velocity-zero note-off, explicit note-off, control change ignored, truncated message ignored
+
+**Given** the new module
+**When** `cargo clippy --workspace` is run
+**Then** no warnings are produced
+
+### Story 22.2: Wire MIDI Input into Continuous Rhythm Matching View
+
+**As a** user with a MIDI controller,
+**I want** my MIDI note-on events to trigger tap evaluation in rhythm training,
+**So that** I can practice rhythm with a pad, keyboard, or any MIDI device instead of (or alongside) tapping the screen.
+
+**Acceptance Criteria:**
+
+**Given** the training view is mounting and the browser supports Web MIDI
+**When** AudioContext is resumed (user gesture)
+**Then** `setup_midi_listeners` is called with a clone of the existing `on_tap` closure
+
+**Given** MIDI setup succeeds
+**When** a MIDI note-on event fires during training
+**Then** the tap evaluation pipeline processes it identically to a pointer or keyboard tap (same `bridge_event_to_audio_time` → `evaluate_tap` → `RhythmOffset` path)
+
+**Given** MIDI setup fails (permission denied, API error)
+**When** the failure occurs
+**Then** a warning is logged via `log::warn!` and training continues with pointer/keyboard input only — no error dialog or UI disruption
+
+**Given** MIDI is not available (unsupported browser)
+**When** the training view mounts
+**Then** MIDI setup is skipped entirely and training works as before
+
+**Given** the training view is unmounting (navigation away)
+**When** `on_cleanup` runs
+**Then** the `MidiCleanupHandle` is cleaned up, removing all MIDI event listeners
+
+**Given** the complete implementation
+**When** `cargo test -p domain` is run
+**Then** all existing domain tests pass unchanged (domain crate is not modified)
+
+**Given** the complete implementation
+**When** `cargo clippy --workspace` is run
+**Then** no warnings are produced
