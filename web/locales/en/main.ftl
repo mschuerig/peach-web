@@ -195,10 +195,12 @@ help-data-title = Data
 help-data-body = **Export** saves your training data as a file you can keep as a backup or transfer to another device.{"\u000A\u000A"}**Import** loads training data from a file. You can replace your current data or merge it with existing records.{"\u000A\u000A"}**Reset** permanently deletes all training data and resets your profile. This cannot be undone.
 
 ## Help - Pitch Discrimination
+discrimination-higher-key = H
+discrimination-lower-key = L
 help-discrimination-goal-title = Goal
 help-discrimination-goal-body = Two notes play one after the other. Your job is to decide: was the **second note higher or lower** than the first? The closer the notes are, the harder it gets — and the sharper your ear becomes.
 help-discrimination-controls-title = Controls
-help-discrimination-controls-body = Once the second note starts playing, the **Higher** and **Lower** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Up** or **H** for higher, **Arrow Down** or **L** for lower.
+help-discrimination-controls-body = Once the second note starts playing, the **Higher** and **Lower** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Up** or **{ discrimination-higher-key }** for higher, **Arrow Down** or **{ discrimination-lower-key }** for lower.
 help-discrimination-feedback-title = Feedback
 help-discrimination-feedback-body = After each answer you'll see a brief **checkmark** (correct) or **X** (incorrect). Use this to calibrate your listening — over time, you'll notice patterns in what you get right.
 help-discrimination-difficulty-title = Difficulty
@@ -207,10 +209,12 @@ help-discrimination-intervals-title = Intervals
 help-discrimination-intervals-body = In interval mode, the two notes are separated by a specific **musical interval** (like a fifth or an octave) instead of a small pitch difference. You still decide which note is higher — but now you're training your sense of musical distance.
 
 ## Help - Rhythm Offset Detection
+rhythm-offset-early-key = E
+rhythm-offset-late-key = L
 help-rhythm-offset-goal-title = Goal
 help-rhythm-offset-goal-body = You'll hear four clicks like a metronome. One of them — the third — is slightly **early or late**. Your job is to decide which one it was. The smaller the offset, the sharper your timing perception.
 help-rhythm-offset-controls-title = Controls
-help-rhythm-offset-controls-body = After the four clicks play, the **Early** and **Late** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Left** or **E** for early, **Arrow Right** or **L** for late.
+help-rhythm-offset-controls-body = After the four clicks play, the **Early** and **Late** buttons become active. Tap the one that matches what you heard. You can also use keyboard shortcuts: **Arrow Left** or **{ rhythm-offset-early-key }** for early, **Arrow Right** or **{ rhythm-offset-late-key }** for late.
 help-rhythm-offset-feedback-title = Feedback
 help-rhythm-offset-feedback-body = After each answer you'll see a brief **checkmark** (correct) or **X** (incorrect), along with the current difficulty as a percentage. A smaller percentage means a subtler offset — and a harder challenge.
 
@@ -218,7 +222,7 @@ help-rhythm-offset-feedback-body = After each answer you'll see a brief **checkm
 help-fill-the-gap-goal-title = Goal
 help-fill-the-gap-goal-body = A steady four-beat pattern plays in a loop. One beat is silent — you hear the gap. Your job is to **tap at the right moment** to fill the missing beat. The closer your timing, the better.
 help-fill-the-gap-controls-title = Controls
-help-fill-the-gap-controls-body = Tap the large button (or press **Space**) when the gap beat should sound. Timing is measured from the moment you press — so tap right on the beat. The sequencer keeps looping; no need to wait.
+help-fill-the-gap-controls-body = Tap the large button (or press **Space**) when the gap beat should sound. Timing is measured from the moment you press — so tap right on the beat. The sequencer keeps looping; no need to wait.{"\u000A\u000A"}You can also tap using a connected **MIDI controller** — any key press will register as a tap.
 help-fill-the-gap-feedback-title = Feedback
 help-fill-the-gap-feedback-body = After each tap, a brief indicator shows how early or late you were in milliseconds, with a color code: **green** for close, **yellow** for moderate, and **red** for far off. After 16 cycles, a summary of your hit rate and average offset appears.
 
@@ -226,7 +230,7 @@ help-fill-the-gap-feedback-body = After each tap, a brief indicator shows how ea
 help-matching-goal-title = Goal
 help-matching-goal-body = You'll hear a **reference note**. Your goal is to match its pitch by sliding to the exact same frequency. The closer you get, the better your ear is becoming.
 help-matching-controls-title = Controls
-help-matching-controls-body = **Touch** the slider to hear your note, then **drag** up or down to adjust the pitch. When you think you've matched the reference, **release** the slider to lock in your answer. You can also press **Enter** or **Space** to commit.
+help-matching-controls-body = **Touch** the slider to hear your note, then **drag** up or down to adjust the pitch. When you think you've matched the reference, **release** the slider to lock in your answer. You can also press **Enter** or **Space** to commit.{"\u000A\u000A"}If you have a MIDI controller connected, you can also use the **pitch bend wheel** to adjust the pitch. Return the wheel to center to lock in your answer.
 help-matching-feedback-title = Feedback
 help-matching-feedback-body = After each attempt, you'll see how many **cents** off you were. A smaller number means a closer match — zero would be perfect. Use the feedback to fine-tune your listening.
 help-matching-intervals-title = Intervals
@@ -236,7 +240,7 @@ help-matching-intervals-body = In interval mode, your target pitch is a specific
 help-info-what-title = What is Peach?
 help-info-what-body = Peach helps you train your ear for music. Practice hearing the difference between notes and learn to match pitches accurately.
 help-info-modes-title = Training Modes
-help-info-modes-body = **Compare – Single Notes** – Listen to two notes and decide which one is higher.{"\u000A\u000A"}**Compare – Intervals** – The same idea, but with musical intervals between notes.{"\u000A\u000A"}**Match – Single Notes** – Hear a note and slide to match its pitch.{"\u000A\u000A"}**Match – Intervals** – Match pitches using musical intervals.
+help-info-modes-body = **Compare – Single Notes** – Listen to two notes and decide which one is higher.{"\u000A\u000A"}**Compare – Intervals** – The same idea, but with musical intervals between notes.{"\u000A\u000A"}**Match – Single Notes** – Hear a note and slide to match its pitch.{"\u000A\u000A"}**Match – Intervals** – Match pitches using musical intervals.{"\u000A\u000A"}**Compare Timing** – Hear four clicks and decide whether the odd one out was early or late.{"\u000A\u000A"}**Fill the Gap** – A beat pattern loops with one silent beat — tap at the right moment to fill it.
 help-info-start-title = Getting Started
 help-info-start-body = Just pick any training mode on the home screen and start practicing. Peach adapts to your skill level automatically.
 

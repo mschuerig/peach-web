@@ -195,10 +195,12 @@ help-data-title = Daten
 help-data-body = **Exportieren** speichert deine Trainingsdaten als Datei, die du als Backup aufbewahren oder auf ein anderes Gerät übertragen kannst.{"\u000A\u000A"}**Importieren** lädt Trainingsdaten aus einer Datei. Du kannst deine aktuellen Daten ersetzen oder mit bestehenden Einträgen zusammenführen.{"\u000A\u000A"}**Zurücksetzen** löscht alle Trainingsdaten unwiderruflich und setzt dein Profil zurück. Dies kann nicht rückgängig gemacht werden.
 
 ## Help - Pitch Discrimination
+discrimination-higher-key = H
+discrimination-lower-key = T
 help-discrimination-goal-title = Ziel
 help-discrimination-goal-body = Zwei Töne werden nacheinander gespielt. Deine Aufgabe: War der **zweite Ton höher oder tiefer** als der erste? Je näher die Töne beieinander liegen, desto schwieriger wird es — und desto schärfer wird dein Gehör.
 help-discrimination-controls-title = Bedienung
-help-discrimination-controls-body = Sobald der zweite Ton zu spielen beginnt, werden die Tasten **Höher** und **Tiefer** aktiv. Tippe auf die Taste, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil hoch** oder **H** für höher, **Pfeil runter** oder **T** für tiefer.
+help-discrimination-controls-body = Sobald der zweite Ton zu spielen beginnt, werden die Tasten **Höher** und **Tiefer** aktiv. Tippe auf die Taste, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil hoch** oder **{ discrimination-higher-key }** für höher, **Pfeil runter** oder **{ discrimination-lower-key }** für tiefer.
 help-discrimination-feedback-title = Feedback
 help-discrimination-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkchen** (richtig) oder ein **X** (falsch). Nutze das, um dein Hören zu kalibrieren — mit der Zeit erkennst du Muster in dem, was du richtig hörst.
 help-discrimination-difficulty-title = Schwierigkeit
@@ -207,10 +209,12 @@ help-discrimination-intervals-title = Intervalle
 help-discrimination-intervals-body = Im Intervallmodus sind die beiden Töne durch ein bestimmtes **musikalisches Intervall** getrennt (z. B. eine Quinte oder Oktave) statt durch einen kleinen Tonhöhenunterschied. Du entscheidest weiterhin, welcher Ton höher ist — aber du trainierst jetzt dein Gespür für musikalische Abstände.
 
 ## Help - Rhythm Offset Detection
+rhythm-offset-early-key = F
+rhythm-offset-late-key = S
 help-rhythm-offset-goal-title = Ziel
 help-rhythm-offset-goal-body = Du hörst vier Klicks wie ein Metronom. Einer davon — der dritte — kommt leicht **zu früh oder zu spät**. Deine Aufgabe ist es, zu entscheiden, welches es war. Je kleiner die Abweichung, desto schärfer ist deine Zeitwahrnehmung.
 help-rhythm-offset-controls-title = Bedienung
-help-rhythm-offset-controls-body = Nachdem die vier Klicks gespielt wurden, werden die Tasten **Zu früh** und **Zu spät** aktiv. Tippe auf die, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil links** oder **E** für zu früh, **Pfeil rechts** oder **L** für zu spät.
+help-rhythm-offset-controls-body = Nachdem die vier Klicks gespielt wurden, werden die Tasten **Zu früh** und **Zu spät** aktiv. Tippe auf die, die zu dem passt, was du gehört hast. Du kannst auch Tastenkürzel verwenden: **Pfeil links** oder **{ rhythm-offset-early-key }** für zu früh, **Pfeil rechts** oder **{ rhythm-offset-late-key }** für zu spät.
 help-rhythm-offset-feedback-title = Feedback
 help-rhythm-offset-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkchen** (richtig) oder ein **X** (falsch), zusammen mit der aktuellen Schwierigkeit als Prozentsatz. Ein kleinerer Prozentsatz bedeutet eine subtilere Abweichung — und eine schwierigere Herausforderung.
 
@@ -218,7 +222,7 @@ help-rhythm-offset-feedback-body = Nach jeder Antwort siehst du kurz ein **Häkc
 help-fill-the-gap-goal-title = Ziel
 help-fill-the-gap-goal-body = Ein gleichmäßiges Vierer-Muster spielt in einer Schleife. Ein Schlag ist stumm — du hörst die Lücke. Deine Aufgabe ist es, **im richtigen Moment zu tippen**, um den fehlenden Schlag zu füllen. Je genauer dein Timing, desto besser.
 help-fill-the-gap-controls-title = Bedienung
-help-fill-the-gap-controls-body = Tippe auf den großen Button (oder drücke **Leertaste**), wenn der Lückenschlag erklingen sollte. Das Timing wird ab dem Moment des Drückens gemessen — tippe also genau auf den Schlag. Der Sequencer läuft weiter in einer Schleife.
+help-fill-the-gap-controls-body = Tippe auf den großen Button (oder drücke **Leertaste**), wenn der Lückenschlag erklingen sollte. Das Timing wird ab dem Moment des Drückens gemessen — tippe also genau auf den Schlag. Der Sequencer läuft weiter in einer Schleife.{"\u000A\u000A"}Du kannst auch mit einem angeschlossenen **MIDI-Controller** tippen — jeder Tastendruck wird als Tap gewertet.
 help-fill-the-gap-feedback-title = Feedback
 help-fill-the-gap-feedback-body = Nach jedem Tippen zeigt ein kurzer Indikator, wie früh oder spät du warst (in Millisekunden), mit Farbcode: **grün** für nah dran, **gelb** für moderat, **rot** für weit daneben. Nach 16 Zyklen erscheint eine Zusammenfassung deiner Trefferquote und mittleren Abweichung.
 
@@ -226,7 +230,7 @@ help-fill-the-gap-feedback-body = Nach jedem Tippen zeigt ein kurzer Indikator, 
 help-matching-goal-title = Ziel
 help-matching-goal-body = Du hörst einen **Referenzton**. Dein Ziel ist es, seine Tonhöhe zu treffen, indem du den Regler auf die gleiche Frequenz schiebst. Je näher du kommst, desto besser wird dein Gehör.
 help-matching-controls-title = Bedienung
-help-matching-controls-body = **Berühre** den Regler, um deinen Ton zu hören, dann **ziehe** nach oben oder unten, um die Tonhöhe anzupassen. Wenn du glaubst, den Referenzton getroffen zu haben, **lasse** den Regler los, um deine Antwort zu bestätigen. Du kannst auch **Enter** oder **Leertaste** drücken.
+help-matching-controls-body = **Berühre** den Regler, um deinen Ton zu hören, dann **ziehe** nach oben oder unten, um die Tonhöhe anzupassen. Wenn du glaubst, den Referenzton getroffen zu haben, **lasse** den Regler los, um deine Antwort zu bestätigen. Du kannst auch **Enter** oder **Leertaste** drücken.{"\u000A\u000A"}Wenn ein MIDI-Controller angeschlossen ist, kannst du auch das **Pitch-Bend-Rad** verwenden, um die Tonhöhe anzupassen. Bringe das Rad zurück in die Mitte, um deine Antwort zu bestätigen.
 help-matching-feedback-title = Feedback
 help-matching-feedback-body = Nach jedem Versuch siehst du, wie viele **Cent** du daneben lagst. Eine kleinere Zahl bedeutet eine bessere Übereinstimmung — null wäre perfekt. Nutze das Feedback, um dein Hören zu verfeinern.
 help-matching-intervals-title = Intervalle
@@ -236,7 +240,7 @@ help-matching-intervals-body = Im Intervallmodus liegt deine Zieltonhöhe ein be
 help-info-what-title = Was ist Peach?
 help-info-what-body = Peach hilft dir, dein Gehör für Musik zu trainieren. Übe, Unterschiede zwischen Tönen zu hören und Tonhöhen genau zu treffen.
 help-info-modes-title = Trainingsmodi
-help-info-modes-body = **Vergleichen – Einzeltöne** – Höre zwei Töne und entscheide, welcher höher ist.{"\u000A\u000A"}**Vergleichen – Intervalle** – Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\u000A\u000A"}**Treffen – Einzeltöne** – Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\u000A\u000A"}**Treffen – Intervalle** – Gleiche Tonhöhen mit musikalischen Intervallen an.
+help-info-modes-body = **Vergleichen – Einzeltöne** – Höre zwei Töne und entscheide, welcher höher ist.{"\u000A\u000A"}**Vergleichen – Intervalle** – Dasselbe Prinzip, aber mit musikalischen Intervallen zwischen den Tönen.{"\u000A\u000A"}**Treffen – Einzeltöne** – Höre einen Ton und gleiche die Tonhöhe mit dem Regler an.{"\u000A\u000A"}**Treffen – Intervalle** – Gleiche Tonhöhen mit musikalischen Intervallen an.{"\u000A\u000A"}**Timing vergleichen** – Höre vier Klicks und entscheide, ob der abweichende zu früh oder zu spät kam.{"\u000A\u000A"}**Lücke füllen** – Ein Schlagmuster läuft in Schleife mit einem stillen Schlag — tippe im richtigen Moment, um ihn zu füllen.
 help-info-start-title = Erste Schritte
 help-info-start-body = Wähle einfach einen Trainingsmodus auf dem Startbildschirm und leg los. Peach passt sich automatisch deinem Niveau an.
 

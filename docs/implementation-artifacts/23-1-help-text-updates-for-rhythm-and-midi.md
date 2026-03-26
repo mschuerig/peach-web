@@ -1,6 +1,6 @@
 # Story 23.1: Help Text Updates for Rhythm and MIDI
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,29 +19,29 @@ so that I can understand all available training modes and how to use MIDI contro
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Extend "Training Modes" help text in info view (AC: 1)
-  - [ ] 1.1 Update `help-info-modes-body` in `web/locales/en/main.ftl` to add two rhythm entries: "Compare Timing" and "Fill the Gap" with brief descriptions
-  - [ ] 1.2 Update `help-info-modes-body` in `web/locales/de/main.ftl` with equivalent German text
+- [x] Task 1: Extend "Training Modes" help text in info view (AC: 1)
+  - [x] 1.1 Update `help-info-modes-body` in `web/locales/en/main.ftl` to add two rhythm entries: "Compare Timing" and "Fill the Gap" with brief descriptions
+  - [x] 1.2 Update `help-info-modes-body` in `web/locales/de/main.ftl` with equivalent German text
 
-- [ ] Task 2: Add MIDI pitch bend to pitch matching help (AC: 2, 5)
-  - [ ] 2.1 Update `help-matching-controls-body` in `web/locales/en/main.ftl` to mention MIDI pitch bend wheel as alternative input (deflect to adjust, return to center to commit)
-  - [ ] 2.2 Update `help-matching-controls-body` in `web/locales/de/main.ftl` with equivalent German text
+- [x] Task 2: Add MIDI pitch bend to pitch matching help (AC: 2, 5)
+  - [x] 2.1 Update `help-matching-controls-body` in `web/locales/en/main.ftl` to mention MIDI pitch bend wheel as alternative input (deflect to adjust, return to center to commit)
+  - [x] 2.2 Update `help-matching-controls-body` in `web/locales/de/main.ftl` with equivalent German text
 
-- [ ] Task 3: Add MIDI input to Fill the Gap help (AC: 3, 5)
-  - [ ] 3.1 Update `help-fill-the-gap-controls-body` in `web/locales/en/main.ftl` to mention MIDI note-on as alternative tap trigger
-  - [ ] 3.2 Update `help-fill-the-gap-controls-body` in `web/locales/de/main.ftl` with equivalent German text
+- [x] Task 3: Add MIDI input to Fill the Gap help (AC: 3, 5)
+  - [x] 3.1 Update `help-fill-the-gap-controls-body` in `web/locales/en/main.ftl` to mention MIDI note-on as alternative tap trigger
+  - [x] 3.2 Update `help-fill-the-gap-controls-body` in `web/locales/de/main.ftl` with equivalent German text
 
-- [ ] Task 4: Localize keyboard shortcuts for rhythm offset detection (AC: 4, 5)
-  - [ ] 4.1 Add Fluent keys for shortcut letters in both locales: e.g. `rhythm-offset-early-key = E` (en), `rhythm-offset-early-key = F` (de), `rhythm-offset-late-key = L` (en), `rhythm-offset-late-key = S` (de)
-  - [ ] 4.2 Update `help-rhythm-offset-controls-body` in both locales to use Fluent variable interpolation for the letter keys instead of hardcoded letters
-  - [ ] 4.3 Update the keyboard handler in `rhythm_offset_detection_view.rs` to read the shortcut keys from the locale (use `tr!()` or `untrack(|| tr!(...))` to get the current key letters) instead of hardcoded `"e"` / `"l"`
-  - [ ] 4.4 Verify the key match is case-insensitive (match both lower and upper case of the localized key)
+- [x] Task 4: Localize keyboard shortcuts for rhythm offset detection (AC: 4, 5)
+  - [x] 4.1 Add Fluent keys for shortcut letters in both locales: e.g. `rhythm-offset-early-key = E` (en), `rhythm-offset-early-key = F` (de), `rhythm-offset-late-key = L` (en), `rhythm-offset-late-key = S` (de)
+  - [x] 4.2 Update `help-rhythm-offset-controls-body` in both locales to use Fluent message references for the letter keys instead of hardcoded letters
+  - [x] 4.3 Update the keyboard handler in `rhythm_offset_detection_view.rs` to read the shortcut keys from the locale (use `untrack(|| tr!(...))` to get the current key letters) instead of hardcoded `"e"` / `"l"`
+  - [x] 4.4 Verify the key match is case-insensitive (match both lower and upper case of the localized key)
 
-- [ ] Task 5: Localize keyboard shortcuts for pitch discrimination (AC: 6, 5)
-  - [ ] 5.1 Add Fluent keys for shortcut letters: `discrimination-higher-key = H` (en/de), `discrimination-lower-key = L` (en), `discrimination-lower-key = T` (de)
-  - [ ] 5.2 Update `help-discrimination-controls-body` in both locales to use Fluent variable interpolation for the letter keys
-  - [ ] 5.3 Update the keyboard handler in `pitch_discrimination_view.rs` to read the shortcut keys from the locale — note the German code already accepts "t"/"T" alongside "l"/"L", so the binding already partially supports this
-  - [ ] 5.4 Verify the key match is case-insensitive
+- [x] Task 5: Localize keyboard shortcuts for pitch discrimination (AC: 6, 5)
+  - [x] 5.1 Add Fluent keys for shortcut letters: `discrimination-higher-key = H` (en/de), `discrimination-lower-key = L` (en), `discrimination-lower-key = T` (de)
+  - [x] 5.2 Update `help-discrimination-controls-body` in both locales to use Fluent message references for the letter keys
+  - [x] 5.3 Update the keyboard handler in `pitch_discrimination_view.rs` to read the shortcut keys from the locale using `untrack(|| tr!(...))`
+  - [x] 5.4 Verify the key match is case-insensitive
 
 ## Dev Notes
 
@@ -125,8 +125,30 @@ Keep MIDI mentions brief and non-technical. The help text should say something l
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — clean implementation with no issues.
 
 ### Completion Notes List
 
+- Task 1: Added "Compare Timing" and "Fill the Gap" entries to `help-info-modes-body` in both EN and DE locales.
+- Task 2: Added MIDI pitch bend wheel paragraph to `help-matching-controls-body` in both locales.
+- Task 3: Added MIDI controller tap paragraph to `help-fill-the-gap-controls-body` in both locales.
+- Task 4: Added `rhythm-offset-early-key` / `rhythm-offset-late-key` Fluent keys (EN: E/L, DE: F/S). Updated help text to use Fluent message references. Replaced hardcoded letter keys in `rhythm_offset_detection_view.rs` with `untrack(|| tr!(...))` locale-driven keys with case-insensitive matching.
+- Task 5: Added `discrimination-higher-key` / `discrimination-lower-key` Fluent keys (EN: H/L, DE: H/T). Updated help text to use Fluent message references. Replaced hardcoded letter keys in `pitch_discrimination_view.rs` with `untrack(|| tr!(...))` locale-driven keys with case-insensitive matching.
+- Design note: Used Fluent **message references** (`{ rhythm-offset-early-key }`) instead of Fluent variables (`{ $earlyKey }`) because the help rendering pipeline (`help_content.rs`) does not pass variables — message references resolve automatically without code changes.
+
 ### File List
+
+- `web/locales/en/main.ftl` — Updated 4 help body keys, added 4 shortcut key entries
+- `web/locales/de/main.ftl` — Mirrored all English changes with German text
+- `web/src/components/rhythm_offset_detection_view.rs` — Replaced hardcoded key letters with locale-driven keys
+- `web/src/components/pitch_discrimination_view.rs` — Replaced hardcoded key letters with locale-driven keys
+- `docs/implementation-artifacts/23-1-help-text-updates-for-rhythm-and-midi.md` — Story file updated
+- `docs/implementation-artifacts/sprint-status.yaml` — Status updated
+
+### Change Log
+
+- 2026-03-26: Implemented all 5 tasks — help text updates for rhythm/MIDI and keyboard shortcut localization

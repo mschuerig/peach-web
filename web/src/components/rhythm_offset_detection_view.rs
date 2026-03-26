@@ -271,18 +271,31 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
         })
     };
 
+    // Capture locale-driven shortcut keys once at mount
+    let early_key = untrack(|| tr!("rhythm-offset-early-key")).to_lowercase();
+    let late_key = untrack(|| tr!("rhythm-offset-late-key")).to_lowercase();
+
     // Keyboard event handler
     let keydown_handler = {
         let on_answer = Rc::clone(&on_answer);
         Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
             let has_modifier = ev.ctrl_key() || ev.meta_key() || ev.alt_key();
+            let key = ev.key().to_lowercase();
             match ev.key().as_str() {
                 _ if has_modifier => {}
-                "ArrowLeft" | "e" | "E" => {
+                "ArrowLeft" => {
                     ev.prevent_default();
                     on_answer(true); // early
                 }
-                "ArrowRight" | "l" | "L" => {
+                "ArrowRight" => {
+                    ev.prevent_default();
+                    on_answer(false); // late
+                }
+                _ if key == early_key => {
+                    ev.prevent_default();
+                    on_answer(true); // early
+                }
+                _ if key == late_key => {
                     ev.prevent_default();
                     on_answer(false); // late
                 }

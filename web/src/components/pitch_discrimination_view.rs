@@ -316,21 +316,34 @@ pub fn PitchDiscriminationView() -> impl IntoView {
         })
     };
 
+    // Capture locale-driven shortcut keys once at mount
+    let higher_key = untrack(|| tr!("discrimination-higher-key")).to_lowercase();
+    let lower_key = untrack(|| tr!("discrimination-lower-key")).to_lowercase();
+
     let keydown_handler = {
         let on_answer = Rc::clone(&on_answer);
         Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
             let has_modifier = ev.ctrl_key() || ev.meta_key() || ev.alt_key();
             // Note: ev.shift_key() is intentionally NOT checked — Shift is allowed
+            let key = ev.key().to_lowercase();
 
             match ev.key().as_str() {
                 _ if has_modifier => {
                     // Any key with a modifier: let the browser handle it
                 }
-                "ArrowUp" | "h" | "H" => {
+                "ArrowUp" => {
                     ev.prevent_default();
                     on_answer(true);
                 }
-                "ArrowDown" | "l" | "L" | "t" | "T" => {
+                "ArrowDown" => {
+                    ev.prevent_default();
+                    on_answer(false);
+                }
+                _ if key == higher_key => {
+                    ev.prevent_default();
+                    on_answer(true);
+                }
+                _ if key == lower_key => {
                     ev.prevent_default();
                     on_answer(false);
                 }
