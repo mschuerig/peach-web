@@ -38,6 +38,22 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Description:** These functions call `ctx.borrow()` and hold the `Ref<AudioContext>` for their entire scope, including through multiple Web Audio JS interop calls (`create_buffer_source`, `create_gain`, `connect_with_audio_node`, `start`). If any of those JS calls ever triggered a synchronous re-entrant Rust callback that attempted to borrow the same `Rc<RefCell<AudioContext>>`, it would panic at runtime. In practice this is safe: WASM is single-threaded, the Web Audio calls are synchronous, and no event callbacks re-enter these paths.
 - **Recommendation:** No action needed unless the architecture changes. If AudioContext is ever shared across async tasks or event listeners that could nest, consider extracting a raw `&AudioContext` reference before the interop calls.
 
+### PEF-016: MIDI hot-plug not supported — devices connected after training starts are ignored
+
+- **Status:** OPEN — future enhancement, not blocking.
+- **Surfaced:** Story 22.2 code review (2026-03-26)
+- **Location:** `web/src/adapters/midi_input.rs` — `setup_midi_listeners()`
+- **Description:** `setup_midi_listeners` iterates connected MIDI inputs at call time but does not attach a `statechange` listener on `MidiAccess`. Devices plugged in after training starts are never registered. The user gets no MIDI input and no indication why.
+- **Recommendation:** Add a `statechange` listener on `MidiAccess` that attaches `midimessage` handlers to newly connected inputs and removes them from disconnected ones.
+
+### PEF-017: MIDI event.data() errors silently swallowed
+
+- **Status:** OPEN — observability gap, low practical impact.
+- **Surfaced:** Story 22.2 code review (2026-03-26)
+- **Location:** `web/src/adapters/midi_input.rs` — `setup_midi_listeners()` closure (line ~116)
+- **Description:** If `MidiMessageEvent.data()` returns `Err`, the event is silently skipped with no log. If a device systematically returns errors, all MIDI input silently stops working with no diagnostic trace.
+- **Recommendation:** Add `log::warn!` on `event.data()` failure for observability.
+
 ### PEF-013: Merge import dedup uses timestamp-only key, losing sub-second records
 
 - **Status:** WONT-FIX — the training loop physically cannot produce two records of the same type within one second (each round involves listening, thinking, answering). The coarse timestamp key correctly deduplicates re-imports without needing field-by-field matching.

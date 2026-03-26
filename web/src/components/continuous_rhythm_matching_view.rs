@@ -426,17 +426,25 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
             *shared_ctx_for_loop.borrow_mut() = Some(Rc::clone(&ctx_rc));
             *shared_click_buffer_for_loop.borrow_mut() = Some(click_buffer.clone());
 
-            // Wire MIDI input as an additional tap source (progressive enhancement)
+            // Wire MIDI input in a separate task so the permission prompt
+            // does not block training startup (progressive enhancement).
             if midi_input::is_midi_available() {
                 let on_tap_for_midi = Rc::clone(&on_tap_for_loop);
-                match midi_input::setup_midi_listeners(move |ts| on_tap_for_midi(ts)).await {
-                    Ok(handle) => {
-                        midi_cleanup_handle.set_value(Some(SendWrapper::new(handle)));
+                let terminated_for_midi = Rc::clone(&terminated);
+                spawn_local(async move {
+                    match midi_input::setup_midi_listeners(move |ts| on_tap_for_midi(ts)).await {
+                        Ok(handle) => {
+                            if terminated_for_midi.get() {
+                                handle.cleanup();
+                            } else {
+                                midi_cleanup_handle.set_value(Some(SendWrapper::new(handle)));
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("MIDI setup failed (non-fatal): {:?}", e);
+                        }
                     }
-                    Err(e) => {
-                        log::warn!("MIDI setup failed (non-fatal): {:?}", e);
-                    }
-                }
+                });
             }
 
             let sixteenth_secs = tempo.sixteenth_note_duration_secs();
