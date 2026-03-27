@@ -133,7 +133,7 @@ fn update_or_create_bucket(
     });
 }
 
-/// Apply Welford's online update to an existing bucket (population stddev).
+/// Apply Welford's online update to an existing bucket (sample stddev).
 fn welford_update_bucket(bucket: &mut TimeBucket, timestamp: f64, metric: f64) {
     let old_count = bucket.record_count;
     let new_count = old_count + 1;
@@ -145,12 +145,16 @@ fn welford_update_bucket(bucket: &mut TimeBucket, timestamp: f64, metric: f64) {
     if timestamp > bucket.period_end {
         bucket.period_end = timestamp;
     }
-    // Recover old m2 from population stddev: m2 = stddev² × old_count
-    let old_m2 = bucket.stddev * bucket.stddev * old_count as f64;
+    // Recover old m2 from sample stddev: m2 = stddev² × (old_count - 1)
+    let old_m2 = if old_count > 1 {
+        bucket.stddev * bucket.stddev * (old_count - 1) as f64
+    } else {
+        0.0
+    };
     let new_m2 = old_m2 + delta * delta2;
-    // Population stddev: sqrt(m2 / n)
-    bucket.stddev = if new_count > 0 {
-        (new_m2 / new_count as f64).sqrt()
+    // Sample stddev with Bessel's correction: sqrt(m2 / (n - 1))
+    bucket.stddev = if new_count >= 2 {
+        (new_m2 / (new_count - 1) as f64).sqrt()
     } else {
         0.0
     };
@@ -389,7 +393,7 @@ fn build_display_buckets(
     all_buckets
 }
 
-/// Aggregate a group of points into a single TimeBucket using Welford's (population stddev).
+/// Aggregate a group of points into a single TimeBucket using Welford's (sample stddev).
 fn aggregate_bucket(pts: &[(f64, f64)], size: BucketSize, period_start: f64) -> TimeBucket {
     let n = pts.len();
     let last_ts = pts[n - 1].0;
@@ -402,8 +406,12 @@ fn aggregate_bucket(pts: &[(f64, f64)], size: BucketSize, period_start: f64) -> 
         let delta2 = metric - mean;
         m2 += delta * delta2;
     }
-    // Population stddev: sqrt(m2 / n)
-    let stddev = if n > 0 { (m2 / n as f64).sqrt() } else { 0.0 };
+    // Sample stddev with Bessel's correction: sqrt(m2 / (n - 1))
+    let stddev = if n >= 2 {
+        (m2 / (n - 1) as f64).sqrt()
+    } else {
+        0.0
+    };
 
     TimeBucket {
         period_start,
@@ -807,7 +815,7 @@ mod tests {
     // --- Population stddev ---
 
     #[test]
-    fn test_population_stddev_in_display_buckets() {
+    fn test_sample_stddev_in_display_buckets() {
         let mut tl = ProgressTimeline::new();
         let today = today_epoch();
 
@@ -820,10 +828,11 @@ mod tests {
 
         let buckets = tl.display_buckets(TrainingDiscipline::UnisonPitchDiscrimination);
         assert_eq!(buckets.len(), 1);
-        let expected_stddev = (200.0_f64 / 3.0).sqrt();
+        // sample stddev of [10, 20, 30]: mean=20, m2=200, stddev=sqrt(200/2)=10
+        let expected_stddev = 10.0;
         assert!(
             (buckets[0].stddev - expected_stddev).abs() < 1e-10,
-            "Expected population stddev {}, got {}",
+            "Expected sample stddev {}, got {}",
             expected_stddev,
             buckets[0].stddev
         );
@@ -1041,7 +1050,8 @@ mod tests {
 
         let stddev = tl.latest_bucket_stddev(TrainingDiscipline::UnisonPitchDiscrimination);
         assert!(stddev.is_some());
-        let expected = (200.0_f64 / 3.0).sqrt();
+        // sample stddev of [10, 20, 30]: mean=20, m2=200, stddev=sqrt(200/2)=10
+        let expected = 10.0;
         assert!((stddev.unwrap() - expected).abs() < 1e-10);
     }
 

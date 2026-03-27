@@ -98,11 +98,21 @@ fn compute_session_bridge(
         .sum::<f64>()
         / total_records as f64;
 
-    let bridge_var = session_buckets
+    let bridge_m2 = session_buckets
         .iter()
-        .map(|b| b.stddev * b.stddev * b.record_count as f64)
-        .sum::<f64>()
-        / total_records as f64;
+        .map(|b| {
+            if b.record_count > 1 {
+                b.stddev * b.stddev * (b.record_count - 1) as f64
+            } else {
+                0.0
+            }
+        })
+        .sum::<f64>();
+    let bridge_var = if total_records > 1 {
+        bridge_m2 / (total_records - 1) as f64
+    } else {
+        0.0
+    };
 
     Some(BridgePoint {
         x: first_session_index as f64 - 0.5,

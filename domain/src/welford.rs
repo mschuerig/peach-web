@@ -45,10 +45,10 @@ impl WelfordAccumulator {
         self.mean
     }
 
-    /// Population standard deviation (None if fewer than 2 samples).
-    pub fn population_std_dev(&self) -> Option<f64> {
+    /// Sample standard deviation with Bessel's correction (None if fewer than 2 samples).
+    pub fn sample_std_dev(&self) -> Option<f64> {
         if self.count >= 2 {
-            Some((self.m2 / self.count as f64).sqrt())
+            Some((self.m2 / (self.count - 1) as f64).sqrt())
         } else {
             None
         }
@@ -76,7 +76,7 @@ mod tests {
     fn test_empty_accumulator() {
         let acc = WelfordAccumulator::new();
         assert_eq!(acc.count(), 0);
-        assert_eq!(acc.population_std_dev(), None);
+        assert_eq!(acc.sample_std_dev(), None);
     }
 
     #[test]
@@ -85,7 +85,7 @@ mod tests {
         acc.update(42.0);
         assert_eq!(acc.count(), 1);
         assert!((acc.mean() - 42.0).abs() < 1e-10);
-        assert_eq!(acc.population_std_dev(), None); // needs >= 2
+        assert_eq!(acc.sample_std_dev(), None); // needs >= 2
     }
 
     #[test]
@@ -95,8 +95,9 @@ mod tests {
         acc.update(20.0);
         assert_eq!(acc.count(), 2);
         assert!((acc.mean() - 15.0).abs() < 1e-10);
-        // pop stddev of [10, 20] = sqrt(((10-15)^2+(20-15)^2)/2) = sqrt(25) = 5
-        assert!((acc.population_std_dev().unwrap() - 5.0).abs() < 1e-10);
+        // sample stddev of [10, 20] = sqrt(((10-15)^2+(20-15)^2)/1) = sqrt(50) ≈ 7.071
+        let expected = 50.0_f64.sqrt();
+        assert!((acc.sample_std_dev().unwrap() - expected).abs() < 1e-10);
     }
 
     #[test]
@@ -107,8 +108,8 @@ mod tests {
         acc.update(30.0);
         assert_eq!(acc.count(), 3);
         assert!((acc.mean() - 20.0).abs() < 1e-10);
-        let expected_std = (200.0_f64 / 3.0).sqrt();
-        assert!((acc.population_std_dev().unwrap() - expected_std).abs() < 1e-10);
+        // sample stddev of [10, 20, 30] = sqrt(200/2) = 10
+        assert!((acc.sample_std_dev().unwrap() - 10.0).abs() < 1e-10);
     }
 
     #[test]
@@ -127,14 +128,5 @@ mod tests {
         acc.update(10.0);
         acc.update(30.0);
         assert!((acc.mean() - 20.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_population_std_dev() {
-        let mut acc = WelfordAccumulator::new();
-        acc.update(10.0);
-        acc.update(20.0);
-        let std = acc.population_std_dev().unwrap();
-        assert!((std - 5.0).abs() < 1e-10);
     }
 }

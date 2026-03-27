@@ -137,7 +137,7 @@ impl TrainingDisciplineStatistics {
             }
         };
 
-        let running_stddev = self.welford.population_std_dev().unwrap_or(0.0);
+        let running_stddev = self.welford.sample_std_dev().unwrap_or(0.0);
 
         // Declining if latest > mean + stddev
         // Improving if latest < ewma
