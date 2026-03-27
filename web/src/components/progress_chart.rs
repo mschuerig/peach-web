@@ -37,13 +37,13 @@ fn compute_y_ticks(y_max: f64) -> Vec<f64> {
     ticks
 }
 
-struct ZoneRange {
-    zone: BucketSize,
-    start_index: usize,
-    end_index: usize, // inclusive
+pub(crate) struct ZoneRange {
+    pub zone: BucketSize,
+    pub start_index: usize,
+    pub end_index: usize, // inclusive
 }
 
-fn detect_zones(buckets: &[TimeBucket]) -> Vec<ZoneRange> {
+pub(crate) fn detect_zones(buckets: &[TimeBucket]) -> Vec<ZoneRange> {
     let mut zones = Vec::new();
     if buckets.is_empty() {
         return zones;
@@ -183,7 +183,7 @@ fn format_annotation_date_session(epoch_secs: f64) -> String {
     formatted.trim_end_matches('.').to_string()
 }
 
-fn format_annotation_date(bucket: &TimeBucket) -> String {
+pub(crate) fn format_annotation_date(bucket: &TimeBucket) -> String {
     match bucket.bucket_size {
         BucketSize::Month => format_annotation_date_monthly(bucket.period_start),
         BucketSize::Day => format_annotation_date_daily(bucket.period_start),
@@ -204,7 +204,7 @@ fn format_weekday_label(epoch_secs: f64) -> String {
     formatted.trim_end_matches('.').to_string()
 }
 
-fn format_decimal_1_chart(value: f64) -> String {
+pub(crate) fn format_decimal_1_chart(value: f64) -> String {
     let options = js_sys::Object::new();
     js_sys::Reflect::set(&options, &"minimumFractionDigits".into(), &1.into()).unwrap();
     js_sys::Reflect::set(&options, &"maximumFractionDigits".into(), &1.into()).unwrap();
@@ -724,7 +724,7 @@ pub fn ProgressChart(
                     height=format!("{popover_h:.0}")
                 >
                     <div
-                        class="backdrop-blur-md bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 rounded-[6px] p-[6px] space-y-[2px]"
+                        class="backdrop-blur-md bg-white/90 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-700 rounded-[6px] p-[6px] space-y-[2px]"
                         style="font-size: 8px; line-height: 1.3;"
                     >
                         <div class="text-gray-500 dark:text-gray-400">{date_str}</div>

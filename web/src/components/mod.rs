@@ -11,6 +11,7 @@ mod progress_card;
 mod progress_chart;
 mod progress_sparkline;
 mod rhythm_offset_detection_view;
+mod rhythm_spectrogram_chart;
 mod settings_view;
 mod start_page;
 mod training_stats;

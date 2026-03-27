@@ -1,6 +1,6 @@
 # Story 19.3: Rhythm Spectrogram Visualization
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -47,18 +47,53 @@ The web app already has the domain building blocks: `TempoRange` (Slow/Medium/Fa
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `SpectrogramThresholds`, `SpectrogramAccuracyLevel`, `SpectrogramCellStats`, `SpectrogramCell`, `SpectrogramColumn`, `SpectrogramData` to domain crate
-- [ ] Task 2: Implement `SpectrogramData::compute()` using `ProgressTimeline` buckets and `StatisticsKey::rhythm(mode, range, direction)` lookups
-- [ ] Task 3: Add domain unit tests (threshold clamping across tempos, cell computation, empty/single-range/multi-range grids, bucket filtering)
-- [ ] Task 4: Create `RhythmSpectrogramChart` web component — SVG heatmap grid with zone backgrounds, tempo-range y-axis labels, time x-axis labels
-- [ ] Task 5: Implement cell color mapping (green/yellow/red/gray) using `SpectrogramThresholds::accuracy_level()`
-- [ ] Task 6: Add click-to-detail popover with early/late breakdown (follow `ProgressChart` annotation pattern)
-- [ ] Task 7: Add horizontal scroll for large datasets
-- [ ] Task 8: Integrate into `ProfileView` — rhythm disciplines use spectrogram chart
-- [ ] Task 9: Add i18n keys for spectrogram labels (tempo range names, accuracy levels, detail labels)
-- [ ] Task 10: Accessibility — aria-label, aria-live announcements, keyboard navigation
-- [ ] Task 11: Verify responsive sizing and dark mode
-- [ ] Task 12: `cargo test -p domain`, `cargo clippy --workspace`, `trunk build`
+- [x] Task 1: Add `SpectrogramThresholds`, `SpectrogramAccuracyLevel`, `SpectrogramCellStats`, `SpectrogramCell`, `SpectrogramColumn`, `SpectrogramData` to domain crate
+- [x] Task 2: Implement `SpectrogramData::compute()` using `ProgressTimeline` buckets and `StatisticsKey::rhythm(mode, range, direction)` lookups
+- [x] Task 3: Add domain unit tests (threshold clamping across tempos, cell computation, empty/single-range/multi-range grids, bucket filtering)
+- [x] Task 4: Create `RhythmSpectrogramChart` web component — SVG heatmap grid with zone backgrounds, tempo-range y-axis labels, time x-axis labels
+- [x] Task 5: Implement cell color mapping (green/yellow/red/gray) using `SpectrogramThresholds::accuracy_level()`
+- [x] Task 6: Add click-to-detail popover with early/late breakdown (follow `ProgressChart` annotation pattern)
+- [x] Task 7: Add horizontal scroll for large datasets
+- [x] Task 8: Integrate into `ProfileView` — rhythm disciplines use spectrogram chart
+- [x] Task 9: Add i18n keys for spectrogram labels (tempo range names, accuracy levels, detail labels)
+- [x] Task 10: Accessibility — aria-label, aria-live announcements, keyboard navigation
+- [ ] Task 11: Verify responsive sizing and dark mode — deferred to user (agent cannot verify in browser)
+- [x] Task 12: `cargo test -p domain`, `cargo clippy --workspace`, `trunk build`
+
+## Dev Agent Record
+
+### Implementation Plan
+
+- ProgressTimeline stores data per-discipline only, not per-key — spectrogram computation needs per-key metrics from PerceptualProfile directly
+- Added `midpoint_bpm()` and `sixteenth_note_ms()` to TempoRange for threshold calculations
+- SpectrogramData::compute() takes ProgressTimeline buckets for time boundaries and per-key MetricPoint vectors from PerceptualProfile for cell data
+- Made `detect_zones`, `format_annotation_date`, `format_decimal_1_chart` pub(crate) in progress_chart.rs for reuse
+- ProgressCard branches on `mode.is_rhythm()` to render spectrogram vs line chart
+
+### Completion Notes
+
+- 19 new domain unit tests for spectrogram types (thresholds, compute, edge cases)
+- 503 total domain tests pass
+- `cargo clippy --workspace` clean (0 warnings)
+- `trunk build` succeeds
+- Task 11 (responsive sizing/dark mode) deferred to user — agent cannot verify in browser
+
+## File List
+
+- `domain/src/spectrogram.rs` — NEW: SpectrogramData, SpectrogramThresholds, SpectrogramAccuracyLevel, SpectrogramCellStats, SpectrogramCell, SpectrogramColumn + 19 unit tests
+- `domain/src/lib.rs` — MODIFIED: register spectrogram module and exports
+- `domain/src/types/tempo_range.rs` — MODIFIED: added midpoint_bpm() and sixteenth_note_ms()
+- `web/src/components/rhythm_spectrogram_chart.rs` — NEW: RhythmSpectrogramChart component (SVG heatmap, click-to-detail, scroll, keyboard nav, a11y)
+- `web/src/components/mod.rs` — MODIFIED: register rhythm_spectrogram_chart module
+- `web/src/components/progress_card.rs` — MODIFIED: rhythm disciplines use spectrogram chart
+- `web/src/components/progress_chart.rs` — MODIFIED: made detect_zones, ZoneRange, format_annotation_date, format_decimal_1_chart pub(crate)
+- `web/locales/en/main.ftl` — MODIFIED: added spectrogram i18n keys (tempo-range-slow/medium/fast, spectrogram-early/late, spectrogram-chart-for)
+- `docs/implementation-artifacts/sprint-status.yaml` — MODIFIED: 19-3 status → review
+- `docs/implementation-artifacts/19-3-rhythm-spectrogram-visualization.md` — MODIFIED: tasks, status, dev record
+
+## Change Log
+
+- 2026-03-27: Implemented Story 19.3 — Rhythm Spectrogram Visualization. Added domain types with hybrid threshold model matching iOS, SVG heatmap chart component with click-to-detail popover, keyboard navigation, and a11y. Integrated into ProfileView for rhythm disciplines.
 
 ## Dev Notes
 

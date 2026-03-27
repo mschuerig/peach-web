@@ -261,6 +261,14 @@ help-profile-zones-body = The chart groups your data by time: months on the left
 chart-annotation-records = { $count } records
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records
 
+## Spectrogram
+tempo-range-slow = Slow
+tempo-range-medium = Medium
+tempo-range-fast = Fast
+spectrogram-early = Early
+spectrogram-late = Late
+spectrogram-chart-for = Rhythm accuracy heatmap for { $name }
+
 ## Domain - Training Modes
 training-discipline-hear-discriminate-single = Compare – Single Notes
 training-discipline-hear-discriminate-intervals = Compare – Intervals

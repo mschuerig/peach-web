@@ -5,6 +5,7 @@ pub mod profile;
 pub mod progress_timeline;
 pub mod records;
 pub mod session;
+pub mod spectrogram;
 pub mod statistics_key;
 pub mod strategy;
 pub mod training;
@@ -36,6 +37,10 @@ pub use session::{
     PitchMatchingSessionState, RHYTHM_FEEDBACK_DURATION_SECS, RandomGapSelector,
     RhythmOffsetDetectionSession, RhythmOffsetDetectionSessionState,
     RhythmOffsetDetectionTrialParams,
+};
+pub use spectrogram::{
+    SpectrogramAccuracyLevel, SpectrogramCell, SpectrogramCellStats, SpectrogramColumn,
+    SpectrogramData, SpectrogramThresholds,
 };
 pub use statistics_key::StatisticsKey;
 pub use strategy::{TrainingSettings, kazez_narrow, kazez_widen, next_pitch_discrimination_trial};

@@ -6,7 +6,8 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen::JsValue;
 
 use domain::{
-    PerceptualProfile, ProgressTimeline, TrainingDiscipline, TrainingDisciplineState, Trend,
+    PerceptualProfile, ProgressTimeline, SpectrogramData, SpectrogramThresholds, StatisticsKey,
+    TrainingDiscipline, TrainingDisciplineState, Trend,
 };
 use leptos_fluent::{I18n, tr};
 
@@ -68,9 +69,28 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
             }
             let ewma = p.current_ewma(mode);
             let trend = p.trend(mode);
+
+            // For rhythm disciplines, extract per-key metrics for spectrogram
+            let spectrogram_metrics: Option<Vec<_>> = if mode.is_rhythm() {
+                let mut key_metrics = Vec::new();
+                for &range in &domain::TempoRange::ALL {
+                    for &dir in &domain::RhythmDirection::ALL {
+                        let key = StatisticsKey::Rhythm(mode, range, dir);
+                        let stats = p.statistics_for_key(&key);
+                        key_metrics.push((range, dir, stats.metrics.clone()));
+                    }
+                }
+                Some(key_metrics)
+            } else {
+                None
+            };
             drop(p);
 
             let buckets = ptl.borrow().display_buckets(mode);
+
+            let spectrogram_data = spectrogram_metrics.map(|km| {
+                SpectrogramData::compute(&buckets, &km, SpectrogramThresholds::default())
+            });
 
             let ewma_str = ewma.map(format_decimal_1).unwrap_or_default();
             let stddev_str = format_stddev(&buckets);
@@ -79,9 +99,15 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
             let display_name = i18n.tr(config.display_name);
             let unit_str = i18n.tr(config.unit_label);
 
-            let card_aria = tr!("progress-chart-for", {
-                "name" => display_name.clone()
-            });
+            let card_aria = if mode.is_rhythm() {
+                tr!("spectrogram-chart-for", {
+                    "name" => display_name.clone()
+                })
+            } else {
+                tr!("progress-chart-for", {
+                    "name" => display_name.clone()
+                })
+            };
             let value_aria = tr!("current-trend", {
                 "ewma" => ewma_str.clone(),
                 "unit" => unit_str.clone(),
@@ -92,7 +118,7 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
                 <div
                     class="progress-card rounded-xl backdrop-blur-md bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 p-4"
                     role="group"
-                    aria-label=card_aria
+                    aria-label=card_aria.clone()
                     aria-description=value_aria
                 >
                     // Headline row
@@ -107,13 +133,25 @@ pub fn ProgressCard(mode: TrainingDiscipline) -> impl IntoView {
                             <span class=format!("text-lg {arrow_color}") aria-hidden="true">{arrow}</span>
                         </span>
                     </div>
-                    // Progress chart
-                    <super::progress_chart::ProgressChart
-                        buckets=buckets
-                        optimal_baseline=config.optimal_baseline
-                        unit_label=unit_str
-                        chart_label=card_aria.clone()
-                    />
+                    // Chart — spectrogram for rhythm, line chart for pitch
+                    {if let Some(spec_data) = spectrogram_data {
+                        view! {
+                            <super::rhythm_spectrogram_chart::RhythmSpectrogramChart
+                                data=spec_data
+                                unit_label=unit_str
+                                chart_label=card_aria.clone()
+                            />
+                        }.into_any()
+                    } else {
+                        view! {
+                            <super::progress_chart::ProgressChart
+                                buckets=buckets
+                                optimal_baseline=config.optimal_baseline
+                                unit_label=unit_str
+                                chart_label=card_aria.clone()
+                            />
+                        }.into_any()
+                    }}
                 </div>
             }
             .into_any()
