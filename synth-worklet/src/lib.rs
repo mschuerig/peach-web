@@ -65,45 +65,46 @@ pub unsafe extern "C" fn synth_load_soundfont(
     }
 }
 
-/// Select a program (bank + preset) on channel 0.
+/// Select a program (bank + preset) on the given channel.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn synth_select_program(synth: *mut Synth, bank: u32, preset: u8) {
+pub unsafe extern "C" fn synth_select_program(
+    synth: *mut Synth,
+    channel: u8,
+    bank: u32,
+    preset: u8,
+) {
     if let Some(synth) = unsafe { synth.as_mut() } {
+        let _ = synth.select_bank(channel, bank);
         let _ = synth.send_event(MidiEvent::ProgramChange {
-            channel: 0,
+            channel,
             program_id: preset,
         });
-        let _ = synth.select_bank(0, bank);
     }
 }
 
-/// Send a NoteOn event on channel 0.
+/// Send a NoteOn event on the given channel.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn synth_note_on(synth: *mut Synth, key: u8, vel: u8) {
+pub unsafe extern "C" fn synth_note_on(synth: *mut Synth, channel: u8, key: u8, vel: u8) {
     if let Some(synth) = unsafe { synth.as_mut() } {
-        let _ = synth.send_event(MidiEvent::NoteOn {
-            channel: 0,
-            key,
-            vel,
-        });
+        let _ = synth.send_event(MidiEvent::NoteOn { channel, key, vel });
     }
 }
 
-/// Send a NoteOff event on channel 0.
+/// Send a NoteOff event on the given channel.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn synth_note_off(synth: *mut Synth, key: u8) {
+pub unsafe extern "C" fn synth_note_off(synth: *mut Synth, channel: u8, key: u8) {
     if let Some(synth) = unsafe { synth.as_mut() } {
-        let _ = synth.send_event(MidiEvent::NoteOff { channel: 0, key });
+        let _ = synth.send_event(MidiEvent::NoteOff { channel, key });
     }
 }
 
-/// Send a PitchBend event on channel 0.
+/// Send a PitchBend event on the given channel.
 /// `bend_value`: 0-16383, center = 8192.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn synth_pitch_bend(synth: *mut Synth, bend_value: u16) {
+pub unsafe extern "C" fn synth_pitch_bend(synth: *mut Synth, channel: u8, bend_value: u16) {
     if let Some(synth) = unsafe { synth.as_mut() } {
         let _ = synth.send_event(MidiEvent::PitchBend {
-            channel: 0,
+            channel,
             value: bend_value,
         });
     }
@@ -124,10 +125,10 @@ pub unsafe extern "C" fn synth_render(
     }
 }
 
-/// Send AllNotesOff on channel 0 to stop all voices.
+/// Send AllNotesOff on the given channel to stop all voices.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn synth_all_notes_off(synth: *mut Synth) {
+pub unsafe extern "C" fn synth_all_notes_off(synth: *mut Synth, channel: u8) {
     if let Some(synth) = unsafe { synth.as_mut() } {
-        let _ = synth.send_event(MidiEvent::AllNotesOff { channel: 0 });
+        let _ = synth.send_event(MidiEvent::AllNotesOff { channel });
     }
 }

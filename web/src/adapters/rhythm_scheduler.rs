@@ -2,8 +2,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use domain::types::TempoBPM;
-use gloo_timers::callback::Interval;
-use web_sys::{AudioBuffer, AudioBufferSourceNode, AudioContext, GainNode};
+use gloo_timers::callback::{Interval, Timeout};
+use web_sys::AudioContext;
+
+use crate::adapters::audio_soundfont::WorkletBridge;
 
 /// A step in the rhythm pattern: either a click or silence.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,53 +26,38 @@ const SCHEDULE_INTERVAL_MS: u32 = 25;
 /// How far ahead to schedule events, in seconds.
 const LOOKAHEAD_SECS: f64 = 0.100;
 
-/// Accent gain for the first beat: +6dB ≈ 2.0x amplitude.
-pub const ACCENT_GAIN: f32 = 2.0;
+/// MIDI percussion channel (General MIDI channel 10, zero-indexed = 9).
+const PERCUSSION_CHANNEL: u8 = 9;
 
-/// Normal (non-accented) gain.
-pub const NORMAL_GAIN: f32 = 1.0;
+/// MIDI bank number for percussion (bank 128).
+const PERCUSSION_BANK: u32 = 128;
 
-/// Duration of the click buffer in seconds.
-const CLICK_DURATION_SECS: f64 = 0.005;
+/// First percussion program.
+const PERCUSSION_PROGRAM: u8 = 0;
 
-/// Synthesize a short percussion click buffer (~5ms exponentially decaying noise burst).
-pub fn create_click_buffer(ctx: &AudioContext) -> Result<AudioBuffer, String> {
-    let sample_rate = ctx.sample_rate();
-    let length = (sample_rate as f64 * CLICK_DURATION_SECS).ceil() as u32;
+/// General MIDI high woodblock note number.
+const WOODBLOCK_NOTE: u8 = 76;
 
-    let buffer = ctx
-        .create_buffer(1, length, sample_rate)
-        .map_err(|e| format!("Failed to create AudioBuffer: {:?}", e))?;
+/// Velocity for accented (first) beat.
+const ACCENT_VELOCITY: u8 = 127;
 
-    // Fill with exponentially decaying white noise
-    let mut data = vec![0f32; length as usize];
-    // Use a simple deterministic pseudo-noise (alternating sign pattern mixed with decay)
-    // For a crisp click, we use a noise-like burst that decays exponentially.
-    let decay_rate = 5.0 / CLICK_DURATION_SECS; // decay to ~e^-5 ≈ 0.7% by end
-    for (i, sample) in data.iter_mut().enumerate() {
-        let t = i as f64 / sample_rate as f64;
-        let envelope = (-decay_rate * t).exp() as f32;
-        // Pseudo-random noise using a simple hash-like pattern
-        let noise = pseudo_noise(i);
-        *sample = noise * envelope;
-    }
+/// Velocity for normal (non-accented) beats.
+const NORMAL_VELOCITY: u8 = 80;
 
-    buffer
-        .copy_to_channel(&data, 0)
-        .map_err(|e| format!("Failed to write click buffer data: {:?}", e))?;
+/// Delay in milliseconds before sending noteOff after noteOn.
+const NOTE_OFF_DELAY_MS: u32 = 50;
 
-    Ok(buffer)
-}
-
-/// Simple deterministic pseudo-noise in range [-1.0, 1.0].
-fn pseudo_noise(index: usize) -> f32 {
-    // Use a simple hash to get deterministic "noise"
-    let mut x = index as u32;
-    x = x.wrapping_mul(1_103_515_245).wrapping_add(12_345);
-    x = (x >> 16) ^ x;
-    x = x.wrapping_mul(1_103_515_245).wrapping_add(12_345);
-    // Map to [-1.0, 1.0]
-    (x as f32 / u32::MAX as f32) * 2.0 - 1.0
+/// Select the percussion program on the percussion channel.
+///
+/// Call once per training session before creating schedulers. Sends a
+/// `selectProgram` message to the OxiSynth worklet for bank 128 / program 0
+/// on MIDI channel 9.
+pub fn select_percussion_program(bridge: &Rc<RefCell<WorkletBridge>>) {
+    let _ = bridge.borrow().send_select_program_ch(
+        PERCUSSION_CHANNEL,
+        PERCUSSION_BANK,
+        PERCUSSION_PROGRAM,
+    );
 }
 
 /// Internal mutable state for the scheduler.
@@ -86,11 +73,11 @@ struct SchedulerState {
 /// A lookahead rhythm scheduler that uses the Web Audio clock for sample-accurate timing.
 ///
 /// Uses the "two clocks" pattern: a main-thread `setInterval` (~25ms) looks ahead ~100ms
-/// and schedules `AudioBufferSourceNode.start(when)` calls on the audio clock.
+/// and schedules percussion noteOn/noteOff events via the OxiSynth worklet bridge.
 pub struct RhythmScheduler {
     state: Rc<RefCell<SchedulerState>>,
     ctx: Rc<RefCell<AudioContext>>,
-    click_buffer: AudioBuffer,
+    bridge: Rc<RefCell<WorkletBridge>>,
     _interval: Option<Interval>,
 }
 
@@ -101,7 +88,7 @@ impl RhythmScheduler {
     /// Panics if the pattern is empty.
     pub fn new(
         ctx: Rc<RefCell<AudioContext>>,
-        click_buffer: AudioBuffer,
+        bridge: Rc<RefCell<WorkletBridge>>,
         config: SchedulerConfig,
     ) -> Self {
         assert!(!config.pattern.is_empty(), "pattern must not be empty");
@@ -119,7 +106,7 @@ impl RhythmScheduler {
         Self {
             state,
             ctx,
-            click_buffer,
+            bridge,
             _interval: None,
         }
     }
@@ -151,10 +138,10 @@ impl RhythmScheduler {
 
         let state = Rc::clone(&self.state);
         let ctx = Rc::clone(&self.ctx);
-        let buffer = self.click_buffer.clone();
+        let bridge = Rc::clone(&self.bridge);
 
         let interval = Interval::new(SCHEDULE_INTERVAL_MS, move || {
-            schedule_ahead(&ctx, &buffer, &state);
+            schedule_ahead(&ctx, &bridge, &state);
         });
 
         self._interval = Some(interval);
@@ -164,7 +151,7 @@ impl RhythmScheduler {
 /// The core scheduling function called by the interval timer.
 fn schedule_ahead(
     ctx: &Rc<RefCell<AudioContext>>,
-    click_buffer: &AudioBuffer,
+    bridge: &Rc<RefCell<WorkletBridge>>,
     state: &Rc<RefCell<SchedulerState>>,
 ) {
     let current_time = ctx.borrow().current_time();
@@ -192,12 +179,8 @@ fn schedule_ahead(
 
         // Schedule the click if this step is Play
         if step == RhythmStep::Play {
-            let gain = if is_first_step {
-                ACCENT_GAIN
-            } else {
-                NORMAL_GAIN
-            };
-            let _ = schedule_click(ctx, click_buffer, next_time, gain);
+            let accent = is_first_step;
+            schedule_click_at(ctx, bridge, next_time, accent);
             state.borrow_mut().cycle_times.push(next_time);
         }
 
@@ -216,84 +199,64 @@ fn schedule_ahead(
     }
 }
 
-/// Play a click as soon as possible (no `when` argument).
+/// Play a click as soon as possible (no delay).
 ///
 /// Used for reactive tap clicks where minimal latency matters.
-/// Calls `source.start()` — equivalent to `start(0)` per the Web Audio spec —
-/// which begins playback immediately, clamped to `currentTime`.
-pub fn play_click_immediate(
-    ctx: &Rc<RefCell<AudioContext>>,
-    buffer: &AudioBuffer,
-    gain_value: f32,
-) -> Result<(), String> {
-    let ctx_ref = ctx.borrow();
+/// Sends noteOn immediately and schedules noteOff after `NOTE_OFF_DELAY_MS`.
+pub fn play_click_immediate(bridge: &Rc<RefCell<WorkletBridge>>, accent: bool) {
+    let velocity = if accent {
+        ACCENT_VELOCITY
+    } else {
+        NORMAL_VELOCITY
+    };
+    let _ = bridge
+        .borrow()
+        .send_note_on_ch(PERCUSSION_CHANNEL, WOODBLOCK_NOTE, velocity);
 
-    let source: AudioBufferSourceNode = ctx_ref
-        .create_buffer_source()
-        .map_err(|e| format!("create_buffer_source failed: {:?}", e))?;
-    source.set_buffer(Some(buffer));
-
-    let gain_node: GainNode = ctx_ref
-        .create_gain()
-        .map_err(|e| format!("create_gain failed: {:?}", e))?;
-    gain_node.gain().set_value(gain_value);
-
-    source
-        .connect_with_audio_node(&gain_node)
-        .map_err(|e| format!("source→gain connect failed: {:?}", e))?;
-    gain_node
-        .connect_with_audio_node(&ctx_ref.destination())
-        .map_err(|e| format!("gain→destination connect failed: {:?}", e))?;
-
-    source
-        .start()
-        .map_err(|e| format!("start failed: {:?}", e))?;
-
-    Ok(())
+    // Schedule noteOff
+    let bridge_clone = Rc::clone(bridge);
+    Timeout::new(NOTE_OFF_DELAY_MS, move || {
+        let _ = bridge_clone
+            .borrow()
+            .send_note_off_ch(PERCUSSION_CHANNEL, WOODBLOCK_NOTE);
+    })
+    .forget();
 }
 
-/// Schedule a single click at the given audio-clock time with the specified gain.
+/// Schedule a single click at the given audio-clock time with the specified accent.
 ///
 /// Public so that training views can schedule individual clicks outside the scheduler's
 /// pattern (e.g. the offset click in rhythm offset detection).
 pub fn schedule_click_at(
     ctx: &Rc<RefCell<AudioContext>>,
-    buffer: &AudioBuffer,
+    bridge: &Rc<RefCell<WorkletBridge>>,
     when: f64,
-    gain_value: f32,
-) -> Result<(), String> {
-    schedule_click(ctx, buffer, when, gain_value)
-}
+    accent: bool,
+) {
+    let current_time = ctx.borrow().current_time();
+    let delay_secs = (when - current_time).max(0.0);
+    let delay_ms = (delay_secs * 1000.0) as u32;
 
-/// Internal click-scheduling used by the lookahead loop.
-fn schedule_click(
-    ctx: &Rc<RefCell<AudioContext>>,
-    buffer: &AudioBuffer,
-    when: f64,
-    gain_value: f32,
-) -> Result<(), String> {
-    let ctx_ref = ctx.borrow();
+    let velocity = if accent {
+        ACCENT_VELOCITY
+    } else {
+        NORMAL_VELOCITY
+    };
 
-    let source: AudioBufferSourceNode = ctx_ref
-        .create_buffer_source()
-        .map_err(|e| format!("create_buffer_source failed: {:?}", e))?;
-    source.set_buffer(Some(buffer));
+    let bridge_clone = Rc::clone(bridge);
+    Timeout::new(delay_ms, move || {
+        let _ = bridge_clone
+            .borrow()
+            .send_note_on_ch(PERCUSSION_CHANNEL, WOODBLOCK_NOTE, velocity);
 
-    let gain_node: GainNode = ctx_ref
-        .create_gain()
-        .map_err(|e| format!("create_gain failed: {:?}", e))?;
-    gain_node.gain().set_value(gain_value);
-
-    source
-        .connect_with_audio_node(&gain_node)
-        .map_err(|e| format!("source→gain connect failed: {:?}", e))?;
-    gain_node
-        .connect_with_audio_node(&ctx_ref.destination())
-        .map_err(|e| format!("gain→destination connect failed: {:?}", e))?;
-
-    source
-        .start_with_when(when)
-        .map_err(|e| format!("start_with_when failed: {:?}", e))?;
-
-    Ok(())
+        // Schedule noteOff
+        let bridge_off = Rc::clone(&bridge_clone);
+        Timeout::new(NOTE_OFF_DELAY_MS, move || {
+            let _ = bridge_off
+                .borrow()
+                .send_note_off_ch(PERCUSSION_CHANNEL, WOODBLOCK_NOTE);
+        })
+        .forget();
+    })
+    .forget();
 }

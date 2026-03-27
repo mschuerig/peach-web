@@ -71,6 +71,54 @@ impl WorkletBridge {
             .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))
     }
 
+    pub fn send_note_on_ch(&self, channel: u8, key: u8, vel: u8) -> Result<(), AudioError> {
+        let msg = js_sys::Object::new();
+        js_sys::Reflect::set(&msg, &"type".into(), &"noteOn".into())
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"channel".into(), &JsValue::from(channel))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"key".into(), &JsValue::from(key))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"vel".into(), &JsValue::from(vel))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        self.port
+            .post_message(&msg)
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))
+    }
+
+    pub fn send_note_off_ch(&self, channel: u8, key: u8) -> Result<(), AudioError> {
+        let msg = js_sys::Object::new();
+        js_sys::Reflect::set(&msg, &"type".into(), &"noteOff".into())
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"channel".into(), &JsValue::from(channel))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"key".into(), &JsValue::from(key))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        self.port
+            .post_message(&msg)
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))
+    }
+
+    pub fn send_select_program_ch(
+        &self,
+        channel: u8,
+        bank: u32,
+        preset: u8,
+    ) -> Result<(), AudioError> {
+        let msg = js_sys::Object::new();
+        js_sys::Reflect::set(&msg, &"type".into(), &"selectProgram".into())
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"channel".into(), &JsValue::from(channel))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"bank".into(), &JsValue::from(bank))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        js_sys::Reflect::set(&msg, &"preset".into(), &JsValue::from(preset))
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))?;
+        self.port
+            .post_message(&msg)
+            .map_err(|e| AudioError::PlaybackFailed(format!("{e:?}")))
+    }
+
     pub fn send_select_program(&self, bank: u32, preset: u8) -> Result<(), AudioError> {
         let msg = js_sys::Object::new();
         js_sys::Reflect::set(&msg, &"type".into(), &"selectProgram".into())

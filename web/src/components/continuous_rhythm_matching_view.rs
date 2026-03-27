@@ -14,14 +14,14 @@ use leptos_fluent::{I18n, move_tr, tr};
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
 use crate::adapters::audio_latency::{bridge_event_to_audio_time, get_output_latency};
+use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::midi_input;
 use crate::adapters::rhythm_scheduler::{
-    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer,
-    play_click_immediate,
+    RhythmScheduler, RhythmStep, SchedulerConfig, play_click_immediate, select_percussion_program,
 };
-use crate::app::base_href;
+use crate::app::{WorkletAssets, base_href, ensure_worklet_connected};
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
@@ -133,10 +133,20 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
     // Shared tap result for the current cycle — set by pointerdown, consumed by training loop
     let tap_result: Rc<Cell<Option<f64>>> = Rc::new(Cell::new(None));
 
+    // WorkletBridge and related context signals (provided in app.rs)
+    let worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, LocalStorage> =
+        use_context().expect("WorkletBridge signal not provided");
+    let worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, LocalStorage> =
+        use_context().expect("worklet_assets not provided");
+    let crate::app::WorkletConnecting(worklet_connecting) =
+        use_context().expect("worklet_connecting not provided");
+    let sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage> =
+        use_context().expect("sf2_presets not provided");
+    let sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, LocalStorage> =
+        use_context().expect("sf_gain_node not provided");
+
     // Shared audio resources populated by the training loop, used by the tap handler
     let shared_ctx: Rc<RefCell<Option<Rc<RefCell<web_sys::AudioContext>>>>> =
-        Rc::new(RefCell::new(None));
-    let shared_click_buffer: Rc<RefCell<Option<web_sys::AudioBuffer>>> =
         Rc::new(RefCell::new(None));
 
     let navigate = use_navigate();
@@ -196,7 +206,6 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
     let on_tap = {
         let session = Rc::clone(&session);
         let shared_ctx = Rc::clone(&shared_ctx);
-        let shared_click_buffer = Rc::clone(&shared_click_buffer);
         let tap_result = Rc::clone(&tap_result);
         let cancelled = Rc::clone(&cancelled);
         Rc::new(move |event_timestamp_ms: f64| {
@@ -243,9 +252,9 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
                 sr_announcement.set(format!("{direction} {:.0} ms", ms.abs()));
             }
 
-            // Play click at tap moment for audible fill (reuse shared buffer)
-            if let Some(ref buf) = *shared_click_buffer.borrow() {
-                let _ = play_click_immediate(&ctx_rc, buf, NORMAL_GAIN);
+            // Play click at tap moment for audible fill via worklet bridge
+            if let Some(ref bridge) = worklet_bridge.get() {
+                play_click_immediate(bridge, false);
             }
         })
     };
@@ -393,7 +402,6 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
         let tap_result = Rc::clone(&tap_result);
         let enabled_positions = enabled_positions.clone();
         let shared_ctx_for_loop = Rc::clone(&shared_ctx);
-        let shared_click_buffer_for_loop = Rc::clone(&shared_click_buffer);
         let on_tap_for_loop = Rc::clone(&on_tap);
         spawn_local(async move {
             // Ensure AudioContext is created and running
@@ -412,19 +420,32 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
                 }
             };
 
-            // Create click buffer once for tap playback
-            let click_buffer = match create_click_buffer(&ctx_rc.borrow()) {
-                Ok(buf) => buf,
-                Err(e) => {
-                    log::error!("Failed to create click buffer: {e}");
-                    audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
+            // Share audio context with the tap handler
+            *shared_ctx_for_loop.borrow_mut() = Some(Rc::clone(&ctx_rc));
+
+            // Ensure worklet is connected before using the bridge
+            ensure_worklet_connected(
+                &ctx_rc,
+                worklet_bridge,
+                worklet_assets,
+                worklet_connecting,
+                sf2_presets,
+                sf_gain_node,
+            )
+            .await;
+
+            // Get the WorkletBridge for percussion playback
+            let bridge = match worklet_bridge.get() {
+                Some(b) => b,
+                None => {
+                    log::error!("WorkletBridge not available after connection attempt");
+                    audio_error.set(Some(untrack(|| i18n.tr("audio-engine-failed"))));
                     return;
                 }
             };
 
-            // Share audio resources with the tap handler
-            *shared_ctx_for_loop.borrow_mut() = Some(Rc::clone(&ctx_rc));
-            *shared_click_buffer_for_loop.borrow_mut() = Some(click_buffer.clone());
+            // Select percussion program once for this training session
+            select_percussion_program(&bridge);
 
             // Wire MIDI input in a separate task so the permission prompt
             // does not block training startup (progressive enhancement).
@@ -495,7 +516,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
                     // Create scheduler for one cycle
                     let mut scheduler = RhythmScheduler::new(
                         Rc::clone(&ctx_rc),
-                        click_buffer.clone(),
+                        Rc::clone(&bridge),
                         SchedulerConfig { pattern, tempo },
                     );
 

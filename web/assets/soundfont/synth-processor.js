@@ -47,8 +47,8 @@ function parseSF2Presets(bytes) {
                 const name = asciiDecode(bytes, rOff, 20);
                 const program = view.getUint16(rOff + 20, true);
                 const bank = view.getUint16(rOff + 22, true);
-                // Skip terminator "EOP" and percussion/drum banks
-                if (name !== 'EOP' && bank < 120 && program < 120) {
+                // Skip terminator "EOP" and invalid programs
+                if (name !== 'EOP' && program < 120) {
                   presets.push({ bank, program, name });
                 }
               }
@@ -134,19 +134,19 @@ class SynthProcessor extends AudioWorkletProcessor {
         break;
       }
       case 'noteOn':
-        if (this.wasm) this.wasm.synth_note_on(this.synth, msg.key, msg.vel);
+        if (this.wasm) this.wasm.synth_note_on(this.synth, msg.channel ?? 0, msg.key, msg.vel);
         break;
       case 'noteOff':
-        if (this.wasm) this.wasm.synth_note_off(this.synth, msg.key);
+        if (this.wasm) this.wasm.synth_note_off(this.synth, msg.channel ?? 0, msg.key);
         break;
       case 'pitchBend':
-        if (this.wasm) this.wasm.synth_pitch_bend(this.synth, msg.value);
+        if (this.wasm) this.wasm.synth_pitch_bend(this.synth, msg.channel ?? 0, msg.value);
         break;
       case 'selectProgram':
-        if (this.wasm) this.wasm.synth_select_program(this.synth, msg.bank, msg.preset);
+        if (this.wasm) this.wasm.synth_select_program(this.synth, msg.channel ?? 0, msg.bank, msg.preset);
         break;
       case 'allNotesOff':
-        if (this.wasm) this.wasm.synth_all_notes_off(this.synth);
+        if (this.wasm) this.wasm.synth_all_notes_off(this.synth, msg.channel ?? 0);
         break;
     }
   }

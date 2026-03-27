@@ -13,13 +13,13 @@ use wasm_bindgen_futures::{JsFuture, spawn_local};
 use leptos_fluent::{I18n, move_tr, tr};
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
+use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::rhythm_scheduler::{
-    NORMAL_GAIN, RhythmScheduler, RhythmStep, SchedulerConfig, create_click_buffer,
-    schedule_click_at,
+    RhythmScheduler, RhythmStep, SchedulerConfig, schedule_click_at, select_percussion_program,
 };
-use crate::app::base_href;
+use crate::app::{WorkletAssets, base_href, ensure_worklet_connected};
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
@@ -425,6 +425,18 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
     let crate::app::AudioNeedsGesture(audio_needs_gesture) =
         use_context().expect("audio_needs_gesture context");
 
+    // WorkletBridge and related context signals (provided in app.rs)
+    let worklet_bridge: RwSignal<Option<Rc<RefCell<WorkletBridge>>>, LocalStorage> =
+        use_context().expect("WorkletBridge signal not provided");
+    let worklet_assets: RwSignal<Option<Rc<WorkletAssets>>, LocalStorage> =
+        use_context().expect("worklet_assets not provided");
+    let crate::app::WorkletConnecting(worklet_connecting) =
+        use_context().expect("worklet_connecting not provided");
+    let sf2_presets: RwSignal<Vec<SF2Preset>, LocalStorage> =
+        use_context().expect("sf2_presets not provided");
+    let sf_gain_node: RwSignal<Option<Rc<web_sys::GainNode>>, LocalStorage> =
+        use_context().expect("sf_gain_node not provided");
+
     // Start the async training loop
     {
         let session = Rc::clone(&session);
@@ -449,15 +461,29 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
                 }
             };
 
-            // Create click buffer once
-            let click_buffer = match create_click_buffer(&ctx_rc.borrow()) {
-                Ok(buf) => buf,
-                Err(e) => {
-                    log::error!("Failed to create click buffer: {e}");
-                    audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
+            // Ensure worklet is connected before using the bridge
+            ensure_worklet_connected(
+                &ctx_rc,
+                worklet_bridge,
+                worklet_assets,
+                worklet_connecting,
+                sf2_presets,
+                sf_gain_node,
+            )
+            .await;
+
+            // Get the WorkletBridge for percussion playback
+            let bridge = match worklet_bridge.get() {
+                Some(b) => b,
+                None => {
+                    log::error!("WorkletBridge not available after connection attempt");
+                    audio_error.set(Some(untrack(|| i18n.tr("audio-engine-failed"))));
                     return;
                 }
             };
+
+            // Select percussion program once for this training session
+            select_percussion_program(&bridge);
 
             let feedback_ms = (RHYTHM_FEEDBACK_DURATION_SECS * 1000.0) as u32;
             let sixteenth_secs = tempo.sixteenth_note_duration_secs();
@@ -501,7 +527,7 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
                     // Schedule clicks: use scheduler for beats 1, 2, 4 and manual for beat 3
                     let mut scheduler = RhythmScheduler::new(
                         Rc::clone(&ctx_rc),
-                        click_buffer.clone(),
+                        Rc::clone(&bridge),
                         SchedulerConfig {
                             pattern: vec![
                                 RhythmStep::Play,
@@ -515,14 +541,7 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
                     scheduler.start();
 
                     // Schedule the offset click (beat 3) manually
-                    if let Err(e) =
-                        schedule_click_at(&ctx_rc, &click_buffer, beat_times[2], NORMAL_GAIN)
-                    {
-                        log::error!("Offset click failed: {e}");
-                        audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
-                        drop(scheduler);
-                        break 'training;
-                    }
+                    schedule_click_at(&ctx_rc, &bridge, beat_times[2], false);
 
                     // Animate dots based on precomputed beat times
                     let dot_off_times: [f64; 4] = [
