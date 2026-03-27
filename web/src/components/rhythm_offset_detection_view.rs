@@ -274,6 +274,12 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
     // Capture locale-driven shortcut keys once at mount
     let early_key = untrack(|| tr!("rhythm-offset-early-key")).to_lowercase();
     let late_key = untrack(|| tr!("rhythm-offset-late-key")).to_lowercase();
+    if early_key.chars().count() != 1 {
+        log::warn!("rhythm-offset-early-key locale value is not a single character: {early_key:?}");
+    }
+    if late_key.chars().count() != 1 {
+        log::warn!("rhythm-offset-late-key locale value is not a single character: {late_key:?}");
+    }
 
     // Keyboard event handler
     let keydown_handler = {

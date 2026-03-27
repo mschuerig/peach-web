@@ -54,6 +54,14 @@ Single source of truth for all known pre-existing issues. Every finding has a un
 - **Description:** If `MidiMessageEvent.data()` returns `Err`, the event is silently skipped with no log. If a device systematically returns errors, all MIDI input silently stops working with no diagnostic trace.
 - **Recommendation:** Add `log::warn!` on `event.data()` failure for observability.
 
+### PEF-018: Fluent help text uses fragile Unicode escape for paragraph breaks
+
+- **Status:** OPEN — cosmetic risk, low practical impact.
+- **Surfaced:** Story 23.1 code review (2026-03-27)
+- **Location:** `web/locales/en/main.ftl`, `web/locales/de/main.ftl` — all `help-*-body` keys
+- **Description:** Help text strings use `{"\u000A\u000A"}` inline Unicode escapes for paragraph breaks. This is a valid Fluent pattern but fragile — if the rendering layer ever strips or normalizes whitespace, paragraph formatting silently breaks. Fluent supports multiline strings natively, but migrating would touch every help key in both locales.
+- **Recommendation:** Consider migrating to Fluent multiline string syntax in a dedicated cleanup story. Low priority since the current pattern works and is consistently applied.
+
 ### PEF-013: Merge import dedup uses timestamp-only key, losing sub-second records
 
 - **Status:** WONT-FIX — the training loop physically cannot produce two records of the same type within one second (each round involves listening, thinking, answering). The coarse timestamp key correctly deduplicates re-imports without needing field-by-field matching.

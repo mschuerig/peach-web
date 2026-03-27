@@ -319,6 +319,16 @@ pub fn PitchDiscriminationView() -> impl IntoView {
     // Capture locale-driven shortcut keys once at mount
     let higher_key = untrack(|| tr!("discrimination-higher-key")).to_lowercase();
     let lower_key = untrack(|| tr!("discrimination-lower-key")).to_lowercase();
+    if higher_key.chars().count() != 1 {
+        log::warn!(
+            "discrimination-higher-key locale value is not a single character: {higher_key:?}"
+        );
+    }
+    if lower_key.chars().count() != 1 {
+        log::warn!(
+            "discrimination-lower-key locale value is not a single character: {lower_key:?}"
+        );
+    }
 
     let keydown_handler = {
         let on_answer = Rc::clone(&on_answer);

@@ -1,6 +1,6 @@
 # Story 23.1: Help Text Updates for Rhythm and MIDI
 
-Status: review
+Status: done
 
 ## Story
 
