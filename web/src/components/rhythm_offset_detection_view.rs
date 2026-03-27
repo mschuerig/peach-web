@@ -483,7 +483,7 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
             };
 
             // Select percussion program once for this training session
-            select_percussion_program(&bridge);
+            select_percussion_program(&bridge, &sf2_presets.get());
 
             let feedback_ms = (RHYTHM_FEEDBACK_DURATION_SECS * 1000.0) as u32;
             let sixteenth_secs = tempo.sixteenth_note_duration_secs();

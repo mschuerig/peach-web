@@ -5,7 +5,7 @@ use domain::types::TempoBPM;
 use gloo_timers::callback::{Interval, Timeout};
 use web_sys::AudioContext;
 
-use crate::adapters::audio_soundfont::WorkletBridge;
+use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 
 /// A step in the rhythm pattern: either a click or silence.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -32,9 +32,6 @@ const PERCUSSION_CHANNEL: u8 = 9;
 /// MIDI bank number for percussion (bank 128).
 const PERCUSSION_BANK: u32 = 128;
 
-/// First percussion program.
-const PERCUSSION_PROGRAM: u8 = 0;
-
 /// General MIDI high woodblock note number.
 const WOODBLOCK_NOTE: u8 = 76;
 
@@ -49,15 +46,24 @@ const NOTE_OFF_DELAY_MS: u32 = 50;
 
 /// Select the percussion program on the percussion channel.
 ///
-/// Call once per training session before creating schedulers. Sends a
-/// `selectProgram` message to the OxiSynth worklet for bank 128 / program 0
-/// on MIDI channel 9.
-pub fn select_percussion_program(bridge: &Rc<RefCell<WorkletBridge>>) {
-    let _ = bridge.borrow().send_select_program_ch(
-        PERCUSSION_CHANNEL,
-        PERCUSSION_BANK,
-        PERCUSSION_PROGRAM,
+/// Call once per training session before creating schedulers. Finds the first
+/// preset in bank 128 from the loaded SF2 preset list and sends a
+/// `selectProgram` message to the OxiSynth worklet on MIDI channel 9.
+pub fn select_percussion_program(bridge: &Rc<RefCell<WorkletBridge>>, presets: &[SF2Preset]) {
+    let program = presets
+        .iter()
+        .find(|p| p.bank == PERCUSSION_BANK as u16)
+        .map(|p| p.program as u8)
+        .unwrap_or_else(|| {
+            log::warn!("No preset found in bank {PERCUSSION_BANK}, falling back to program 0");
+            0
+        });
+    log::info!(
+        "Selecting percussion program {program} on channel {PERCUSSION_CHANNEL} (bank {PERCUSSION_BANK})"
     );
+    let _ = bridge
+        .borrow()
+        .send_select_program_ch(PERCUSSION_CHANNEL, PERCUSSION_BANK, program);
 }
 
 /// Internal mutable state for the scheduler.

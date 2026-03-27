@@ -445,7 +445,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
             };
 
             // Select percussion program once for this training session
-            select_percussion_program(&bridge);
+            select_percussion_program(&bridge, &sf2_presets.get());
 
             // Wire MIDI input in a separate task so the permission prompt
             // does not block training startup (progressive enhancement).

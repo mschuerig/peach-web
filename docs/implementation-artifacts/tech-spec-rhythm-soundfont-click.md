@@ -49,12 +49,12 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `synth-worklet/src/lib.rs` -- Add channel parameter to `synth_note_on`, `synth_note_off`, `synth_select_program`; fix bank-before-program-change order in select_program
-- [ ] `web/assets/soundfont/synth-processor.js` -- Remove `bank < 120` filter from `parseSF2Presets`; pass `msg.channel ?? 0` to WASM functions
-- [ ] `web/src/adapters/audio_soundfont.rs` -- Add `send_note_on_ch`, `send_note_off_ch`, `send_select_program_ch` to WorkletBridge with channel field
-- [ ] `web/src/adapters/rhythm_scheduler.rs` -- Replace `AudioBuffer`/`AudioBufferSourceNode` with `WorkletBridge` percussion noteOn/noteOff; use `setTimeout` for sub-interval timing; select bank 128 program on channel 9 at construction
-- [ ] `web/src/components/continuous_rhythm_matching_view.rs` -- Pass WorkletBridge to scheduler; use WorkletBridge for tap feedback click
-- [ ] `web/src/components/rhythm_offset_detection_view.rs` -- Pass WorkletBridge to scheduler and offset click
+- [x] `synth-worklet/src/lib.rs` -- Add channel parameter to `synth_note_on`, `synth_note_off`, `synth_select_program`; fix bank-before-program-change order in select_program
+- [x] `web/assets/soundfont/synth-processor.js` -- Remove `bank < 120` filter from `parseSF2Presets`; pass `msg.channel ?? 0` to WASM functions
+- [x] `web/src/adapters/audio_soundfont.rs` -- Add `send_note_on_ch`, `send_note_off_ch`, `send_select_program_ch` to WorkletBridge with channel field
+- [x] `web/src/adapters/rhythm_scheduler.rs` -- Replace `AudioBuffer`/`AudioBufferSourceNode` with `WorkletBridge` percussion noteOn/noteOff; use `setTimeout` for sub-interval timing; dynamically look up first bank 128 program from SF2 preset list
+- [x] `web/src/components/continuous_rhythm_matching_view.rs` -- Pass WorkletBridge to scheduler; use WorkletBridge for tap feedback click
+- [x] `web/src/components/rhythm_offset_detection_view.rs` -- Pass WorkletBridge to scheduler and offset click
 
 **Acceptance Criteria:**
 - Given rhythm training starts, when the metronome plays, then a woodblock percussion sound is heard (not a noise burst)
