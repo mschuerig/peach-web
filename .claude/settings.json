@@ -1,4 +1,18 @@
 {
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "if": "Bash(git commit *)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "staged=$(git diff --cached --name-only --diff-filter=d -- '*.rs'); if [ -n \"$staged\" ]; then echo \"$staged\" | xargs rustfmt && echo \"$staged\" | xargs git add; fi"
+          }
+        ]
+      }
+    ]
+  },
   "env": {
     "ENABLE_LSP_TOOL": "1"
   },

@@ -63,6 +63,14 @@ All BMAD functionality is accessible via slash commands (skills) in `.claude/com
 **Quality**: `/bmad-tea-testarch-*` commands for test design, automation, CI, ATDD, traceability
 **Utilities**: `/bmad-help` (context-aware next steps), `/bmad-party-mode` (multi-agent discussions)
 
+## Development Skills
+
+Use these skills at the appropriate moments during development:
+
+- `/simplify` — Run after completing code changes to review for reuse, quality, and efficiency issues
+- `/bmad-code-review` — Run after implementing stories or significant changes for multi-layer adversarial review
+- `/bmad-wds-bugfixing` — Use for bugs that resist quick diagnosis; enforces reproduce-first, root-cause-before-fix discipline to prevent circular debugging
+
 ## Agent Conventions
 
 - Agents have persona-driven identities with specific roles and communication styles
