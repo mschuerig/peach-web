@@ -2290,6 +2290,14 @@ V3 format: 19 columns covering all 4 training types. Replaces V1 (12 columns, pi
 
 Adds rhythm chart cards to the profile screen with discipline-aware unit labels.
 
+### Story 19.3: Rhythm Spectrogram Visualization
+
+**As a** user,
+**I want** to see my rhythm accuracy as a heatmap across tempo ranges and time,
+**So that** I can identify which tempos I'm precise at and where I need work.
+
+Replaces (or augments) the rhythm line charts with a spectrogram-style grid: x-axis = time buckets (session/day/month, matching existing `ProgressTimeline`), y-axis = trained tempo ranges (Slow/Medium/Fast), cell color = accuracy level (green/yellow/red). Tap a cell for early/late breakdown detail. Follows the iOS `SpectrogramData` + `RhythmSpectrogramView` pattern, adapted to the web's SVG chart architecture.
+
 ## Epic 21: Rhythm Tap Latency & Audio Doubling
 
 Improve the "Fill the Gap" training experience by reducing tap-to-sound latency and eliminating audio doubling when user taps coincide with scheduled beats. Based on technical research in `docs/planning-artifacts/research/domain-web-audio-tap-latency-research-2026-03-25.md`.

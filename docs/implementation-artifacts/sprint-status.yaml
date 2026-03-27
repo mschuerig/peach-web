@@ -181,9 +181,10 @@ development_status:
   18-2-continuous-rhythm-matching-screen: done
 
   # Epic 19: CSV V3 & Data Portability
-  epic-19: done
+  epic-19: in-progress
   19-1-csv-v3-format-alignment: done
   19-2-rhythm-profile-visualization: done
+  19-3-rhythm-spectrogram-visualization: backlog
 
   # Epic 20: Training View Refactoring
   epic-20: backlog
