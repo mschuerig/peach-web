@@ -310,19 +310,25 @@ pub fn RhythmSpectrogramChart(
             let late_label = untrack(|| i18n.tr("spectrogram-late"));
 
             let early_text = cell.early_stats.as_ref().map(|s| {
+                let rec = untrack(|| {
+                    leptos_fluent::tr!("spectrogram-rec", { "count" => s.count })
+                });
                 format!(
-                    "{}: {}%, {} rec",
+                    "{}: {}%, {}",
                     early_label,
                     format_decimal_1_chart(s.mean_percent),
-                    s.count,
+                    rec,
                 )
             });
             let late_text = cell.late_stats.as_ref().map(|s| {
+                let rec = untrack(|| {
+                    leptos_fluent::tr!("spectrogram-rec", { "count" => s.count })
+                });
                 format!(
-                    "{}: {}%, {} rec",
+                    "{}: {}%, {}",
                     late_label,
                     format_decimal_1_chart(s.mean_percent),
-                    s.count,
+                    rec,
                 )
             });
 
@@ -366,9 +372,14 @@ pub fn RhythmSpectrogramChart(
                     .mean_accuracy_percent
                     .map(format_decimal_1_chart)
                     .unwrap_or_else(|| "\u{2013}".to_string());
+                let records = untrack(|| {
+                    leptos_fluent::tr!("spectrogram-records", {
+                        "count" => cell.record_count
+                    })
+                });
                 format!(
-                    "{} \u{2014} {}, {} {}, {} records",
-                    range_label, date_str, mean_str, unit_label_a11y, cell.record_count
+                    "{} \u{2014} {}, {} {}, {}",
+                    range_label, date_str, mean_str, unit_label_a11y, records
                 )
             })
             .unwrap_or_default()

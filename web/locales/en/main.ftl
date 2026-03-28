@@ -267,6 +267,8 @@ tempo-range-medium = Medium
 tempo-range-fast = Fast
 spectrogram-early = Early
 spectrogram-late = Late
+spectrogram-rec = { $count } rec
+spectrogram-records = { $count } records
 spectrogram-chart-for = Rhythm accuracy heatmap for { $name }
 
 ## Domain - Training Modes
