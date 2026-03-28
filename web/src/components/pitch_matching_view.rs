@@ -736,6 +736,9 @@ pub fn PitchMatchingView() -> impl IntoView {
                         audio_error.set(Some(untrack(|| i18n.tr("audio-playback-failed"))));
                     }
 
+                    // Reset slider to center as soon as reference starts
+                    reset_trigger.set(reset_trigger.get_untracked() + 1);
+
                     // Wait for reference note duration
                     let mut elapsed = 0u32;
                     while elapsed < duration_ms {
@@ -755,9 +758,6 @@ pub fn PitchMatchingView() -> impl IntoView {
 
                     // === AwaitingSliderTouch phase ===
                     // Tunable note will start when user touches the slider (see slider_on_change)
-
-                    // Enable slider and reset to center for new challenge
-                    reset_trigger.set(reset_trigger.get_untracked() + 1);
 
                     // Wait for commit (slider release or Enter/Space)
                     while session.borrow().state() != PitchMatchingSessionState::ShowingFeedback {
