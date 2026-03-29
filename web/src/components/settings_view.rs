@@ -77,7 +77,31 @@ fn SettingsRowDynamic(label: Signal<String>, children: Children) -> impl IntoVie
     }
 }
 
-/// iOS-style +/- stepper control.
+/// Starts an auto-repeat loop: fires `callback` after `delay_ms`, then repeats with
+/// accelerating speed (400→200→100→50ms). Stops when `holding` becomes false or
+/// `disabled` becomes true.
+fn start_auto_repeat(
+    holding: RwSignal<bool>,
+    disabled: Signal<bool>,
+    callback: Callback<()>,
+    delay_ms: u32,
+) {
+    spawn_local(async move {
+        TimeoutFuture::new(delay_ms).await;
+        if !holding.get_untracked() || disabled.get_untracked() {
+            return;
+        }
+        callback.run(());
+        let next_delay = match delay_ms {
+            d if d >= 400 => 200,
+            200 => 100,
+            _ => 50,
+        };
+        start_auto_repeat(holding, disabled, callback, next_delay);
+    });
+}
+
+/// iOS-style +/- stepper control with press-and-hold auto-repeat.
 #[component]
 fn Stepper(
     #[prop(into)] label: Signal<String>,
@@ -88,22 +112,61 @@ fn Stepper(
 ) -> impl IntoView {
     let dec_label = move || format!("Decrease {}", label.get());
     let inc_label = move || format!("Increase {}", label.get());
+
+    let dec_holding = RwSignal::new(false);
+    let inc_holding = RwSignal::new(false);
+
+    on_cleanup(move || {
+        dec_holding.set(false);
+        inc_holding.set(false);
+    });
+
+    let on_dec_down = move |_: web_sys::PointerEvent| {
+        if decrement_disabled.get_untracked() {
+            return;
+        }
+        dec_holding.set(true);
+        on_decrement.run(());
+        start_auto_repeat(dec_holding, decrement_disabled, on_decrement, 400);
+    };
+    let on_dec_up = move |_: web_sys::PointerEvent| {
+        dec_holding.set(false);
+    };
+
+    let on_inc_down = move |_: web_sys::PointerEvent| {
+        if increment_disabled.get_untracked() {
+            return;
+        }
+        inc_holding.set(true);
+        on_increment.run(());
+        start_auto_repeat(inc_holding, increment_disabled, on_increment, 400);
+    };
+    let on_inc_up = move |_: web_sys::PointerEvent| {
+        inc_holding.set(false);
+    };
+
     view! {
         <div class="inline-flex items-center rounded-lg bg-gray-200 dark:bg-gray-700" role="group">
             <button
-                on:click=move |_| on_decrement.run(())
+                on:pointerdown=on_dec_down
+                on:pointerup=on_dec_up
+                on:pointerleave=on_dec_up
+                on:pointercancel=on_dec_up
                 disabled=decrement_disabled
                 aria-label=dec_label
-                class="min-h-[34px] min-w-[40px] flex items-center justify-center rounded-l-lg text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
+                class="min-h-[34px] min-w-[40px] flex items-center justify-center rounded-l-lg text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400 select-none touch-none"
             >
                 "\u{2212}"
             </button>
             <div class="w-px h-5 bg-gray-300 dark:bg-gray-600"></div>
             <button
-                on:click=move |_| on_increment.run(())
+                on:pointerdown=on_inc_down
+                on:pointerup=on_inc_up
+                on:pointerleave=on_inc_up
+                on:pointercancel=on_inc_up
                 disabled=increment_disabled
                 aria-label=inc_label
-                class="min-h-[34px] min-w-[40px] flex items-center justify-center rounded-r-lg text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400"
+                class="min-h-[34px] min-w-[40px] flex items-center justify-center rounded-r-lg text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400 select-none touch-none"
             >
                 "+"
             </button>
