@@ -63,12 +63,9 @@ impl Interval {
 
     /// Interval code for CSV export (iOS compatibility).
     ///
-    /// Same as `short_label()` except Tritone returns `"A4"` (iOS CSV format).
+    /// Identical to `short_label()`. Both iOS and web now use `"d5"` for tritone.
     pub fn csv_code(&self) -> &'static str {
-        match self {
-            Interval::Tritone => "A4",
-            other => other.short_label(),
-        }
+        self.short_label()
     }
 
     /// Parse an interval code string back to an `Interval`.
@@ -321,7 +318,7 @@ mod tests {
             (Interval::MinorThird, "m3"),
             (Interval::MajorThird, "M3"),
             (Interval::PerfectFourth, "P4"),
-            (Interval::Tritone, "A4"),
+            (Interval::Tritone, "d5"),
             (Interval::PerfectFifth, "P5"),
             (Interval::MinorSixth, "m6"),
             (Interval::MajorSixth, "M6"),
@@ -335,8 +332,8 @@ mod tests {
     }
 
     #[test]
-    fn test_csv_code_tritone_differs_from_short_label() {
-        assert_eq!(Interval::Tritone.csv_code(), "A4");
+    fn test_csv_code_tritone_matches_short_label() {
+        assert_eq!(Interval::Tritone.csv_code(), "d5");
         assert_eq!(Interval::Tritone.short_label(), "d5");
     }
 

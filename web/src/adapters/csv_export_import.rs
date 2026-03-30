@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
@@ -32,7 +32,7 @@ pub enum ImportExportStatus {
     Error(String),
 }
 
-const CSV_HEADER: &str = "trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,tempoBPM,offsetMs,initialCentOffset,userCentError,meanOffsetMs,meanOffsetMsPosition0,meanOffsetMsPosition1,meanOffsetMsPosition2,meanOffsetMsPosition3";
+const CSV_HEADER: &str = "trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,initialCentOffset,userCentError,tempoBPM,offsetMs,meanOffsetMs,meanOffsetMsPosition0,meanOffsetMsPosition1,meanOffsetMsPosition2,meanOffsetMsPosition3";
 const CSV_HEADER_V1: &str = "trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,initialCentOffset,userCentError";
 #[allow(dead_code)] // Used in tests for consistency check against METADATA_LINE
 const FORMAT_VERSION: u32 = 3;
@@ -110,9 +110,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                 let ref_name = MIDINote::new(r.reference_note).name();
                 let target_name = MIDINote::new(r.target_note).name();
                 let ts = truncate_timestamp_to_second(&r.timestamp);
-                // cols 0-7 filled, 8-11 empty (4), 12-13 filled, 14-18 empty (5)
+                // cols 0-7 filled, 8-9 empty (2), 10-11 filled, 12-18 empty (7)
                 csv.push_str(&format!(
-                    "pitchMatching,{},{},{},{},{},{},{},,,,,{},{},,,,,\n",
+                    "pitchMatching,{},{},{},{},{},{},{},,,{},{},,,,,,,\n",
                     ts,
                     r.reference_note,
                     ref_name,
@@ -126,9 +126,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
             }
             TrainingRecord::RhythmOffsetDetection(r) => {
                 let ts = truncate_timestamp_to_second(&r.timestamp);
-                // cols 0-1 filled, 2-8 empty (7), 9-11 filled, 12-18 empty (7)
+                // cols 0-1 filled, 2-8 empty (7), 9 filled, 10-11 empty (2), 12-13 filled, 14-18 empty (5)
                 csv.push_str(&format!(
-                    "rhythmOffsetDetection,{},,,,,,,,{},{},{},,,,,,,\n",
+                    "rhythmOffsetDetection,{},,,,,,,,{},,,{},{},,,,,\n",
                     ts, r.is_correct, r.tempo_bpm, r.offset_ms,
                 ));
             }
@@ -138,9 +138,9 @@ pub async fn export_all_data(store: &IndexedDbStore) -> Result<(), String> {
                 let p1 = format_optional_f64(r.per_position_mean_ms[1]);
                 let p2 = format_optional_f64(r.per_position_mean_ms[2]);
                 let p3 = format_optional_f64(r.per_position_mean_ms[3]);
-                // cols 0-1 filled, 2-9 empty (8), 10 filled, 11-13 empty (3), 14-18 filled
+                // cols 0-1 filled, 2-11 empty (10), 12 filled, 13 empty, 14-18 filled
                 csv.push_str(&format!(
-                    "continuousRhythmMatching,{},,,,,,,,,{},,,,{},{},{},{},{}\n",
+                    "continuousRhythmMatching,{},,,,,,,,,,,{},,{},{},{},{},{}\n",
                     ts, r.tempo_bpm, r.mean_offset_ms, p0, p1, p2, p3,
                 ));
             }
@@ -202,6 +202,45 @@ fn read_format_version(first_line: &str) -> Result<u32, String> {
     }
 }
 
+/// Build a column-name-to-index map from the header row.
+/// Returns an error naming any required column that is missing.
+fn build_column_index(header: &str) -> Result<HashMap<&str, usize>, String> {
+    let map: HashMap<&str, usize> = header
+        .split(',')
+        .enumerate()
+        .map(|(i, col)| (col.trim(), i))
+        .collect();
+    let required = [
+        "trainingType",
+        "timestamp",
+        "referenceNote",
+        "referenceNoteName",
+        "targetNote",
+        "targetNoteName",
+        "interval",
+        "tuningSystem",
+        "centOffset",
+        "isCorrect",
+        "initialCentOffset",
+        "userCentError",
+        "tempoBPM",
+        "offsetMs",
+        "meanOffsetMs",
+        "meanOffsetMsPosition0",
+        "meanOffsetMsPosition1",
+        "meanOffsetMsPosition2",
+        "meanOffsetMsPosition3",
+    ];
+    for &col in &required {
+        if !map.contains_key(col) {
+            return Err(format!(
+                "Invalid file format: required column '{col}' is missing from the header row"
+            ));
+        }
+    }
+    Ok(map)
+}
+
 /// Parse a CSV file's text content into structured records.
 pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
     let content = content.trim();
@@ -230,13 +269,8 @@ pub fn parse_import_file(content: &str) -> Result<ParsedImportData, String> {
             parse_v1(lines)
         }
         3 => {
-            if header != CSV_HEADER {
-                return Err(
-                    "Invalid file format: header row does not match expected V3 columns"
-                        .to_string(),
-                );
-            }
-            parse_v3(lines)
+            let col = build_column_index(header)?;
+            parse_v3(lines, &col)
         }
         v => Err(format!(
             "Unsupported export format version {v}. Please update the app to import this file."
@@ -377,7 +411,10 @@ fn parse_pitch_matching_row(
 }
 
 /// Parse CSV data rows in the V3 format (19 columns, all 4 training types).
-fn parse_v3(lines: std::str::Lines) -> Result<ParsedImportData, String> {
+fn parse_v3(
+    lines: std::str::Lines,
+    col: &HashMap<&str, usize>,
+) -> Result<ParsedImportData, String> {
     let mut pitch_discriminations = Vec::new();
     let mut pitch_matchings = Vec::new();
     let mut rhythm_offset_detections = Vec::new();
@@ -409,18 +446,20 @@ fn parse_v3(lines: std::str::Lines) -> Result<ParsedImportData, String> {
                     Err(msg) => warnings.push(msg),
                 }
             }
-            "pitchMatching" => match parse_pitch_matching_row_v3(&fields, row_num) {
+            "pitchMatching" => match parse_pitch_matching_row_v3(&fields, row_num, col) {
                 Ok(record) => pitch_matchings.push(record),
                 Err(msg) => warnings.push(msg),
             },
-            "rhythmOffsetDetection" => match parse_rhythm_offset_row(&fields, row_num) {
+            "rhythmOffsetDetection" => match parse_rhythm_offset_row(&fields, row_num, col) {
                 Ok(record) => rhythm_offset_detections.push(record),
                 Err(msg) => warnings.push(msg),
             },
-            "continuousRhythmMatching" => match parse_continuous_rhythm_row(&fields, row_num) {
-                Ok(record) => continuous_rhythm_matchings.push(record),
-                Err(msg) => warnings.push(msg),
-            },
+            "continuousRhythmMatching" => {
+                match parse_continuous_rhythm_row(&fields, row_num, col) {
+                    Ok(record) => continuous_rhythm_matchings.push(record),
+                    Err(msg) => warnings.push(msg),
+                }
+            }
             other => {
                 warnings.push(format!(
                     "Row {row_num}: unknown trainingType '{other}', skipped"
@@ -442,10 +481,11 @@ fn parse_v3(lines: std::str::Lines) -> Result<ParsedImportData, String> {
     })
 }
 
-/// Parse a V3 pitch matching row (initialCentOffset at col 12, userCentError at col 13).
+/// Parse a V3 pitch matching row using header-driven column indices.
 fn parse_pitch_matching_row_v3(
     fields: &[&str],
     row_num: usize,
+    col: &HashMap<&str, usize>,
 ) -> Result<PitchMatchingRecord, String> {
     let timestamp = fields[1].to_string();
     let reference_note: u8 = fields[2]
@@ -463,11 +503,10 @@ fn parse_pitch_matching_row_v3(
             )
         })?;
     let tuning_system = fields[7].to_string();
-    // V3 columns: 12=initialCentOffset, 13=userCentError (shifted from V1 cols 10,11)
-    let initial_cent_offset: f64 = fields[12]
+    let initial_cent_offset: f64 = fields[col["initialCentOffset"]]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid initialCentOffset, skipped"))?;
-    let user_cent_error: f64 = fields[13]
+    let user_cent_error: f64 = fields[col["userCentError"]]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid userCentError, skipped"))?;
 
@@ -482,23 +521,24 @@ fn parse_pitch_matching_row_v3(
     })
 }
 
-/// Parse a rhythm offset detection row from V3 CSV.
+/// Parse a rhythm offset detection row from V3 CSV using header-driven column indices.
 fn parse_rhythm_offset_row(
     fields: &[&str],
     row_num: usize,
+    col: &HashMap<&str, usize>,
 ) -> Result<RhythmOffsetDetectionRecord, String> {
     let timestamp = fields[1].to_string();
-    let is_correct = match fields[9] {
+    let is_correct = match fields[col["isCorrect"]] {
         "true" => true,
         "false" => false,
         _ => {
             return Err(format!("Row {row_num}: invalid isCorrect value, skipped"));
         }
     };
-    let tempo_bpm: u16 = fields[10]
+    let tempo_bpm: u16 = fields[col["tempoBPM"]]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid tempoBPM, skipped"))?;
-    let offset_ms: f64 = fields[11]
+    let offset_ms: f64 = fields[col["offsetMs"]]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid offsetMs, skipped"))?;
 
@@ -510,16 +550,17 @@ fn parse_rhythm_offset_row(
     })
 }
 
-/// Parse a continuous rhythm matching row from V3 CSV.
+/// Parse a continuous rhythm matching row from V3 CSV using header-driven column indices.
 fn parse_continuous_rhythm_row(
     fields: &[&str],
     row_num: usize,
+    col: &HashMap<&str, usize>,
 ) -> Result<ContinuousRhythmMatchingRecord, String> {
     let timestamp = fields[1].to_string();
-    let tempo_bpm: u16 = fields[10]
+    let tempo_bpm: u16 = fields[col["tempoBPM"]]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid tempoBPM, skipped"))?;
-    let mean_offset_ms: f64 = fields[14]
+    let mean_offset_ms: f64 = fields[col["meanOffsetMs"]]
         .parse()
         .map_err(|_| format!("Row {row_num}: invalid meanOffsetMs, skipped"))?;
 
@@ -535,10 +576,10 @@ fn parse_continuous_rhythm_row(
     };
 
     let per_position_mean_ms = [
-        parse_optional_f64(15, "meanOffsetMsPosition0")?,
-        parse_optional_f64(16, "meanOffsetMsPosition1")?,
-        parse_optional_f64(17, "meanOffsetMsPosition2")?,
-        parse_optional_f64(18, "meanOffsetMsPosition3")?,
+        parse_optional_f64(col["meanOffsetMsPosition0"], "meanOffsetMsPosition0")?,
+        parse_optional_f64(col["meanOffsetMsPosition1"], "meanOffsetMsPosition1")?,
+        parse_optional_f64(col["meanOffsetMsPosition2"], "meanOffsetMsPosition2")?,
+        parse_optional_f64(col["meanOffsetMsPosition3"], "meanOffsetMsPosition3")?,
     ];
 
     Ok(ContinuousRhythmMatchingRecord {
@@ -990,7 +1031,7 @@ mod tests {
     #[test]
     fn test_import_v3_pitch_matching() {
         let csv = make_csv(&[
-            "pitchMatching,2026-03-04T14:30:00Z,60,C4,67,G4,P5,equal,,,,,25.5,3.2,,,,,",
+            "pitchMatching,2026-03-04T14:30:00Z,60,C4,67,G4,P5,equal,,,25.5,3.2,,,,,,,",
         ]);
         let result = parse_import_file(&csv).unwrap();
         assert_eq!(result.pitch_matchings.len(), 1);
@@ -1005,7 +1046,7 @@ mod tests {
     #[test]
     fn test_import_v3_rhythm_offset_detection() {
         let csv =
-            make_csv(&["rhythmOffsetDetection,2026-03-04T14:30:00Z,,,,,,,,true,120,15.5,,,,,,,"]);
+            make_csv(&["rhythmOffsetDetection,2026-03-04T14:30:00Z,,,,,,,,true,,,120,15.5,,,,,"]);
         let result = parse_import_file(&csv).unwrap();
         assert_eq!(result.rhythm_offset_detections.len(), 1);
         assert!(result.warnings.is_empty());
@@ -1018,7 +1059,7 @@ mod tests {
     #[test]
     fn test_import_v3_continuous_rhythm_matching() {
         let csv = make_csv(&[
-            "continuousRhythmMatching,2026-03-04T14:30:00Z,,,,,,,,,80,,,,5.2,1.1,2.3,,4.5",
+            "continuousRhythmMatching,2026-03-04T14:30:00Z,,,,,,,,,,,80,,5.2,1.1,2.3,,4.5",
         ]);
         let result = parse_import_file(&csv).unwrap();
         assert_eq!(result.continuous_rhythm_matchings.len(), 1);
@@ -1076,9 +1117,9 @@ mod tests {
     fn test_import_v3_all_four_training_types() {
         let csv = make_csv(&[
             "pitchDiscrimination,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equalTemperament,5.0,true,,,,,,,,,",
-            "pitchMatching,2026-03-04T14:31:00Z,60,C4,67,G4,P5,equalTemperament,,,,,25.5,3.2,,,,,",
-            "rhythmOffsetDetection,2026-03-04T14:32:00Z,,,,,,,,false,90,-12.3,,,,,,,",
-            "continuousRhythmMatching,2026-03-04T14:33:00Z,,,,,,,,,100,,,,8.1,2.0,3.0,4.0,5.0",
+            "pitchMatching,2026-03-04T14:31:00Z,60,C4,67,G4,P5,equalTemperament,,,25.5,3.2,,,,,,,",
+            "rhythmOffsetDetection,2026-03-04T14:32:00Z,,,,,,,,false,,,90,-12.3,,,,,",
+            "continuousRhythmMatching,2026-03-04T14:33:00Z,,,,,,,,,,,100,,8.1,2.0,3.0,4.0,5.0",
         ]);
         let result = parse_import_file(&csv).unwrap();
         assert!(result.warnings.is_empty());
@@ -1157,7 +1198,7 @@ mod tests {
         let ref_name = MIDINote::new(original.reference_note).name();
         let target_name = MIDINote::new(original.target_note).name();
         let row = format!(
-            "pitchMatching,{},{},{},{},{},{},{},,,,,{},{},,,,,",
+            "pitchMatching,{},{},{},{},{},{},{},,,{},{},,,,,,,",
             original.timestamp,
             original.reference_note,
             ref_name,
@@ -1183,7 +1224,7 @@ mod tests {
             timestamp: "2026-03-04T14:32:00Z".to_string(),
         };
         let row = format!(
-            "rhythmOffsetDetection,{},,,,,,,,{},{},{},,,,,,,",
+            "rhythmOffsetDetection,{},,,,,,,,{},,,{},{},,,,,",
             original.timestamp, original.is_correct, original.tempo_bpm, original.offset_ms,
         );
         let csv = make_csv(&[&row]);
@@ -1207,7 +1248,7 @@ mod tests {
         let p2 = format_optional_f64(original.per_position_mean_ms[2]);
         let p3 = format_optional_f64(original.per_position_mean_ms[3]);
         let row = format!(
-            "continuousRhythmMatching,{},,,,,,,,,{},,,,{},{},{},{},{}",
+            "continuousRhythmMatching,{},,,,,,,,,,,{},,{},{},{},{},{}",
             original.timestamp, original.tempo_bpm, original.mean_offset_ms, p0, p1, p2, p3,
         );
         let csv = make_csv(&[&row]);
@@ -1220,15 +1261,15 @@ mod tests {
 
     #[test]
     fn test_import_ios_v3_fixture() {
-        // Simulate an iOS-exported V3 file with all 4 training types
+        // Simulate an iOS-exported V3 file with all 4 training types (iOS column order)
         let csv = format!(
             "{}\n{}\n{}\n{}\n{}\n{}\n",
             "# peach-export-format:3",
             CSV_HEADER,
             "pitchDiscrimination,2026-01-15T10:00:00Z,69,A4,72,C5,m3,equalTemperament,8.5,true,,,,,,,,,",
-            "pitchMatching,2026-01-15T10:01:00Z,60,C4,60,C4,P1,justIntonation,,,,,10.0,2.5,,,,,",
-            "rhythmOffsetDetection,2026-01-15T10:02:00Z,,,,,,,,true,100,5.0,,,,,,,",
-            "continuousRhythmMatching,2026-01-15T10:03:00Z,,,,,,,,,120,,,,3.5,1.0,2.0,3.0,4.0",
+            "pitchMatching,2026-01-15T10:01:00Z,60,C4,60,C4,P1,justIntonation,,,10.0,2.5,,,,,,,",
+            "rhythmOffsetDetection,2026-01-15T10:02:00Z,,,,,,,,true,,,100,5.0,,,,,",
+            "continuousRhythmMatching,2026-01-15T10:03:00Z,,,,,,,,,,,120,,3.5,1.0,2.0,3.0,4.0",
         );
         let result = parse_import_file(&csv).unwrap();
         assert!(result.warnings.is_empty());
@@ -1266,6 +1307,34 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_import_old_web_v3_backward_compat() {
+        // Old web column order (before alignment with iOS)
+        let old_web_header = "trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,tempoBPM,offsetMs,initialCentOffset,userCentError,meanOffsetMs,meanOffsetMsPosition0,meanOffsetMsPosition1,meanOffsetMsPosition2,meanOffsetMsPosition3";
+        let csv = format!(
+            "# peach-export-format:3\n{old_web_header}\n{}\n{}\n{}\n{}\n",
+            "pitchDiscrimination,2026-01-15T10:00:00Z,69,A4,72,C5,m3,equalTemperament,8.5,true,,,,,,,,,",
+            "pitchMatching,2026-01-15T10:01:00Z,60,C4,60,C4,P1,justIntonation,,,,,10.0,2.5,,,,,",
+            "rhythmOffsetDetection,2026-01-15T10:02:00Z,,,,,,,,true,100,5.0,,,,,,,",
+            "continuousRhythmMatching,2026-01-15T10:03:00Z,,,,,,,,,120,,,,3.5,1.0,2.0,3.0,4.0",
+        );
+        let result = parse_import_file(&csv).unwrap();
+        assert!(result.warnings.is_empty());
+        assert_eq!(result.pitch_discriminations.len(), 1);
+        assert_eq!(result.pitch_matchings.len(), 1);
+        assert_eq!(result.rhythm_offset_detections.len(), 1);
+        assert_eq!(result.continuous_rhythm_matchings.len(), 1);
+
+        let pm = &result.pitch_matchings[0];
+        assert!((pm.initial_cent_offset - 10.0).abs() < f64::EPSILON);
+
+        let rod = &result.rhythm_offset_detections[0];
+        assert_eq!(rod.tempo_bpm, 100);
+
+        let crm = &result.continuous_rhythm_matchings[0];
+        assert_eq!(crm.tempo_bpm, 120);
+    }
+
     // --- V3 header column count consistency ---
 
     #[test]
@@ -1276,6 +1345,32 @@ mod tests {
     #[test]
     fn test_v1_header_has_12_columns() {
         assert_eq!(CSV_HEADER_V1.split(',').count(), 12);
+    }
+
+    // --- Header-driven parser edge cases ---
+
+    #[test]
+    fn test_import_v3_extra_unknown_column_ignored() {
+        let extended_header = format!("{CSV_HEADER},extraColumn");
+        let csv = format!(
+            "# peach-export-format:3\n{extended_header}\n{}\n",
+            "pitchDiscrimination,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,,,,,,,,,bonus",
+        );
+        let result = parse_import_file(&csv).unwrap();
+        assert_eq!(result.pitch_discriminations.len(), 1);
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_import_v3_missing_required_column_error() {
+        // Header missing "tempoBPM"
+        let bad_header = "trainingType,timestamp,referenceNote,referenceNoteName,targetNote,targetNoteName,interval,tuningSystem,centOffset,isCorrect,initialCentOffset,userCentError,offsetMs,meanOffsetMs,meanOffsetMsPosition0,meanOffsetMsPosition1,meanOffsetMsPosition2,meanOffsetMsPosition3";
+        let csv = format!(
+            "# peach-export-format:3\n{bad_header}\npitchDiscrimination,2026-03-04T14:30:00Z,60,C4,64,E4,M3,equal,0,true,,,,,,,,\n",
+        );
+        let result = parse_import_file(&csv);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("tempoBPM"));
     }
 
     // --- format_optional_f64 tests ---
