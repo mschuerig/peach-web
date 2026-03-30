@@ -78,6 +78,11 @@ Use these skills at the appropriate moments during development:
 - Agents must load module config at activation (step 2, non-negotiable)
 - Resources are loaded at runtime, never pre-loaded
 
+### Code Quality
+
+- `/simplify-code` — **Mandatory.** After any code changes are accepted, always run `/simplify-code` before considering the task complete. This applies to every workflow: BMAD stories, quick dev, ad-hoc fixes, refactors.
+- `/orchestrate-batch-refactor` — When planning larger refactoring efforts across multiple files
+
 ## Documentation Standards
 
 - Strict CommonMark specification compliance
