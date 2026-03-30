@@ -265,7 +265,9 @@ impl SpectrogramData {
             }
             // Filter metrics that fall within this bucket's time range.
             for m in metrics {
-                if m.timestamp >= bucket.period_start && m.timestamp < bucket.period_end {
+                if m.timestamp >= bucket.period_start
+                    && (m.timestamp < bucket.period_end || bucket.period_start >= bucket.period_end)
+                {
                     all_values.push(m.value);
                     match dir {
                         RhythmDirection::Early => early_values.push(m.value),
@@ -684,6 +686,34 @@ mod tests {
             data.accuracy_level(cell, TempoRange::Slow),
             Some(SpectrogramAccuracyLevel::Excellent)
         );
+    }
+
+    #[test]
+    fn test_single_record_bucket_where_start_equals_end() {
+        // When period_start == period_end (single-record session bucket),
+        // the metric at that exact timestamp must be included (not excluded by strict <).
+        let ts = 1000.0;
+        let buckets = vec![make_bucket(ts, ts, crate::BucketSize::Session)];
+        let key_metrics = vec![
+            (
+                TempoRange::Slow,
+                RhythmDirection::Early,
+                vec![make_metric(ts, 7.0)],
+            ),
+            (TempoRange::Slow, RhythmDirection::Late, vec![]),
+            (TempoRange::Slow, RhythmDirection::OnBeat, vec![]),
+        ];
+
+        let data =
+            SpectrogramData::compute(&buckets, &key_metrics, SpectrogramThresholds::default());
+        assert_eq!(data.columns.len(), 1);
+        let cell = &data.columns[0].cells[0];
+        assert!(
+            cell.has_data(),
+            "single-record bucket cell must not be empty"
+        );
+        assert!((cell.mean_accuracy_percent.unwrap() - 7.0).abs() < 0.01);
+        assert_eq!(cell.record_count, 1);
     }
 
     #[test]

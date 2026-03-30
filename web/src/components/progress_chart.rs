@@ -236,18 +236,14 @@ pub fn ProgressChart(
     // Scrollable container setup
     let container_ref = NodeRef::<leptos::html::Div>::new();
     let is_scrollable = bucket_count > VISIBLE_BUCKETS;
-    let svg_width = if is_scrollable {
-        format!("{}%", bucket_count as f64 / VISIBLE_BUCKETS as f64 * 100.0)
-    } else {
-        "100%".to_string()
-    };
+    // svg_width is set after weights are computed (see below)
 
     // Set initial scroll position to right edge after mount
     if is_scrollable {
         Effect::new(move |_| {
             if container_ref.get().is_some() {
                 leptos::task::spawn_local_scoped_with_cancellation(async move {
-                    gloo_timers::future::TimeoutFuture::new(0).await;
+                    gloo_timers::future::TimeoutFuture::new(50).await;
                     if let Some(el) = container_ref.get() {
                         let element: &web_sys::Element = el.as_ref();
                         element.set_scroll_left(element.scroll_width() - element.client_width());
@@ -318,8 +314,46 @@ pub fn ProgressChart(
         .fold(0.0_f64, f64::max)
         .max(1.0);
 
-    // Index-based X mapping — AC 1
-    let x = |index: f64| -> f64 { MARGIN_LEFT + (index + 0.5) / bucket_count as f64 * inner_w };
+    // Weighted X mapping — session buckets get fractional width
+    const SESSION_WEIGHT: f64 = 0.4;
+    let weights: Vec<f64> = buckets
+        .iter()
+        .map(|b| {
+            if b.bucket_size == BucketSize::Session {
+                SESSION_WEIGHT
+            } else {
+                1.0
+            }
+        })
+        .collect();
+    let total_weight: f64 = weights.iter().sum();
+    let effective_weight = total_weight.max(2.0); // minimum prevents degenerate narrow charts
+    let svg_width = if effective_weight < VISIBLE_BUCKETS as f64 {
+        format!("{}%", effective_weight / VISIBLE_BUCKETS as f64 * 100.0)
+    } else {
+        "100%".to_string()
+    };
+    // Cumulative weight before each bucket index
+    let cum_weights: Vec<f64> = {
+        let mut cw = Vec::with_capacity(bucket_count + 1);
+        cw.push(0.0);
+        for w in &weights {
+            cw.push(cw.last().unwrap() + w);
+        }
+        cw
+    };
+    // x(index) returns the center x-position for a bucket
+    let x = |index: f64| -> f64 {
+        let i = (index.floor() as usize).min(bucket_count - 1);
+        let frac = index - i as f64;
+        let cum_before = cum_weights[i] + frac * weights[i];
+        MARGIN_LEFT + (cum_before + weights[i] * 0.5) / total_weight * inner_w
+    };
+    // x_left / x_right return left and right edges of a bucket
+    let x_left =
+        |index: usize| -> f64 { MARGIN_LEFT + cum_weights[index] / total_weight * inner_w };
+    let x_right =
+        |index: usize| -> f64 { MARGIN_LEFT + cum_weights[index + 1] / total_weight * inner_w };
     let y = |value: f64| -> f64 { MARGIN_TOP + inner_h - (value / y_max) * inner_h };
 
     // Session detection
@@ -352,8 +386,8 @@ pub fn ProgressChart(
         zones
             .iter()
             .map(|z| {
-                let x1 = x(z.start_index as f64 - 0.5);
-                let x2 = x(z.end_index as f64 + 0.5);
+                let x1 = x_left(z.start_index);
+                let x2 = x_right(z.end_index);
                 let width = x2 - x1;
                 let fill_class = match z.zone {
                     BucketSize::Month | BucketSize::Session => "chart-zone-bg",
@@ -377,13 +411,13 @@ pub fn ProgressChart(
     };
 
     // --- Layer 2: Zone dividers and year boundaries (AC 4) ---
-    let mut divider_xs: Vec<f64> = Vec::new();
+    let mut divider_positions: Vec<f64> = Vec::new();
     let mut zone_transition_indices: Vec<usize> = Vec::new();
 
     if multi_zone {
         for i in 1..buckets.len() {
             if buckets[i].bucket_size != buckets[i - 1].bucket_size {
-                divider_xs.push(i as f64 - 0.5);
+                divider_positions.push(x_left(i));
                 zone_transition_indices.push(i);
             }
         }
@@ -396,22 +430,20 @@ pub fn ProgressChart(
                 let prev_year = year_from_epoch(buckets[i - 1].period_start);
                 let curr_year = year_from_epoch(buckets[i].period_start);
                 if curr_year != prev_year {
-                    let boundary_idx = i as f64 - 0.5;
                     // Suppress if within 1 index of a zone transition
                     let near_transition =
                         zone_transition_indices.iter().any(|&t| i.abs_diff(t) <= 1);
                     if !near_transition {
-                        divider_xs.push(boundary_idx);
+                        divider_positions.push(x_left(i));
                     }
                 }
             }
         }
     }
 
-    let dividers = divider_xs
+    let dividers = divider_positions
         .iter()
-        .map(|&idx| {
-            let dx = x(idx);
+        .map(|&dx| {
             view! {
                 <line
                     x1=format!("{dx:.1}")
@@ -642,6 +674,7 @@ pub fn ProgressChart(
         .collect();
 
     // Task 2: Click handler — convert click to bucket index
+    let cum_weights_click = cum_weights.clone();
     let on_chart_click = move |ev: web_sys::MouseEvent| {
         let Some(target) = ev.current_target() else {
             return;
@@ -656,9 +689,15 @@ pub fn ProgressChart(
         // (its left edge shifts as the container scrolls), so no scroll_left adjustment needed.
         let svg_x = (client_x - rect.left()) / rect.width() * viewbox_w;
 
-        // Invert the x() function: raw_index = (svg_x - MARGIN_LEFT) / inner_w * bucket_count - 0.5
-        let raw_index = (svg_x - MARGIN_LEFT) / inner_w * bucket_count as f64 - 0.5;
-        let clicked_index = raw_index.round().max(0.0).min((bucket_count - 1) as f64) as usize;
+        // Invert weighted x: find which bucket the click falls into
+        let click_weight = (svg_x - MARGIN_LEFT) / inner_w * total_weight;
+        let mut clicked_index = bucket_count - 1;
+        for i in 0..bucket_count {
+            if click_weight < cum_weights_click[i + 1] {
+                clicked_index = i;
+                break;
+            }
+        }
 
         // Toggle logic
         if selected_bucket.get_untracked() == Some(clicked_index) {
@@ -767,7 +806,7 @@ pub fn ProgressChart(
         // Scrollable chart area
         <div
             node_ref=container_ref
-            class=if is_scrollable { "flex-1 min-w-0 overflow-x-auto chart-scroll-container" } else { "flex-1 min-w-0" }
+            class=if is_scrollable { "flex-1 min-w-0 overflow-x-auto chart-scroll-container" } else { "flex-1 min-w-0 flex justify-end" }
         >
         <svg
             viewBox=format!("0 0 {viewbox_w} {viewbox_height}")

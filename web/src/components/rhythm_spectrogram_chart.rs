@@ -84,17 +84,13 @@ pub fn RhythmSpectrogramChart(
 
     let container_ref = NodeRef::<leptos::html::Div>::new();
     let is_scrollable = col_count > VISIBLE_BUCKETS;
-    let svg_width = if is_scrollable {
-        format!("{}%", col_count as f64 / VISIBLE_BUCKETS as f64 * 100.0)
-    } else {
-        "100%".to_string()
-    };
+    // svg_width is set after weights are computed (see below)
 
     if is_scrollable {
         Effect::new(move |_| {
             if container_ref.get().is_some() {
                 leptos::task::spawn_local_scoped_with_cancellation(async move {
-                    gloo_timers::future::TimeoutFuture::new(0).await;
+                    gloo_timers::future::TimeoutFuture::new(50).await;
                     if let Some(el) = container_ref.get() {
                         let element: &web_sys::Element = el.as_ref();
                         element.set_scroll_left(element.scroll_width() - element.client_width());
@@ -133,8 +129,41 @@ pub fn RhythmSpectrogramChart(
     };
     let inner_w = viewbox_w - MARGIN_LEFT - MARGIN_RIGHT;
     let inner_h = viewbox_height - MARGIN_TOP - MARGIN_BOTTOM;
-    let cell_w = inner_w / col_count as f64;
     let cell_h = inner_h / row_count as f64;
+
+    // Weighted column widths — session buckets get fractional width
+    const SESSION_WEIGHT: f64 = 0.4;
+    let weights: Vec<f64> = data
+        .columns
+        .iter()
+        .map(|c| {
+            if c.bucket.bucket_size == BucketSize::Session {
+                SESSION_WEIGHT
+            } else {
+                1.0
+            }
+        })
+        .collect();
+    let total_weight: f64 = weights.iter().sum();
+    let effective_weight = total_weight.max(2.0); // minimum prevents degenerate narrow charts
+    let svg_width = if effective_weight < VISIBLE_BUCKETS as f64 {
+        format!("{}%", effective_weight / VISIBLE_BUCKETS as f64 * 100.0)
+    } else {
+        "100%".to_string()
+    };
+    // Cumulative weight before each column index
+    let cum_weights: Vec<f64> = {
+        let mut cw = Vec::with_capacity(col_count + 1);
+        cw.push(0.0);
+        for w in &weights {
+            cw.push(cw.last().unwrap() + w);
+        }
+        cw
+    };
+    // Per-column x-position (left edge) and width
+    let col_x = |ci: usize| -> f64 { MARGIN_LEFT + cum_weights[ci] / total_weight * inner_w };
+    let col_w = |ci: usize| -> f64 { weights[ci] / total_weight * inner_w };
+    let col_center = |ci: usize| -> f64 { col_x(ci) + col_w(ci) / 2.0 };
 
     // --- Static layers (computed once) ---
 
@@ -147,8 +176,8 @@ pub fn RhythmSpectrogramChart(
         zones
             .iter()
             .map(|z| {
-                let x1 = MARGIN_LEFT + z.start_index as f64 * cell_w;
-                let x2 = MARGIN_LEFT + (z.end_index as f64 + 1.0) * cell_w;
+                let x1 = col_x(z.start_index);
+                let x2 = col_x(z.end_index) + col_w(z.end_index);
                 let width = x2 - x1;
                 let fill_class = match z.zone {
                     BucketSize::Month | BucketSize::Session => "chart-zone-bg",
@@ -172,7 +201,7 @@ pub fn RhythmSpectrogramChart(
         (1..col_count)
             .filter(|&i| buckets[i].bucket_size != buckets[i - 1].bucket_size)
             .map(|i| {
-                let dx = MARGIN_LEFT + i as f64 * cell_w;
+                let dx = col_x(i);
                 view! {
                     <line
                         x1=format!("{dx:.1}") y1=format!("{MARGIN_TOP:.1}")
@@ -196,9 +225,9 @@ pub fn RhythmSpectrogramChart(
             let level = data.accuracy_level(cell, range);
             let fill = cell_fill(level);
             let opacity = cell_opacity(level);
-            let rx = MARGIN_LEFT + ci as f64 * cell_w + cell_gap / 2.0;
+            let rx = col_x(ci) + cell_gap / 2.0;
             let ry = MARGIN_TOP + (row_count - 1 - ri) as f64 * cell_h + cell_gap / 2.0;
-            let rw = (cell_w - cell_gap).max(1.0);
+            let rw = (col_w(ci) - cell_gap).max(1.0);
             let rh = (cell_h - cell_gap).max(1.0);
             heatmap_cells.push(view! {
                 <rect
@@ -251,7 +280,7 @@ pub fn RhythmSpectrogramChart(
                         }
                     }
                 };
-                (MARGIN_LEFT + (i as f64 + 0.5) * cell_w, label)
+                (col_center(i), label)
             })
             .collect();
         let mut deduped = Vec::new();
@@ -274,6 +303,7 @@ pub fn RhythmSpectrogramChart(
     // --- Reactive layers ---
 
     // Click handler
+    let cum_weights_click = cum_weights.clone();
     let on_chart_click = move |ev: web_sys::MouseEvent| {
         let Some(target) = ev.current_target() else {
             return;
@@ -285,7 +315,16 @@ pub fn RhythmSpectrogramChart(
         let svg_x = (ev.client_x() as f64 - rect.left()) / rect.width() * viewbox_w;
         let svg_y = (ev.client_y() as f64 - rect.top()) / rect.height() * viewbox_height;
 
-        let ci = ((svg_x - MARGIN_LEFT) / cell_w).floor() as isize;
+        // Invert weighted x: find which column the click falls into
+        let click_weight = (svg_x - MARGIN_LEFT) / inner_w * total_weight;
+        let mut ci_found: isize = -1;
+        for i in 0..col_count {
+            if click_weight < cum_weights_click[i + 1] {
+                ci_found = i as isize;
+                break;
+            }
+        }
+        let ci = ci_found;
         let row_from_top = ((svg_y - MARGIN_TOP) / cell_h).floor() as isize;
         let ri = row_count as isize - 1 - row_from_top;
 
@@ -300,6 +339,10 @@ pub fn RhythmSpectrogramChart(
             selected_cell.set(Some(pos));
         }
     };
+
+    // Pre-compute column positions for reactive closures
+    let col_positions: Vec<f64> = (0..col_count).map(col_x).collect();
+    let col_widths: Vec<f64> = (0..col_count).map(col_w).collect();
 
     // Pre-clone for reactive closures
     let columns_popover = data.columns.clone();
@@ -317,10 +360,11 @@ pub fn RhythmSpectrogramChart(
             let range = ranges_popover[ri];
             let bucket = &col.bucket;
 
-            let rx = MARGIN_LEFT + ci as f64 * cell_w;
+            let rx = col_positions[ci];
+            let cw = col_widths[ci];
             let ry = MARGIN_TOP + (row_count - 1 - ri) as f64 * cell_h;
 
-            let fo_x = (rx + cell_w / 2.0 - popover_w / 2.0)
+            let fo_x = (rx + cw / 2.0 - popover_w / 2.0)
                 .max(MARGIN_LEFT)
                 .min(MARGIN_LEFT + inner_w - popover_w);
             let fo_y = (MARGIN_TOP + 2.0).min(MARGIN_TOP + inner_h - popover_h);
@@ -361,7 +405,7 @@ pub fn RhythmSpectrogramChart(
             view! {
                 <rect
                     x=format!("{rx:.1}") y=format!("{ry:.1}")
-                    width=format!("{cell_w:.1}") height=format!("{cell_h:.1}")
+                    width=format!("{cw:.1}") height=format!("{cell_h:.1}")
                     fill="none" stroke="currentColor" stroke-width="2"
                     vector-effect="non-scaling-stroke" class="chart-selection-line"
                 />
@@ -433,7 +477,7 @@ pub fn RhythmSpectrogramChart(
         <div class="flex h-[180px] md:h-[240px]">
         <div
             node_ref=container_ref
-            class=if is_scrollable { "flex-1 min-w-0 overflow-x-auto chart-scroll-container" } else { "flex-1 min-w-0" }
+            class=if is_scrollable { "flex-1 min-w-0 overflow-x-auto chart-scroll-container" } else { "flex-1 min-w-0 flex justify-end" }
         >
         <svg
             viewBox=format!("0 0 {viewbox_w} {viewbox_height}")
