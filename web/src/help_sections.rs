@@ -140,4 +140,12 @@ pub static PROFILE_HELP: &[HelpSection] = &[
         title_key: "help-profile-zones-title",
         body_key: "help-profile-zones-body",
     },
+    HelpSection {
+        title_key: "help-profile-spectrogram-title",
+        body_key: "help-profile-spectrogram-body",
+    },
+    HelpSection {
+        title_key: "help-profile-spectrogram-colors-title",
+        body_key: "help-profile-spectrogram-colors-body",
+    },
 ];

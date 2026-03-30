@@ -286,10 +286,10 @@ impl TrainingDiscipline {
     }
 
     /// Returns all statistics keys for this discipline.
-    /// Pitch disciplines: 1 key. Rhythm disciplines: 9 keys (3 tempo ranges × 3 directions).
+    /// Pitch disciplines: 1 key. Rhythm disciplines: 18 keys (6 tempo ranges × 3 directions).
     pub fn statistics_keys(&self) -> Vec<StatisticsKey> {
         if self.is_rhythm() {
-            let mut keys = Vec::with_capacity(9);
+            let mut keys = Vec::with_capacity(18);
             for tempo_range in TempoRange::ALL {
                 for direction in RhythmDirection::ALL {
                     keys.push(StatisticsKey::Rhythm(*self, tempo_range, direction));
@@ -688,9 +688,9 @@ mod tests {
     }
 
     #[test]
-    fn test_rhythm_discipline_has_nine_keys() {
+    fn test_rhythm_discipline_has_eighteen_keys() {
         let keys = TrainingDiscipline::RhythmOffsetDetection.statistics_keys();
-        assert_eq!(keys.len(), 9);
+        assert_eq!(keys.len(), 18);
         // Verify all combinations present
         for tempo in TempoRange::ALL {
             for dir in RhythmDirection::ALL {
@@ -716,12 +716,12 @@ mod tests {
     }
 
     #[test]
-    fn test_all_rhythm_disciplines_have_nine_keys() {
+    fn test_all_rhythm_disciplines_have_eighteen_keys() {
         for discipline in [
             TrainingDiscipline::RhythmOffsetDetection,
             TrainingDiscipline::ContinuousRhythmMatching,
         ] {
-            assert_eq!(discipline.statistics_keys().len(), 9, "{discipline:?}");
+            assert_eq!(discipline.statistics_keys().len(), 18, "{discipline:?}");
         }
     }
 
@@ -796,14 +796,14 @@ mod tests {
 
     #[test]
     fn test_rhythm_offset_statistics_key() {
-        // 80 BPM → Medium, negative offset → Early
+        // 80 BPM → Moderate, negative offset → Early
         let record = rhythm_record(80, -5.0);
         let key = TrainingDiscipline::RhythmOffsetDetection.rhythm_offset_statistics_key(&record);
         assert_eq!(
             key,
             Some(StatisticsKey::Rhythm(
                 TrainingDiscipline::RhythmOffsetDetection,
-                TempoRange::Medium,
+                TempoRange::Moderate,
                 RhythmDirection::Early,
             ))
         );

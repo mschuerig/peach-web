@@ -256,15 +256,22 @@ help-profile-baseline-title = Zielwert
 help-profile-baseline-body = Die grüne gestrichelte Linie ist dein Ziel — wenn sich die Trendlinie ihr nähert, wird dein Gehör schärfer.
 help-profile-zones-title = Zeitzonen
 help-profile-zones-body = Das Diagramm gruppiert deine Daten nach Zeit: Monate links, aktuelle Tage in der Mitte und die heutigen Sitzungen rechts.
+help-profile-spectrogram-title = Rhythmus-Spektrogramm
+help-profile-spectrogram-body = Das farbige Raster zeigt deine Rhythmus-Genauigkeit über verschiedene Tempobereiche im Zeitverlauf. Jede Zeile ist ein Tempobereich, jede Spalte ein Zeitabschnitt. Die Farbe zeigt dir, wie präzise dein Timing war.
+help-profile-spectrogram-colors-title = Spektrogramm-Farben
+help-profile-spectrogram-colors-body = Blaugrün bedeutet exzellent, Grün ist präzise, Gelb ist moderat, Orange ist ungenau und Rot bedeutet unregelmäßig. Tippe auf eine Zelle für eine detaillierte Aufschlüsselung von frühen und späten Treffern.
 
 ## Chart Annotations
 chart-annotation-records = { $count } Einträge
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } Einträge
 
 ## Spectrogram
+tempo-range-very-slow = Sehr langsam
 tempo-range-slow = Langsam
-tempo-range-medium = Mittel
+tempo-range-moderate = Moderat
+tempo-range-brisk = Zügig
 tempo-range-fast = Schnell
+tempo-range-very-fast = Sehr schnell
 spectrogram-early = Früh
 spectrogram-late = Spät
 spectrogram-rec = { $count } Eintr.

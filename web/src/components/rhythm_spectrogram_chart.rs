@@ -18,8 +18,10 @@ const MARGIN_BOTTOM: f64 = 24.0;
 
 fn cell_fill(level: Option<SpectrogramAccuracyLevel>) -> &'static str {
     match level {
+        Some(SpectrogramAccuracyLevel::Excellent) => "rgb(45, 212, 191)",
         Some(SpectrogramAccuracyLevel::Precise) => "rgb(34, 197, 94)",
         Some(SpectrogramAccuracyLevel::Moderate) => "rgb(234, 179, 8)",
+        Some(SpectrogramAccuracyLevel::Loose) => "rgb(249, 115, 22)",
         Some(SpectrogramAccuracyLevel::Erratic) => "rgb(239, 68, 68)",
         None => "rgb(156, 163, 175)",
     }
@@ -34,9 +36,12 @@ fn cell_opacity(level: Option<SpectrogramAccuracyLevel>) -> &'static str {
 
 fn tempo_range_i18n_key(range: domain::TempoRange) -> &'static str {
     match range {
+        domain::TempoRange::VerySlow => "tempo-range-very-slow",
         domain::TempoRange::Slow => "tempo-range-slow",
-        domain::TempoRange::Medium => "tempo-range-medium",
+        domain::TempoRange::Moderate => "tempo-range-moderate",
+        domain::TempoRange::Brisk => "tempo-range-brisk",
         domain::TempoRange::Fast => "tempo-range-fast",
+        domain::TempoRange::VeryFast => "tempo-range-very-fast",
     }
 }
 

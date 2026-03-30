@@ -256,15 +256,22 @@ help-profile-baseline-title = Target Baseline
 help-profile-baseline-body = The green dashed line is your goal — as the trend line approaches it, your ear is getting sharper.
 help-profile-zones-title = Time Zones
 help-profile-zones-body = The chart groups your data by time: months on the left, recent days in the middle, and today's sessions on the right.
+help-profile-spectrogram-title = Rhythm Spectrogram
+help-profile-spectrogram-body = The colored grid shows your rhythm accuracy across tempo ranges over time. Each row is a tempo range, each column a time period. The color tells you how precise your timing was.
+help-profile-spectrogram-colors-title = Spectrogram Colors
+help-profile-spectrogram-colors-body = Teal means excellent, green is precise, yellow is moderate, orange is loose, and red means erratic. Click or tap any cell for a detailed breakdown of early and late hits.
 
 ## Chart Annotations
 chart-annotation-records = { $count } records
 chart-annotation-summary = { $date } — { $mean } { $unit }, ±{ $stddev }, { $count } records
 
 ## Spectrogram
+tempo-range-very-slow = Very Slow
 tempo-range-slow = Slow
-tempo-range-medium = Medium
+tempo-range-moderate = Moderate
+tempo-range-brisk = Brisk
 tempo-range-fast = Fast
+tempo-range-very-fast = Very Fast
 spectrogram-early = Early
 spectrogram-late = Late
 spectrogram-rec = { $count } rec

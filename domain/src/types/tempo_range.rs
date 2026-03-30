@@ -4,25 +4,40 @@ use crate::types::TempoBPM;
 /// Each range covers a portion of the 40–200 BPM spectrum.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TempoRange {
-    /// 40–79 BPM
+    /// 40–59 BPM
+    VerySlow,
+    /// 60–79 BPM
     Slow,
-    /// 80–119 BPM
-    Medium,
-    /// 120–200 BPM
+    /// 80–99 BPM
+    Moderate,
+    /// 100–119 BPM
+    Brisk,
+    /// 120–159 BPM
     Fast,
+    /// 160–200 BPM
+    VeryFast,
 }
 
 impl TempoRange {
-    /// All tempo range variants.
-    pub const ALL: [TempoRange; 3] = [TempoRange::Slow, TempoRange::Medium, TempoRange::Fast];
+    /// All tempo range variants in ascending order.
+    pub const ALL: [TempoRange; 6] = [
+        TempoRange::VerySlow,
+        TempoRange::Slow,
+        TempoRange::Moderate,
+        TempoRange::Brisk,
+        TempoRange::Fast,
+        TempoRange::VeryFast,
+    ];
 
     /// Midpoint BPM for threshold calculations.
-    /// Slow: 60, Medium: 100, Fast: 160.
     pub fn midpoint_bpm(self) -> u16 {
         match self {
-            TempoRange::Slow => 60,
-            TempoRange::Medium => 100,
-            TempoRange::Fast => 160,
+            TempoRange::VerySlow => 50,
+            TempoRange::Slow => 70,
+            TempoRange::Moderate => 90,
+            TempoRange::Brisk => 110,
+            TempoRange::Fast => 140,
+            TempoRange::VeryFast => 180,
         }
     }
 
@@ -35,12 +50,18 @@ impl TempoRange {
     /// Classify a tempo into its range.
     pub fn from_bpm(tempo: TempoBPM) -> Self {
         let bpm = tempo.bpm();
-        if bpm < 80 {
+        if bpm < 60 {
+            TempoRange::VerySlow
+        } else if bpm < 80 {
             TempoRange::Slow
+        } else if bpm < 100 {
+            TempoRange::Moderate
         } else if bpm < 120 {
-            TempoRange::Medium
-        } else {
+            TempoRange::Brisk
+        } else if bpm < 160 {
             TempoRange::Fast
+        } else {
+            TempoRange::VeryFast
         }
     }
 }
@@ -50,28 +71,67 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_very_slow_range_boundaries() {
+        assert_eq!(
+            TempoRange::from_bpm(TempoBPM::new(40)),
+            TempoRange::VerySlow
+        );
+        assert_eq!(
+            TempoRange::from_bpm(TempoBPM::new(59)),
+            TempoRange::VerySlow
+        );
+    }
+
+    #[test]
     fn test_slow_range_boundaries() {
-        assert_eq!(TempoRange::from_bpm(TempoBPM::new(40)), TempoRange::Slow);
+        assert_eq!(TempoRange::from_bpm(TempoBPM::new(60)), TempoRange::Slow);
         assert_eq!(TempoRange::from_bpm(TempoBPM::new(79)), TempoRange::Slow);
     }
 
     #[test]
-    fn test_medium_range_boundaries() {
-        assert_eq!(TempoRange::from_bpm(TempoBPM::new(80)), TempoRange::Medium);
-        assert_eq!(TempoRange::from_bpm(TempoBPM::new(119)), TempoRange::Medium);
+    fn test_moderate_range_boundaries() {
+        assert_eq!(
+            TempoRange::from_bpm(TempoBPM::new(80)),
+            TempoRange::Moderate
+        );
+        assert_eq!(
+            TempoRange::from_bpm(TempoBPM::new(99)),
+            TempoRange::Moderate
+        );
+    }
+
+    #[test]
+    fn test_brisk_range_boundaries() {
+        assert_eq!(TempoRange::from_bpm(TempoBPM::new(100)), TempoRange::Brisk);
+        assert_eq!(TempoRange::from_bpm(TempoBPM::new(119)), TempoRange::Brisk);
     }
 
     #[test]
     fn test_fast_range_boundaries() {
         assert_eq!(TempoRange::from_bpm(TempoBPM::new(120)), TempoRange::Fast);
-        assert_eq!(TempoRange::from_bpm(TempoBPM::new(200)), TempoRange::Fast);
+        assert_eq!(TempoRange::from_bpm(TempoBPM::new(159)), TempoRange::Fast);
     }
 
     #[test]
-    fn test_all_contains_three_variants() {
-        assert_eq!(TempoRange::ALL.len(), 3);
+    fn test_very_fast_range_boundaries() {
+        assert_eq!(
+            TempoRange::from_bpm(TempoBPM::new(160)),
+            TempoRange::VeryFast
+        );
+        assert_eq!(
+            TempoRange::from_bpm(TempoBPM::new(200)),
+            TempoRange::VeryFast
+        );
+    }
+
+    #[test]
+    fn test_all_contains_six_variants() {
+        assert_eq!(TempoRange::ALL.len(), 6);
+        assert!(TempoRange::ALL.contains(&TempoRange::VerySlow));
         assert!(TempoRange::ALL.contains(&TempoRange::Slow));
-        assert!(TempoRange::ALL.contains(&TempoRange::Medium));
+        assert!(TempoRange::ALL.contains(&TempoRange::Moderate));
+        assert!(TempoRange::ALL.contains(&TempoRange::Brisk));
         assert!(TempoRange::ALL.contains(&TempoRange::Fast));
+        assert!(TempoRange::ALL.contains(&TempoRange::VeryFast));
     }
 }

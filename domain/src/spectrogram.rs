@@ -4,50 +4,79 @@ use crate::types::TempoRange;
 /// Accuracy classification for a spectrogram cell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SpectrogramAccuracyLevel {
+    /// Within excellent threshold — best tier.
+    Excellent,
     /// Within precise threshold.
     Precise,
     /// Between precise and moderate thresholds.
     Moderate,
-    /// Beyond moderate threshold.
+    /// Between moderate and loose thresholds.
+    Loose,
+    /// Beyond loose threshold.
     Erratic,
 }
 
 /// Hybrid floor/ceiling threshold model matching iOS `SpectrogramThresholds`.
 ///
-/// Thresholds are computed as a percentage of 16th-note duration at the tempo range
-/// midpoint, then clamped to absolute ms bounds. This ensures thresholds are
+/// Each accuracy boundary is defined by a base percentage of 16th-note duration,
+/// clamped to absolute ms floor/ceiling bounds. This ensures thresholds are
 /// musically meaningful at all tempos while staying within perceptible bounds.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SpectrogramThresholds {
+    /// Base percentage for "excellent" level (e.g. 0.04 = 4%).
+    pub excellent_base_percent: f64,
+    /// Absolute floor in ms for excellent threshold.
+    pub excellent_floor_ms: f64,
+    /// Absolute ceiling in ms for excellent threshold.
+    pub excellent_ceiling_ms: f64,
     /// Base percentage for "precise" level (e.g. 0.08 = 8%).
     pub precise_base_percent: f64,
     /// Absolute floor in ms for precise threshold.
     pub precise_floor_ms: f64,
     /// Absolute ceiling in ms for precise threshold.
     pub precise_ceiling_ms: f64,
-    /// Base percentage for "moderate" level (e.g. 0.20 = 20%).
+    /// Base percentage for "moderate" level (e.g. 0.15 = 15%).
     pub moderate_base_percent: f64,
     /// Absolute floor in ms for moderate threshold.
     pub moderate_floor_ms: f64,
     /// Absolute ceiling in ms for moderate threshold.
     pub moderate_ceiling_ms: f64,
+    /// Base percentage for "loose" level (e.g. 0.25 = 25%).
+    pub loose_base_percent: f64,
+    /// Absolute floor in ms for loose threshold.
+    pub loose_floor_ms: f64,
+    /// Absolute ceiling in ms for loose threshold.
+    pub loose_ceiling_ms: f64,
 }
 
 impl Default for SpectrogramThresholds {
-    /// iOS defaults: precise = 8% (12-30ms), moderate = 20% (25-50ms).
+    /// iOS defaults: excellent = 4% (8-15ms), precise = 8% (12-30ms),
+    /// moderate = 15% (20-40ms), loose = 25% (30-55ms).
     fn default() -> Self {
         Self {
+            excellent_base_percent: 0.04,
+            excellent_floor_ms: 8.0,
+            excellent_ceiling_ms: 15.0,
             precise_base_percent: 0.08,
             precise_floor_ms: 12.0,
             precise_ceiling_ms: 30.0,
-            moderate_base_percent: 0.20,
-            moderate_floor_ms: 25.0,
-            moderate_ceiling_ms: 50.0,
+            moderate_base_percent: 0.15,
+            moderate_floor_ms: 20.0,
+            moderate_ceiling_ms: 40.0,
+            loose_base_percent: 0.25,
+            loose_floor_ms: 30.0,
+            loose_ceiling_ms: 55.0,
         }
     }
 }
 
 impl SpectrogramThresholds {
+    /// Compute the excellent threshold in ms for a given tempo range.
+    pub fn excellent_threshold_ms(&self, range: TempoRange) -> f64 {
+        let base_ms = range.sixteenth_note_ms() * self.excellent_base_percent;
+        base_ms.clamp(self.excellent_floor_ms, self.excellent_ceiling_ms)
+    }
+
     /// Compute the precise threshold in ms for a given tempo range.
     pub fn precise_threshold_ms(&self, range: TempoRange) -> f64 {
         let base_ms = range.sixteenth_note_ms() * self.precise_base_percent;
@@ -60,12 +89,22 @@ impl SpectrogramThresholds {
         base_ms.clamp(self.moderate_floor_ms, self.moderate_ceiling_ms)
     }
 
+    /// Compute the loose threshold in ms for a given tempo range.
+    pub fn loose_threshold_ms(&self, range: TempoRange) -> f64 {
+        let base_ms = range.sixteenth_note_ms() * self.loose_base_percent;
+        base_ms.clamp(self.loose_floor_ms, self.loose_ceiling_ms)
+    }
+
     /// Classify an accuracy value (in ms) for a given tempo range.
     pub fn accuracy_level(&self, accuracy_ms: f64, range: TempoRange) -> SpectrogramAccuracyLevel {
-        if accuracy_ms <= self.precise_threshold_ms(range) {
+        if accuracy_ms <= self.excellent_threshold_ms(range) {
+            SpectrogramAccuracyLevel::Excellent
+        } else if accuracy_ms <= self.precise_threshold_ms(range) {
             SpectrogramAccuracyLevel::Precise
         } else if accuracy_ms <= self.moderate_threshold_ms(range) {
             SpectrogramAccuracyLevel::Moderate
+        } else if accuracy_ms <= self.loose_threshold_ms(range) {
+            SpectrogramAccuracyLevel::Loose
         } else {
             SpectrogramAccuracyLevel::Erratic
         }
@@ -134,7 +173,7 @@ pub struct SpectrogramColumn {
 /// The complete spectrogram grid for a rhythm discipline.
 #[derive(Clone, Debug)]
 pub struct SpectrogramData {
-    /// Only tempo ranges that have training data, in order (Slow, Medium, Fast).
+    /// Only tempo ranges that have training data, in ascending order.
     pub trained_ranges: Vec<TempoRange>,
     /// Columns (one per time bucket), each containing cells for trained ranges.
     pub columns: Vec<SpectrogramColumn>,
@@ -160,7 +199,7 @@ impl SpectrogramData {
         thresholds: SpectrogramThresholds,
     ) -> Self {
         // Determine which tempo ranges have data.
-        let mut has_data = [false; 3]; // indexed by TempoRange::ALL position
+        let mut has_data = [false; 6]; // indexed by TempoRange::ALL position
         for (range, _, metrics) in key_metrics {
             if !metrics.is_empty() {
                 let idx = TempoRange::ALL.iter().position(|r| r == range).unwrap();
@@ -313,71 +352,104 @@ mod tests {
     #[test]
     fn test_default_thresholds() {
         let t = SpectrogramThresholds::default();
+        assert_eq!(t.excellent_base_percent, 0.04);
+        assert_eq!(t.excellent_floor_ms, 8.0);
+        assert_eq!(t.excellent_ceiling_ms, 15.0);
         assert_eq!(t.precise_base_percent, 0.08);
         assert_eq!(t.precise_floor_ms, 12.0);
         assert_eq!(t.precise_ceiling_ms, 30.0);
-        assert_eq!(t.moderate_base_percent, 0.20);
-        assert_eq!(t.moderate_floor_ms, 25.0);
-        assert_eq!(t.moderate_ceiling_ms, 50.0);
+        assert_eq!(t.moderate_base_percent, 0.15);
+        assert_eq!(t.moderate_floor_ms, 20.0);
+        assert_eq!(t.moderate_ceiling_ms, 40.0);
+        assert_eq!(t.loose_base_percent, 0.25);
+        assert_eq!(t.loose_floor_ms, 30.0);
+        assert_eq!(t.loose_ceiling_ms, 55.0);
     }
 
     #[test]
-    fn test_precise_threshold_slow_tempo() {
-        // Slow midpoint = 60 BPM. 16th note = 60000/60/4 = 250ms.
-        // 8% of 250 = 20ms, within 12-30ms clamp → 20ms.
+    fn test_excellent_threshold_very_slow_tempo() {
+        // VerySlow midpoint = 50 BPM. 16th note = 60000/50/4 = 300ms.
+        // 4% of 300 = 12ms, within 8-15ms clamp → 12ms.
         let t = SpectrogramThresholds::default();
-        let ms = t.precise_threshold_ms(TempoRange::Slow);
-        assert!((ms - 20.0).abs() < 0.01);
-    }
-
-    #[test]
-    fn test_precise_threshold_medium_tempo() {
-        // Medium midpoint = 100 BPM. 16th note = 60000/100/4 = 150ms.
-        // 8% of 150 = 12ms, at floor → 12ms.
-        let t = SpectrogramThresholds::default();
-        let ms = t.precise_threshold_ms(TempoRange::Medium);
+        let ms = t.excellent_threshold_ms(TempoRange::VerySlow);
         assert!((ms - 12.0).abs() < 0.01);
     }
 
     #[test]
-    fn test_precise_threshold_fast_tempo() {
-        // Fast midpoint = 160 BPM. 16th note = 60000/160/4 = 93.75ms.
-        // 8% of 93.75 = 7.5ms, below floor 12ms → clamped to 12ms.
+    fn test_excellent_threshold_very_fast_tempo() {
+        // VeryFast midpoint = 180 BPM. 16th note = 60000/180/4 ≈ 83.33ms.
+        // 4% of 83.33 ≈ 3.33ms, below floor 8ms → clamped to 8ms.
         let t = SpectrogramThresholds::default();
-        let ms = t.precise_threshold_ms(TempoRange::Fast);
+        let ms = t.excellent_threshold_ms(TempoRange::VeryFast);
+        assert!((ms - 8.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_precise_threshold_slow_tempo() {
+        // Slow midpoint = 70 BPM. 16th note = 60000/70/4 ≈ 214.29ms.
+        // 8% of 214.29 ≈ 17.14ms, within 12-30ms clamp → 17.14ms.
+        let t = SpectrogramThresholds::default();
+        let ms = t.precise_threshold_ms(TempoRange::Slow);
+        assert!((ms - 17.14).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_precise_threshold_very_fast_tempo() {
+        // VeryFast midpoint = 180 BPM. 16th note ≈ 83.33ms.
+        // 8% of 83.33 ≈ 6.67ms, below floor 12ms → clamped to 12ms.
+        let t = SpectrogramThresholds::default();
+        let ms = t.precise_threshold_ms(TempoRange::VeryFast);
         assert!((ms - 12.0).abs() < 0.01);
     }
 
     #[test]
     fn test_moderate_threshold_slow_tempo() {
-        // 20% of 250ms = 50ms, at ceiling → 50ms.
+        // 15% of 214.29ms ≈ 32.14ms, within 20-40ms → 32.14ms.
         let t = SpectrogramThresholds::default();
         let ms = t.moderate_threshold_ms(TempoRange::Slow);
-        assert!((ms - 50.0).abs() < 0.01);
+        assert!((ms - 32.14).abs() < 0.01);
     }
 
     #[test]
-    fn test_moderate_threshold_medium_tempo() {
-        // 20% of 150ms = 30ms, within 25-50ms → 30ms.
+    fn test_moderate_threshold_very_fast_tempo() {
+        // 15% of 83.33ms ≈ 12.5ms, below floor 20ms → clamped to 20ms.
         let t = SpectrogramThresholds::default();
-        let ms = t.moderate_threshold_ms(TempoRange::Medium);
+        let ms = t.moderate_threshold_ms(TempoRange::VeryFast);
+        assert!((ms - 20.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_loose_threshold_slow_tempo() {
+        // 25% of 214.29ms ≈ 53.57ms, within 30-55ms → 53.57ms.
+        let t = SpectrogramThresholds::default();
+        let ms = t.loose_threshold_ms(TempoRange::Slow);
+        assert!((ms - 53.57).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_loose_threshold_very_fast_tempo() {
+        // 25% of 83.33ms ≈ 20.83ms, below floor 30ms → clamped to 30ms.
+        let t = SpectrogramThresholds::default();
+        let ms = t.loose_threshold_ms(TempoRange::VeryFast);
         assert!((ms - 30.0).abs() < 0.01);
     }
 
     #[test]
-    fn test_moderate_threshold_fast_tempo() {
-        // 20% of 93.75ms = 18.75ms, below floor 25ms → clamped to 25ms.
+    fn test_accuracy_level_excellent() {
         let t = SpectrogramThresholds::default();
-        let ms = t.moderate_threshold_ms(TempoRange::Fast);
-        assert!((ms - 25.0).abs() < 0.01);
+        // 5ms at Slow (excellent threshold ≈ 8.57ms) → excellent
+        assert_eq!(
+            t.accuracy_level(5.0, TempoRange::Slow),
+            SpectrogramAccuracyLevel::Excellent
+        );
     }
 
     #[test]
     fn test_accuracy_level_precise() {
         let t = SpectrogramThresholds::default();
-        // 10ms at Slow (threshold=20ms) → precise
+        // 12ms at Slow (excellent ≈ 8.57ms, precise ≈ 17.14ms) → precise
         assert_eq!(
-            t.accuracy_level(10.0, TempoRange::Slow),
+            t.accuracy_level(12.0, TempoRange::Slow),
             SpectrogramAccuracyLevel::Precise
         );
     }
@@ -385,17 +457,27 @@ mod tests {
     #[test]
     fn test_accuracy_level_moderate() {
         let t = SpectrogramThresholds::default();
-        // 35ms at Slow (precise=20ms, moderate=50ms) → moderate
+        // 25ms at Slow (precise ≈ 17.14ms, moderate ≈ 32.14ms) → moderate
         assert_eq!(
-            t.accuracy_level(35.0, TempoRange::Slow),
+            t.accuracy_level(25.0, TempoRange::Slow),
             SpectrogramAccuracyLevel::Moderate
+        );
+    }
+
+    #[test]
+    fn test_accuracy_level_loose() {
+        let t = SpectrogramThresholds::default();
+        // 40ms at Slow (moderate ≈ 32.14ms, loose ≈ 53.57ms) → loose
+        assert_eq!(
+            t.accuracy_level(40.0, TempoRange::Slow),
+            SpectrogramAccuracyLevel::Loose
         );
     }
 
     #[test]
     fn test_accuracy_level_erratic() {
         let t = SpectrogramThresholds::default();
-        // 60ms at Slow (moderate=50ms) → erratic
+        // 60ms at Slow (loose ≈ 53.57ms) → erratic
         assert_eq!(
             t.accuracy_level(60.0, TempoRange::Slow),
             SpectrogramAccuracyLevel::Erratic
@@ -405,19 +487,30 @@ mod tests {
     #[test]
     fn test_accuracy_level_from_percent() {
         let t = SpectrogramThresholds::default();
-        // Slow: 16th note = 250ms. 4% of 250 = 10ms → precise (threshold=20ms)
+        // Slow: 16th note ≈ 214.29ms.
+        // 2% of 214.29 ≈ 4.29ms → excellent (threshold ≈ 8.57ms)
         assert_eq!(
-            t.accuracy_level_from_percent(4.0, TempoRange::Slow),
+            t.accuracy_level_from_percent(2.0, TempoRange::Slow),
+            SpectrogramAccuracyLevel::Excellent
+        );
+        // 6% of 214.29 ≈ 12.86ms → precise (excellent ≈ 8.57ms, precise ≈ 17.14ms)
+        assert_eq!(
+            t.accuracy_level_from_percent(6.0, TempoRange::Slow),
             SpectrogramAccuracyLevel::Precise
         );
-        // 12% of 250 = 30ms → moderate (precise=20ms, moderate=50ms)
+        // 12% of 214.29 ≈ 25.71ms → moderate (precise ≈ 17.14ms, moderate ≈ 32.14ms)
         assert_eq!(
             t.accuracy_level_from_percent(12.0, TempoRange::Slow),
             SpectrogramAccuracyLevel::Moderate
         );
-        // 25% of 250 = 62.5ms → erratic (moderate=50ms)
+        // 20% of 214.29 ≈ 42.86ms → loose (moderate ≈ 32.14ms, loose ≈ 53.57ms)
         assert_eq!(
-            t.accuracy_level_from_percent(25.0, TempoRange::Slow),
+            t.accuracy_level_from_percent(20.0, TempoRange::Slow),
+            SpectrogramAccuracyLevel::Loose
+        );
+        // 30% of 214.29 ≈ 64.29ms → erratic (loose ≈ 53.57ms)
+        assert_eq!(
+            t.accuracy_level_from_percent(30.0, TempoRange::Slow),
             SpectrogramAccuracyLevel::Erratic
         );
     }
@@ -501,21 +594,21 @@ mod tests {
 
     #[test]
     fn test_compute_only_trained_ranges_appear() {
-        // Only Medium has data — Slow and Fast should be excluded.
+        // Only Moderate has data — other ranges should be excluded.
         let buckets = vec![make_bucket(0.0, 100.0, crate::BucketSize::Day)];
         let key_metrics = vec![
             (
-                TempoRange::Medium,
+                TempoRange::Moderate,
                 RhythmDirection::Early,
                 vec![make_metric(50.0, 8.0)],
             ),
-            (TempoRange::Medium, RhythmDirection::Late, vec![]),
-            (TempoRange::Medium, RhythmDirection::OnBeat, vec![]),
+            (TempoRange::Moderate, RhythmDirection::Late, vec![]),
+            (TempoRange::Moderate, RhythmDirection::OnBeat, vec![]),
         ];
 
         let data =
             SpectrogramData::compute(&buckets, &key_metrics, SpectrogramThresholds::default());
-        assert_eq!(data.trained_ranges, vec![TempoRange::Medium]);
+        assert_eq!(data.trained_ranges, vec![TempoRange::Moderate]);
     }
 
     #[test]
@@ -577,7 +670,7 @@ mod tests {
             (
                 TempoRange::Slow,
                 RhythmDirection::Early,
-                vec![make_metric(50.0, 4.0)],
+                vec![make_metric(50.0, 2.0)],
             ),
             (TempoRange::Slow, RhythmDirection::Late, vec![]),
             (TempoRange::Slow, RhythmDirection::OnBeat, vec![]),
@@ -586,10 +679,10 @@ mod tests {
         let data =
             SpectrogramData::compute(&buckets, &key_metrics, SpectrogramThresholds::default());
         let cell = &data.columns[0].cells[0];
-        // 4% of 16th at Slow (250ms) = 10ms → precise (threshold=20ms)
+        // 2% of 16th at Slow (214.29ms) ≈ 4.29ms → excellent (threshold ≈ 8.57ms)
         assert_eq!(
             data.accuracy_level(cell, TempoRange::Slow),
-            Some(SpectrogramAccuracyLevel::Precise)
+            Some(SpectrogramAccuracyLevel::Excellent)
         );
     }
 
