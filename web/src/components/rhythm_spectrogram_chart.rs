@@ -16,6 +16,26 @@ const MARGIN_RIGHT: f64 = 10.0;
 const MARGIN_TOP: f64 = 10.0;
 const MARGIN_BOTTOM: f64 = 24.0;
 
+const LEGEND_LEVELS: [(SpectrogramAccuracyLevel, &str); 5] = [
+    (
+        SpectrogramAccuracyLevel::Excellent,
+        "spectrogram-level-excellent",
+    ),
+    (
+        SpectrogramAccuracyLevel::Precise,
+        "spectrogram-level-precise",
+    ),
+    (
+        SpectrogramAccuracyLevel::Moderate,
+        "spectrogram-level-moderate",
+    ),
+    (SpectrogramAccuracyLevel::Loose, "spectrogram-level-loose"),
+    (
+        SpectrogramAccuracyLevel::Erratic,
+        "spectrogram-level-erratic",
+    ),
+];
+
 fn cell_fill(level: Option<SpectrogramAccuracyLevel>) -> &'static str {
     match level {
         Some(SpectrogramAccuracyLevel::Excellent) => "rgb(45, 212, 191)",
@@ -196,13 +216,13 @@ pub fn RhythmSpectrogramChart(
         .enumerate()
         .map(|(ri, &range)| {
             let ly = MARGIN_TOP + (row_count - 1 - ri) as f64 * cell_h + cell_h / 2.0;
-            let label = untrack(|| i18n.tr(tempo_range_i18n_key(range)));
+            let label = range.bpm_label();
             view! {
                 <text
                     x=format!("{:.1}", MARGIN_LEFT - 4.0)
                     y=format!("{ly:.1}")
                     text-anchor="end" dominant-baseline="central"
-                    font-size="11" fill="currentColor" opacity="0.7"
+                    font-size="10" fill="currentColor" opacity="0.7"
                 >
                     {label}
                 </text>
@@ -445,6 +465,21 @@ pub fn RhythmSpectrogramChart(
             {selection_and_popover}
         </svg>
         </div>
+        </div>
+        <div class="flex flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+            {LEGEND_LEVELS.iter().map(|(level, key)| {
+                let color = cell_fill(Some(*level));
+                let label = untrack(|| i18n.tr(key));
+                view! {
+                    <span class="inline-flex items-center gap-1">
+                        <span
+                            class="inline-block w-2.5 h-2.5 rounded-sm"
+                            style=format!("background-color: {color}; opacity: 0.7;")
+                        />
+                        {label}
+                    </span>
+                }
+            }).collect::<Vec<_>>()}
         </div>
         <div class="sr-only" role="status" aria-live="polite">
             {live_region_text}

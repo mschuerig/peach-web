@@ -47,6 +47,18 @@ impl TempoRange {
         60_000.0 / self.midpoint_bpm() as f64 / 4.0
     }
 
+    /// BPM range label for display, e.g. "80\u{2013}99".
+    pub fn bpm_label(self) -> &'static str {
+        match self {
+            TempoRange::VerySlow => "40\u{2013}59",
+            TempoRange::Slow => "60\u{2013}79",
+            TempoRange::Moderate => "80\u{2013}99",
+            TempoRange::Brisk => "100\u{2013}119",
+            TempoRange::Fast => "120\u{2013}159",
+            TempoRange::VeryFast => "160\u{2013}200",
+        }
+    }
+
     /// Classify a tempo into its range.
     pub fn from_bpm(tempo: TempoBPM) -> Self {
         let bpm = tempo.bpm();
