@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use leptos_fluent::{leptos_fluent, move_tr};
 use leptos_router::{
     components::{A, Route, Router, Routes},
+    hooks::use_navigate,
     path,
 };
 use send_wrapper::SendWrapper;
@@ -56,6 +57,33 @@ pub fn base_href(path: &str) -> String {
     }
 }
 
+/// Navigate back: if in-app depth > 0, use browser history; otherwise go to `/`.
+pub fn go_back() {
+    let NavDepth(depth) = use_context::<NavDepth>().expect("NavDepth context");
+    let NavBackInProgress(back_flag) =
+        use_context::<NavBackInProgress>().expect("NavBackInProgress context");
+    let current = depth.get_untracked();
+    if current > 0 {
+        back_flag.set(true);
+        depth.set(current - 1);
+        web_sys::window()
+            .unwrap()
+            .history()
+            .unwrap()
+            .back()
+            .unwrap();
+    } else {
+        let navigate = use_navigate();
+        navigate("/", Default::default());
+    }
+}
+
+/// Record an in-app forward navigation (increment depth counter).
+pub fn nav_push() {
+    let NavDepth(depth) = use_context::<NavDepth>().expect("NavDepth context");
+    depth.set(depth.get_untracked() + 1);
+}
+
 // Newtype wrappers for RwSignal<bool> contexts — Leptos uses types for context
 // lookup, so multiple RwSignal<bool> values would shadow each other.
 #[derive(Clone, Copy)]
@@ -66,6 +94,16 @@ pub struct WorkletConnecting(pub RwSignal<bool>);
 
 #[derive(Clone, Copy)]
 pub struct AudioNeedsGesture(pub RwSignal<bool>);
+
+/// In-app navigation depth counter. Incremented on each in-app navigation,
+/// decremented on back. When 0, back navigates to `/`.
+#[derive(Clone, Copy)]
+pub struct NavDepth(pub RwSignal<u32>);
+
+/// Flag to distinguish app-initiated `history.back()` (from `go_back()`)
+/// vs browser-initiated back/forward in the `popstate` listener.
+#[derive(Clone, Copy)]
+pub struct NavBackInProgress(pub RwSignal<bool>);
 use crate::adapters::audio_soundfont::{SF2Preset, WorkletBridge};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::components::{
@@ -99,6 +137,8 @@ pub fn App() -> impl IntoView {
     let worklet_assets = RwSignal::new_local(None::<Rc<WorkletAssets>>);
     let worklet_connecting = RwSignal::new(false);
     let audio_needs_gesture = RwSignal::new(false);
+    let nav_depth = RwSignal::new(0u32);
+    let nav_back_in_progress = RwSignal::new(false);
 
     // Always fetch SF2 so presets are available in settings.
     // Initial status is Fetching — views that need SF2 show loading indicator.
@@ -117,6 +157,8 @@ pub fn App() -> impl IntoView {
     provide_context(WorkletConnecting(worklet_connecting));
     provide_context(AudioNeedsGesture(audio_needs_gesture));
     provide_context(BasePath(base_path().into_owned()));
+    provide_context(NavDepth(nav_depth));
+    provide_context(NavBackInProgress(nav_back_in_progress));
 
     // Async hydration — runs after mount
     let profile_for_hydration = Rc::clone(&*profile);
@@ -221,6 +263,30 @@ pub fn App() -> impl IntoView {
                 log::warn!("Failed to fetch worklet assets (oscillator fallback): {e}");
                 sf2_load_status.set(SoundFontLoadStatus::Failed(e));
             }
+        }
+    });
+
+    // Popstate listener: distinguish app-initiated history.back() from browser back/forward.
+    // App-initiated: NavBackInProgress is true — just reset the flag.
+    // Browser-initiated: reset depth to 0 (safe fallback).
+    let popstate_handler =
+        Closure::<dyn FnMut(web_sys::Event)>::new(move |_event: web_sys::Event| {
+            if nav_back_in_progress.get_untracked() {
+                nav_back_in_progress.set(false);
+            } else {
+                nav_depth.set(0);
+            }
+        });
+    let popstate_fn: JsValue = popstate_handler.as_ref().clone();
+    web_sys::window()
+        .unwrap()
+        .add_event_listener_with_callback("popstate", popstate_fn.unchecked_ref())
+        .unwrap();
+    let _popstate_closure = StoredValue::new_local(popstate_handler);
+    on_cleanup(move || {
+        if let Some(window) = web_sys::window() {
+            let _ =
+                window.remove_event_listener_with_callback("popstate", popstate_fn.unchecked_ref());
         }
     });
 

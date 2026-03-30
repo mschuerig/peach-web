@@ -1,22 +1,21 @@
 use leptos::prelude::*;
 use leptos_fluent::move_tr;
-use leptos_router::hooks::use_navigate;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 use web_sys::KeyboardEvent;
 
 use super::help_content::HelpContent;
 use super::nav_bar::NavBar;
+use crate::app::go_back;
 use crate::help_sections::{INFO_ACKNOWLEDGMENTS, INFO_HELP};
 
 #[component]
 pub fn InfoView() -> impl IntoView {
-    // Escape key handler — navigates back to start page
-    let navigate = use_navigate();
+    // Escape key handler — navigates back
     let keydown_handler = Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
         if ev.key() == "Escape" {
             ev.prevent_default();
-            navigate("/", Default::default());
+            go_back();
         }
     });
 
@@ -40,12 +39,10 @@ pub fn InfoView() -> impl IntoView {
     view! {
         <div class="pt-4 pb-12">
             <NavBar title=move_tr!("app-name") left_content=ViewFn::from({
-                let navigate = use_navigate();
                 move || {
-                    let navigate = navigate.clone();
                     view! {
                         <button
-                            on:click=move |_| navigate("/", Default::default())
+                            on:click=move |_| go_back()
                             class="min-h-11 min-w-11 px-3 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 dark:focus:ring-offset-gray-900"
                             aria-label=move || move_tr!("done").get()
                         >

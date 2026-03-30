@@ -7,7 +7,7 @@ use leptos_router::components::A;
 use super::nav_bar::{NavBar, NavIconButton};
 use super::progress_sparkline::ProgressSparkline;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
-use crate::app::{SoundFontLoadStatus, base_href};
+use crate::app::{SoundFontLoadStatus, base_href, nav_push};
 use crate::interval_codes::encode_intervals;
 use domain::{Interval, TrainingDiscipline};
 
@@ -50,6 +50,8 @@ fn TrainingCard(
             on:click=move |ev| {
                 if disabled.get_untracked() {
                     ev.prevent_default();
+                } else {
+                    nav_push();
                 }
             }
         >

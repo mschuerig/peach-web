@@ -278,11 +278,8 @@ pub fn PitchDiscriminationView() -> impl IntoView {
     };
     let on_nav_start = {
         let on_nav_away = on_nav_away.clone();
-        let navigate = navigate.clone();
-        move |ev: leptos::ev::MouseEvent| {
-            ev.prevent_default();
+        move || {
             on_nav_away();
-            navigate("/", Default::default());
         }
     };
     // Help modal state
@@ -303,10 +300,10 @@ pub fn PitchDiscriminationView() -> impl IntoView {
         help_paused.set(false);
     });
 
-    // Shared interruption closure — stops training and navigates to start page
+    // Shared interruption closure — stops training and navigates to start page.
+    // System interrupts always go to `/` regardless of depth (not user back-navigation).
     let interrupt_and_navigate = {
         let cancelled = Rc::clone(&cancelled);
-        let navigate = navigate.clone();
         Rc::new(move || {
             if cancelled.get() {
                 return;
@@ -729,10 +726,9 @@ pub fn PitchDiscriminationView() -> impl IntoView {
         }
     });
 
-    #[allow(clippy::redundant_closure)]
     let on_back_cb = {
         let handler = SendWrapper::new(on_nav_start);
-        Callback::new(move |ev| handler(ev))
+        Callback::new(move |()| handler())
     };
     #[allow(clippy::redundant_closure)]
     let on_help_cb = {
@@ -742,7 +738,7 @@ pub fn PitchDiscriminationView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title=discrimination_title back_href=base_href("/") on_back=on_back_cb pill_group=true>
+            <NavBar title=discrimination_title show_back=true on_back=on_back_cb pill_group=true>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb circled=true />
                 <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
                 <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />

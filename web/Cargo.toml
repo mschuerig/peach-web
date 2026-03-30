@@ -81,6 +81,7 @@ web-sys = { version = "0.3", features = [
     "HtmlInputElement",
     "Storage",
     "Url",
+    "History",
     "Window",
 ] }
 

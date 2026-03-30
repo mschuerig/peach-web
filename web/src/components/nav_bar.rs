@@ -2,6 +2,8 @@ use leptos::prelude::*;
 use leptos_fluent::tr;
 use leptos_router::components::A;
 
+use crate::app::{go_back, nav_push};
+
 /// Reusable icon button for navigation bars.
 /// Renders as `<A>` when href provided, `<button>` when on_click provided.
 /// When `filled` is true, the button has a visible circle background (matching back button style).
@@ -29,7 +31,9 @@ pub fn NavIconButton(
 
     if let Some(href) = href {
         view! {
-            <A href=href attr:class=class attr:aria-label=move || label.get()>
+            <A href=href attr:class=class attr:aria-label=move || label.get()
+                on:click=move |_| nav_push()
+            >
                 <span class=icon_class aria-hidden="true">{icon}</span>
             </A>
         }
@@ -58,12 +62,12 @@ pub fn NavBar(
     /// The page title displayed centered in the bar.
     #[prop(into)]
     title: Signal<String>,
-    /// Optional href for back navigation. If None, no back button is shown (unless left_content provided).
+    /// When true, a back button is shown. Uses `go_back()` for navigation.
+    #[prop(optional)]
+    show_back: bool,
+    /// Optional click handler called before `go_back()` (for training views that need to stop sessions).
     #[prop(optional, into)]
-    back_href: Option<String>,
-    /// Optional click handler for back button (for training views that need to stop sessions).
-    #[prop(optional, into)]
-    on_back: Option<Callback<leptos::ev::MouseEvent>>,
+    on_back: Option<Callback<()>>,
     /// Optional custom left-side content (replaces back button). Used by start page for info icon.
     #[prop(optional, into)]
     left_content: Option<ViewFn>,
@@ -78,24 +82,23 @@ pub fn NavBar(
 
     let left = if let Some(left_fn) = left_content {
         left_fn.run()
-    } else {
-        match (back_href, on_back) {
-            (Some(href), Some(on_back)) => view! {
-                <A href=href attr:class=back_class attr:aria-label=move || tr!("back")
-                    on:click=move |ev| on_back.run(ev)
-                >
-                    <span aria-hidden="true">{"\u{2039}"}</span>
-                </A>
-            }
-            .into_any(),
-            (Some(href), None) => view! {
-                <A href=href attr:class=back_class attr:aria-label=move || tr!("back")>
-                    <span aria-hidden="true">{"\u{2039}"}</span>
-                </A>
-            }
-            .into_any(),
-            _ => view! { <span></span> }.into_any(),
+    } else if show_back {
+        let on_back = on_back.unwrap_or_else(|| Callback::new(|()| {}));
+        view! {
+            <button
+                on:click=move |_| {
+                    on_back.run(());
+                    go_back();
+                }
+                class=back_class
+                aria-label=move || tr!("back")
+            >
+                <span aria-hidden="true">{"\u{2039}"}</span>
+            </button>
         }
+        .into_any()
+    } else {
+        view! { <span></span> }.into_any()
     };
 
     let right_class = if pill_group {

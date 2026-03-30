@@ -15,7 +15,6 @@ use crate::adapters::csv_export_import::{ImportExportStatus, ResetStatus};
 use crate::adapters::indexeddb_store::IndexedDbStore;
 use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::sound_preview::SoundPreview;
-use crate::app::base_href;
 use crate::app::{AudioNeedsGesture, SoundFontLoadStatus, WorkletAssets, WorkletConnecting};
 use domain::ports::UserSettings;
 use domain::types::{DetunedMIDINote, Frequency, MIDINote, SoundSourceID, StepPosition, TempoBPM};
@@ -332,7 +331,7 @@ pub fn SettingsView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title=move_tr!("settings-title") back_href=base_href("/")>
+            <NavBar title=move_tr!("settings-title") show_back=true>
                 <NavIconButton label=Signal::derive(move || tr!("nav-help")) icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) circled=true />
             </NavBar>
             <HelpModal title=move_tr!("settings-help-title") sections=SETTINGS_HELP is_open=is_help_open />

@@ -5,8 +5,6 @@ use leptos::prelude::*;
 use leptos_fluent::{I18n, move_tr, tr};
 use send_wrapper::SendWrapper;
 
-use crate::app::base_href;
-
 use domain::{PerceptualProfile, TrainingDiscipline, TrainingDisciplineState};
 
 use super::help_content::HelpModal;
@@ -27,7 +25,7 @@ pub fn ProfileView() -> impl IntoView {
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title=move_tr!("profile-title") back_href=base_href("/")>
+            <NavBar title=move_tr!("profile-title") show_back=true>
                 <NavIconButton label=Signal::derive(move || tr!("nav-help")) icon="?".to_string() on_click=Callback::new(move |_| is_help_open.set(true)) circled=true />
             </NavBar>
             <HelpModal title=move_tr!("profile-help-title") sections=PROFILE_HELP is_open=is_help_open />
