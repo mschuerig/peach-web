@@ -11,10 +11,11 @@ use crate::components::progress_chart::{
 
 const VIEWBOX_WIDTH: f64 = 300.0;
 const VISIBLE_BUCKETS: usize = 8;
-const MARGIN_LEFT: f64 = 50.0;
+const MARGIN_LEFT: f64 = 10.0;
 const MARGIN_RIGHT: f64 = 10.0;
 const MARGIN_TOP: f64 = 10.0;
 const MARGIN_BOTTOM: f64 = 24.0;
+const Y_AXIS_VB_W: f64 = 50.0;
 
 const LEGEND_LEVELS: [(SpectrogramAccuracyLevel, &str); 5] = [
     (
@@ -209,8 +210,8 @@ pub fn RhythmSpectrogramChart(
         }
     }
 
-    // Y-axis labels
-    let range_labels: Vec<_> = data
+    // Y-axis labels (right-side SVG)
+    let y_axis_labels: Vec<_> = data
         .trained_ranges
         .iter()
         .enumerate()
@@ -219,9 +220,9 @@ pub fn RhythmSpectrogramChart(
             let label = range.bpm_label();
             view! {
                 <text
-                    x=format!("{:.1}", MARGIN_LEFT - 4.0)
+                    x="4"
                     y=format!("{ly:.1}")
-                    text-anchor="end" dominant-baseline="central"
+                    text-anchor="start" dominant-baseline="central"
                     font-size="10" fill="currentColor" opacity="0.7"
                 >
                     {label}
@@ -446,7 +447,6 @@ pub fn RhythmSpectrogramChart(
             {zone_bgs}
             {dividers}
             {heatmap_cells}
-            {range_labels}
             {x_labels
                 .into_iter()
                 .map(|(lx, label)| {
@@ -465,6 +465,16 @@ pub fn RhythmSpectrogramChart(
             {selection_and_popover}
         </svg>
         </div>
+        // Fixed Y-axis (right side, non-scrolling)
+        <svg
+            viewBox=format!("0 0 {Y_AXIS_VB_W} {viewbox_height}")
+            class="flex-none w-10"
+            height="100%"
+            aria-hidden="true"
+            preserveAspectRatio="none"
+        >
+            {y_axis_labels}
+        </svg>
         </div>
         <div class="flex flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {LEGEND_LEVELS.iter().map(|(level, key)| {
