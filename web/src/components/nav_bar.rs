@@ -14,6 +14,10 @@ pub fn NavIconButton(
     #[prop(into)] icon: String,
     #[prop(optional, into)] href: Option<String>,
     #[prop(optional, into)] on_click: Option<Callback<leptos::ev::MouseEvent>>,
+    /// Optional callback fired before navigation when `href` is used.
+    /// Use for cleanup (e.g. stopping a training session) before navigating away.
+    #[prop(optional, into)]
+    before_nav: Option<Callback<()>>,
     #[prop(optional)] filled: bool,
     #[prop(optional)] circled: bool,
 ) -> impl IntoView {
@@ -32,7 +36,12 @@ pub fn NavIconButton(
     if let Some(href) = href {
         view! {
             <A href=href attr:class=class attr:aria-label=move || label.get()
-                on:click=move |_| nav_push()
+                on:click=move |_| {
+                    if let Some(cb) = before_nav {
+                        cb.run(());
+                    }
+                    nav_push();
+                }
             >
                 <span class=icon_class aria-hidden="true">{icon}</span>
             </A>

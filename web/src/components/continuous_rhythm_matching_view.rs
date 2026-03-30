@@ -21,7 +21,7 @@ use crate::adapters::midi_input;
 use crate::adapters::rhythm_scheduler::{
     RhythmScheduler, RhythmStep, SchedulerConfig, play_click_immediate, select_percussion_program,
 };
-use crate::app::{WorkletAssets, ensure_worklet_connected, nav_push};
+use crate::app::{WorkletAssets, base_href, ensure_worklet_connected};
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
@@ -149,8 +149,6 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
     let shared_ctx: Rc<RefCell<Option<Rc<RefCell<web_sys::AudioContext>>>>> =
         Rc::new(RefCell::new(None));
 
-    let navigate = use_navigate();
-
     // Navigation away handler
     let on_nav_away = {
         let cancelled = Rc::clone(&cancelled);
@@ -163,11 +161,11 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
             sr_announcement.set(untrack(|| i18n.tr("training-stopped")));
         }
     };
-    let on_nav_start = {
+    // Callback for stopping training — used by back button and settings/profile nav icons.
+    let on_nav_away_cb = {
         let on_nav_away = on_nav_away.clone();
-        move || {
-            on_nav_away();
-        }
+        let handler = SendWrapper::new(move |()| on_nav_away());
+        Callback::new(move |()| handler(()))
     };
 
     // Help modal
@@ -185,11 +183,7 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
         help_paused.set(false);
     });
 
-    // Clones for settings/profile nav callbacks (before interrupt_and_navigate takes ownership).
-    let on_nav_away_for_settings = on_nav_away.clone();
-    let on_nav_away_for_profile = on_nav_away.clone();
-    let navigate_for_settings = navigate.clone();
-    let navigate_for_profile = navigate.clone();
+    let navigate = use_navigate();
 
     // Shared interruption closure — system interrupts always go to `/`.
     let interrupt_and_navigate = {
@@ -653,31 +647,9 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
     let tempo_label =
         Signal::derive(move || tr!("bpm-label", {"value" => tempo.bpm().to_string()}));
 
-    let on_back_cb = {
-        let handler = SendWrapper::new(on_nav_start);
-        Callback::new(move |()| handler())
-    };
     #[allow(clippy::redundant_closure)]
     let on_help_cb = {
         let handler = SendWrapper::new(on_help_open);
-        Callback::new(move |ev| handler(ev))
-    };
-    #[allow(clippy::redundant_closure)]
-    let on_settings_cb = {
-        let handler = SendWrapper::new(move |_: leptos::ev::MouseEvent| {
-            on_nav_away_for_settings();
-            nav_push();
-            navigate_for_settings("/settings", Default::default());
-        });
-        Callback::new(move |ev| handler(ev))
-    };
-    #[allow(clippy::redundant_closure)]
-    let on_profile_cb = {
-        let handler = SendWrapper::new(move |_: leptos::ev::MouseEvent| {
-            on_nav_away_for_profile();
-            nav_push();
-            navigate_for_profile("/profile", Default::default());
-        });
         Callback::new(move |ev| handler(ev))
     };
 
@@ -693,10 +665,10 @@ pub fn ContinuousRhythmMatchingView() -> impl IntoView {
 
     view! {
         <div class="flex flex-col pt-4 pb-12 h-screen">
-            <NavBar title=fill_the_gap_title show_back=true on_back=on_back_cb pill_group=true>
+            <NavBar title=fill_the_gap_title show_back=true on_back=on_nav_away_cb pill_group=true>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb circled=true />
-                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() on_click=on_settings_cb />
-                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() on_click=on_profile_cb />
+                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") before_nav=on_nav_away_cb />
+                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") before_nav=on_nav_away_cb />
             </NavBar>
             <HelpModal title=move_tr!("fill-the-gap-help-title") sections=CONTINUOUS_RHYTHM_MATCHING_HELP is_open=is_help_open on_close=on_help_close />
 

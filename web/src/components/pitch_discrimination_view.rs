@@ -12,7 +12,7 @@ use wasm_bindgen_futures::{JsFuture, spawn_local};
 
 use leptos_fluent::{I18n, move_tr, tr};
 
-use crate::app::nav_push;
+use crate::app::base_href;
 use web_sys::KeyboardEvent;
 
 use crate::adapters::audio_context::{AudioContextManager, ensure_audio_ready};
@@ -276,12 +276,13 @@ pub fn PitchDiscriminationView() -> impl IntoView {
             sr_announcement.set(untrack(|| i18n.tr("training-stopped")));
         }
     };
-    let on_nav_start = {
+    // Callback for stopping training — used by back button and settings/profile nav icons.
+    let on_nav_away_cb = {
         let on_nav_away = on_nav_away.clone();
-        move || {
-            on_nav_away();
-        }
+        let handler = SendWrapper::new(move |()| on_nav_away());
+        Callback::new(move |()| handler(()))
     };
+
     // Help modal state
     let is_help_open = RwSignal::new(false);
     let on_help_open = {
@@ -299,12 +300,6 @@ pub fn PitchDiscriminationView() -> impl IntoView {
         is_help_open.set(false);
         help_paused.set(false);
     });
-
-    // Clones for settings/profile nav callbacks (before interrupt_and_navigate takes ownership).
-    let on_nav_away_for_settings = on_nav_away.clone();
-    let on_nav_away_for_profile = on_nav_away.clone();
-    let navigate_for_settings = navigate.clone();
-    let navigate_for_profile = navigate.clone();
 
     // Shared interruption closure — stops training and navigates to start page.
     // System interrupts always go to `/` regardless of depth (not user back-navigation).
@@ -732,40 +727,18 @@ pub fn PitchDiscriminationView() -> impl IntoView {
         }
     });
 
-    let on_back_cb = {
-        let handler = SendWrapper::new(on_nav_start);
-        Callback::new(move |()| handler())
-    };
     #[allow(clippy::redundant_closure)]
     let on_help_cb = {
         let handler = SendWrapper::new(on_help_open);
         Callback::new(move |ev| handler(ev))
     };
-    #[allow(clippy::redundant_closure)]
-    let on_settings_cb = {
-        let handler = SendWrapper::new(move |_: leptos::ev::MouseEvent| {
-            on_nav_away_for_settings();
-            nav_push();
-            navigate_for_settings("/settings", Default::default());
-        });
-        Callback::new(move |ev| handler(ev))
-    };
-    #[allow(clippy::redundant_closure)]
-    let on_profile_cb = {
-        let handler = SendWrapper::new(move |_: leptos::ev::MouseEvent| {
-            on_nav_away_for_profile();
-            nav_push();
-            navigate_for_profile("/profile", Default::default());
-        });
-        Callback::new(move |ev| handler(ev))
-    };
 
     view! {
         <div class="pt-4 pb-12">
-            <NavBar title=discrimination_title show_back=true on_back=on_back_cb pill_group=true>
+            <NavBar title=discrimination_title show_back=true on_back=on_nav_away_cb pill_group=true>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb circled=true />
-                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() on_click=on_settings_cb />
-                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() on_click=on_profile_cb />
+                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") before_nav=on_nav_away_cb />
+                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") before_nav=on_nav_away_cb />
             </NavBar>
             <HelpModal title=move_tr!("discrimination-help-title") sections=PITCH_DISCRIMINATION_HELP is_open=is_help_open on_close=on_help_close />
 

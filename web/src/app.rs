@@ -273,7 +273,7 @@ pub fn App() -> impl IntoView {
         Closure::<dyn FnMut(web_sys::Event)>::new(move |_event: web_sys::Event| {
             if nav_back_in_progress.get_untracked() {
                 nav_back_in_progress.set(false);
-            } else {
+            } else if nav_depth.get_untracked() != 0 {
                 nav_depth.set(0);
             }
         });
