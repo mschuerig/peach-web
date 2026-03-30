@@ -19,7 +19,7 @@ use crate::adapters::localstorage_settings::LocalStorageSettings;
 use crate::adapters::rhythm_scheduler::{
     RhythmScheduler, RhythmStep, SchedulerConfig, schedule_click_at, select_percussion_program,
 };
-use crate::app::{WorkletAssets, base_href, ensure_worklet_connected};
+use crate::app::{WorkletAssets, ensure_worklet_connected, nav_push};
 use crate::bridge::{ProfilePort, RecordPort, TimelinePort};
 use crate::components::TrainingStats;
 use crate::components::audio_gate_overlay::AudioGateOverlay;
@@ -254,6 +254,12 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
         is_help_open.set(false);
         help_paused.set(false);
     });
+
+    // Clones for settings/profile nav callbacks (before interrupt_and_navigate takes ownership).
+    let on_nav_away_for_settings = on_nav_away.clone();
+    let on_nav_away_for_profile = on_nav_away.clone();
+    let navigate_for_settings = navigate.clone();
+    let navigate_for_profile = navigate.clone();
 
     // Shared interruption closure — system interrupts always go to `/`.
     let interrupt_and_navigate = {
@@ -663,6 +669,24 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
         let handler = SendWrapper::new(on_help_open);
         Callback::new(move |ev| handler(ev))
     };
+    #[allow(clippy::redundant_closure)]
+    let on_settings_cb = {
+        let handler = SendWrapper::new(move |_: leptos::ev::MouseEvent| {
+            on_nav_away_for_settings();
+            nav_push();
+            navigate_for_settings("/settings", Default::default());
+        });
+        Callback::new(move |ev| handler(ev))
+    };
+    #[allow(clippy::redundant_closure)]
+    let on_profile_cb = {
+        let handler = SendWrapper::new(move |_: leptos::ev::MouseEvent| {
+            on_nav_away_for_profile();
+            nav_push();
+            navigate_for_profile("/profile", Default::default());
+        });
+        Callback::new(move |ev| handler(ev))
+    };
 
     let btn_enabled = "flex flex-1 flex-col items-center justify-center gap-4 w-full rounded-2xl bg-blue-500 px-6 py-12 text-white text-2xl font-semibold shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-offset-gray-900";
     let btn_disabled = "flex flex-1 flex-col items-center justify-center gap-4 w-full rounded-2xl bg-gray-300 px-6 py-12 text-gray-500 text-2xl font-semibold cursor-not-allowed dark:bg-gray-700 dark:text-gray-500";
@@ -671,8 +695,8 @@ pub fn RhythmOffsetDetectionView() -> impl IntoView {
         <div class="flex flex-col pt-4 pb-12 h-screen">
             <NavBar title=rhythm_offset_title show_back=true on_back=on_back_cb pill_group=true>
                 <NavIconButton label="Help".to_string() icon="?".to_string() on_click=on_help_cb circled=true />
-                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() href=base_href("/settings") />
-                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() href=base_href("/profile") />
+                <NavIconButton label="Settings".to_string() icon="\u{2699}\u{FE0F}".to_string() on_click=on_settings_cb />
+                <NavIconButton label="Profile".to_string() icon="\u{1F4CA}".to_string() on_click=on_profile_cb />
             </NavBar>
             <HelpModal title=move_tr!("rhythm-offset-help-title") sections=RHYTHM_OFFSET_DETECTION_HELP is_open=is_help_open on_close=on_help_close />
 
