@@ -552,7 +552,7 @@ pub fn SettingsView() -> impl IntoView {
                                                 let mut presets = sf2_presets.get();
                                                 // Filter out percussion banks (≥120) — not useful as melodic sound sources
                                                 presets.retain(|p| p.bank < 120);
-                                                presets.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                                                presets.sort_by_key(|a| a.name.to_lowercase());
                                                 options.extend(presets.into_iter().map(|p| {
                                                     let value = format!("sf2:{}:{}", p.bank, p.program);
                                                     let label = p.name.clone();
