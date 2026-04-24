@@ -143,6 +143,7 @@ rhythm-offset-help-title = Timing-Training
 ## Continuous Rhythm Matching (Fill the Gap)
 fill-the-gap-title = Lücke füllen
 fill-the-gap-help-title = Lücke-füllen-Training
+fill-the-gap-experimental = Experimentell. Funktioniert am besten mit einem kabelgebundenen Eingabegerät. MIDI funktioniert besser als Computertastatur oder Maus/Trackpad.
 tap = Tippen
 offset-ms = { $value } ms
 hit-rate-label = { $hits }/{ $total } Treffer
